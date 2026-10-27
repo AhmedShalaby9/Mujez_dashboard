@@ -1,0 +1,306 @@
+<div (click)="closeKebab()">
+  <div class="page-head">
+    <div class="page-head__text">
+      <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+      <h1 class="page-head__title">{{ L().title }}</h1>
+    </div>
+    <div class="page-head__actions">
+      <button type="button" class="btn btn--ghost" (click)="exportCsv()">{{ L().exportBtn }}</button>
+      <button type="button" class="btn btn--primary" disabled [title]="L().comingSoon">{{ L().addBtn }}</button>
+    </div>
+  </div>
+
+  <section class="kpis">
+    <button type="button" class="kpi" [class.kpi--active]="statusFilter() === 'all'" (click)="filterByKpiStatus('all')">
+      <span class="kpi__label">{{ L().kpis.total }}</span>
+      <span class="kpi__value">{{ kpis().total }}</span>
+    </button>
+    <button type="button" class="kpi" [class.kpi--active]="statusFilter() === 'active'" (click)="filterByKpiStatus('active')">
+      <span class="kpi__label">{{ L().kpis.active }}</span>
+      <span class="kpi__value" style="color: #2f7a4f">{{ kpis().active }}</span>
+    </button>
+    <button type="button" class="kpi" [class.kpi--active]="statusFilter() === 'trial'" (click)="filterByKpiStatus('trial')">
+      <span class="kpi__label">{{ L().kpis.trial }}</span>
+      <span class="kpi__value" style="color: #2b37a0">{{ kpis().trial }}</span>
+    </button>
+    <button type="button" class="kpi" [class.kpi--active]="statusFilter() === 'suspended'" (click)="filterByKpiStatus('suspended')">
+      <span class="kpi__label">{{ L().kpis.suspended }}</span>
+      <span class="kpi__value" style="color: #b4442f">{{ kpis().suspended }}</span>
+    </button>
+  </section>
+
+  <section class="filters">
+    <input
+      type="text"
+      class="filters__search"
+      [placeholder]="L().searchPh"
+      [value]="search()"
+      (input)="setSearch($any($event.target).value)"
+    />
+
+    <div class="chip-row">
+      <button type="button" class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="setStatusFilter('all')">
+        {{ L().statusAll }}
+      </button>
+      @for (s of statusTypes; track s) {
+        <button type="button" class="chip" [class.chip--active]="statusFilter() === s" (click)="setStatusFilter(s)">
+          {{ statusLabel(s) }}
+        </button>
+      }
+    </div>
+
+    <div class="chip-row">
+      <button type="button" class="chip" [class.chip--active]="typeFilter() === 'all'" (click)="setTypeFilter('all')">
+        {{ L().typeAll }}
+      </button>
+      @for (t of companyTypes; track t) {
+        <button type="button" class="chip" [class.chip--active]="typeFilter() === t" (click)="setTypeFilter(t)">
+          {{ typeLabel(t) }}
+        </button>
+      }
+    </div>
+
+    <div class="chip-row">
+      <button type="button" class="chip" [class.chip--active]="planFilter() === 'all'" (click)="setPlanFilter('all')">
+        {{ L().planAll }}
+      </button>
+      @for (p of planTypes; track p) {
+        <button type="button" class="chip" [class.chip--active]="planFilter() === p" (click)="setPlanFilter(p)">
+          {{ planLabel(p) }}
+        </button>
+      }
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="table-scroll">
+      <div class="table-min">
+        <div class="t-head">
+          <button type="button" class="t-head__cell t-head__cell--grow" (click)="toggleSort('name')">
+            {{ L().columns.company }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'name'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell" (click)="toggleSort('status')">
+            {{ L().columns.status }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'status'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell" (click)="toggleSort('plan')">
+            {{ L().columns.plan }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'plan'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell" (click)="toggleSort('type')">
+            {{ L().columns.type }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'type'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell" (click)="toggleSort('city')">
+            {{ L().columns.city }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'city'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell t-head__cell--end" (click)="toggleSort('users')">
+            {{ L().columns.users }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'users'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell t-head__cell--end" (click)="toggleSort('mrr')">
+            {{ L().columns.mrr }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'mrr'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell" (click)="toggleSort('activity')">
+            {{ L().columns.activity }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'activity'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <span class="t-head__cell t-head__cell--end"></span>
+        </div>
+
+        @for (c of pageRows(); track c.id) {
+          <div class="t-row" (click)="openView(c)">
+            <div class="t-cell t-cell--grow">
+              <span class="t-logo" [style.background]="logoBg(c)">{{ logoInitials(c) }}</span>
+              <div class="t-cell__text">
+                <span class="t-cell__main">{{ companyName(c) }}</span>
+                <span class="t-cell__sub">{{ c.id }}</span>
+              </div>
+            </div>
+            <div class="t-cell">
+              <span class="pill" [style.background]="statusColor(c.status).bg" [style.color]="statusColor(c.status).fg">
+                {{ statusLabel(c.status) }}
+              </span>
+            </div>
+            <div class="t-cell">
+              <span class="plan-dot" [style.background]="planDot(c.plan)"></span>
+              {{ planLabel(c.plan) }}
+            </div>
+            <div class="t-cell">{{ typeLabel(c.type) }}</div>
+            <div class="t-cell">{{ cityLabel(c.city) }}</div>
+            <div class="t-cell t-cell--end mono">{{ c.users }}</div>
+            <div class="t-cell t-cell--end mono">{{ formatMrr(c.mrr) }}</div>
+            <div class="t-cell">{{ c.lastActivity }}</div>
+            <div class="t-cell t-cell--end t-cell--actions" (click)="$event.stopPropagation()">
+              @if (c.status !== 'archived') {
+                <button type="button" class="row-btn" (click)="openWsDialog(c)">{{ L().actions.enter }}</button>
+              }
+              <div class="kebab-wrap">
+                <button type="button" class="row-btn row-btn--icon" (click)="toggleKebab(c.id)" aria-label="More actions">⋯</button>
+                @if (kebabFor() === c.id) {
+                  <div class="dropdown" (click)="$event.stopPropagation()">
+                    <button type="button" class="dropdown__item" (click)="openView(c)">{{ L().actions.view }}</button>
+                    @for (kind of rowActions(c); track kind) {
+                      <button
+                        type="button"
+                        class="dropdown__item"
+                        [class.dropdown__item--danger]="kind === 'suspend' || kind === 'archive'"
+                        (click)="askConfirm(c, kind)"
+                      >
+                        {{ L().actions[kind] }}
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        } @empty {
+          <div class="t-empty">
+            <span class="t-empty__title">{{ L().emptyTitle }}</span>
+            <span class="t-empty__sub">{{ L().emptySub }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="pager">
+      <span>{{ pagerText() }}</span>
+      <button type="button" class="btn btn--ghost" [disabled]="page() <= 1" (click)="prevPage()">{{ L().prev }}</button>
+      <button type="button" class="btn btn--ghost" [disabled]="page() >= totalPages()" (click)="nextPage()">{{ L().next }}</button>
+    </div>
+  </section>
+</div>
+
+@if (viewing(); as c) {
+  <div class="scrim" (click)="closeView()"></div>
+  <aside class="drawer" (click)="$event.stopPropagation()">
+    <div class="drawer__header">
+      <span class="t-logo t-logo--lg" [style.background]="logoBg(c)">{{ logoInitials(c) }}</span>
+      <div class="drawer__headerText">
+        <span class="drawer__name">{{ companyName(c) }}</span>
+        <span class="pill" [style.background]="statusColor(c.status).bg" [style.color]="statusColor(c.status).fg">
+          {{ statusLabel(c.status) }}
+        </span>
+      </div>
+      <button type="button" class="drawer__close" (click)="closeView()" aria-label="Close">×</button>
+    </div>
+
+    <div class="drawer__body">
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.id }}</span><span class="drawer__v mono" dir="ltr">{{ c.id }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.type }}</span><span class="drawer__v">{{ typeLabel(c.type) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.plan }}</span><span class="drawer__v">{{ planLabel(c.plan) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.city }}</span><span class="drawer__v">{{ cityLabel(c.city) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.adminEmail }}</span><span class="drawer__v" dir="ltr">{{ c.adminEmail }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.phone }}</span><span class="drawer__v" dir="ltr">{{ c.phone }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.website }}</span><span class="drawer__v" dir="ltr">{{ c.website }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.users }}</span><span class="drawer__v mono">{{ c.users }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.mrr }}</span><span class="drawer__v mono">{{ formatMrr(c.mrr) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.created }}</span><span class="drawer__v">{{ c.createdAt }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.lastActivity }}</span><span class="drawer__v">{{ c.lastActivity }}</span></div>
+    </div>
+
+    <div class="drawer__footer">
+      @if (c.status !== 'archived') {
+        <button type="button" class="btn btn--primary" (click)="openWsDialog(c)">{{ L().actions.enter }}</button>
+        @for (kind of rowActions(c); track kind) {
+          <button type="button" class="btn btn--ghost" (click)="askConfirm(c, kind)">{{ L().actions[kind] }}</button>
+        }
+      }
+      <button type="button" class="btn btn--ghost" (click)="closeView()">{{ L().drawerClose }}</button>
+    </div>
+  </aside>
+}
+
+@if (wsCompany(); as c) {
+  <div class="scrim" (click)="closeWsDialog()"></div>
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__header">
+      <span class="t-logo" [style.background]="logoBg(c)">{{ logoInitials(c) }}</span>
+      <div class="drawer__headerText">
+        <span class="dialog__title">{{ L().wsTitle }}</span>
+        <span class="dialog__sub">{{ companyName(c) }} · {{ L().wsSub }}</span>
+      </div>
+    </div>
+
+    <div class="dialog__body">
+      <button type="button" class="ws-mode" [class.ws-mode--active]="wsMode() === 'read'" (click)="wsMode.set('read')">
+        <span class="ws-mode__radio" [class.ws-mode__radio--active]="wsMode() === 'read'"></span>
+        <span class="ws-mode__text">
+          <span class="ws-mode__label">{{ L().wsModeRead }}</span>
+          <span class="ws-mode__sub">{{ L().wsModeReadSub }}</span>
+        </span>
+      </button>
+      <button type="button" class="ws-mode" [class.ws-mode--active]="wsMode() === 'manage'" (click)="wsMode.set('manage')">
+        <span class="ws-mode__radio" [class.ws-mode__radio--active]="wsMode() === 'manage'"></span>
+        <span class="ws-mode__text">
+          <span class="ws-mode__label">{{ L().wsModeManage }}</span>
+          <span class="ws-mode__sub">{{ L().wsModeManageSub }}</span>
+        </span>
+      </button>
+
+      @if (wsMode() === 'manage') {
+        <label class="field">
+          <span class="field__label">{{ L().wsReasonLabel }}</span>
+          <textarea
+            class="textarea"
+            rows="2"
+            [placeholder]="L().wsReasonPh"
+            [value]="wsReason()"
+            (input)="wsReason.set($any($event.target).value)"
+          ></textarea>
+        </label>
+        <div class="dur-row">
+          <span class="field__label">{{ L().wsDurationLabel }}</span>
+          <div class="chip-row">
+            @for (d of wsDurations; track d) {
+              <button type="button" class="chip" [class.chip--active]="wsDuration() === d" (click)="wsDuration.set(d)">{{ d }}m</button>
+            }
+          </div>
+        </div>
+        <button type="button" class="ack-row" (click)="wsAck.set(!wsAck())">
+          <span class="ack-box" [class.ack-box--on]="wsAck()">@if (wsAck()) { ✓ }</span>
+          <span class="ack-text">{{ L().wsAck }}</span>
+        </button>
+      }
+
+      @if (wsError()) {
+        <span class="field__error">{{ wsError() }}</span>
+      }
+    </div>
+
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeWsDialog()">{{ L().wsCancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="submitWsDialog()">{{ L().wsEnter }}</button>
+    </div>
+  </div>
+}
+
+@if (confirming(); as cf) {
+  <div class="scrim" (click)="cancelConfirm()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">
+        {{
+          cf.kind === 'suspend'
+            ? L().confirmSuspendTitle
+            : cf.kind === 'reactivate'
+              ? L().confirmReactivateTitle
+              : L().confirmArchiveTitle
+        }}
+      </span>
+      <p class="dialog__text">
+        {{
+          cf.kind === 'suspend'
+            ? L().confirmSuspendBody(companyName(cf.company))
+            : cf.kind === 'reactivate'
+              ? L().confirmReactivateBody(companyName(cf.company))
+              : L().confirmArchiveBody(companyName(cf.company))
+        }}
+      </p>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="cancelConfirm()">{{ L().confirmCancel }}</button>
+      <button type="button" class="btn btn--danger" (click)="performConfirm()">{{ L().confirmGo }}</button>
+    </div>
+  </div>
+}
+
+@if (toast(); as msg) {
+  <div class="toast">{{ msg }}</div>
+}

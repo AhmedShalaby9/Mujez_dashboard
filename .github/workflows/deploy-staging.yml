@@ -1,0 +1,61 @@
+name: Deploy dashboard to staging
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: dashboard-staging
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment:
+      name: staging
+      url: ${{ vars.DASHBOARD_URL || 'https://mujez-stg.mujez.net' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci
+      - name: Generate public configuration
+        env:
+          STAGING_ENV: ${{ secrets.STAGING_ENV }}
+          API_URL: ${{ vars.API_URL || 'https://api-stg.mujez.net' }}
+          DASHBOARD_URL: ${{ vars.DASHBOARD_URL || 'https://mujez-stg.mujez.net' }}
+        run: node scripts/write-runtime-config.mjs
+      - run: npm run build
+      - name: Configure verified SSH access
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+        run: bash deploy/staging/setup-ssh.sh
+      - name: Upload and activate release
+        env:
+          DASHBOARD_RELEASES_PATH: ${{ vars.DASHBOARD_RELEASES_PATH || '/var/www/mujez-staging/releases' }}
+          DASHBOARD_URL: ${{ vars.DASHBOARD_URL || 'https://mujez-stg.mujez.net' }}
+        run: |
+          set -euo pipefail
+          [[ "$DASHBOARD_RELEASES_PATH" =~ ^/var/www/[a-zA-Z0-9_/-]+/releases$ ]] || exit 2
+          [[ "$DASHBOARD_URL" =~ ^https://[a-zA-Z0-9.-]+$ ]] || exit 2
+          release_id="$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          incoming="/tmp/mujez-dashboard-$release_id"
+          tar -czf "$RUNNER_TEMP/dashboard.tar.gz" -C dist/mujez-dashboard/browser .
+          ssh staging-actions "install -d -m 700 $incoming"
+          scp "$RUNNER_TEMP/dashboard.tar.gz" deploy/staging/deploy.sh "staging-actions:$incoming/"
+          ssh staging-actions "bash $incoming/deploy.sh $DASHBOARD_RELEASES_PATH $release_id $DASHBOARD_URL"
+          version=$(curl --fail --silent --show-error --retry 3 --max-time 15 "${DASHBOARD_URL}/deployment-version.txt")
+          test "$version" = "$release_id"
+      - name: Remove runner SSH credentials
+        if: always()
+        run: rm -f "$HOME/.ssh/staging_key" "$HOME/.ssh/staging_known_hosts" "$HOME/.ssh/config"

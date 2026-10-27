@@ -1,0 +1,170 @@
+<div class="login-page" [attr.dir]="dir()">
+  <aside class="login-aside">
+    <div class="login-aside__top">
+      <div class="login-aside__brand">
+        <svg width="32" height="32" viewBox="0 0 64 64">
+          <rect width="64" height="64" rx="15" fill="#3D4FD6" />
+          <path
+            d="M14 46V27L23.5 18.5L32 26L40.5 18.5L50 27V46"
+            fill="none"
+            stroke="#fff"
+            stroke-width="5.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <rect x="28.5" y="35" width="7" height="11" rx="1.5" fill="#F5B841" />
+        </svg>
+        <span class="login-aside__brandName">{{ L().brand }}</span>
+        <span class="login-aside__badge">{{ L().platformPortal }}</span>
+      </div>
+    </div>
+
+    <div class="login-aside__content">
+      <span class="login-aside__kicker">{{ L().kicker }}</span>
+      <h1 class="login-aside__headline">{{ L().headline }}</h1>
+      <p class="login-aside__sub">{{ L().sub }}</p>
+    </div>
+
+    <div class="login-aside__points">
+      @for (point of L().points; track point) {
+        <div class="login-aside__point">
+          <span class="login-aside__dot"></span>
+          {{ point }}
+        </div>
+      }
+    </div>
+  </aside>
+
+  <div class="login-main">
+    <div class="login-main__topbar">
+      <div class="login-main__brandMobile">
+        <svg width="26" height="26" viewBox="0 0 64 64">
+          <rect width="64" height="64" rx="15" fill="#3D4FD6" />
+          <path
+            d="M14 46V27L23.5 18.5L32 26L40.5 18.5L50 27V46"
+            fill="none"
+            stroke="#fff"
+            stroke-width="5.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <rect x="28.5" y="35" width="7" height="11" rx="1.5" fill="#F5B841" />
+        </svg>
+        <span class="login-main__brandName">{{ L().brand }}</span>
+      </div>
+      <button type="button" class="lang-btn" (click)="toggleLang()">{{ L().otherLang }}</button>
+    </div>
+
+    <div class="login-main__formWrap">
+      @if (view() === 'signin') {
+        <form class="login-form" (submit)="$event.preventDefault(); submit()" novalidate>
+          <div class="login-form__header">
+            <h2 class="login-form__title">{{ L().title }}</h2>
+            <span class="login-form__subtitle">{{ L().titleSub }}</span>
+          </div>
+
+          @if (formError()) {
+            <div class="login-form__error">
+              <span class="login-form__errorMark">!</span>
+              <span>{{ formError() }}</span>
+            </div>
+          }
+
+          <label class="field">
+            <span class="field__label">{{ L().email }}</span>
+            <input
+              type="email"
+              autocomplete="username"
+              dir="ltr"
+              placeholder="name@mujez.io"
+              class="input"
+              [class.input--error]="emailInvalid()"
+              [value]="email()"
+              (input)="setEmail($any($event.target).value)"
+              (blur)="emailTouched.set(true)"
+            />
+            @if (emailInvalid()) {
+              <span class="field__error">{{ L().emailErr }}</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__row">
+              <span class="field__label">{{ L().password }}</span>
+              <button type="button" class="field__link" (click)="openForgot()">{{ L().forgot }}</button>
+            </span>
+            <div class="password-field" dir="ltr">
+              <input
+                [type]="showPassword() ? 'text' : 'password'"
+                autocomplete="current-password"
+                dir="ltr"
+                class="input input--password"
+                [class.input--error]="passwordInvalid()"
+                [value]="password()"
+                (input)="setPassword($any($event.target).value)"
+                (blur)="passwordTouched.set(true)"
+              />
+              <button type="button" class="password-toggle" (click)="toggleShowPassword()">
+                {{ showPassword() ? L().hide : L().show }}
+              </button>
+            </div>
+            @if (passwordInvalid()) {
+              <span class="field__error">{{ L().passErr }}</span>
+            }
+          </label>
+
+          <label class="checkbox-field">
+            <input type="checkbox" [checked]="remember()" (change)="toggleRemember()" />
+            {{ L().remember }}
+          </label>
+
+          <button type="submit" class="submit-btn" [disabled]="loading()">
+            {{ loading() ? L().signingIn : L().signIn }}
+          </button>
+
+          <div class="notice">
+            <span class="notice__icon">i</span>
+            <span>{{ L().notice }}</span>
+          </div>
+        </form>
+      } @else {
+        <div class="login-form">
+          <div class="login-form__header">
+            <h2 class="login-form__title">{{ L().fTitle }}</h2>
+            <span class="login-form__subtitle">{{ L().forgotSub }}</span>
+          </div>
+
+          @if (!forgotSent()) {
+            <label class="field">
+              <span class="field__label">{{ L().email }}</span>
+              <input
+                type="email"
+                dir="ltr"
+                class="input"
+                [class.input--error]="forgotEmailInvalid()"
+                [value]="forgotEmail()"
+                (input)="forgotEmail.set($any($event.target).value)"
+                (blur)="forgotTouched.set(true)"
+              />
+              @if (forgotEmailInvalid()) {
+                <span class="field__error">{{ L().emailErr }}</span>
+              }
+            </label>
+            <button type="button" class="submit-btn" [disabled]="forgotLoading()" (click)="sendReset()">
+              {{ L().fBtn }}
+            </button>
+          } @else {
+            <div class="forgot-sent">{{ L().fSent }}</div>
+          }
+
+          <button type="button" class="back-link" (click)="closeForgot()">{{ L().back }}</button>
+        </div>
+      }
+    </div>
+
+    <div class="login-main__footer">
+      <span>© 2026 Mujez</span>
+      <span>{{ L().foot }}</span>
+    </div>
+  </div>
+</div>

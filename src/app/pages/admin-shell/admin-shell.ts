@@ -1,0 +1,175 @@
+import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { AdminUiState, type Lang } from './admin-ui-state';
+
+interface NavHead {
+  kind: 'head';
+  label: string;
+}
+
+interface NavItem {
+  kind: 'item';
+  label: string;
+  path?: string;
+  count?: string;
+  enabled: boolean;
+}
+
+type NavEntry = NavHead | NavItem;
+
+interface Notification {
+  title: string;
+  time: string;
+  unread: boolean;
+}
+
+interface Copy {
+  brand: string;
+  platformTag: string;
+  platformAdmin: string;
+  searchPh: string;
+  otherLang: string;
+  profileMenu: { profile: string; settings: string; signOut: string };
+  notifTitle: string;
+  notifEmpty: string;
+  nav: NavEntry[];
+  notifications: Notification[];
+}
+
+const EN_NAV: NavEntry[] = [
+  { kind: 'head', label: 'Overview' },
+  { kind: 'item', label: 'Dashboard', path: 'dashboard', enabled: true },
+  { kind: 'head', label: 'Companies' },
+  { kind: 'item', label: 'Companies', count: '428', enabled: false },
+  { kind: 'item', label: 'Onboarding', count: '24', enabled: false },
+  { kind: 'head', label: 'Billing' },
+  { kind: 'item', label: 'Subscription Plans', enabled: false },
+  { kind: 'item', label: 'Subscriptions', count: '391', enabled: false },
+  { kind: 'item', label: 'Billing & Invoices', enabled: false },
+  { kind: 'item', label: 'Payments', enabled: false },
+  { kind: 'head', label: 'Platform' },
+  { kind: 'item', label: 'Feature Management', enabled: false },
+  { kind: 'item', label: 'Usage & Limits', enabled: false },
+  { kind: 'item', label: 'Integrations', enabled: false },
+  { kind: 'item', label: 'System Health', enabled: false },
+  { kind: 'head', label: 'Support' },
+  { kind: 'item', label: 'Support Tickets', count: '12', enabled: false },
+  { kind: 'item', label: 'Announcements', enabled: false },
+  { kind: 'head', label: 'Administration' },
+  { kind: 'item', label: 'Platform Users', enabled: false },
+  { kind: 'item', label: 'Roles & Permissions', enabled: false },
+  { kind: 'item', label: 'Audit Logs', enabled: false },
+  { kind: 'item', label: 'Settings', enabled: false },
+];
+
+const AR_NAV: NavEntry[] = [
+  { kind: 'head', label: 'نظرة عامة' },
+  { kind: 'item', label: 'لوحة التحكم', path: 'dashboard', enabled: true },
+  { kind: 'head', label: 'الشركات' },
+  { kind: 'item', label: 'الشركات', count: '428', enabled: false },
+  { kind: 'item', label: 'التأهيل', count: '24', enabled: false },
+  { kind: 'head', label: 'الفوترة' },
+  { kind: 'item', label: 'خطط الاشتراك', enabled: false },
+  { kind: 'item', label: 'الاشتراكات', count: '391', enabled: false },
+  { kind: 'item', label: 'الفواتير', enabled: false },
+  { kind: 'item', label: 'المدفوعات', enabled: false },
+  { kind: 'head', label: 'المنصة' },
+  { kind: 'item', label: 'إدارة الميزات', enabled: false },
+  { kind: 'item', label: 'الاستخدام والحدود', enabled: false },
+  { kind: 'item', label: 'التكاملات', enabled: false },
+  { kind: 'item', label: 'سلامة النظام', enabled: false },
+  { kind: 'head', label: 'الدعم' },
+  { kind: 'item', label: 'تذاكر الدعم', count: '12', enabled: false },
+  { kind: 'item', label: 'الإعلانات', enabled: false },
+  { kind: 'head', label: 'الإدارة' },
+  { kind: 'item', label: 'موظفو المنصة', enabled: false },
+  { kind: 'item', label: 'الأدوار والصلاحيات', enabled: false },
+  { kind: 'item', label: 'سجلات التدقيق', enabled: false },
+  { kind: 'item', label: 'الإعدادات', enabled: false },
+];
+
+const COPY: Record<Lang, Copy> = {
+  en: {
+    brand: 'Mujez',
+    platformTag: 'Platform Admin',
+    platformAdmin: 'Platform Admin',
+    searchPh: 'Search companies, invoices, tickets…',
+    otherLang: 'العربية',
+    profileMenu: { profile: 'Profile', settings: 'Settings', signOut: 'Sign out' },
+    notifTitle: 'Notifications',
+    notifEmpty: "You're all caught up.",
+    nav: EN_NAV,
+    notifications: [
+      { title: 'Al Qahira Developments — payment failed (3rd attempt)', time: '12m ago', unread: true },
+      { title: 'Nile View Realty — trial ends in 2 days', time: '1h ago', unread: true },
+      { title: 'Deira Properties — approaching 90% of unit limit', time: '3h ago', unread: true },
+      { title: 'New company created: Coastal Homes', time: 'Yesterday', unread: false },
+    ],
+  },
+  ar: {
+    brand: 'مجاز',
+    platformTag: 'إدارة المنصة',
+    platformAdmin: 'إدارة المنصة',
+    searchPh: 'ابحث عن شركات أو فواتير أو تذاكر…',
+    otherLang: 'English',
+    profileMenu: { profile: 'الملف الشخصي', settings: 'الإعدادات', signOut: 'تسجيل الخروج' },
+    notifTitle: 'الإشعارات',
+    notifEmpty: 'لا توجد إشعارات جديدة.',
+    nav: AR_NAV,
+    notifications: [
+      { title: 'القاهرة للتطوير — فشل الدفع (المحاولة الثالثة)', time: 'منذ 12 دقيقة', unread: true },
+      { title: 'نايل فيو العقارية — تنتهي الفترة التجريبية خلال يومين', time: 'منذ ساعة', unread: true },
+      { title: 'ديرة العقارية — اقتربت من 90% من حد الوحدات', time: 'منذ 3 ساعات', unread: true },
+      { title: 'تم إنشاء شركة جديدة: كوستال هومز', time: 'أمس', unread: false },
+    ],
+  },
+};
+
+@Component({
+  selector: 'app-admin-shell',
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  templateUrl: './admin-shell.html',
+  styleUrl: './admin-shell.scss',
+})
+export class AdminShell {
+  private readonly ui = inject(AdminUiState);
+
+  readonly dir = this.ui.dir;
+  readonly L = computed(() => COPY[this.ui.lang()]);
+
+  readonly me = { name: 'Omar Khaled', role: 'Platform Admin', initials: 'OK' };
+
+  readonly mobileNavOpen = signal(false);
+  readonly notifOpen = signal(false);
+  readonly profileOpen = signal(false);
+  readonly search = signal('');
+
+  readonly unreadCount = computed(() => this.L().notifications.filter((n) => n.unread).length);
+
+  toggleLang(): void {
+    this.ui.toggleLang();
+  }
+
+  toggleMobileNav(): void {
+    this.mobileNavOpen.set(!this.mobileNavOpen());
+  }
+
+  closeMobileNav(): void {
+    this.mobileNavOpen.set(false);
+  }
+
+  toggleNotif(): void {
+    this.notifOpen.set(!this.notifOpen());
+    this.profileOpen.set(false);
+  }
+
+  toggleProfile(): void {
+    this.profileOpen.set(!this.profileOpen());
+    this.notifOpen.set(false);
+  }
+
+  closeMenus(): void {
+    this.notifOpen.set(false);
+    this.profileOpen.set(false);
+  }
+}

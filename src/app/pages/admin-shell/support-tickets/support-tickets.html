@@ -14,6 +14,8 @@
     <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
     <h1 class="page-head__title">{{ L().title }}</h1>
     <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+  <div class="page-head__actions">
     <button type="button" class="btn btn--primary" (click)="openCreate()">
       {{ lang() === 'ar' ? '+ تذكرة جديدة' : '+ New ticket' }}
     </button>
@@ -87,7 +89,7 @@
       </div>
       @for (t of filtered(); track t.id) {
         <div class="tix-row" (click)="openTicket(t)">
-          <span class="mono">{{ t.id }}</span>
+          <span class="mono ticket-id" [title]="t.id">{{ t.id }}</span>
           <span class="tix-cell__ellipsis">{{ company(t) }}</span>
           <span class="tix-cell__ellipsis">{{ subject(t) }}</span>
           <span>{{ categoryName(t.category) }}</span>
@@ -119,7 +121,7 @@
       <div class="drawer__headerText">
         <span class="drawer__name">{{ subject(t) }}</span>
         <span class="drawer__sub"
-          ><span class="mono">{{ t.id }}</span> · {{ company(t) }}</span
+          ><span class="mono ticket-id" [title]="t.id">{{ t.id }}</span> · {{ company(t) }}</span
         >
       </div>
       <button type="button" class="drawer__close" (click)="closeTicket()">✕</button>

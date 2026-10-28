@@ -198,7 +198,7 @@ button {
 .tix-head,
 .tix-row {
   display: grid;
-  grid-template-columns: 70px 1.1fr 1.5fr 110px 90px 110px 1fr 90px;
+  grid-template-columns: 90px 1.1fr 1.5fr 110px 90px 110px 1fr 90px;
   gap: 10px;
   align-items: center;
 }
@@ -602,4 +602,14 @@ button {
   .drawer {
     width: 100vw;
   }
+}
+
+.page-head__actions {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ticket-id {
+  white-space: nowrap;
 }

@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { AuthService } from '../../../auth.service';
 import { FormsModule } from '@angular/forms';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
@@ -8,6 +9,8 @@ type Status = 'draft' | 'scheduled' | 'published' | 'expired';
 type AnnLang = 'both' | 'en' | 'ar';
 
 interface Announcement {
+  version: number;
+  published: boolean;
   id: string;
   titleEn: string;
   titleAr: string;
@@ -20,14 +23,6 @@ interface Announcement {
   status: Status;
   lang: AnnLang;
 }
-
-const SEED: Announcement[] = [
-  { id: 'ANN-1', titleEn: 'Scheduled maintenance', titleAr: 'صيانة مجدولة', bodyEn: 'Mujez will be briefly unavailable Oct 30, 02:00–04:00 Cairo time for planned maintenance.', bodyAr: 'ستكون منصة مجاز غير متاحة لفترة وجيزة يوم 30 أكتوبر من 02:00 حتى 04:00 بتوقيت القاهرة لصيانة مجدولة.', type: 'maint', target: 'all', from: 'Oct 30, 02:00', to: 'Oct 30, 04:00', status: 'published', lang: 'both' },
-  { id: 'ANN-2', titleEn: 'New: Advanced lead routing', titleAr: 'جديد: توجيه العملاء المتقدم', bodyEn: 'Business and Enterprise plans can now set weighted and round-robin routing rules with SLA auto-reassignment.', bodyAr: 'يمكن الآن لباقتي Business وEnterprise ضبط قواعد توجيه بالتناوب أو بالوزن مع إعادة توجيه تلقائي حسب SLA.', type: 'feature', target: 'business', from: 'Oct 20', to: 'Nov 20', status: 'published', lang: 'both' },
-  { id: 'ANN-3', titleEn: 'Invoices now itemize VAT', titleAr: 'الفواتير الآن تُفصّل ضريبة القيمة المضافة', bodyEn: 'Starting November 1, all invoices show subtotal, 14% VAT and total as separate lines.', bodyAr: 'اعتبارًا من 1 نوفمبر، تعرض جميع الفواتير الإجمالي الفرعي وضريبة 14٪ والإجمالي كبنود منفصلة.', type: 'billing', target: 'all', from: 'Nov 1', to: '—', status: 'scheduled', lang: 'both' },
-  { id: 'ANN-4', titleEn: 'Property Finder sync incident resolved', titleAr: 'تم حل عطل مزامنة بروبرتي فايندر', bodyEn: 'The listing sync issue affecting some accounts on Oct 27 has been resolved.', bodyAr: 'تم حل مشكلة مزامنة الإعلانات التي أثرت على بعض الحسابات في 27 أكتوبر.', type: 'update', target: 'all', from: 'Oct 28', to: 'Oct 28', status: 'expired', lang: 'both' },
-  { id: 'ANN-5', titleEn: 'Preview: commission scheme builder', titleAr: 'معاينة: أداة بناء مخططات العمولة', bodyEn: 'A visual builder for multi-tier commission splits is coming to Business and Enterprise.', bodyAr: 'أداة بصرية لبناء تقسيمات عمولة متعددة المستويات قادمة لباقتي Business وEnterprise.', type: 'feature', target: 'enterprise', from: 'TBD', to: 'TBD', status: 'draft', lang: 'both' },
-];
 
 interface Copy {
   eyebrow: string;
@@ -68,7 +63,7 @@ const COPY: Record<Lang, Copy> = {
   en: {
     eyebrow: 'Support',
     title: 'Announcements',
-    sub: 'Maintenance, features and product updates inside tenant CRMs',
+    sub: 'Manage bilingual company notices and publishing schedules',
     newBtn: '+ New announcement',
     colTitle: 'Title',
     colTarget: 'Target',
@@ -78,7 +73,13 @@ const COPY: Record<Lang, Copy> = {
     edit: 'Edit',
     status: { draft: 'Draft', scheduled: 'Scheduled', published: 'Published', expired: 'Expired' },
     type: { maint: 'Maintenance', feature: 'Feature', update: 'Update', billing: 'Billing' },
-    target: { all: 'All companies', starter: 'Starter plan', pro: 'Pro plan', business: 'Business plan', enterprise: 'Enterprise plan' },
+    target: {
+      all: 'All companies',
+      starter: 'Starter plan',
+      pro: 'Pro plan',
+      business: 'Business plan',
+      enterprise: 'Enterprise plan',
+    },
     langLabel: { both: 'EN + AR', en: 'English only', ar: 'Arabic only' },
     formTitleNew: 'New announcement',
     formTitleEdit: 'Edit announcement',
@@ -96,13 +97,13 @@ const COPY: Record<Lang, Copy> = {
     saveDraft: 'Save as draft',
     publish: 'Publish',
     draftToast: 'Saved as draft.',
-    publishToast: 'Announcement published.',
+    publishToast: 'Publishing settings saved. Status follows the selected time window.',
     emptyTitle: 'No announcements yet',
   },
   ar: {
     eyebrow: 'الدعم',
     title: 'الإعلانات',
-    sub: 'الصيانة والخصائص وتحديثات المنتج داخل أنظمة الشركات',
+    sub: 'إدارة إعلانات الشركات باللغتين ومواعيد النشر',
     newBtn: '+ إعلان جديد',
     colTitle: 'العنوان',
     colTarget: 'الاستهداف',
@@ -112,7 +113,13 @@ const COPY: Record<Lang, Copy> = {
     edit: 'تعديل',
     status: { draft: 'مسودة', scheduled: 'مجدول', published: 'منشور', expired: 'منتهٍ' },
     type: { maint: 'صيانة', feature: 'خاصية', update: 'تحديث', billing: 'فوترة' },
-    target: { all: 'كل الشركات', starter: 'باقة Starter', pro: 'باقة Pro', business: 'باقة Business', enterprise: 'باقة Enterprise' },
+    target: {
+      all: 'كل الشركات',
+      starter: 'باقة Starter',
+      pro: 'باقة Pro',
+      business: 'باقة Business',
+      enterprise: 'باقة Enterprise',
+    },
     langLabel: { both: 'عربي + إنجليزي', en: 'إنجليزي فقط', ar: 'عربي فقط' },
     formTitleNew: 'إعلان جديد',
     formTitleEdit: 'تعديل الإعلان',
@@ -130,15 +137,23 @@ const COPY: Record<Lang, Copy> = {
     saveDraft: 'حفظ كمسودة',
     publish: 'نشر',
     draftToast: 'تم الحفظ كمسودة.',
-    publishToast: 'تم نشر الإعلان.',
+    publishToast: 'تم حفظ إعدادات النشر. تتحدد الحالة وفق الفترة المختارة.',
     emptyTitle: 'لا توجد إعلانات بعد',
   },
 };
 
-type Draft = Omit<Announcement, 'id' | 'status'>;
+type Draft = Omit<Announcement, 'id' | 'status' | 'version' | 'published'>;
 
 const EMPTY_DRAFT: Draft = {
-  titleEn: '', titleAr: '', bodyEn: '', bodyAr: '', type: 'update', target: 'all', from: '', to: '', lang: 'both',
+  titleEn: '',
+  titleAr: '',
+  bodyEn: '',
+  bodyAr: '',
+  type: 'update',
+  target: 'all',
+  from: '',
+  to: '',
+  lang: 'both',
 };
 
 @Component({
@@ -148,6 +163,37 @@ const EMPTY_DRAFT: Draft = {
   styleUrl: './announcements.scss',
 })
 export class Announcements {
+  private readonly api = inject(AuthService);
+  readonly loading = signal(false);
+  readonly saving = signal(false);
+  readonly error = signal('');
+  constructor() {
+    void this.load();
+  }
+  async load() {
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      const items: Announcement[] = [];
+      let page = 1;
+      while (true) {
+        const r = await this.api.request('/admin/api/v1/announcements?page=' + page + '&limit=100');
+        items.push(...r.items);
+        if (items.length >= r.total || !r.items.length) break;
+        page++;
+      }
+      this.items.set(items);
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.loading.set(false);
+    }
+  }
+  localTime(value: string | null) {
+    if (!value) return '';
+    const date = new Date(value);
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  }
   private readonly ui = inject(AdminUiState);
 
   readonly lang = computed<Lang>(() => this.ui.lang());
@@ -156,7 +202,7 @@ export class Announcements {
   readonly targets: Target[] = ['all', 'starter', 'pro', 'business', 'enterprise'];
   readonly langs: AnnLang[] = ['both', 'en', 'ar'];
 
-  readonly items = signal<Announcement[]>(SEED);
+  readonly items = signal<Announcement[]>([]);
   readonly editing = signal<Announcement | null>(null);
   readonly creating = signal(false);
   draft: Draft = { ...EMPTY_DRAFT };
@@ -165,11 +211,11 @@ export class Announcements {
   private toastTimer?: ReturnType<typeof setTimeout>;
 
   title(a: Announcement): string {
-    return this.lang() === 'ar' ? a.titleAr : a.titleEn;
+    return this.lang() === 'ar' ? a.titleAr || a.titleEn : a.titleEn || a.titleAr;
   }
 
   body(a: Announcement): string {
-    return this.lang() === 'ar' ? a.bodyAr : a.bodyEn;
+    return this.lang() === 'ar' ? a.bodyAr || a.bodyEn : a.bodyEn || a.bodyAr;
   }
 
   statusName(s: Status): string {
@@ -201,8 +247,8 @@ export class Announcements {
   openEdit(a: Announcement): void {
     this.creating.set(false);
     this.editing.set(a);
-    const { id, status, ...rest } = a;
-    this.draft = { ...rest };
+    const { id, status, version, published, ...rest } = a;
+    this.draft = { ...rest, from: this.localTime(a.from), to: this.localTime(a.to) };
   }
 
   close(): void {
@@ -210,27 +256,36 @@ export class Announcements {
     this.editing.set(null);
   }
 
-  private upsert(status: Status): void {
-    const current = this.editing();
-    if (current) {
-      this.items.update((list) =>
-        list.map((a) => (a.id === current.id ? { ...current, ...this.draft, status } : a)),
+  async save(published: boolean): Promise<void> {
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.error.set('');
+    try {
+      const current = this.editing();
+      await this.api.request(
+        '/admin/api/v1/announcements' + (current ? '/' + current.id + '/update' : ''),
+        {
+          ...this.draft,
+          version: current?.version ?? 0,
+          published,
+          from: this.draft.from ? new Date(this.draft.from).toISOString() : null,
+          to: this.draft.to ? new Date(this.draft.to).toISOString() : null,
+        },
       );
-    } else {
-      const id = 'ANN-' + (this.items().length + 1 + Math.floor(Math.random() * 90));
-      this.items.update((list) => [{ id, ...this.draft, status }, ...list]);
+      this.close();
+      await this.load();
+      this.showToast(published ? this.L().publishToast : this.L().draftToast);
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.saving.set(false);
     }
-    this.close();
   }
-
-  saveDraft(): void {
-    this.upsert('draft');
-    this.showToast(this.L().draftToast);
+  saveDraft() {
+    return this.save(false);
   }
-
-  publish(): void {
-    this.upsert('published');
-    this.showToast(this.L().publishToast);
+  publish() {
+    return this.save(true);
   }
 
   private showToast(msg: string): void {

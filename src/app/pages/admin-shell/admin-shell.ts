@@ -1,3 +1,4 @@
+import { SupportApi } from '../../support-api.service';
 import { BillingApi } from '../../billing-api.service';
 import { SubscriptionsApi } from '../../subscriptions-api.service';
 import { CompaniesApi } from '../../companies-api.service';
@@ -58,7 +59,7 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Integrations', path: 'integrations', enabled: true },
   { kind: 'item', label: 'System Health', path: 'system-health', enabled: true },
   { kind: 'head', label: 'Support' },
-  { kind: 'item', label: 'Support Tickets', path: 'support-tickets', count: '12', enabled: true },
+  { kind: 'item', label: 'Support Tickets', path: 'support-tickets', enabled: true },
   { kind: 'item', label: 'Announcements', path: 'announcements', enabled: true },
   { kind: 'head', label: 'Administration' },
   { kind: 'item', label: 'Platform Users', path: 'platform-users', enabled: true },
@@ -84,7 +85,7 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'التكاملات', path: 'integrations', enabled: true },
   { kind: 'item', label: 'سلامة النظام', path: 'system-health', enabled: true },
   { kind: 'head', label: 'الدعم' },
-  { kind: 'item', label: 'تذاكر الدعم', path: 'support-tickets', count: '12', enabled: true },
+  { kind: 'item', label: 'تذاكر الدعم', path: 'support-tickets', enabled: true },
   { kind: 'item', label: 'الإعلانات', path: 'announcements', enabled: true },
   { kind: 'head', label: 'الإدارة' },
   { kind: 'item', label: 'موظفو المنصة', path: 'platform-users', enabled: true },
@@ -149,6 +150,10 @@ const COPY: Record<Lang, Copy> = {
   styleUrl: './admin-shell.scss',
 })
 export class AdminShell {
+  readonly supportApi = inject(SupportApi);
+  constructor() {
+    if (this.auth.user()?.permissions.includes('support')) void this.supportApi.summary();
+  }
   readonly billingApi = inject(BillingApi);
   readonly subscriptionsApi = inject(SubscriptionsApi);
   readonly companiesApi = inject(CompaniesApi);
@@ -197,7 +202,15 @@ export class AdminShell {
                           ],
                         ),
                 }
-              : entry,
+              : entry.kind === 'item' && entry.path === 'support-tickets'
+                ? {
+                    ...entry,
+                    count:
+                      this.supportApi.count() === undefined
+                        ? undefined
+                        : String(this.supportApi.count()),
+                  }
+                : entry,
       ),
     };
   });

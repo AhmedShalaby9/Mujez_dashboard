@@ -1,3 +1,9 @@
+@if (error()) {
+  <p role="alert">{{ error() }}</p>
+}
+@if (loading()) {
+  <p role="status">{{ lang() === 'ar' ? 'جار التحميل…' : 'Loading…' }}</p>
+}
 <div class="page-head">
   <div class="page-head__text">
     <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
@@ -5,6 +11,9 @@
     <span class="page-head__sub">{{ L().sub }}</span>
   </div>
   <div class="page-head__actions">
+    <button type="button" class="btn btn--ghost" [disabled]="loading()" (click)="load()">
+      {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+    </button>
     <button type="button" class="btn btn--primary" (click)="openCreate()">{{ L().newBtn }}</button>
   </div>
 </div>
@@ -26,8 +35,12 @@
             <span class="ann-cell__sub">{{ body(a) }}</span>
           </span>
           <span>{{ targetName(a.target) }}</span>
-          <span class="mono">{{ a.from }} – {{ a.to }}</span>
-          <span><span class="pill" [class]="'pill--' + a.status">{{ statusName(a.status) }}</span></span>
+          <span class="mono">{{ a.from || '—' }} – {{ a.to || '—' }}</span>
+          <span
+            ><span class="pill" [class]="'pill--' + a.status">{{
+              statusName(a.status)
+            }}</span></span
+          >
           <span>
             <button type="button" class="row-btn" (click)="openEdit(a)">{{ L().edit }}</button>
           </span>
@@ -50,6 +63,16 @@
       <button type="button" class="drawer__close" (click)="close()">✕</button>
     </div>
     <div class="drawer__body">
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
+      <p>
+        {{
+          lang() === 'ar'
+            ? 'توقيت الحقول حسب الجهاز. يتم الحفظ بتوقيت UTC. حفظ إعلان منشور كمسودة يوقف ظهوره.'
+            : 'Dates use this device’s local time and are stored as UTC. Saving a published notice as a draft withdraws it.'
+        }}
+      </p>
       <span class="section-title">{{ L().previewTitle }}</span>
       <div class="preview-banner" [class]="typeColorClass(draft.type)">
         <span class="preview-banner__title">{{ draft.titleEn || '—' }}</span>
@@ -58,26 +81,57 @@
 
       <label class="field">
         <span class="field__label">{{ L().fieldTitleEn }}</span>
-        <input class="textbox" type="text" maxlength="120" [(ngModel)]="draft.titleEn" name="titleEn" />
+        <input
+          class="textbox"
+          type="text"
+          maxlength="120"
+          [(ngModel)]="draft.titleEn"
+          name="titleEn"
+        />
       </label>
       <label class="field">
         <span class="field__label">{{ L().fieldTitleAr }}</span>
-        <input class="textbox" type="text" maxlength="120" [(ngModel)]="draft.titleAr" name="titleAr" dir="rtl" />
+        <input
+          class="textbox"
+          type="text"
+          maxlength="120"
+          [(ngModel)]="draft.titleAr"
+          name="titleAr"
+          dir="rtl"
+        />
       </label>
       <label class="field">
         <span class="field__label">{{ L().fieldBodyEn }}</span>
-        <textarea class="textarea" rows="2" maxlength="280" [(ngModel)]="draft.bodyEn" name="bodyEn"></textarea>
+        <textarea
+          class="textarea"
+          rows="2"
+          maxlength="280"
+          [(ngModel)]="draft.bodyEn"
+          name="bodyEn"
+        ></textarea>
       </label>
       <label class="field">
         <span class="field__label">{{ L().fieldBodyAr }}</span>
-        <textarea class="textarea" rows="2" maxlength="280" [(ngModel)]="draft.bodyAr" name="bodyAr" dir="rtl"></textarea>
+        <textarea
+          class="textarea"
+          rows="2"
+          maxlength="280"
+          [(ngModel)]="draft.bodyAr"
+          name="bodyAr"
+          dir="rtl"
+        ></textarea>
       </label>
 
       <div class="field">
         <span class="field__label">{{ L().fieldType }}</span>
         <div class="chip-row">
           @for (t of types; track t) {
-            <button type="button" class="chip" [class.chip--active]="draft.type === t" (click)="draft.type = t">
+            <button
+              type="button"
+              class="chip"
+              [class.chip--active]="draft.type === t"
+              (click)="draft.type = t"
+            >
               {{ typeName(t) }}
             </button>
           }
@@ -88,7 +142,12 @@
         <span class="field__label">{{ L().fieldTarget }}</span>
         <div class="chip-row">
           @for (t of targets; track t) {
-            <button type="button" class="chip" [class.chip--active]="draft.target === t" (click)="draft.target = t">
+            <button
+              type="button"
+              class="chip"
+              [class.chip--active]="draft.target === t"
+              (click)="draft.target = t"
+            >
               {{ targetName(t) }}
             </button>
           }
@@ -98,11 +157,11 @@
       <div class="win-row">
         <label class="field">
           <span class="field__label">{{ L().fieldFrom }}</span>
-          <input class="textbox" type="text" [(ngModel)]="draft.from" name="fromDate" placeholder="Oct 30" />
+          <input class="textbox" type="datetime-local" [(ngModel)]="draft.from" name="fromDate" />
         </label>
         <label class="field">
           <span class="field__label">{{ L().fieldTo }}</span>
-          <input class="textbox" type="text" [(ngModel)]="draft.to" name="toDate" placeholder="Nov 1" />
+          <input class="textbox" type="datetime-local" [(ngModel)]="draft.to" name="toDate" />
         </label>
       </div>
 
@@ -110,7 +169,12 @@
         <span class="field__label">{{ L().fieldLang }}</span>
         <div class="chip-row">
           @for (l of langs; track l) {
-            <button type="button" class="chip" [class.chip--active]="draft.lang === l" (click)="draft.lang = l">
+            <button
+              type="button"
+              class="chip"
+              [class.chip--active]="draft.lang === l"
+              (click)="draft.lang = l"
+            >
               {{ langName(l) }}
             </button>
           }
@@ -119,8 +183,12 @@
     </div>
     <div class="drawer__footer">
       <button type="button" class="btn btn--ghost" (click)="close()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--ghost" (click)="saveDraft()">{{ L().saveDraft }}</button>
-      <button type="button" class="btn btn--primary" (click)="publish()">{{ L().publish }}</button>
+      <button type="button" class="btn btn--ghost" [disabled]="saving()" (click)="saveDraft()">
+        {{ L().saveDraft }}
+      </button>
+      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="publish()">
+        {{ L().publish }}
+      </button>
     </div>
   </div>
 }

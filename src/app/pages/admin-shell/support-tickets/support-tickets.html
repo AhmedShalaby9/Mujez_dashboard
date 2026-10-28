@@ -1,8 +1,25 @@
+@if (error()) {
+  <p role="alert">
+    {{ error() }}
+    <button type="button" class="chip" (click)="load()">
+      {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+    </button>
+  </p>
+}
+@if (loading() || detailLoading()) {
+  <p role="status">{{ lang() === 'ar' ? 'جار التحميل…' : 'Loading…' }}</p>
+}
 <div class="page-head">
   <div class="page-head__text">
     <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
     <h1 class="page-head__title">{{ L().title }}</h1>
     <span class="page-head__sub">{{ L().sub }}</span>
+    <button type="button" class="btn btn--primary" (click)="openCreate()">
+      {{ lang() === 'ar' ? '+ تذكرة جديدة' : '+ New ticket' }}
+    </button>
+    <button type="button" class="chip" [disabled]="loading()" (click)="load()">
+      {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+    </button>
   </div>
 </div>
 
@@ -35,11 +52,21 @@
 />
 
 <div class="chip-row">
-  <button type="button" class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="setStatusFilter('all')">
+  <button
+    type="button"
+    class="chip"
+    [class.chip--active]="statusFilter() === 'all'"
+    (click)="setStatusFilter('all')"
+  >
     {{ L().statusAll }}
   </button>
   @for (s of statuses; track s) {
-    <button type="button" class="chip" [class.chip--active]="statusFilter() === s" (click)="setStatusFilter(s)">
+    <button
+      type="button"
+      class="chip"
+      [class.chip--active]="statusFilter() === s"
+      (click)="setStatusFilter(s)"
+    >
       {{ statusName(s) }}
     </button>
   }
@@ -64,8 +91,16 @@
           <span class="tix-cell__ellipsis">{{ company(t) }}</span>
           <span class="tix-cell__ellipsis">{{ subject(t) }}</span>
           <span>{{ categoryName(t.category) }}</span>
-          <span><span class="pill" [class]="'pill--' + t.priority">{{ priorityName(t.priority) }}</span></span>
-          <span><span class="pill" [class]="'pill--' + t.status">{{ statusName(t.status) }}</span></span>
+          <span
+            ><span class="pill" [class]="'pill--' + t.priority">{{
+              priorityName(t.priority)
+            }}</span></span
+          >
+          <span
+            ><span class="pill" [class]="'pill--' + t.status">{{
+              statusName(t.status)
+            }}</span></span
+          >
           <span class="tix-cell__ellipsis">{{ t.assigned || L().unassigned }}</span>
           <span>{{ t.updated }}</span>
         </div>
@@ -83,11 +118,48 @@
     <div class="drawer__header">
       <div class="drawer__headerText">
         <span class="drawer__name">{{ subject(t) }}</span>
-        <span class="drawer__sub"><span class="mono">{{ t.id }}</span> · {{ company(t) }}</span>
+        <span class="drawer__sub"
+          ><span class="mono">{{ t.id }}</span> · {{ company(t) }}</span
+        >
       </div>
       <button type="button" class="drawer__close" (click)="closeTicket()">✕</button>
     </div>
     <div class="drawer__body">
+      @if (error()) {
+        <p role="alert">
+          {{ error() }}
+          <button type="button" class="chip" (click)="openTicket(t)">
+            {{ lang() === 'ar' ? 'إعادة تحميل التذكرة' : 'Reload ticket' }}
+          </button>
+        </p>
+      }
+      <label class="field"
+        ><span class="field__label">{{ L().colAssigned }}</span
+        ><select
+          class="textarea"
+          [disabled]="saving()"
+          [ngModel]="t.assignedTo || ''"
+          (ngModelChange)="assign($event)"
+        >
+          <option value="">{{ L().unassigned }}</option>
+          @for (a of options().agents; track a.id) {
+            <option [value]="a.id">{{ a.name }}</option>
+          }
+        </select></label
+      >
+      <label class="field"
+        ><span class="field__label">{{ L().colPriority }}</span
+        ><select
+          class="textarea"
+          [disabled]="saving()"
+          [ngModel]="t.priority"
+          (ngModelChange)="priority($event)"
+        >
+          @for (p of priorities; track p) {
+            <option [value]="p">{{ priorityName(p) }}</option>
+          }
+        </select></label
+      >
       <div class="meta-row">
         <span class="pill" [class]="'pill--' + t.priority">{{ priorityName(t.priority) }}</span>
         <span class="pill" [class]="'pill--' + t.status">{{ statusName(t.status) }}</span>
@@ -110,7 +182,13 @@
       <span class="section-title">{{ L().changeStatus }}</span>
       <div class="status-chips">
         @for (s of statuses; track s) {
-          <button type="button" class="chip chip--sm" [class.chip--active]="t.status === s" (click)="setStatus(s)">
+          <button
+            type="button"
+            class="chip chip--sm"
+            [class.chip--active]="t.status === s"
+            [disabled]="saving() || !canTransition(t.status, s)"
+            (click)="setStatus(s)"
+          >
             {{ statusName(s) }}
           </button>
         }
@@ -119,15 +197,41 @@
       <span class="section-title">{{ L().conversation }}</span>
       <div class="thread">
         @for (m of t.messages; track $index) {
-          <div class="bubble" [class.bubble--agent]="m.author !== 'customer'" [class.bubble--system]="m.author === 'system'">
+          <div
+            class="bubble"
+            [class.bubble--agent]="m.author !== 'customer'"
+            [class.bubble--system]="m.author === 'system'"
+          >
             <span class="bubble__text">{{ msgText(m) }}</span>
-            <span class="bubble__time">{{ m.time }}</span>
+            <span class="bubble__time"
+              >{{ m.time }} · {{ lang() === 'ar' ? 'محفوظ في التذكرة' : 'Stored in ticket' }}</span
+            >
           </div>
         }
       </div>
       <div class="reply-box">
-        <textarea class="textarea" rows="2" [placeholder]="L().replyPh" [ngModel]="replyDraft()" (ngModelChange)="replyDraft.set($event)" name="replyDraft"></textarea>
-        <button type="button" class="btn btn--primary" [disabled]="!replyDraft().trim()" (click)="sendReply()">{{ L().sendReply }}</button>
+        <textarea
+          class="textarea"
+          rows="2"
+          [placeholder]="L().replyPh"
+          [ngModel]="replyDraft()"
+          (ngModelChange)="replyDraft.set($event)"
+          maxlength="5000"
+          name="replyDraft"
+        ></textarea>
+        <button
+          type="button"
+          class="btn btn--primary"
+          [disabled]="
+            saving() ||
+            t.status === 'closed' ||
+            t.status === 'resolved' ||
+            replyDraft().trim().length < 2
+          "
+          (click)="sendReply()"
+        >
+          {{ L().sendReply }}
+        </button>
       </div>
 
       <span class="section-title">{{ L().internalNotes }}</span>
@@ -141,13 +245,58 @@
         }
       </div>
       <div class="reply-box">
-        <textarea class="textarea textarea--amber" rows="2" [placeholder]="L().notePh" [ngModel]="noteDraft()" (ngModelChange)="noteDraft.set($event)" name="noteDraft"></textarea>
-        <button type="button" class="btn btn--ghost" [disabled]="noteDraft().trim().length < 2" (click)="addNote()">{{ L().addNote }}</button>
+        <textarea
+          class="textarea textarea--amber"
+          rows="2"
+          [placeholder]="L().notePh"
+          [ngModel]="noteDraft()"
+          (ngModelChange)="noteDraft.set($event)"
+          maxlength="5000"
+          name="noteDraft"
+        ></textarea>
+        <button
+          type="button"
+          class="btn btn--ghost"
+          [disabled]="
+            saving() ||
+            t.status === 'closed' ||
+            t.status === 'resolved' ||
+            noteDraft().trim().length < 2
+          "
+          (click)="addNote()"
+        >
+          {{ L().addNote }}
+        </button>
       </div>
+      <span class="section-title">{{ L().requestWorkspace }}</span>
+      <p class="hint">{{ L().requestWorkspaceBody }}</p>
+      @for (r of t.requests; track r.id) {
+        <div class="note">
+          <span>{{ r.actorName }} · {{ r.status }} · {{ r.durationMinutes }}m</span
+          ><span>{{ r.reason }}</span>
+          @if (r.status === 'pending' && r.actorId === auth.user()?.id) {
+            <button type="button" class="chip" [disabled]="saving()" (click)="cancelRequest(r.id)">
+              {{ lang() === 'ar' ? 'إلغاء الطلب' : 'Cancel request' }}
+            </button>
+          }
+        </div>
+      }
     </div>
     <div class="drawer__footer">
       <button type="button" class="btn btn--ghost" (click)="closeTicket()">{{ L().close }}</button>
-      <button type="button" class="btn btn--primary" (click)="askWorkspace(t)">{{ L().requestWorkspace }}</button>
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="
+          saving() ||
+          !auth.user()?.permissions?.includes('ws.read') ||
+          t.status === 'closed' ||
+          t.status === 'resolved'
+        "
+        (click)="askWorkspace(t)"
+      >
+        {{ L().requestWorkspace }}
+      </button>
     </div>
   </div>
 }
@@ -158,9 +307,18 @@
     <div class="dialog__body dialog__body--pad">
       <span class="dialog__title">{{ L().requestWorkspaceTitle(company(rt)) }}</span>
       <p class="dialog__text">{{ L().requestWorkspaceBody }}</p>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
       <label class="field">
         <span class="field__label">{{ L().reasonLabel }}</span>
-        <textarea class="textarea" rows="2" [ngModel]="requestReason()" (ngModelChange)="requestReason.set($event)" name="requestReason"></textarea>
+        <textarea
+          class="textarea"
+          rows="2"
+          [ngModel]="requestReason()"
+          (ngModelChange)="requestReason.set($event)"
+          name="requestReason"
+        ></textarea>
         @if (requestError()) {
           <span class="field__error">{{ L().reasonError }}</span>
         }
@@ -169,7 +327,12 @@
         <span class="field__label">{{ L().durationLabel }}</span>
         <div class="dur-row">
           @for (d of durations; track d) {
-            <button type="button" class="chip chip--sm" [class.chip--active]="requestDuration() === d" (click)="requestDuration.set(d)">
+            <button
+              type="button"
+              class="chip chip--sm"
+              [class.chip--active]="requestDuration() === d"
+              (click)="requestDuration.set(d)"
+            >
               {{ d }}m
             </button>
           }
@@ -177,12 +340,118 @@
       </div>
     </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelWorkspace()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" (click)="confirmWorkspace()">{{ L().confirm }}</button>
+      <button type="button" class="btn btn--ghost" (click)="cancelWorkspace()">
+        {{ L().cancel }}
+      </button>
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="saving()"
+        (click)="confirmWorkspace()"
+      >
+        {{ L().confirm }}
+      </button>
     </div>
   </div>
 }
 
 @if (toast(); as msg) {
   <div class="toast">{{ msg }}</div>
+}
+
+@if (creating()) {
+  <div class="scrim" (click)="creating.set(false)"></div>
+  <form class="drawer" (ngSubmit)="createTicket()">
+    <div class="drawer__header">
+      <span class="drawer__name">{{ lang() === 'ar' ? 'تذكرة جديدة' : 'New ticket' }}</span
+      ><button type="button" class="drawer__close" (click)="creating.set(false)">✕</button>
+    </div>
+    <div class="drawer__body">
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
+      <label class="field"
+        ><span class="field__label">{{ L().colCompany }}</span
+        ><select class="textarea" name="companyId" [(ngModel)]="draft.companyId" required>
+          <option value="">—</option>
+          @for (c of options().companies; track c.id) {
+            <option [value]="c.id">{{ lang() === 'ar' ? c.name.ar : c.name.en }}</option>
+          }
+        </select></label
+      >
+      <label class="field"
+        ><span class="field__label">{{ L().colSubject }} (EN)</span
+        ><input
+          class="textarea"
+          name="subjectEn"
+          [(ngModel)]="draft.subjectEn"
+          required
+          minlength="3"
+          maxlength="160"
+      /></label>
+      <label class="field"
+        ><span class="field__label">{{ L().colSubject }} (AR)</span
+        ><input
+          class="textarea"
+          dir="rtl"
+          name="subjectAr"
+          [(ngModel)]="draft.subjectAr"
+          required
+          minlength="3"
+          maxlength="160"
+      /></label>
+      <label class="field"
+        ><span class="field__label">{{ L().requester }}</span
+        ><input
+          class="textarea"
+          name="requester"
+          [(ngModel)]="draft.requester"
+          required
+          minlength="2"
+          maxlength="160"
+      /></label>
+      <label class="field"
+        ><span class="field__label">{{ L().colCategory }}</span
+        ><select class="textarea" name="category" [(ngModel)]="draft.category">
+          @for (c of categories; track c) {
+            <option [value]="c">{{ categoryName(c) }}</option>
+          }
+        </select></label
+      >
+      <label class="field"
+        ><span class="field__label">{{ L().colPriority }}</span
+        ><select class="textarea" name="priority" [(ngModel)]="draft.priority">
+          @for (p of priorities; track p) {
+            <option [value]="p">{{ priorityName(p) }}</option>
+          }
+        </select></label
+      >
+      <label class="field"
+        ><span class="field__label">{{ L().conversation }}</span
+        ><textarea
+          class="textarea"
+          name="message"
+          [(ngModel)]="draft.message"
+          required
+          minlength="2"
+          maxlength="5000"
+          rows="5"
+        ></textarea>
+      </label>
+      <p class="hint">
+        {{
+          lang() === 'ar'
+            ? 'تسجل التذكرة نيابة عن مقدم الطلب. إرسال البريد غير مهيأ.'
+            : 'Recorded by staff on behalf of the requester. Email delivery is not configured.'
+        }}
+      </p>
+    </div>
+    <div class="drawer__footer">
+      <button type="button" class="btn btn--ghost" (click)="creating.set(false)">
+        {{ L().cancel }}</button
+      ><button type="submit" class="btn btn--primary" [disabled]="saving()">
+        {{ lang() === 'ar' ? 'إنشاء التذكرة' : 'Create ticket' }}
+      </button>
+    </div>
+  </form>
 }

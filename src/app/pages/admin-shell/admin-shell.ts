@@ -219,7 +219,9 @@ export class AdminShell {
     const user = this.auth.user();
     return {
       name: user?.name ?? '',
-      role: user?.role === 'super_admin' ? 'Super Admin' : 'Platform Admin',
+      role:
+        user?.roleName?.[this.ui.lang()] ??
+        (user?.role === 'super_admin' ? 'Super Admin' : 'Administrator'),
       initials: (user?.name ?? '')
         .split(' ')
         .map((s) => s[0])

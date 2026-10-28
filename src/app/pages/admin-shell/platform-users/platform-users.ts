@@ -1,8 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { AuthService } from '../../../auth.service';
 import { FormsModule } from '@angular/forms';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
-type RoleKey = 'super' | 'platform_admin' | 'support_admin' | 'billing_admin';
+type RoleKey = string;
 type UserStatus = 'active' | 'invited' | 'disabled';
 
 interface PlatformUser {
@@ -11,22 +12,11 @@ interface PlatformUser {
   email: string;
   role: RoleKey;
   status: UserStatus;
-  mfaEnabled: boolean;
-  lastLogin: string;
+  mfaEnabled: boolean | null;
+  version: number;
+  activeSessions: number;
+  lastLogin: string | null;
 }
-
-const ME_ID = 'u-1';
-
-const SEED: PlatformUser[] = [
-  { id: 'u-1', name: 'Omar Khaled', email: 'omar@mujez.io', role: 'super', status: 'active', mfaEnabled: true, lastLogin: '12m ago' },
-  { id: 'u-2', name: 'Sara Fouad', email: 'sara@mujez.io', role: 'platform_admin', status: 'active', mfaEnabled: true, lastLogin: '1h ago' },
-  { id: 'u-3', name: 'Mostafa Adel', email: 'mostafa@mujez.io', role: 'support_admin', status: 'active', mfaEnabled: true, lastLogin: '3h ago' },
-  { id: 'u-4', name: 'Hany Fathy', email: 'hany@mujez.io', role: 'billing_admin', status: 'active', mfaEnabled: false, lastLogin: '2d ago' },
-  { id: 'u-5', name: 'Laila Hassan', email: 'laila@mujez.io', role: 'support_admin', status: 'invited', mfaEnabled: false, lastLogin: '—' },
-  { id: 'u-6', name: 'Khaled Reda', email: 'khaled.r@mujez.io', role: 'platform_admin', status: 'disabled', mfaEnabled: true, lastLogin: '3w ago' },
-];
-
-const ROLE_ORDER: RoleKey[] = ['super', 'platform_admin', 'support_admin', 'billing_admin'];
 
 interface Copy {
   eyebrow: string;
@@ -79,9 +69,19 @@ const COPY: Record<Lang, Copy> = {
     eyebrow: 'Administration',
     title: 'Platform users',
     sub: 'Mujez internal administrators — separate from tenant employees',
-    kpis: { total: 'Platform users', active: 'Active', invited: 'Invited (pending)', mfaOff: 'MFA not enabled' },
+    kpis: {
+      total: 'Platform users',
+      active: 'Active',
+      invited: 'Invited (pending)',
+      mfaOff: 'Active sessions',
+    },
     inviteBtn: '+ Invite administrator',
-    roleLabel: { super: 'Super Admin', platform_admin: 'Platform Admin', support_admin: 'Support Admin', billing_admin: 'Billing Admin' },
+    roleLabel: {
+      super: 'Super Admin',
+      platform_admin: 'Platform Admin',
+      support_admin: 'Support Admin',
+      billing_admin: 'Billing Admin',
+    },
     statusLabel: { active: 'Active', invited: 'Invited', disabled: 'Disabled' },
     colUser: 'Administrator',
     colRole: 'Role',
@@ -95,17 +95,18 @@ const COPY: Record<Lang, Copy> = {
     disable: 'Disable',
     enable: 'Enable',
     inviteTitle: 'Invite administrator',
-    inviteEmailLabel: 'Email (name@mujez.io)',
-    inviteEmailError: 'Must be a @mujez.io address.',
+    inviteEmailLabel: 'Email',
+    inviteEmailError: 'Enter a valid email address.',
     inviteRoleLabel: 'Role',
     cancel: 'Cancel',
-    send: 'Send invitation',
+    send: 'Create activation link',
     confirm: 'Confirm',
     changeRoleTitle: (name) => `Change role — ${name}`,
     revokeTitle: (name) => `Revoke sessions — ${name}`,
     revokeBody: 'Signs this administrator out of every device immediately.',
     resetMfaTitle: (name) => `Reset MFA — ${name}`,
-    resetMfaBody: 'Requires a second Super Admin\'s approval and identity verification before it takes effect.',
+    resetMfaBody:
+      "Requires a second Super Admin's approval and identity verification before it takes effect.",
     requestApproval: 'Request approval',
     disableTitle: (name) => `Disable ${name}`,
     disableBody: 'They immediately lose access to the Platform Admin portal.',
@@ -113,7 +114,8 @@ const COPY: Record<Lang, Copy> = {
     enableBody: 'Restores their access to the Platform Admin portal.',
     reasonLabel: 'Reason',
     reasonError: 'A reason is required.',
-    inviteToast: (email) => `Invitation sent to ${email}.`,
+    inviteToast: (email) =>
+      `Activation link created for ${email}. Share it securely; no email was sent.`,
     roleToast: (name, role) => `${name}'s role changed to ${role}.`,
     revokeToast: (name) => `Sessions revoked for ${name}.`,
     mfaToast: (name) => `Approval requested from another Super Admin for ${name}.`,
@@ -124,9 +126,19 @@ const COPY: Record<Lang, Copy> = {
     eyebrow: 'الإدارة',
     title: 'مستخدمو المنصة',
     sub: 'مسؤولو مجاز الداخليون — منفصلون عن موظفي الشركات',
-    kpis: { total: 'مستخدمو المنصة', active: 'نشطون', invited: 'مدعوون (قيد الانتظار)', mfaOff: 'بدون MFA' },
+    kpis: {
+      total: 'مستخدمو المنصة',
+      active: 'نشطون',
+      invited: 'مدعوون (قيد الانتظار)',
+      mfaOff: 'الجلسات النشطة',
+    },
     inviteBtn: '+ دعوة مسؤول',
-    roleLabel: { super: 'مدير عام', platform_admin: 'مسؤول منصة', support_admin: 'مسؤول دعم', billing_admin: 'مسؤول فوترة' },
+    roleLabel: {
+      super: 'مدير عام',
+      platform_admin: 'مسؤول منصة',
+      support_admin: 'مسؤول دعم',
+      billing_admin: 'مسؤول فوترة',
+    },
     statusLabel: { active: 'نشط', invited: 'مدعو', disabled: 'معطّل' },
     colUser: 'المسؤول',
     colRole: 'الدور',
@@ -140,11 +152,11 @@ const COPY: Record<Lang, Copy> = {
     disable: 'تعطيل',
     enable: 'تفعيل',
     inviteTitle: 'دعوة مسؤول',
-    inviteEmailLabel: 'البريد (name@mujez.io)',
-    inviteEmailError: 'يجب أن يكون البريد بنطاق @mujez.io.',
+    inviteEmailLabel: 'البريد الإلكتروني',
+    inviteEmailError: 'أدخل بريدًا إلكترونيًا صحيحًا.',
     inviteRoleLabel: 'الدور',
     cancel: 'إلغاء',
-    send: 'إرسال الدعوة',
+    send: 'إنشاء رابط تفعيل',
     confirm: 'تأكيد',
     changeRoleTitle: (name) => `تغيير الدور — ${name}`,
     revokeTitle: (name) => `إلغاء الجلسات — ${name}`,
@@ -158,7 +170,7 @@ const COPY: Record<Lang, Copy> = {
     enableBody: 'يستعيد الوصول إلى لوحة إدارة المنصة.',
     reasonLabel: 'السبب',
     reasonError: 'السبب مطلوب.',
-    inviteToast: (email) => `تم إرسال الدعوة إلى ${email}.`,
+    inviteToast: (email) => `تم إنشاء رابط تفعيل لـ ${email}. لم يتم إرسال بريد.`,
     roleToast: (name, role) => `تم تغيير دور ${name} إلى ${role}.`,
     revokeToast: (name) => `تم إلغاء جلسات ${name}.`,
     mfaToast: (name) => `تم طلب الموافقة من مدير عام آخر لـ ${name}.`,
@@ -178,10 +190,84 @@ export class PlatformUsers {
 
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
-  readonly roleOrder = ROLE_ORDER;
-  readonly meId = ME_ID;
+  readonly auth = inject(AuthService);
+  readonly canManage = computed(() => this.auth.user()?.role === 'super_admin');
+  readonly roles = signal<Array<{ key: string; nameEn: string; nameAr: string }>>([]);
+  readonly roleOrder = computed(() =>
+    this.roles()
+      .filter((r) => r.key !== 'super_admin')
+      .map((r) => r.key),
+  );
+  readonly loading = signal(false);
+  readonly saving = signal(false);
+  readonly error = signal('');
+  readonly password = signal('');
+  readonly reason = signal('');
+  readonly inviteName = signal('');
+  readonly activationLink = signal('');
+  constructor() {
+    void this.load();
+  }
+  async load() {
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      const roles = await this.auth.request('/admin/api/v1/roles');
+      this.roles.set(roles.roles);
+      const items: PlatformUser[] = [];
+      let page = 1;
+      while (true) {
+        const r = await this.auth.request(
+          '/admin/api/v1/platform-users?page=' + page + '&limit=100',
+        );
+        items.push(...r.items);
+        if (items.length >= r.total || !r.items.length) break;
+        page++;
+      }
+      this.users.set(items);
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.loading.set(false);
+    }
+  }
+  credentials() {
+    return { password: this.password(), reason: this.reason().trim() };
+  }
+  clearAuth() {
+    this.password.set('');
+    this.reason.set('');
+    this.error.set('');
+  }
+  async mutate(u: PlatformUser, action: string, extra: object = {}) {
+    if (this.saving()) return false;
+    this.saving.set(true);
+    this.error.set('');
+    try {
+      const r = await this.auth.request('/admin/api/v1/platform-users/' + u.id + '/' + action, {
+        version: u.version,
+        ...extra,
+        ...this.credentials(),
+      });
+      this.password.set('');
+      if (r.token) this.activationLink.set(location.origin + '/activate#token=' + r.token);
+      await this.load();
+      return true;
+    } catch (e) {
+      this.error.set((e as Error).message);
+      return false;
+    } finally {
+      this.saving.set(false);
+    }
+  }
+  async reissue(u: PlatformUser) {
+    this.revoking.set(u);
+    this.reissuing.set(true);
+    this.clearAuth();
+  }
+  readonly reissuing = signal(false);
 
-  readonly users = signal<PlatformUser[]>(SEED);
+  readonly users = signal<PlatformUser[]>([]);
   readonly kebabFor = signal<string | null>(null);
 
   readonly inviting = signal(false);
@@ -193,7 +279,6 @@ export class PlatformUsers {
   readonly roleDraft = signal<RoleKey>('support_admin');
 
   readonly revoking = signal<PlatformUser | null>(null);
-  readonly resettingMfa = signal<PlatformUser | null>(null);
 
   readonly togglingStatus = signal<PlatformUser | null>(null);
   readonly statusReason = signal('');
@@ -203,7 +288,8 @@ export class PlatformUsers {
   private toastTimer?: ReturnType<typeof setTimeout>;
 
   roleName(r: RoleKey): string {
-    return this.L().roleLabel[r];
+    const role = this.roles().find((x) => x.key === r);
+    return role ? (this.lang() === 'ar' ? role.nameAr : role.nameEn) : r;
   }
 
   statusName(s: UserStatus): string {
@@ -211,7 +297,7 @@ export class PlatformUsers {
   }
 
   isMe(u: PlatformUser): boolean {
-    return u.id === this.meId;
+    return u.id === this.auth.user()?.id;
   }
 
   readonly kpis = computed(() => {
@@ -220,7 +306,7 @@ export class PlatformUsers {
       total: list.length,
       active: list.filter((u) => u.status === 'active').length,
       invited: list.filter((u) => u.status === 'invited').length,
-      mfaOff: list.filter((u) => !u.mfaEnabled && u.status !== 'disabled').length,
+      mfaOff: list.reduce((n, u) => n + u.activeSessions, 0),
     };
   });
 
@@ -233,6 +319,8 @@ export class PlatformUsers {
   }
 
   openInvite(): void {
+    this.clearAuth();
+    this.inviteName.set('');
     this.inviting.set(true);
     this.inviteEmail.set('');
     this.inviteRole.set('support_admin');
@@ -243,32 +331,32 @@ export class PlatformUsers {
     this.inviting.set(false);
   }
 
-  confirmInvite(): void {
-    const email = this.inviteEmail().trim().toLowerCase();
-    if (!/^[^\s@]+@mujez\.io$/.test(email)) {
-      this.inviteError.set(true);
-      return;
+  async confirmInvite() {
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.error.set('');
+    try {
+      const r = await this.auth.request('/admin/api/v1/platform-users', {
+        name: this.inviteName().trim(),
+        email: this.inviteEmail().trim().toLowerCase(),
+        role: this.inviteRole(),
+        ...this.credentials(),
+      });
+      this.activationLink.set(location.origin + '/activate#token=' + r.token);
+      this.password.set('');
+      this.closeInvite();
+      await this.load();
+      this.showToast(this.L().inviteToast(this.inviteEmail()));
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.saving.set(false);
     }
-    const name = email
-      .split('@')[0]
-      .replace(/[._]/g, ' ')
-      .replace(/\b\w/g, (m) => m.toUpperCase());
-    const user: PlatformUser = {
-      id: 'u-' + (this.users().length + 1 + Math.floor(Math.random() * 90)),
-      name,
-      email,
-      role: this.inviteRole(),
-      status: 'invited',
-      mfaEnabled: false,
-      lastLogin: '—',
-    };
-    this.users.update((list) => [user, ...list]);
-    this.closeInvite();
-    this.showToast(this.L().inviteToast(email));
   }
 
   askChangeRole(u: PlatformUser): void {
     this.closeKebab();
+    this.clearAuth();
     this.roleChanging.set(u);
     this.roleDraft.set(u.role);
   }
@@ -277,17 +365,18 @@ export class PlatformUsers {
     this.roleChanging.set(null);
   }
 
-  confirmChangeRole(): void {
+  async confirmChangeRole() {
     const u = this.roleChanging();
-    if (!u) return;
-    const role = this.roleDraft();
-    this.users.update((list) => list.map((x) => (x.id === u.id ? { ...x, role } : x)));
-    this.roleChanging.set(null);
-    this.showToast(this.L().roleToast(u.name, this.roleName(role)));
+    if (u && (await this.mutate(u, 'role', { role: this.roleDraft() }))) {
+      this.roleChanging.set(null);
+      this.showToast(this.L().roleToast(u.name, this.roleName(this.roleDraft())));
+    }
   }
 
   askRevoke(u: PlatformUser): void {
     this.closeKebab();
+    this.clearAuth();
+    this.reissuing.set(false);
     this.revoking.set(u);
   }
 
@@ -295,31 +384,19 @@ export class PlatformUsers {
     this.revoking.set(null);
   }
 
-  confirmRevoke(): void {
+  async confirmRevoke() {
     const u = this.revoking();
-    if (!u) return;
-    this.revoking.set(null);
-    this.showToast(this.L().revokeToast(u.name));
-  }
-
-  askResetMfa(u: PlatformUser): void {
-    this.closeKebab();
-    this.resettingMfa.set(u);
-  }
-
-  cancelResetMfa(): void {
-    this.resettingMfa.set(null);
-  }
-
-  confirmResetMfa(): void {
-    const u = this.resettingMfa();
-    if (!u) return;
-    this.resettingMfa.set(null);
-    this.showToast(this.L().mfaToast(u.name));
+    if (u && (await this.mutate(u, this.reissuing() ? 'reissue' : 'revoke'))) {
+      this.revoking.set(null);
+      this.showToast(
+        this.reissuing() ? 'New activation link created' : this.L().revokeToast(u.name),
+      );
+    }
   }
 
   askToggleStatus(u: PlatformUser): void {
     this.closeKebab();
+    this.clearAuth();
     this.togglingStatus.set(u);
     this.statusReason.set('');
     this.statusError.set(false);
@@ -329,18 +406,17 @@ export class PlatformUsers {
     this.togglingStatus.set(null);
   }
 
-  confirmToggleStatus(): void {
+  async confirmToggleStatus() {
     const u = this.togglingStatus();
-    if (!u) return;
-    const willDisable = u.status !== 'disabled';
-    if (willDisable && this.statusReason().trim().length < 5) {
-      this.statusError.set(true);
-      return;
+    if (
+      u &&
+      (await this.mutate(u, 'status', { status: u.status === 'disabled' ? 'active' : 'disabled' }))
+    ) {
+      this.togglingStatus.set(null);
+      this.showToast(
+        u.status === 'disabled' ? this.L().enableToast(u.name) : this.L().disableToast(u.name),
+      );
     }
-    const nextStatus: UserStatus = willDisable ? 'disabled' : 'active';
-    this.users.update((list) => list.map((x) => (x.id === u.id ? { ...x, status: nextStatus } : x)));
-    this.togglingStatus.set(null);
-    this.showToast(willDisable ? this.L().disableToast(u.name) : this.L().enableToast(u.name));
   }
 
   private showToast(msg: string): void {

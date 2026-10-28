@@ -1,3 +1,13 @@
+@if (error()) {
+  <p role="alert">{{ error() }} <button class="row-btn" (click)="load()">Refresh</button></p>
+}
+@if (loading()) {
+  <p role="status">Loading...</p>
+}
+<p>
+  Changes require an active Super Admin, current password and a reason. Built-in roles cannot be
+  archived.
+</p>
 <div class="page-head">
   <div class="page-head__text">
     <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
@@ -5,13 +15,23 @@
     <span class="page-head__sub">{{ L().sub }}</span>
   </div>
   <div class="page-head__actions">
-    <button type="button" class="btn btn--primary" (click)="openCreateRole()">{{ L().newRoleBtn }}</button>
+    <button
+      type="button"
+      class="btn btn--primary"
+      [disabled]="!canManage()"
+      (click)="openCreateRole()"
+    >
+      {{ L().newRoleBtn }}
+    </button>
   </div>
 </div>
 
 <div class="card">
   <div class="table-scroll">
-    <div class="matrix" [style.grid-template-columns]="'minmax(220px, 1.6fr) repeat(' + roles().length + ', 150px)'">
+    <div
+      class="matrix"
+      [style.grid-template-columns]="'minmax(220px, 1.6fr) repeat(' + roles().length + ', 150px)'"
+    >
       <div class="matrix__row matrix__row--head">
         <span class="matrix__cell matrix__cell--feature">{{ L().colPermission }}</span>
         @for (r of roles(); track r.key) {
@@ -22,14 +42,16 @@
             } @else {
               <span class="role-sub">{{ L().membersLabel(r.members) }}</span>
             }
-            @if (!r.locked) {
-              <button type="button" class="role-delete" (click)="askDelete(r)">{{ L().deleteRole }}</button>
+            @if (!r.system && canManage()) {
+              <button type="button" class="role-delete" (click)="askDelete(r)">
+                {{ L().deleteRole }}
+              </button>
             }
           </span>
         }
       </div>
 
-      @for (p of permissions; track p.key) {
+      @for (p of permissions(); track p.key) {
         <div class="matrix__row">
           <span class="matrix__cell matrix__cell--feature">
             {{ permName(p) }}
@@ -44,6 +66,9 @@
                 class="toggle"
                 [class.toggle--on]="has(r, p)"
                 [class.toggle--locked]="r.locked"
+                [disabled]="saving() || r.locked || !canManage()"
+                [attr.aria-label]="name(r) + ': ' + permName(p)"
+                [attr.aria-pressed]="has(r, p)"
                 (click)="toggle(r, p)"
               >
                 <span class="toggle__knob"></span>
@@ -60,19 +85,37 @@
   <div class="scrim" (click)="cancelGrant()"></div>
   <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
     <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ L().grantTitle(permName(gc.perm), name(gc.role)) }}</span>
-      <p class="dialog__text">{{ L().grantBody(name(gc.role)) }}</p>
-      <label class="field">
-        <span class="field__label">{{ L().codeLabel }}</span>
-        <input class="textbox" type="text" dir="ltr" maxlength="6" [ngModel]="grantCode()" (ngModelChange)="grantCode.set($event)" name="grantCode" placeholder="123456" />
-        @if (grantError()) {
-          <span class="field__error">{{ L().codeError }}</span>
-        }
+      <span class="dialog__title"
+        >{{ gc.on ? 'Grant permission' : 'Remove permission' }}: {{ permName(gc.perm) }}</span
+      >
+      <p class="dialog__text">
+        {{ name(gc.role) }}: this change applies to every member on their next request.
+      </p>
+    </div>
+    <div class="dialog__body dialog__body--pad">
+      <label class="field"
+        ><span class="field__label">{{
+          lang() === 'ar' ? 'كلمة المرور الحالية' : 'Current password'
+        }}</span
+        ><input
+          class="textbox"
+          type="password"
+          autocomplete="current-password"
+          [(ngModel)]="grantCode"
+          name="reauth" /></label
+      ><label class="field"
+        ><span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
+        ><textarea class="textarea" [(ngModel)]="reason" name="reason" maxlength="500"></textarea>
       </label>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
     </div>
     <div class="dialog__footer">
       <button type="button" class="btn btn--ghost" (click)="cancelGrant()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" (click)="confirmGrant()">{{ L().confirm }}</button>
+      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="confirmGrant()">
+        {{ L().confirm }}
+      </button>
     </div>
   </div>
 }
@@ -85,7 +128,9 @@
       <p class="dialog__text">{{ L().deleteBlockedBody(name(db), db.members) }}</p>
     </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--primary" (click)="closeDeleteBlocked()">{{ L().ok }}</button>
+      <button type="button" class="btn btn--primary" (click)="closeDeleteBlocked()">
+        {{ L().ok }}
+      </button>
     </div>
   </div>
 }
@@ -97,9 +142,32 @@
       <span class="dialog__title">{{ L().deleteTitle(name(dc)) }}</span>
       <p class="dialog__text">{{ L().deleteBody }}</p>
     </div>
+    <div class="dialog__body dialog__body--pad">
+      <label class="field"
+        ><span class="field__label">{{
+          lang() === 'ar' ? 'كلمة المرور الحالية' : 'Current password'
+        }}</span
+        ><input
+          class="textbox"
+          type="password"
+          autocomplete="current-password"
+          [(ngModel)]="grantCode"
+          name="reauth" /></label
+      ><label class="field"
+        ><span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
+        ><textarea class="textarea" [(ngModel)]="reason" name="reason" maxlength="500"></textarea>
+      </label>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
+    </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelDelete()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--danger" (click)="confirmDelete()">{{ L().confirm }}</button>
+      <button type="button" class="btn btn--ghost" (click)="cancelDelete()">
+        {{ L().cancel }}
+      </button>
+      <button type="button" class="btn btn--danger" [disabled]="saving()" (click)="confirmDelete()">
+        {{ L().confirm }}
+      </button>
     </div>
   </div>
 }
@@ -111,19 +179,60 @@
       <span class="dialog__title">{{ L().newRoleTitle }}</span>
       <label class="field">
         <span class="field__label">{{ L().roleNameEn }}</span>
-        <input class="textbox" type="text" [ngModel]="newRoleNameEn()" (ngModelChange)="newRoleNameEn.set($event)" name="newRoleNameEn" />
+        <input
+          class="textbox"
+          type="text"
+          [ngModel]="newRoleNameEn()"
+          (ngModelChange)="newRoleNameEn.set($event)"
+          name="newRoleNameEn"
+        />
       </label>
       <label class="field">
         <span class="field__label">{{ L().roleNameAr }}</span>
-        <input class="textbox" type="text" dir="rtl" [ngModel]="newRoleNameAr()" (ngModelChange)="newRoleNameAr.set($event)" name="newRoleNameAr" />
+        <input
+          class="textbox"
+          type="text"
+          dir="rtl"
+          [ngModel]="newRoleNameAr()"
+          (ngModelChange)="newRoleNameAr.set($event)"
+          name="newRoleNameAr"
+        />
       </label>
       @if (newRoleError()) {
         <span class="field__error">{{ L().roleNameError }}</span>
       }
     </div>
+    <div class="dialog__body dialog__body--pad">
+      <label class="field"
+        ><span class="field__label">{{
+          lang() === 'ar' ? 'كلمة المرور الحالية' : 'Current password'
+        }}</span
+        ><input
+          class="textbox"
+          type="password"
+          autocomplete="current-password"
+          [(ngModel)]="grantCode"
+          name="reauth" /></label
+      ><label class="field"
+        ><span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
+        ><textarea class="textarea" [(ngModel)]="reason" name="reason" maxlength="500"></textarea>
+      </label>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
+    </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeCreateRole()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" (click)="confirmCreateRole()">{{ L().create }}</button>
+      <button type="button" class="btn btn--ghost" (click)="closeCreateRole()">
+        {{ L().cancel }}
+      </button>
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="saving()"
+        (click)="confirmCreateRole()"
+      >
+        {{ L().create }}
+      </button>
     </div>
   </div>
 }

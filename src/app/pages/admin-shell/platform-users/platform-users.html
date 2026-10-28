@@ -1,3 +1,25 @@
+@if (error()) {
+  <p role="alert">{{ error() }} <button class="row-btn" (click)="load()">Refresh</button></p>
+}
+@if (loading()) {
+  <p role="status">Loading...</p>
+}
+<p>
+  {{
+    lang() === 'ar'
+      ? 'MFA غير مهيأ. الدعوات بروابط تفعيل يدوية، دون إرسال بريد.'
+      : 'MFA is not configured. Invitations use manual activation links; no email is sent.'
+  }}
+</p>
+@if (activationLink()) {
+  <div class="card">
+    <p>Activation link (single use, expires in 24 hours). Share securely:</p>
+    <textarea class="textarea" readonly [value]="activationLink()"></textarea
+    ><button class="btn btn--ghost" (click)="activationLink.set('')">
+      {{ lang() === 'ar' ? 'إغلاق' : 'Dismiss' }}
+    </button>
+  </div>
+}
 <div class="page-head" (click)="closeKebab()">
   <div class="page-head__text">
     <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
@@ -5,7 +27,9 @@
     <span class="page-head__sub">{{ L().sub }}</span>
   </div>
   <div class="page-head__actions">
-    <button type="button" class="btn btn--primary" (click)="openInvite()">{{ L().inviteBtn }}</button>
+    <button type="button" class="btn btn--primary" [disabled]="!canManage()" (click)="openInvite()">
+      {{ L().inviteBtn }}
+    </button>
   </div>
 </div>
 
@@ -42,28 +66,47 @@
       @for (u of users(); track u.id) {
         <div class="u-row">
           <span class="u-cell__text">
-            <span class="u-cell__name">{{ u.name }} @if (isMe(u)) { <span class="you-badge">{{ L().you }}</span> }</span>
+            <span class="u-cell__name"
+              >{{ u.name }}
+              @if (isMe(u)) {
+                <span class="you-badge">{{ L().you }}</span>
+              }
+            </span>
             <span class="u-cell__email mono" dir="ltr">{{ u.email }}</span>
           </span>
           <span>{{ roleName(u.role) }}</span>
-          <span><span class="pill" [class]="'pill--' + u.status">{{ statusName(u.status) }}</span></span>
+          <span
+            ><span class="pill" [class]="'pill--' + u.status">{{
+              statusName(u.status)
+            }}</span></span
+          >
           <span>
-            @if (u.mfaEnabled) {
-              <span class="mfa-dot mfa-dot--on"></span>
-            } @else {
-              <span class="mfa-dot mfa-dot--off"></span>
-            }
+            <span title="MFA not configured">---</span>
           </span>
-          <span>{{ u.lastLogin }}</span>
+          <span>{{ u.lastLogin || '---' }}</span>
           <span class="kebab-wrap" (click)="$event.stopPropagation()">
-            @if (!isMe(u)) {
-              <button type="button" class="row-btn row-btn--icon" (click)="toggleKebab(u)">⋯</button>
+            @if (canManage() && !isMe(u) && u.role !== 'super_admin') {
+              <button type="button" class="row-btn row-btn--icon" (click)="toggleKebab(u)">
+                ⋯
+              </button>
               @if (kebabFor() === u.id) {
                 <div class="dropdown">
-                  <button type="button" class="dropdown__item" (click)="askChangeRole(u)">{{ L().changeRole }}</button>
-                  <button type="button" class="dropdown__item" (click)="askRevoke(u)">{{ L().revokeSessions }}</button>
-                  <button type="button" class="dropdown__item" (click)="askResetMfa(u)">{{ L().resetMfa }}</button>
-                  <button type="button" class="dropdown__item dropdown__item--danger" (click)="askToggleStatus(u)">
+                  <button type="button" class="dropdown__item" (click)="askChangeRole(u)">
+                    {{ L().changeRole }}
+                  </button>
+                  <button type="button" class="dropdown__item" (click)="askRevoke(u)">
+                    {{ L().revokeSessions }}
+                  </button>
+                  @if (u.status === 'invited') {
+                    <button type="button" class="dropdown__item" (click)="reissue(u)">
+                      {{ lang() === 'ar' ? 'تجديد رابط التفعيل' : 'Reissue activation link' }}
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    class="dropdown__item dropdown__item--danger"
+                    (click)="askToggleStatus(u)"
+                  >
                     {{ u.status === 'disabled' ? L().enable : L().disable }}
                   </button>
                 </div>
@@ -81,9 +124,20 @@
   <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
     <div class="dialog__body dialog__body--pad">
       <span class="dialog__title">{{ L().inviteTitle }}</span>
+      <label class="field"
+        ><span class="field__label">{{ lang() === 'ar' ? 'الاسم' : 'Name' }}</span
+        ><input class="textbox" [(ngModel)]="inviteName" name="inviteName" maxlength="100"
+      /></label>
       <label class="field">
         <span class="field__label">{{ L().inviteEmailLabel }}</span>
-        <input class="textbox" type="text" dir="ltr" [ngModel]="inviteEmail()" (ngModelChange)="inviteEmail.set($event)" name="inviteEmail" />
+        <input
+          class="textbox"
+          type="text"
+          dir="ltr"
+          [ngModel]="inviteEmail()"
+          (ngModelChange)="inviteEmail.set($event)"
+          name="inviteEmail"
+        />
         @if (inviteError()) {
           <span class="field__error">{{ L().inviteEmailError }}</span>
         }
@@ -91,9 +145,14 @@
       <div class="field">
         <span class="field__label">{{ L().inviteRoleLabel }}</span>
         <div class="chip-row">
-          @for (r of roleOrder; track r) {
-            @if (r !== 'super') {
-              <button type="button" class="chip" [class.chip--active]="inviteRole() === r" (click)="inviteRole.set(r)">
+          @for (r of roleOrder(); track r) {
+            @if (r !== 'super_admin') {
+              <button
+                type="button"
+                class="chip"
+                [class.chip--active]="inviteRole() === r"
+                (click)="inviteRole.set(r)"
+              >
                 {{ roleName(r) }}
               </button>
             }
@@ -101,9 +160,40 @@
         </div>
       </div>
     </div>
+    <div class="dialog__body dialog__body--pad">
+      <label class="field"
+        ><span class="field__label">{{
+          lang() === 'ar' ? 'كلمة المرور الحالية' : 'Current password'
+        }}</span
+        ><input
+          class="textbox"
+          type="password"
+          autocomplete="current-password"
+          [(ngModel)]="password"
+          name="adminPassword" /></label
+      ><label class="field"
+        ><span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
+        ><textarea
+          class="textarea"
+          [(ngModel)]="reason"
+          name="adminReason"
+          maxlength="500"
+        ></textarea>
+      </label>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
+    </div>
     <div class="dialog__footer">
       <button type="button" class="btn btn--ghost" (click)="closeInvite()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" (click)="confirmInvite()">{{ L().send }}</button>
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="saving()"
+        (click)="confirmInvite()"
+      >
+        {{ L().send }}
+      </button>
     </div>
   </div>
 }
@@ -114,18 +204,56 @@
     <div class="dialog__body dialog__body--pad">
       <span class="dialog__title">{{ L().changeRoleTitle(ru.name) }}</span>
       <div class="chip-row">
-        @for (r of roleOrder; track r) {
-          @if (r !== 'super') {
-            <button type="button" class="chip" [class.chip--active]="roleDraft() === r" (click)="roleDraft.set(r)">
+        @for (r of roleOrder(); track r) {
+          @if (r !== 'super_admin') {
+            <button
+              type="button"
+              class="chip"
+              [class.chip--active]="roleDraft() === r"
+              (click)="roleDraft.set(r)"
+            >
               {{ roleName(r) }}
             </button>
           }
         }
       </div>
     </div>
+    <div class="dialog__body dialog__body--pad">
+      <label class="field"
+        ><span class="field__label">{{
+          lang() === 'ar' ? 'كلمة المرور الحالية' : 'Current password'
+        }}</span
+        ><input
+          class="textbox"
+          type="password"
+          autocomplete="current-password"
+          [(ngModel)]="password"
+          name="adminPassword" /></label
+      ><label class="field"
+        ><span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
+        ><textarea
+          class="textarea"
+          [(ngModel)]="reason"
+          name="adminReason"
+          maxlength="500"
+        ></textarea>
+      </label>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
+    </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelChangeRole()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" (click)="confirmChangeRole()">{{ L().confirm }}</button>
+      <button type="button" class="btn btn--ghost" (click)="cancelChangeRole()">
+        {{ L().cancel }}
+      </button>
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="saving()"
+        (click)="confirmChangeRole()"
+      >
+        {{ L().confirm }}
+      </button>
     </div>
   </div>
 }
@@ -134,26 +262,44 @@
   <div class="scrim" (click)="cancelRevoke()"></div>
   <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
     <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ L().revokeTitle(rv.name) }}</span>
-      <p class="dialog__text">{{ L().revokeBody }}</p>
+      <span class="dialog__title">{{
+        reissuing() ? 'Reissue activation link' : L().revokeTitle(rv.name)
+      }}</span>
+      <p class="dialog__text">
+        {{ reissuing() ? 'The previous activation link will stop working.' : L().revokeBody }}
+      </p>
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelRevoke()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--danger" (click)="confirmRevoke()">{{ L().confirm }}</button>
-    </div>
-  </div>
-}
-
-@if (resettingMfa(); as mu) {
-  <div class="scrim" (click)="cancelResetMfa()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
     <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ L().resetMfaTitle(mu.name) }}</span>
-      <p class="dialog__text">{{ L().resetMfaBody }}</p>
+      <label class="field"
+        ><span class="field__label">{{
+          lang() === 'ar' ? 'كلمة المرور الحالية' : 'Current password'
+        }}</span
+        ><input
+          class="textbox"
+          type="password"
+          autocomplete="current-password"
+          [(ngModel)]="password"
+          name="adminPassword" /></label
+      ><label class="field"
+        ><span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
+        ><textarea
+          class="textarea"
+          [(ngModel)]="reason"
+          name="adminReason"
+          maxlength="500"
+        ></textarea>
+      </label>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
     </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelResetMfa()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" (click)="confirmResetMfa()">{{ L().requestApproval }}</button>
+      <button type="button" class="btn btn--ghost" (click)="cancelRevoke()">
+        {{ L().cancel }}
+      </button>
+      <button type="button" class="btn btn--danger" [disabled]="saving()" (click)="confirmRevoke()">
+        {{ L().confirm }}
+      </button>
     </div>
   </div>
 }
@@ -168,23 +314,41 @@
       <p class="dialog__text">
         {{ su.status !== 'disabled' ? L().disableBody : L().enableBody }}
       </p>
-      @if (su.status !== 'disabled') {
-        <label class="field">
-          <span class="field__label">{{ L().reasonLabel }}</span>
-          <textarea class="textarea" rows="2" [ngModel]="statusReason()" (ngModelChange)="statusReason.set($event)" name="statusReason"></textarea>
-          @if (statusError()) {
-            <span class="field__error">{{ L().reasonError }}</span>
-          }
-        </label>
+    </div>
+    <div class="dialog__body dialog__body--pad">
+      <label class="field"
+        ><span class="field__label">{{
+          lang() === 'ar' ? 'كلمة المرور الحالية' : 'Current password'
+        }}</span
+        ><input
+          class="textbox"
+          type="password"
+          autocomplete="current-password"
+          [(ngModel)]="password"
+          name="adminPassword" /></label
+      ><label class="field"
+        ><span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
+        ><textarea
+          class="textarea"
+          [(ngModel)]="reason"
+          name="adminReason"
+          maxlength="500"
+        ></textarea>
+      </label>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
       }
     </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelToggleStatus()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--ghost" (click)="cancelToggleStatus()">
+        {{ L().cancel }}
+      </button>
       <button
         type="button"
         class="btn"
         [class.btn--danger]="su.status !== 'disabled'"
         [class.btn--primary]="su.status === 'disabled'"
+        [disabled]="saving()"
         (click)="confirmToggleStatus()"
       >
         {{ L().confirm }}

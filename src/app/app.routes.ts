@@ -1,3 +1,4 @@
+import { Activate } from './activate';
 import { adminGuard } from './auth.service';
 import { Routes } from '@angular/router';
 import { Login } from './pages/login/login';
@@ -21,6 +22,7 @@ import { AuditLogs } from './pages/admin-shell/audit-logs/audit-logs';
 import { Settings } from './pages/admin-shell/settings/settings';
 
 export const routes: Routes = [
+  { path: 'activate', component: Activate },
   { path: '', component: Login },
   {
     path: 'admin',

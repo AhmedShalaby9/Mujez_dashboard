@@ -142,6 +142,11 @@ export class Dashboard {
               sub: ar ? 'يشمل المؤرشفة' : 'Includes archived',
             },
             {
+              label: ar ? 'قيد الإعداد' : 'Pending onboarding',
+              value: String(c.pending),
+              sub: ar ? 'الحالة الحالية' : 'Current company status',
+            },
+            {
               label: ar ? 'نشطة' : 'Active',
               value: String(c.active),
               sub: ar ? 'الحالة الحالية' : 'Current company status',

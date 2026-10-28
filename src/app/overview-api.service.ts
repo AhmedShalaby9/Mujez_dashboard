@@ -14,6 +14,7 @@ export interface OverviewData {
   window: { range: string; from: string; to: string; bucket: string };
   companies: null | {
     total: number;
+    pending: number;
     active: number;
     trial: number;
     suspended: number;

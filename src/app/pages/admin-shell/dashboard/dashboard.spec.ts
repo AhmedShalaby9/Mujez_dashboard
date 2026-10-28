@@ -6,7 +6,16 @@ import { OverviewApi, overviewMoney } from '../../../overview-api.service';
 const snapshot = (finance = true) => ({
   asOf: '2026-10-29T12:00:00Z',
   window: { range: '12m', from: '2025-11-01', to: '2026-10-29', bucket: 'month' },
-  companies: { total: 3, active: 1, trial: 1, suspended: 1, archived: 0, added: 3, crmUsers: '2' },
+  companies: {
+    total: 3,
+    pending: 0,
+    active: 1,
+    trial: 1,
+    suspended: 1,
+    archived: 0,
+    added: 3,
+    crmUsers: '2',
+  },
   finance: finance
     ? {
         currency: 'EGP',

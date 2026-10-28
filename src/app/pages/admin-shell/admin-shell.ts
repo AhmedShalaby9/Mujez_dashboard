@@ -1,3 +1,4 @@
+import { SubscriptionsApi } from '../../subscriptions-api.service';
 import { CompaniesApi } from '../../companies-api.service';
 import { AuthService } from '../../auth.service';
 import { Router } from '@angular/router';
@@ -147,6 +148,7 @@ const COPY: Record<Lang, Copy> = {
   styleUrl: './admin-shell.scss',
 })
 export class AdminShell {
+  readonly subscriptionsApi = inject(SubscriptionsApi);
   readonly companiesApi = inject(CompaniesApi);
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
@@ -172,7 +174,15 @@ export class AdminShell {
               ...entry,
               count: counts[entry.path] === undefined ? undefined : String(counts[entry.path]),
             }
-          : entry,
+          : entry.kind === 'item' && entry.path === 'subscriptions'
+            ? {
+                ...entry,
+                count:
+                  this.subscriptionsApi.count() === undefined
+                    ? undefined
+                    : String(this.subscriptionsApi.count()),
+              }
+            : entry,
       ),
     };
   });

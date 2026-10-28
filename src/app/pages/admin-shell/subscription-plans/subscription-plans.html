@@ -1,10 +1,18 @@
+@if (loading()) {
+  <p role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading plans…' }}</p>
+}
+@if (error()) {
+  <p role="alert">
+    {{ error() }} <button (click)="reload()">{{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}</button>
+  </p>
+}
 <div class="page-head">
   <div class="page-head__text">
     <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
     <h1 class="page-head__title">{{ L().title }}</h1>
   </div>
   <div class="page-head__actions">
-    <button type="button" class="btn btn--primary" disabled [title]="L().comingSoon">{{ L().addBtn }}</button>
+    <button type="button" class="btn btn--primary" (click)="openCreate()">{{ L().addBtn }}</button>
   </div>
 </div>
 
@@ -42,42 +50,277 @@
 
       <div class="plan-card__actions">
         @if (!isArchived(p)) {
-          <button type="button" class="btn btn--primary btn--grow" (click)="openEdit(p)">{{ L().editBtn }}</button>
-          <button type="button" class="btn btn--danger-outline" (click)="askConfirm(p, 'archive')">{{ L().archiveBtn }}</button>
+          <button type="button" class="btn btn--primary btn--grow" (click)="openEdit(p)">
+            {{ L().editBtn }}
+          </button>
+          <button type="button" class="btn btn--danger-outline" (click)="askConfirm(p, 'archive')">
+            {{ L().archiveBtn }}
+          </button>
         } @else {
-          <button type="button" class="btn btn--ghost btn--grow" (click)="askConfirm(p, 'restore')">{{ L().restoreBtn }}</button>
+          <button type="button" class="btn btn--ghost btn--grow" (click)="askConfirm(p, 'restore')">
+            {{ L().restoreBtn }}
+          </button>
         }
       </div>
     </section>
   }
 </div>
 
-@if (editing(); as p) {
+@if (editing() || creating()) {
+  @let p = editing();
   <div class="scrim" (click)="closeEdit()"></div>
   <div class="dialog" (click)="$event.stopPropagation()">
     <div class="dialog__header">
       <div class="drawer__headerText">
         <span class="dialog__title">{{ L().editTitle }}</span>
-        <span class="dialog__sub">{{ L().editSub(name(p)) }}</span>
+        <span class="dialog__sub">{{
+          lang() === 'ar'
+            ? 'حفظ الأسعار والحدود كنُسخة جديدة'
+            : 'Save prices and limits as a new version'
+        }}</span>
       </div>
     </div>
-    <div class="dialog__body">
-      <button type="button" class="ws-mode" [class.ws-mode--active]="editScope() === 'new'" (click)="editScope.set('new')">
+    <div class="dialog__body" style="max-height: 65vh; overflow: auto">
+      @if (creating()) {
+        <label
+          >{{ lang() === 'ar' ? 'رمز الخطة' : 'Plan key'
+          }}<select [(ngModel)]="draft.key">
+            <option value="starter">Starter</option>
+            <option value="pro">Pro</option>
+            <option value="business">Business</option>
+            <option value="enterprise">Enterprise</option>
+          </select></label
+        >
+      }
+      <div style="display: grid; gap: 12px; margin-bottom: 20px">
+        <label
+          >{{ lang() === 'ar' ? 'الاسم بالإنجليزية' : 'English name'
+          }}<input
+            style="
+              display: block;
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+            "
+            type="text"
+            maxlength="1000"
+            [(ngModel)]="draft.nameEn" /></label
+        ><label
+          >{{ lang() === 'ar' ? 'الاسم بالعربية' : 'Arabic name'
+          }}<input
+            style="
+              display: block;
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+            "
+            type="text"
+            maxlength="1000"
+            [(ngModel)]="draft.nameAr" /></label
+        ><label
+          >{{ lang() === 'ar' ? 'الوصف بالإنجليزية' : 'English description'
+          }}<input
+            style="
+              display: block;
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+            "
+            type="text"
+            maxlength="1000"
+            [(ngModel)]="draft.descEn" /></label
+        ><label
+          >{{ lang() === 'ar' ? 'الوصف بالعربية' : 'Arabic description'
+          }}<input
+            style="
+              display: block;
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+            "
+            type="text"
+            maxlength="1000"
+            [(ngModel)]="draft.descAr" /></label
+        ><label
+          >{{ lang() === 'ar' ? 'السعر الشهري (ج.م)' : 'Monthly price (EGP)'
+          }}<input
+            style="
+              display: block;
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+            "
+            type="number"
+            min="0"
+            step="0.01"
+            [(ngModel)]="draft.monthlyPrice" /></label
+        ><label
+          >{{ lang() === 'ar' ? 'السعر السنوي (ج.م)' : 'Annual price (EGP)'
+          }}<input
+            style="
+              display: block;
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+            "
+            type="number"
+            min="0"
+            step="0.01"
+            [(ngModel)]="draft.annualPrice" /></label
+        ><label
+          >{{ lang() === 'ar' ? 'المستخدمون (فارغ: بلا حد)' : 'Users (blank: unlimited)'
+          }}<input
+            style="
+              display: block;
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+            "
+            type="number"
+            min="0"
+            step="1"
+            [(ngModel)]="draft.users" /></label
+        ><label
+          >{{ lang() === 'ar' ? 'حد الوحدات' : 'Listings limit'
+          }}<input
+            style="
+              display: block;
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+            "
+            type="number"
+            min="0"
+            step="1"
+            [(ngModel)]="draft.listings" /></label
+        ><label
+          >{{ lang() === 'ar' ? 'حد المشاريع' : 'Projects limit'
+          }}<input
+            style="
+              display: block;
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+            "
+            type="number"
+            min="0"
+            step="1"
+            [(ngModel)]="draft.projects" /></label
+        ><label
+          >{{ lang() === 'ar' ? 'حد التخزين (جيجابايت)' : 'Storage limit (GB)'
+          }}<input
+            style="
+              display: block;
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+            "
+            type="number"
+            min="0"
+            step="1"
+            [(ngModel)]="draft.storageGb" /></label
+        ><label
+          >{{ lang() === 'ar' ? 'المزايا بالإنجليزية' : 'English features'
+          }}<input
+            style="
+              display: block;
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+            "
+            type="text"
+            maxlength="1000"
+            [(ngModel)]="draft.featsEn" /></label
+        ><label
+          >{{ lang() === 'ar' ? 'المزايا بالعربية' : 'Arabic features'
+          }}<input
+            style="
+              display: block;
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+            "
+            type="text"
+            maxlength="1000"
+            [(ngModel)]="draft.featsAr"
+        /></label>
+      </div>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
+      @if (!creating() && editScope() === 'migrate') {
+        <p>
+          {{
+            lang() === 'ar'
+              ? 'اختر الاشتراكات لتطبيق الشروط فورًا دون تحصيل دفعة'
+              : 'Select subscriptions for immediate terms changes without collecting payment'
+          }}
+        </p>
+        @for (sub of subscribers(); track sub.subId) {
+          @if (sub.plan === p?.key) {
+            <label style="display: block"
+              ><input
+                type="checkbox"
+                [checked]="selectedIds().includes(sub.subId)"
+                (change)="toggleSelected(sub.subId)"
+              />{{ sub.companyEn }} · {{ sub.subId }}</label
+            >
+          }
+        }
+      }
+
+      <button
+        [disabled]="creating()"
+        type="button"
+        class="ws-mode"
+        [class.ws-mode--active]="editScope() === 'new'"
+        (click)="editScope.set('new')"
+      >
         <span class="ws-mode__radio" [class.ws-mode__radio--active]="editScope() === 'new'"></span>
         <span class="ws-mode__text">
           <span class="ws-mode__label">{{ L().scopeNew }}</span>
           <span class="ws-mode__sub">{{ L().scopeNewSub }}</span>
         </span>
       </button>
-      <button type="button" class="ws-mode" [class.ws-mode--active]="editScope() === 'renewal'" (click)="editScope.set('renewal')">
-        <span class="ws-mode__radio" [class.ws-mode__radio--active]="editScope() === 'renewal'"></span>
+      <button
+        [disabled]="creating()"
+        type="button"
+        class="ws-mode"
+        [class.ws-mode--active]="editScope() === 'renewal'"
+        (click)="editScope.set('renewal')"
+      >
+        <span
+          class="ws-mode__radio"
+          [class.ws-mode__radio--active]="editScope() === 'renewal'"
+        ></span>
         <span class="ws-mode__text">
           <span class="ws-mode__label">{{ L().scopeRenewal }}</span>
           <span class="ws-mode__sub">{{ L().scopeRenewalSub }}</span>
         </span>
       </button>
-      <button type="button" class="ws-mode" [class.ws-mode--active]="editScope() === 'migrate'" (click)="editScope.set('migrate')">
-        <span class="ws-mode__radio" [class.ws-mode__radio--active]="editScope() === 'migrate'"></span>
+      <button
+        [disabled]="creating()"
+        type="button"
+        class="ws-mode"
+        [class.ws-mode--active]="editScope() === 'migrate'"
+        (click)="editScope.set('migrate')"
+      >
+        <span
+          class="ws-mode__radio"
+          [class.ws-mode__radio--active]="editScope() === 'migrate'"
+        ></span>
         <span class="ws-mode__text">
           <span class="ws-mode__label">{{ L().scopeMigrate }}</span>
           <span class="ws-mode__sub">{{ L().scopeMigrateSub }}</span>
@@ -86,7 +329,9 @@
     </div>
     <div class="dialog__footer">
       <button type="button" class="btn btn--ghost" (click)="closeEdit()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" (click)="submitEdit()">{{ L().continue }}</button>
+      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="submitEdit()">
+        {{ L().continue }}
+      </button>
     </div>
   </div>
 }
@@ -95,14 +340,27 @@
   <div class="scrim" (click)="cancelConfirm()"></div>
   <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
     <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ cf.kind === 'archive' ? L().archiveTitle : L().restoreTitle }}</span>
+      <span class="dialog__title">{{
+        cf.kind === 'archive' ? L().archiveTitle : L().restoreTitle
+      }}</span>
       <p class="dialog__text">
-        {{ cf.kind === 'archive' ? L().archiveBody(name(cf.plan)) : L().restoreBody(name(cf.plan)) }}
+        {{
+          cf.kind === 'archive' ? L().archiveBody(name(cf.plan)) : L().restoreBody(name(cf.plan))
+        }}
       </p>
     </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelConfirm()">{{ L().cancel }}</button>
-      <button type="button" class="btn" [class.btn--danger]="cf.kind === 'archive'" [class.btn--primary]="cf.kind === 'restore'" (click)="performConfirm()">
+      <button type="button" class="btn btn--ghost" (click)="cancelConfirm()">
+        {{ L().cancel }}
+      </button>
+      <button
+        type="button"
+        class="btn"
+        [class.btn--danger]="cf.kind === 'archive'"
+        [class.btn--primary]="cf.kind === 'restore'"
+        [disabled]="saving()"
+        (click)="performConfirm()"
+      >
         {{ L().confirmGo }}
       </button>
     </div>

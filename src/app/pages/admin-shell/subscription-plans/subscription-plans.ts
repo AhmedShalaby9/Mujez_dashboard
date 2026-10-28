@@ -1,3 +1,5 @@
+import { FormsModule } from '@angular/forms';
+import { SubscriptionsApi } from '../../../subscriptions-api.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AdminUiState, type Lang } from '../admin-ui-state';
@@ -12,6 +14,15 @@ interface PlanLimit {
 }
 
 interface PlanDef {
+  version: number;
+  planVersionId: string;
+  archived: boolean;
+  monthlyMinor: number;
+  annualMinor: number;
+  users: number | null;
+  listings: number | null;
+  projects: number | null;
+  storageGb: number | null;
   key: PlanKey;
   nameEn: string;
   nameAr: string;
@@ -27,93 +38,6 @@ interface PlanDef {
   companies: number;
   color: string;
 }
-
-const PLANS: PlanDef[] = [
-  {
-    key: 'starter',
-    nameEn: 'Starter',
-    nameAr: 'أساسية',
-    descEn: 'For small, single-office brokerages getting started.',
-    descAr: 'للوسطاء الصغار من مكتب واحد في بداية الطريق.',
-    priceEn: 'EGP 990',
-    priceAr: '990 ج.م',
-    perEn: 'per month',
-    perAr: 'شهريًا',
-    limits: [
-      { labelEn: 'Users', labelAr: 'المستخدمون', value: '5' },
-      { labelEn: 'Listings', labelAr: 'الوحدات المعروضة', value: '200' },
-      { labelEn: 'Projects', labelAr: 'المشاريع', value: '2' },
-      { labelEn: 'Storage', labelAr: 'التخزين', value: '5 GB' },
-    ],
-    featsEn: 'Leads · Pipeline · Contacts · Calendar · Tasks',
-    featsAr: 'العملاء المحتملون · خط الصفقات · جهات الاتصال · التقويم · المهام',
-    companies: 9,
-    color: '#C3C5D6',
-  },
-  {
-    key: 'pro',
-    nameEn: 'Pro',
-    nameAr: 'احترافية',
-    descEn: 'For growing teams that need reporting and routing.',
-    descAr: 'للفرق المتنامية التي تحتاج تقارير وتوجيه عملاء.',
-    priceEn: 'EGP 2,900',
-    priceAr: '2,900 ج.م',
-    perEn: 'per month',
-    perAr: 'شهريًا',
-    limits: [
-      { labelEn: 'Users', labelAr: 'المستخدمون', value: '25' },
-      { labelEn: 'Listings', labelAr: 'الوحدات المعروضة', value: '2,000' },
-      { labelEn: 'Projects', labelAr: 'المشاريع', value: '10' },
-      { labelEn: 'Storage', labelAr: 'التخزين', value: '50 GB' },
-    ],
-    featsEn: '+ Reports · Lead routing · Marketing · Documents',
-    featsAr: '+ التقارير · توجيه العملاء · التسويق · المستندات',
-    companies: 8,
-    color: '#3D4FD6',
-  },
-  {
-    key: 'business',
-    nameEn: 'Business',
-    nameAr: 'أعمال',
-    descEn: 'For multi-branch brokerages and developers.',
-    descAr: 'للوسطاء متعددي الفروع والمطورين العقاريين.',
-    priceEn: 'EGP 7,900',
-    priceAr: '7,900 ج.م',
-    perEn: 'per month',
-    perAr: 'شهريًا',
-    limits: [
-      { labelEn: 'Users', labelAr: 'المستخدمون', value: '100' },
-      { labelEn: 'Listings', labelAr: 'الوحدات المعروضة', value: '10,000' },
-      { labelEn: 'Projects', labelAr: 'المشاريع', value: '50' },
-      { labelEn: 'Storage', labelAr: 'التخزين', value: '250 GB' },
-    ],
-    featsEn: '+ Commission splits · Custom roles · API access',
-    featsAr: '+ تقسيم العمولات · أدوار مخصصة · وصول API',
-    companies: 5,
-    color: '#7E89E6',
-  },
-  {
-    key: 'enterprise',
-    nameEn: 'Enterprise',
-    nameAr: 'مؤسسات',
-    descEn: 'For large developers and portfolio owners.',
-    descAr: 'للمطورين الكبار وملّاك المحافظ العقارية.',
-    priceEn: 'Custom',
-    priceAr: 'مخصص',
-    perEn: 'contact sales',
-    perAr: 'تواصل مع المبيعات',
-    limits: [
-      { labelEn: 'Users', labelAr: 'المستخدمون', value: 'Unlimited' },
-      { labelEn: 'Listings', labelAr: 'الوحدات المعروضة', value: 'Unlimited' },
-      { labelEn: 'Projects', labelAr: 'المشاريع', value: 'Unlimited' },
-      { labelEn: 'Storage', labelAr: 'التخزين', value: '1 TB+' },
-    ],
-    featsEn: '+ SSO · Dedicated support · SLAs · White-label',
-    featsAr: '+ تسجيل دخول موحد · دعم مخصص · اتفاقيات مستوى الخدمة · علامة بيضاء',
-    companies: 2,
-    color: '#F5B841',
-  },
-];
 
 interface Copy {
   eyebrow: string;
@@ -161,14 +85,15 @@ const COPY: Record<Lang, Copy> = {
     scopeNew: 'New subscriptions only',
     scopeNewSub: 'Existing subscribers keep their current terms.',
     scopeRenewal: 'Existing, at next renewal',
-    scopeRenewalSub: 'Every subscriber on this plan moves at their next billing cycle.',
+    scopeRenewalSub: 'Apply the updated terms when each subscription is manually renewed.',
     scopeMigrate: 'Selected, via explicit migration',
     scopeMigrateSub: "You'll pick specific companies to migrate immediately.",
     cancel: 'Cancel',
     continue: 'Continue',
     editToast: (name) => `Static design preview — changes to ${name} are not persisted.`,
     archiveTitle: 'Archive plan',
-    archiveBody: (name) => `${name} will be hidden from new subscriptions. Existing subscribers keep this plan.`,
+    archiveBody: (name) =>
+      `${name} will be hidden from new subscriptions. Existing subscribers keep this plan.`,
     restoreTitle: 'Restore plan',
     restoreBody: (name) => `${name} becomes available for new subscriptions again.`,
     confirmGo: 'Confirm',
@@ -190,14 +115,15 @@ const COPY: Record<Lang, Copy> = {
     scopeNew: 'الاشتراكات الجديدة فقط',
     scopeNewSub: 'يحتفظ المشتركون الحاليون بشروطهم الحالية.',
     scopeRenewal: 'الحاليون، عند التجديد القادم',
-    scopeRenewalSub: 'ينتقل كل مشترك في هذه الخطة عند دورة الفوترة القادمة.',
+    scopeRenewalSub: 'تُطبّق الشروط عند التجديد اليدوي القادم لكل اشتراك.',
     scopeMigrate: 'شركات محددة، عبر ترحيل صريح',
     scopeMigrateSub: 'ستختار شركات معينة للترحيل فورًا.',
     cancel: 'إلغاء',
     continue: 'متابعة',
     editToast: (name) => `معاينة تصميم ثابتة — التغييرات على ${name} غير محفوظة.`,
     archiveTitle: 'أرشفة الخطة',
-    archiveBody: (name) => `ستُخفى ${name} عن الاشتراكات الجديدة. يحتفظ المشتركون الحاليون بهذه الخطة.`,
+    archiveBody: (name) =>
+      `ستُخفى ${name} عن الاشتراكات الجديدة. يحتفظ المشتركون الحاليون بهذه الخطة.`,
     restoreTitle: 'استعادة الخطة',
     restoreBody: (name) => `ستصبح ${name} متاحة للاشتراكات الجديدة مجددًا.`,
     confirmGo: 'تأكيد',
@@ -208,6 +134,7 @@ const COPY: Record<Lang, Copy> = {
 
 @Component({
   selector: 'app-subscription-plans',
+  imports: [FormsModule],
   templateUrl: './subscription-plans.html',
   styleUrl: './subscription-plans.scss',
 })
@@ -217,7 +144,111 @@ export class SubscriptionPlans {
 
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
-  readonly plans = PLANS;
+  private readonly api = inject(SubscriptionsApi);
+  readonly loading = signal(false);
+  readonly saving = signal(false);
+  readonly error = signal('');
+  readonly records = signal<PlanDef[]>([]);
+  get plans() {
+    return this.records();
+  }
+  readonly creating = signal(false);
+  readonly selectedIds = signal<string[]>([]);
+  readonly subscribers = signal<Array<{ subId: string; companyEn: string; plan: string }>>([]);
+  draft = {
+    key: 'starter',
+    nameEn: '',
+    nameAr: '',
+    descEn: '',
+    descAr: '',
+    monthlyPrice: 0,
+    annualPrice: 0,
+    users: null as number | null,
+    listings: null as number | null,
+    projects: null as number | null,
+    storageGb: null as number | null,
+    featsEn: '',
+    featsAr: '',
+  };
+  constructor() {
+    void this.reload();
+  }
+  async reload() {
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      const data = await this.api.plans();
+      this.records.set(
+        data.map((v: any) => ({
+          ...v,
+          priceEn: 'EGP ' + (v.monthlyMinor / 100).toLocaleString('en-US'),
+          priceAr: (v.monthlyMinor / 100).toLocaleString('en-US') + ' ج.م',
+          perEn: 'per month',
+          perAr: 'شهريًا',
+          color: (
+            {
+              starter: '#C3C5D6',
+              pro: '#3D4FD6',
+              business: '#7E89E6',
+              enterprise: '#F5B841',
+            } as Record<string, string>
+          )[v.key],
+          limits: [
+            {
+              labelEn: 'Users',
+              labelAr: 'المستخدمون',
+              value: v.users === null ? 'Unlimited' : String(v.users),
+            },
+            {
+              labelEn: 'Listings',
+              labelAr: 'الوحدات',
+              value: v.listings === null ? 'Unlimited' : String(v.listings),
+            },
+            {
+              labelEn: 'Projects',
+              labelAr: 'المشاريع',
+              value: v.projects === null ? 'Unlimited' : String(v.projects),
+            },
+            {
+              labelEn: 'Storage (GB)',
+              labelAr: 'التخزين (جيجابايت)',
+              value: v.storageGb === null ? 'Unlimited' : String(v.storageGb),
+            },
+          ],
+        })),
+      );
+      this.subscribers.set(await this.api.subscriptions());
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to load plans');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+  openCreate() {
+    this.error.set('');
+    this.creating.set(true);
+    this.editing.set(null);
+    this.draft = {
+      key: 'starter',
+      nameEn: '',
+      nameAr: '',
+      descEn: '',
+      descAr: '',
+      monthlyPrice: 0,
+      annualPrice: 0,
+      users: null,
+      listings: null,
+      projects: null,
+      storageGb: null,
+      featsEn: '',
+      featsAr: '',
+    };
+  }
+  toggleSelected(id: string) {
+    this.selectedIds.update((ids) =>
+      ids.includes(id) ? ids.filter((v) => v !== id) : [...ids, id],
+    );
+  }
 
   private readonly archived = signal<Set<PlanKey>>(new Set());
 
@@ -252,7 +283,7 @@ export class SubscriptionPlans {
   }
 
   isArchived(p: PlanDef): boolean {
-    return this.archived().has(p.key);
+    return p.archived;
   }
 
   viewSubscribers(p: PlanDef): void {
@@ -260,19 +291,63 @@ export class SubscriptionPlans {
   }
 
   openEdit(p: PlanDef): void {
+    this.error.set('');
+    this.creating.set(false);
+    this.selectedIds.set([]);
+    this.draft = {
+      key: p.key,
+      nameEn: p.nameEn,
+      nameAr: p.nameAr,
+      descEn: p.descEn,
+      descAr: p.descAr,
+      monthlyPrice: p.monthlyMinor / 100,
+      annualPrice: p.annualMinor / 100,
+      users: p.users,
+      listings: p.listings,
+      projects: p.projects,
+      storageGb: p.storageGb,
+      featsEn: p.featsEn,
+      featsAr: p.featsAr,
+    };
     this.editing.set(p);
     this.editScope.set('new');
   }
 
   closeEdit(): void {
+    this.creating.set(false);
     this.editing.set(null);
   }
 
-  submitEdit(): void {
-    const p = this.editing();
-    if (!p) return;
-    this.closeEdit();
-    this.showToast(this.L().editToast(this.name(p)));
+  async submitEdit() {
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.error.set('');
+    try {
+      const { key, monthlyPrice, annualPrice, ...rest } = this.draft;
+      const terms = {
+        ...rest,
+        monthlyMinor: Math.round(Number(monthlyPrice) * 100),
+        annualMinor: Math.round(Number(annualPrice) * 100),
+      };
+      const current = this.editing();
+      await this.api.savePlan(
+        current
+          ? {
+              ...terms,
+              version: current.version,
+              scope: this.editScope(),
+              selectedIds: this.selectedIds(),
+            }
+          : { ...terms, key },
+        current?.key,
+      );
+      this.closeEdit();
+      await this.reload();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to save plan');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   askConfirm(p: PlanDef, kind: 'archive' | 'restore'): void {
@@ -283,18 +358,20 @@ export class SubscriptionPlans {
     this.confirming.set(null);
   }
 
-  performConfirm(): void {
+  async performConfirm() {
     const target = this.confirming();
-    if (!target) return;
-    this.archived.update((set) => {
-      const next = new Set(set);
-      if (target.kind === 'archive') next.add(target.plan.key);
-      else next.delete(target.plan.key);
-      return next;
-    });
-    const name = this.name(target.plan);
-    this.showToast(target.kind === 'archive' ? this.L().archivedToast(name) : this.L().restoredToast(name));
-    this.confirming.set(null);
+    if (!target || this.saving()) return;
+    this.saving.set(true);
+    this.error.set('');
+    try {
+      await this.api.archive(target.plan.key, target.plan.version, target.kind === 'archive');
+      this.confirming.set(null);
+      await this.reload();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to update plan');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   private showToast(msg: string): void {

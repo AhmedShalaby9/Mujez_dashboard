@@ -20,7 +20,14 @@ export class AuthService {
       headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
-    if (!response.ok) throw new Error(String(response.status));
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(
+        Array.isArray(body.message)
+          ? body.message.join(', ')
+          : body.message || 'Request failed (' + response.status + ')',
+      );
+    }
     return response.json();
   }
   async restore() {

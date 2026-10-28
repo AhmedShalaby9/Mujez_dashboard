@@ -1,9 +1,13 @@
+import { CompaniesApi } from '../../../companies-api.service';
+import { AuthService } from '../../../auth.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
 type OnboardStatus = 'trial' | 'pending';
 
 interface OnboardingCompany {
+  version: number;
+  completedKeys: string[];
   id: string;
   nameEn: string;
   nameAr: string;
@@ -13,21 +17,13 @@ interface OnboardingCompany {
   stuckDays: number;
 }
 
-const SEED: OnboardingCompany[] = [
-  { id: 'MJ-1002', nameEn: 'Nile View Realty', nameAr: 'نايل فيو العقارية', status: 'trial', signedUp: 'Sep 18, 2026', completedSteps: 3, stuckDays: 2 },
-  { id: 'MJ-1008', nameEn: 'Marina Bay Properties', nameAr: 'مارينا باي العقارية', status: 'trial', signedUp: 'Oct 12, 2026', completedSteps: 1, stuckDays: 1 },
-  { id: 'MJ-1016', nameEn: 'Rehab Living Co.', nameAr: 'الرحاب ليفينج', status: 'trial', signedUp: 'Oct 8, 2026', completedSteps: 2, stuckDays: 9 },
-  { id: 'MJ-1024', nameEn: 'Sunrise Properties', nameAr: 'صن رايز العقارية', status: 'trial', signedUp: 'Oct 20, 2026', completedSteps: 0, stuckDays: 0 },
-  { id: 'MJ-1010', nameEn: 'Urban Nest Brokerage', nameAr: 'أوربان نِست', status: 'pending', signedUp: 'Oct 25, 2026', completedSteps: 0, stuckDays: 3 },
-];
-
 interface StepDef {
   labelEn: string;
   labelAr: string;
 }
 
 const STEPS: StepDef[] = [
-  { labelEn: 'Invite admin', labelAr: 'دعوة المشرف' },
+  { labelEn: 'Admin contact verified', labelAr: 'التحقق من جهة اتصال المسؤول' },
   { labelEn: 'Import inventory', labelAr: 'استيراد المخزون' },
   { labelEn: 'Invite team', labelAr: 'دعوة الفريق' },
   { labelEn: 'Connect lead sources', labelAr: 'ربط مصادر العملاء' },
@@ -100,6 +96,60 @@ const COPY: Record<Lang, Copy> = {
   styleUrl: './onboarding.scss',
 })
 export class Onboarding {
+  private readonly api = inject(CompaniesApi);
+  readonly auth = inject(AuthService);
+  readonly loading = signal(false);
+  readonly saving = signal(false);
+  readonly error = signal('');
+  readonly stepKeys = ['admin_contact', 'inventory', 'team', 'lead_sources', 'first_deal'];
+  constructor() {
+    void this.reload();
+  }
+  async reload() {
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      this.companies.set(await this.api.list<OnboardingCompany>(true));
+      const current = this.viewing();
+      if (current) this.viewing.set(this.companies().find((c) => c.id === current.id) ?? null);
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to load onboarding');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+  async toggleStep(c: OnboardingCompany, index: number) {
+    if (this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.api.change(c.id, 'onboarding', {
+        step: this.stepKeys[index],
+        completed: !c.completedKeys.includes(this.stepKeys[index]),
+        version: c.version,
+      });
+      await this.reload();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to update progress');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+  async changeStatus(c: OnboardingCompany, action: string) {
+    if (this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.api.change(c.id, 'status', {
+        action,
+        version: c.version,
+        reason: 'Platform onboarding status updated',
+      });
+      await this.reload();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to update status');
+    } finally {
+      this.saving.set(false);
+    }
+  }
   private readonly ui = inject(AdminUiState);
 
   readonly lang = computed<Lang>(() => this.ui.lang());
@@ -107,7 +157,7 @@ export class Onboarding {
   readonly steps = STEPS;
   readonly totalSteps = STEPS.length;
 
-  readonly companies = signal<OnboardingCompany[]>(SEED);
+  readonly companies = signal<OnboardingCompany[]>([]);
   readonly statusFilter = signal<OnboardStatus | 'all'>('all');
   readonly viewing = signal<OnboardingCompany | null>(null);
   readonly toast = signal<string | null>(null);
@@ -116,7 +166,10 @@ export class Onboarding {
   readonly kpis = computed(() => {
     const list = this.companies();
     const avg = list.length
-      ? Math.round((list.reduce((sum, c) => sum + c.completedSteps, 0) / (list.length * this.totalSteps)) * 100)
+      ? Math.round(
+          (list.reduce((sum, c) => sum + c.completedSteps, 0) / (list.length * this.totalSteps)) *
+            100,
+        )
       : 0;
     return {
       total: list.length,
@@ -147,7 +200,7 @@ export class Onboarding {
   }
 
   stepState(c: OnboardingCompany, index: number): 'done' | 'current' | 'pending' {
-    if (index < c.completedSteps) return 'done';
+    if (c.completedKeys.includes(this.stepKeys[index])) return 'done';
     if (index === c.completedSteps) return 'current';
     return 'pending';
   }
@@ -181,7 +234,7 @@ export class Onboarding {
   }
 
   sendReminder(c: OnboardingCompany): void {
-    this.showToast(this.L().reminderToast(this.name(c)));
+    this.error.set('Email reminders are not configured yet.');
   }
 
   private showToast(msg: string): void {

@@ -1,3 +1,4 @@
+import { CompaniesApi } from '../../companies-api.service';
 import { AuthService } from '../../auth.service';
 import { Router } from '@angular/router';
 import { Component, computed, inject, signal } from '@angular/core';
@@ -146,6 +147,7 @@ const COPY: Record<Lang, Copy> = {
   styleUrl: './admin-shell.scss',
 })
 export class AdminShell {
+  readonly companiesApi = inject(CompaniesApi);
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   async signOut() {
@@ -159,7 +161,21 @@ export class AdminShell {
   private readonly ui = inject(AdminUiState);
 
   readonly dir = this.ui.dir;
-  readonly L = computed(() => COPY[this.ui.lang()]);
+  readonly L = computed(() => {
+    const copy = COPY[this.ui.lang()];
+    const counts = this.companiesApi.counts();
+    return {
+      ...copy,
+      nav: copy.nav.map((entry) =>
+        entry.kind === 'item' && (entry.path === 'companies' || entry.path === 'onboarding')
+          ? {
+              ...entry,
+              count: counts[entry.path] === undefined ? undefined : String(counts[entry.path]),
+            }
+          : entry,
+      ),
+    };
+  });
 
   get me() {
     const user = this.auth.user();

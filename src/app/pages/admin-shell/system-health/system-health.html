@@ -1,3 +1,29 @@
+@if (error()) {
+  <p role="alert">
+    {{ error() }} — {{ lang() === 'ar' ? 'البيانات السابقة قديمة' : 'Previous data is stale' }}
+  </p>
+}
+@if (loading() && !data()) {
+  <p role="status">{{ lang() === 'ar' ? 'جار الفحص…' : 'Checking…' }}</p>
+}
+<button type="button" class="chip" [disabled]="loading()" (click)="load()">
+  {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+</button>
+@if (data(); as d) {
+  <p>
+    {{ lang() === 'ar' ? 'آخر فحص:' : 'Last checked:' }} {{ d.observedAt }} · PostgreSQL:
+    {{ status(d.database.status) }} ({{ d.database.latencyMs ?? '—' }} ms) · Redis:
+    {{ status(d.redis.status) }} ({{ d.redis.latencyMs ?? '—' }} ms)
+  </p>
+  <p>
+    {{ lang() === 'ar' ? 'المقاييس منذ:' : 'Metrics since:' }} {{ d.metrics.startedAt }} ·
+    {{
+      lang() === 'ar'
+        ? 'زمن الاستجابة لآخر ١٠٠٠٠ طلب. المهام والتخزين غير مراقبين.'
+        : 'Latency: latest 10,000 requests. Jobs and storage are not instrumented.'
+    }}
+  </p>
+}
 <div class="page-head">
   <div class="page-head__text">
     <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
@@ -9,31 +35,33 @@
 <div class="kpis">
   <div class="kpi">
     <span class="kpi__label">{{ L().kpis.availability }}</span>
-    <span class="kpi__value kpi__value--ok">99.96%</span>
+    <span class="kpi__value kpi__value--ok">{{ data()?.uptimeSeconds ?? '—' }}</span>
   </div>
   <div class="kpi">
     <span class="kpi__label">{{ L().kpis.p50 }}</span>
-    <span class="kpi__value">82 ms</span>
+    <span class="kpi__value">{{ data()?.metrics.p50 ?? '—' }} ms</span>
   </div>
   <div class="kpi">
     <span class="kpi__label">{{ L().kpis.p95 }}</span>
-    <span class="kpi__value">310 ms</span>
+    <span class="kpi__value">{{ data()?.metrics.p95 ?? '—' }} ms</span>
   </div>
   <div class="kpi">
     <span class="kpi__label">{{ L().kpis.errorRate }}</span>
-    <span class="kpi__value">0.08%</span>
+    <span class="kpi__value">{{ data()?.metrics.errorRate ?? '—' }}%</span>
   </div>
   <div class="kpi">
     <span class="kpi__label">{{ L().kpis.jobs }}</span>
-    <span class="kpi__value">12</span>
+    <span class="kpi__value">{{ status(data()?.redis.status) }}</span>
   </div>
   <div class="kpi">
     <span class="kpi__label">{{ L().kpis.db }}</span>
-    <span class="kpi__value">48/200</span>
+    <span class="kpi__value"
+      >{{ data()?.connections.total ?? '—' }}/{{ data()?.connections.max ?? '—' }}</span
+    >
   </div>
   <div class="kpi">
     <span class="kpi__label">{{ L().kpis.storage }}</span>
-    <span class="kpi__value">2.1 TB</span>
+    <span class="kpi__value">{{ data()?.memoryMb ?? '—' }} MB</span>
   </div>
 </div>
 
@@ -41,13 +69,24 @@
   <div class="chart-card__head">
     <span class="chart-card__title">{{ L().chartTitle }}</span>
     <span class="chart-legend">
-      <span class="chart-legend__item"><span class="chart-legend__dot chart-legend__dot--req"></span>{{ L().chartLegendReq }}</span>
-      <span class="chart-legend__item"><span class="chart-legend__dot chart-legend__dot--err"></span>{{ L().chartLegendErr }}</span>
+      <span class="chart-legend__item"
+        ><span class="chart-legend__dot chart-legend__dot--req"></span
+        >{{ L().chartLegendReq }}</span
+      >
+      <span class="chart-legend__item"
+        ><span class="chart-legend__dot chart-legend__dot--err"></span
+        >{{ L().chartLegendErr }}</span
+      >
     </span>
   </div>
   <div class="chart">
-    @for (b of chartBars; track $index) {
-      <div class="chart__col" [title]="b.req + ' req · ' + b.err + ' err'">
+    @for (b of chartBars(); track $index) {
+      <div
+        class="chart__col"
+        [title]="
+          b.hour + (b.observed ? ': ' + b.req + ' req · ' + b.err + ' err' : ': no observations')
+        "
+      >
         <div class="chart__bar" [style.height.%]="b.reqPct">
           <div class="chart__err" [style.height.%]="b.errPct"></div>
         </div>
@@ -61,7 +100,12 @@
 </div>
 
 <div class="chip-row">
-  <button type="button" class="chip" [class.chip--active]="sevFilter() === 'all'" (click)="setSev('all')">
+  <button
+    type="button"
+    class="chip"
+    [class.chip--active]="sevFilter() === 'all'"
+    (click)="setSev('all')"
+  >
     {{ L().sevAll }}
   </button>
   @for (s of severities; track s) {
@@ -72,7 +116,12 @@
 </div>
 
 <div class="chip-row chip-row--second">
-  <button type="button" class="chip" [class.chip--active]="svcFilter() === 'all'" (click)="setSvc('all')">
+  <button
+    type="button"
+    class="chip"
+    [class.chip--active]="svcFilter() === 'all'"
+    (click)="setSvc('all')"
+  >
     {{ L().svcAll }}
   </button>
   @for (s of services; track s) {
@@ -96,7 +145,7 @@
         <span class="pill" [class]="'pill--' + a.severity">{{ sevName(a.severity) }}</span>
       </div>
     }
-    @if (!filtered().length) {
+    @if (data() && !filtered().length) {
       <div class="t-empty">{{ L().emptyTitle }}</div>
     }
   </div>

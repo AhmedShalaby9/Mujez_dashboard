@@ -1,8 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
 type Severity = 'critical' | 'warning' | 'info' | 'resolved';
-type Service = 'payments' | 'routing' | 'email' | 'storage' | 'db';
+type Service = 'db' | 'redis';
+import { AuthService } from '../../../auth.service';
 
 interface Alert {
   id: string;
@@ -12,20 +13,6 @@ interface Alert {
   messageAr: string;
   time: string;
 }
-
-const ALERTS: Alert[] = [
-  { id: 'AL-401', severity: 'critical', service: 'payments', messageEn: 'Paymob webhook latency above 5s for 8 minutes', messageAr: 'زمن استجابة Paymob تجاوز 5 ثوانٍ لمدة 8 دقائق', time: '08:40' },
-  { id: 'AL-400', severity: 'warning', service: 'email', messageEn: 'SendGrid soft-bounce rate at 2.1% (threshold 2%)', messageAr: 'معدل الارتداد المؤقت لـ SendGrid 2.1٪', time: '10:18' },
-  { id: 'AL-399', severity: 'warning', service: 'routing', messageEn: 'Lead routing queue depth above 200 for 3 minutes', messageAr: 'عمق طابور توجيه العملاء تجاوز 200 لمدة 3 دقائق', time: '09:52' },
-  { id: 'AL-398', severity: 'info', service: 'db', messageEn: 'Nightly vacuum completed on companies schema', messageAr: 'اكتمل التفريغ الليلي لمخطط الشركات', time: '03:00' },
-  { id: 'AL-397', severity: 'resolved', service: 'storage', messageEn: 'S3 upload error rate spike, auto-recovered', messageAr: 'ارتفاع مؤقت في أخطاء رفع S3، تعافى تلقائيًا', time: 'Yesterday' },
-  { id: 'AL-396', severity: 'critical', service: 'db', messageEn: 'Primary database CPU above 90% for 5 minutes', messageAr: 'استخدام CPU لقاعدة البيانات الرئيسية فوق 90٪ لمدة 5 دقائق', time: 'Yesterday' },
-  { id: 'AL-395', severity: 'info', service: 'payments', messageEn: 'Scheduled maintenance window completed', messageAr: 'اكتملت نافذة الصيانة المجدولة', time: '2 d ago' },
-  { id: 'AL-394', severity: 'resolved', service: 'routing', messageEn: 'SLA auto-reassignment backlog cleared', messageAr: 'تم تصريف تراكم إعادة التوجيه بموجب SLA', time: '3 d ago' },
-];
-
-const REQUESTS_24H = [1120, 980, 860, 790, 820, 940, 1240, 1680, 2040, 2210, 2150, 2080, 2230, 2190, 2010, 1950, 2070, 2140, 1980, 1760, 1520, 1380, 1260, 1150];
-const ERRORS_24H = [2, 1, 1, 0, 1, 2, 3, 5, 8, 11, 9, 7, 14, 6, 5, 4, 6, 8, 5, 3, 2, 2, 1, 1];
 
 interface Copy {
   eyebrow: string;
@@ -55,47 +42,47 @@ const COPY: Record<Lang, Copy> = {
   en: {
     eyebrow: 'Platform',
     title: 'System health',
-    sub: 'Production · operational visibility (read-only)',
+    sub: 'Live API process · read-only · refreshes every 30s',
     kpis: {
-      availability: 'Availability (30d)',
+      availability: 'API uptime (seconds)',
       p50: 'Latency p50',
       p95: 'Latency p95',
-      errorRate: 'Error rate',
-      jobs: 'Active jobs',
-      db: 'DB connections',
-      storage: 'Storage used',
+      errorRate: 'HTTP 5xx rate',
+      jobs: 'Redis readiness',
+      db: 'API DB pool connections',
+      storage: 'API memory (RSS)',
     },
-    chartTitle: 'Requests & errors (24h)',
+    chartTitle: 'Requests & HTTP 5xx · up to 24h since restart (UTC)',
     chartLegendReq: 'Requests',
     chartLegendErr: 'Errors',
     alertsTitle: 'Alerts',
     sevAll: 'All severities',
     sev: { critical: 'Critical', warning: 'Warning', info: 'Info', resolved: 'Resolved' },
     svcAll: 'All services',
-    svc: { payments: 'Payments', routing: 'Routing', email: 'Email', storage: 'Storage', db: 'DB' },
+    svc: { db: 'Database', redis: 'Redis' },
     emptyTitle: 'No alerts match this filter',
   },
   ar: {
     eyebrow: 'المنصة',
     title: 'صحة النظام',
-    sub: 'الإنتاج · رؤية تشغيلية (قراءة فقط)',
+    sub: 'عملية API الحالية · قراءة فقط · تحديث كل 30 ثانية',
     kpis: {
-      availability: 'التوفر (30 يومًا)',
+      availability: 'مدة تشغيل API (ثوانٍ)',
       p50: 'زمن الاستجابة p50',
       p95: 'زمن الاستجابة p95',
       errorRate: 'معدل الأخطاء',
-      jobs: 'المهام النشطة',
+      jobs: 'جاهزية Redis',
       db: 'اتصالات قاعدة البيانات',
-      storage: 'التخزين المستخدم',
+      storage: 'ذاكرة API',
     },
-    chartTitle: 'الطلبات والأخطاء (24 س)',
+    chartTitle: 'الطلبات وأخطاء 5xx · حتى 24 ساعة منذ إعادة التشغيل (UTC)',
     chartLegendReq: 'الطلبات',
     chartLegendErr: 'الأخطاء',
     alertsTitle: 'التنبيهات',
     sevAll: 'كل المستويات',
     sev: { critical: 'حرج', warning: 'تحذير', info: 'معلومة', resolved: 'تم الحل' },
     svcAll: 'كل الخدمات',
-    svc: { payments: 'المدفوعات', routing: 'التوجيه', email: 'البريد', storage: 'التخزين', db: 'قاعدة البيانات' },
+    svc: { db: 'قاعدة البيانات', redis: 'Redis' },
     emptyTitle: 'لا توجد تنبيهات مطابقة لهذا الفلتر',
   },
 };
@@ -111,20 +98,59 @@ export class SystemHealth {
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
   readonly severities: Severity[] = ['critical', 'warning', 'info', 'resolved'];
-  readonly services: Service[] = ['payments', 'routing', 'email', 'storage', 'db'];
+  readonly services: Service[] = ['db', 'redis'];
 
-  readonly alerts = signal<Alert[]>(ALERTS);
+  readonly alerts = signal<Alert[]>([]);
   readonly sevFilter = signal<Severity | 'all'>('all');
   readonly svcFilter = signal<Service | 'all'>('all');
 
-  private readonly maxReq = Math.max(...REQUESTS_24H);
-
-  readonly chartBars = REQUESTS_24H.map((req, i) => ({
-    req,
-    err: ERRORS_24H[i],
-    reqPct: Math.round((req / this.maxReq) * 100),
-    errPct: Math.round((ERRORS_24H[i] / req) * 100 * 4),
-  }));
+  private readonly api = inject(AuthService);
+  private readonly destroy = inject(DestroyRef);
+  readonly data = signal<any>(null);
+  readonly error = signal('');
+  readonly loading = signal(false);
+  constructor() {
+    void this.load();
+    const timer = setInterval(() => void this.load(), 30000);
+    this.destroy.onDestroy(() => clearInterval(timer));
+  }
+  async load() {
+    if (this.loading()) return;
+    this.loading.set(true);
+    try {
+      const data = await this.api.request('/admin/api/v1/system-health');
+      this.data.set(data);
+      this.alerts.set(data.alerts);
+      this.error.set('');
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.loading.set(false);
+    }
+  }
+  readonly chartBars = computed(() => {
+    const bars = this.data()?.metrics.bars ?? [];
+    const max = Math.max(1, ...bars.map((b: any) => b.requests));
+    return bars.map((b: any) => ({
+      req: b.requests,
+      err: b.errors,
+      hour: b.hour,
+      observed: b.observed,
+      reqPct: Math.round((b.requests / max) * 100),
+      errPct: b.requests ? Math.round((b.errors / b.requests) * 100) : 0,
+    }));
+  });
+  status(value: string | undefined) {
+    return value === 'healthy'
+      ? this.lang() === 'ar'
+        ? 'سليم'
+        : 'Healthy'
+      : value === 'down'
+        ? this.lang() === 'ar'
+          ? 'متعطل'
+          : 'Down'
+        : '—';
+  }
 
   sevName(s: Severity): string {
     return this.L().sev[s];
@@ -141,7 +167,9 @@ export class SystemHealth {
   readonly filtered = computed(() => {
     const sev = this.sevFilter();
     const svc = this.svcFilter();
-    return this.alerts().filter((a) => (sev === 'all' || a.severity === sev) && (svc === 'all' || a.service === svc));
+    return this.alerts().filter(
+      (a) => (sev === 'all' || a.severity === sev) && (svc === 'all' || a.service === svc),
+    );
   });
 
   setSev(s: Severity | 'all'): void {

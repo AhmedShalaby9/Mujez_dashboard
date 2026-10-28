@@ -1,3 +1,21 @@
+@if (error()) {
+  <p role="alert">
+    {{ error() }}
+    <button type="button" class="btn" (click)="load()">
+      {{ lang() === 'ar' ? 'إعادة المحاولة' : 'Retry' }}
+    </button>
+  </p>
+}
+@if (loading()) {
+  <p role="status">{{ lang() === 'ar' ? 'جار التحميل…' : 'Loading…' }}</p>
+}
+<p>
+  {{
+    lang() === 'ar'
+      ? 'سجل إعدادات التكاملات. الموصلات وبيانات اعتماد المزودين لم يتم إعدادها بعد.'
+      : 'Integration configuration registry. Provider connectors and credentials are pending.'
+  }}
+</p>
 <div class="page-head">
   <div class="page-head__text">
     <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
@@ -25,7 +43,12 @@
 </div>
 
 <div class="chip-row">
-  <button type="button" class="chip" [class.chip--active]="catFilter() === 'all'" (click)="setCat('all')">
+  <button
+    type="button"
+    class="chip"
+    [class.chip--active]="catFilter() === 'all'"
+    (click)="setCat('all')"
+  >
     {{ L().catAll }}
   </button>
   @for (c of categories; track c) {
@@ -55,10 +78,19 @@
             <span class="pill" [class]="'pill--' + i.status">{{ statusName(i.status) }}</span>
           </span>
           <span class="mono t-end">{{ i.companies }}</span>
-          <span>{{ i.lastSync }}</span>
-          <span class="mono t-end" [class.t-danger]="i.errors24h > 0">{{ i.errors24h }}</span>
+          <span>{{ i.lastSync || '—' }}</span>
+          <span class="mono t-end" [class.t-danger]="(i.errors24h || 0) > 0">{{
+            i.errors24h ?? '—'
+          }}</span>
           <span (click)="$event.stopPropagation()">
-            <button type="button" class="toggle" [class.toggle--on]="i.status !== 'disabled'" (click)="askToggle(i)">
+            <button
+              type="button"
+              class="toggle"
+              [attr.aria-label]="name(i)"
+              [attr.aria-pressed]="i.enabled"
+              [class.toggle--on]="i.enabled"
+              (click)="askToggle(i)"
+            >
               <span class="toggle__knob"></span>
             </button>
           </span>
@@ -85,11 +117,13 @@
       <span class="drawer__sectionTitle">{{ L().drawerConfig }}</span>
       <div class="drawer__row">
         <span class="drawer__k">{{ L().drawerCredentials }}</span>
-        <span class="drawer__v mono">•••••••• ({{ L().drawerVaultRef }}: kv/integrations/{{ v.key }})</span>
+        <span class="drawer__v mono">{{ lang() === 'ar' ? 'غير مهيأ' : 'Not configured' }}</span>
       </div>
       <div class="drawer__row">
         <span class="drawer__k">{{ L().drawerWebhook }}</span>
-        <span class="drawer__v mono" dir="ltr">https://hooks.mujez.com/{{ v.webhookSlug }}</span>
+        <span class="drawer__v mono" dir="ltr">{{
+          lang() === 'ar' ? 'غير متاح' : 'Not available'
+        }}</span>
       </div>
       <div class="drawer__row">
         <span class="drawer__k">{{ L().drawerConnected }}</span>
@@ -98,6 +132,11 @@
 
       <span class="drawer__sectionTitle">{{ L().drawerLog }}</span>
       <div class="drawer__log">
+        @if (!v.log.length) {
+          <p>
+            {{ lang() === 'ar' ? 'لا توجد تغييرات مسجلة' : 'No configuration changes recorded' }}
+          </p>
+        }
         @for (e of v.log; track e.time) {
           <div class="drawer__logRow">
             <span class="mono drawer__logTime">{{ e.time }}</span>
@@ -107,7 +146,9 @@
       </div>
     </div>
     <div class="drawer__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeView()">{{ L().drawerClose }}</button>
+      <button type="button" class="btn btn--ghost" (click)="closeView()">
+        {{ L().drawerClose }}
+      </button>
     </div>
   </div>
 }
@@ -117,15 +158,20 @@
   <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
     <div class="dialog__body dialog__body--pad">
       <span class="dialog__title">
-        {{ t.status !== 'disabled' ? L().disableTitle(name(t)) : L().enableTitle(name(t)) }}
+        {{ t.enabled ? L().disableTitle(name(t)) : L().enableTitle(name(t)) }}
       </span>
       <p class="dialog__text">
-        {{ t.status !== 'disabled' ? L().disableBody(t.companies) : L().enableBody }}
+        {{ t.enabled ? L().disableBody(t.companies) : L().enableBody }}
       </p>
-      @if (t.status !== 'disabled') {
+      @if (toggling()) {
         <label class="field">
           <span class="field__label">{{ L().reasonLabel }}</span>
-          <textarea class="textarea" rows="2" [(ngModel)]="toggleReason" name="toggleReason"></textarea>
+          <textarea
+            class="textarea"
+            rows="2"
+            [(ngModel)]="toggleReason"
+            name="toggleReason"
+          ></textarea>
           @if (toggleError()) {
             <span class="field__error">{{ L().reasonError }}</span>
           }
@@ -133,12 +179,15 @@
       }
     </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelToggle()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--ghost" (click)="cancelToggle()">
+        {{ L().cancel }}
+      </button>
       <button
         type="button"
         class="btn"
-        [class.btn--danger]="t.status !== 'disabled'"
-        [class.btn--primary]="t.status === 'disabled'"
+        [class.btn--danger]="t.enabled"
+        [class.btn--primary]="!t.enabled"
+        [disabled]="saving()"
         (click)="confirmToggle()"
       >
         {{ L().confirm }}

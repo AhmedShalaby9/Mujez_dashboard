@@ -380,6 +380,17 @@ export class SupportTickets {
   readonly toast = signal<string | null>(null);
   private toastTimer?: ReturnType<typeof setTimeout>;
 
+  time(value: string): string {
+    return new Intl.DateTimeFormat(this.lang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', {
+      timeZone: 'Africa/Cairo',
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(new Date(value));
+  }
+
   company(t: Ticket): string {
     return this.lang() === 'ar' ? t.companyAr : t.companyEn;
   }

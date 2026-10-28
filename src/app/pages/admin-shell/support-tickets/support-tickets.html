@@ -104,7 +104,7 @@
             }}</span></span
           >
           <span class="tix-cell__ellipsis">{{ t.assigned || L().unassigned }}</span>
-          <span>{{ t.updated }}</span>
+          <span [title]="t.updated">{{ time(t.updated) }}</span>
         </div>
       }
       @if (!filtered().length) {

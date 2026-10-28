@@ -24,7 +24,7 @@
         @if (entry.kind === 'head') {
           <div class="sidebar__groupLabel">{{ entry.label }}</div>
         } @else {
-          @if (entry.enabled) {
+          @if (entry.enabled && canView(entry.path)) {
             <a
               class="sidebar__item"
               [routerLink]="entry.path ? ['/admin', entry.path] : null"
@@ -132,7 +132,7 @@
             <div class="dropdown dropdown--profile" (click)="$event.stopPropagation()">
               <button type="button" class="dropdown__item">{{ L().profileMenu.profile }}</button>
               <button type="button" class="dropdown__item">{{ L().profileMenu.settings }}</button>
-              <a class="dropdown__item dropdown__item--danger" routerLink="/">{{ L().profileMenu.signOut }}</a>
+              <a class="dropdown__item dropdown__item--danger" (click)="signOut()" role="button" tabindex="0">{{ L().profileMenu.signOut }}</a>
             </div>
           }
         </div>

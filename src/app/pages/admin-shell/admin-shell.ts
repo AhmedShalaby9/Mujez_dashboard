@@ -1,3 +1,5 @@
+import { AuthService } from '../../auth.service';
+import { Router } from '@angular/router';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AdminUiState, type Lang } from './admin-ui-state';
@@ -100,7 +102,11 @@ const COPY: Record<Lang, Copy> = {
     notifEmpty: "You're all caught up.",
     nav: EN_NAV,
     notifications: [
-      { title: 'Al Qahira Developments — payment failed (3rd attempt)', time: '12m ago', unread: true },
+      {
+        title: 'Al Qahira Developments — payment failed (3rd attempt)',
+        time: '12m ago',
+        unread: true,
+      },
       { title: 'Nile View Realty — trial ends in 2 days', time: '1h ago', unread: true },
       { title: 'Deira Properties — approaching 90% of unit limit', time: '3h ago', unread: true },
       { title: 'New company created: Coastal Homes', time: 'Yesterday', unread: false },
@@ -117,8 +123,16 @@ const COPY: Record<Lang, Copy> = {
     notifEmpty: 'لا توجد إشعارات جديدة.',
     nav: AR_NAV,
     notifications: [
-      { title: 'القاهرة للتطوير — فشل الدفع (المحاولة الثالثة)', time: 'منذ 12 دقيقة', unread: true },
-      { title: 'نايل فيو العقارية — تنتهي الفترة التجريبية خلال يومين', time: 'منذ ساعة', unread: true },
+      {
+        title: 'القاهرة للتطوير — فشل الدفع (المحاولة الثالثة)',
+        time: 'منذ 12 دقيقة',
+        unread: true,
+      },
+      {
+        title: 'نايل فيو العقارية — تنتهي الفترة التجريبية خلال يومين',
+        time: 'منذ ساعة',
+        unread: true,
+      },
       { title: 'ديرة العقارية — اقتربت من 90% من حد الوحدات', time: 'منذ 3 ساعات', unread: true },
       { title: 'تم إنشاء شركة جديدة: كوستال هومز', time: 'أمس', unread: false },
     ],
@@ -132,12 +146,44 @@ const COPY: Record<Lang, Copy> = {
   styleUrl: './admin-shell.scss',
 })
 export class AdminShell {
+  readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  async signOut() {
+    try {
+      await this.auth.logout();
+      await this.router.navigateByUrl('/');
+    } catch {
+      window.alert('Could not sign out. Please try again.');
+    }
+  }
   private readonly ui = inject(AdminUiState);
 
   readonly dir = this.ui.dir;
   readonly L = computed(() => COPY[this.ui.lang()]);
 
-  readonly me = { name: 'Omar Khaled', role: 'Platform Admin', initials: 'OK' };
+  get me() {
+    const user = this.auth.user();
+    return {
+      name: user?.name ?? '',
+      role: user?.role === 'super_admin' ? 'Super Admin' : 'Platform Admin',
+      initials: (user?.name ?? '')
+        .split(' ')
+        .map((s) => s[0])
+        .join('')
+        .slice(0, 2),
+    };
+  }
+  canView(path?: string) {
+    const permissions: Record<string, string> = {
+      companies: 'co.view',
+      onboarding: 'co.create',
+      'subscription-plans': 'plans',
+      subscriptions: 'sub.manage',
+      billing: 'billing',
+      payments: 'billing',
+    };
+    return !path || !permissions[path] || this.auth.user()?.permissions.includes(permissions[path]);
+  }
 
   readonly mobileNavOpen = signal(false);
   readonly notifOpen = signal(false);

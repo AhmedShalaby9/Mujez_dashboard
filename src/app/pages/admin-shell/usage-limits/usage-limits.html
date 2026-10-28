@@ -1,3 +1,19 @@
+@if (loading()) {
+  <p role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading measured usage…' }}</p>
+}
+@if (error()) {
+  <p role="alert">
+    {{ error() }}
+    <button class="btn" (click)="reload()">{{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}</button>
+  </p>
+}
+<p>
+  {{
+    lang() === 'ar'
+      ? 'تُقاس أعداد المستخدمين من قاعدة البيانات. قياسات الوحدات والتخزين غير متاحة حتى تنفيذ مصادرها.'
+      : 'User counts come from the database. Listings and storage are not measured until their modules supply readings.'
+  }}
+</p>
 <div class="page-head">
   <div class="page-head__text">
     <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
@@ -25,7 +41,12 @@
 </div>
 
 <div class="chip-row">
-  <button type="button" class="chip" [class.chip--active]="filter() === 'all'" (click)="setFilter('all')">
+  <button
+    type="button"
+    class="chip"
+    [class.chip--active]="filter() === 'all'"
+    (click)="setFilter('all')"
+  >
     {{ L().filterAll }}
   </button>
   <button type="button" class="chip" [class.chip--active]="filter() === 80" (click)="setFilter(80)">
@@ -34,7 +55,12 @@
   <button type="button" class="chip" [class.chip--active]="filter() === 90" (click)="setFilter(90)">
     {{ L().filter90 }}
   </button>
-  <button type="button" class="chip" [class.chip--active]="filter() === 100" (click)="setFilter(100)">
+  <button
+    type="button"
+    class="chip"
+    [class.chip--active]="filter() === 100"
+    (click)="setFilter(100)"
+  >
     {{ L().filter100 }}
   </button>
 </div>
@@ -56,30 +82,71 @@
             {{ name(r) }}
             <span class="u-cell__sub mono">{{ r.id }}</span>
           </span>
-          <span class="pill">{{ planName(r.plan) }}</span>
-
-          <span class="bar-cell">
-            <span class="bar"><span class="bar__fill" [class]="barClass(pct(r.users))" [style.width.%]="pct(r.users)"></span></span>
-            <span class="bar-cell__text mono">{{ format(r.users.used) }}/{{ format(r.users.limit) }}</span>
+          <span class="pill"
+            >{{ planName(r.plan) }}
+            @if (!r.accessible) {
+              · {{ lang() === 'ar' ? 'المساحة غير متاحة' : 'Workspace unavailable' }}
+            }
           </span>
 
           <span class="bar-cell">
-            <span class="bar"><span class="bar__fill" [class]="barClass(pct(r.listings))" [style.width.%]="pct(r.listings)"></span></span>
-            <span class="bar-cell__text mono">{{ format(r.listings.used) }}/{{ format(r.listings.limit) }}</span>
+            <span class="bar"
+              ><span
+                class="bar__fill"
+                [class]="barClass(pct(r.users))"
+                [style.width.%]="pct(r.users)"
+              ></span
+            ></span>
+            <span class="bar-cell__text mono"
+              >{{ format(r.users.used) }}/{{ limitLabel(r.users.limit) }}</span
+            >
           </span>
 
           <span class="bar-cell">
-            <span class="bar"><span class="bar__fill" [class]="barClass(pct(r.storage))" [style.width.%]="pct(r.storage)"></span></span>
-            <span class="bar-cell__text mono">{{ format(r.storage.used) }}/{{ format(r.storage.limit) }} GB</span>
+            <span class="bar"
+              ><span
+                class="bar__fill"
+                [class]="barClass(pct(r.listings))"
+                [style.width.%]="pct(r.listings)"
+              ></span
+            ></span>
+            <span class="bar-cell__text mono"
+              >{{ format(r.listings.used) }}/{{ limitLabel(r.listings.limit) }}</span
+            >
+          </span>
+
+          <span class="bar-cell">
+            <span class="bar"
+              ><span
+                class="bar__fill"
+                [class]="barClass(pct(r.storage))"
+                [style.width.%]="pct(r.storage)"
+              ></span
+            ></span>
+            <span class="bar-cell__text mono"
+              >{{ format(r.storage.used) }}/{{ limitLabel(r.storage.limit) }} GB</span
+            >
           </span>
 
           <span class="u-actions">
-            @if (pct(r.users) >= 80) {
-              <button type="button" class="row-btn" (click)="askOverride(r, 'users')">{{ L().override }}</button>
-            } @else if (pct(r.listings) >= 80) {
-              <button type="button" class="row-btn" (click)="askOverride(r, 'listings')">{{ L().override }}</button>
-            } @else if (pct(r.storage) >= 80) {
-              <button type="button" class="row-btn" (click)="askOverride(r, 'storage')">{{ L().override }}</button>
+            @for (resource of resourceKeys; track resource) {
+              @if (r[resource].overrideExpires) {
+                <span>{{ r[resource].overrideExpires }}</span
+                ><button
+                  class="row-btn"
+                  [disabled]="saving()"
+                  (click)="removeOverride(r, resource)"
+                >
+                  {{ lang() === 'ar' ? 'إزالة الاستثناء' : 'Remove override' }} ·
+                  {{ L().resourceLabel[resource] }}
+                </button>
+              } @else if (
+                r.plan !== 'none' && r[resource].limit !== null && (r[resource].limit ?? 0) > 0
+              ) {
+                <button class="row-btn" (click)="askOverride(r, resource)">
+                  {{ L().override }} · {{ L().resourceLabel[resource] }}
+                </button>
+              }
             }
           </span>
         </div>
@@ -95,19 +162,37 @@
   <div class="scrim" (click)="cancelOverride()"></div>
   <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
     <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ L().overrideTitle(name(ov.row), L().resourceLabel[ov.resource]) }}</span>
-      <p class="dialog__text">{{ L().overrideBody(ov.row[ov.resource].limit, nextLimit()) }}</p>
+      <span class="dialog__title">{{
+        L().overrideTitle(name(ov.row), L().resourceLabel[ov.resource])
+      }}</span>
+      <p class="dialog__text">
+        {{ L().overrideBody(ov.row[ov.resource].limit ?? 0, nextLimit()) }}
+      </p>
       <label class="field">
         <span class="field__label">{{ L().reasonLabel }}</span>
-        <textarea class="textarea" rows="2" [(ngModel)]="overrideReason" name="overrideReason"></textarea>
+        <textarea
+          class="textarea"
+          rows="2"
+          [(ngModel)]="overrideReason"
+          name="overrideReason"
+        ></textarea>
         @if (overrideError()) {
           <span class="field__error">{{ L().reasonError }}</span>
         }
       </label>
     </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelOverride()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" (click)="confirmOverride()">{{ L().confirm }}</button>
+      <button type="button" class="btn btn--ghost" (click)="cancelOverride()">
+        {{ L().cancel }}
+      </button>
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="saving()"
+        (click)="confirmOverride()"
+      >
+        {{ L().confirm }}
+      </button>
     </div>
   </div>
 }

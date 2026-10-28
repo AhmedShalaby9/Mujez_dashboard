@@ -1,3 +1,35 @@
+@if (loading()) {
+  <p role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading features…' }}</p>
+}
+@if (error()) {
+  <p role="alert">
+    {{ error() }}
+    <button class="btn" (click)="reload()">{{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}</button>
+  </p>
+}
+<button class="btn btn--primary" (click)="adding.set(true)">
+  {{ lang() === 'ar' ? 'إضافة استثناء للشركة' : 'Add company override' }}
+</button>
+<label
+  >{{ lang() === 'ar' ? 'فحص صلاحيات الشركة' : 'Evaluate company access'
+  }}<select (change)="previewCompany($any($event.target).value)">
+    <option value="">—</option>
+    @for (c of companies(); track c.id) {
+      <option [value]="c.id">{{ c.nameEn }}</option>
+    }
+  </select></label
+>
+@if (effective(); as e) {
+  <p>
+    {{ e.companyId }} · {{ lang() === 'ar' ? 'المساحة متاحة' : 'Workspace available' }}:
+    {{ e.accessible }}
+  </p>
+  @for (f of features(); track f.key) {
+    <span style="display: inline-block; margin: 8px"
+      >{{ name(f) }}: {{ e.features[f.key] ? L().valueOn : L().valueOff }}</span
+    >
+  }
+}
 <div class="page-head">
   <div class="page-head__text">
     <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
@@ -9,7 +41,12 @@
 <div class="card">
   <div class="table-scroll">
     <div class="matrix">
-      <div class="matrix__head">
+      <div
+        class="matrix__head"
+        [style.grid-template-columns]="
+          'minmax(200px,2fr) 100px repeat(' + planOrder.length + ',100px) 100px'
+        "
+      >
         <span class="matrix__headCell matrix__headCell--feature">{{ L().colFeature }}</span>
         <span class="matrix__headCell matrix__headCell--center">{{ L().colPlatform }}</span>
         @for (p of planOrder; track p) {
@@ -19,10 +56,21 @@
       </div>
 
       @for (f of features(); track f.key) {
-        <div class="matrix__row" [class.matrix__row--off]="!f.platformOn">
+        <div
+          [style.grid-template-columns]="
+            'minmax(200px,2fr) 100px repeat(' + planOrder.length + ',100px) 100px'
+          "
+          class="matrix__row"
+          [class.matrix__row--off]="!f.platformOn"
+        >
           <span class="matrix__cell matrix__cell--feature">{{ name(f) }}</span>
           <span class="matrix__cell matrix__cell--center">
-            <button type="button" class="toggle" [class.toggle--on]="f.platformOn" (click)="askFlagToggle(f)">
+            <button
+              type="button"
+              class="toggle"
+              [class.toggle--on]="f.platformOn"
+              (click)="askFlagToggle(f)"
+            >
               <span class="toggle__knob"></span>
             </button>
           </span>
@@ -32,7 +80,7 @@
                 type="button"
                 class="toggle toggle--sm"
                 [class.toggle--on]="f.plans[p]"
-                [disabled]="!f.platformOn"
+                [disabled]="saving()"
                 (click)="askPlanToggle(f, p)"
               >
                 <span class="toggle__knob"></span>
@@ -40,7 +88,9 @@
             </span>
           }
           <span class="matrix__cell matrix__cell--center">
-            <button type="button" class="rollout-btn" (click)="openRollout(f)">{{ f.rollout }}%</button>
+            <button type="button" class="rollout-btn" (click)="openRollout(f)">
+              {{ f.rollout }}%
+            </button>
           </span>
         </div>
       }
@@ -93,12 +143,23 @@
   <div class="scrim" (click)="cancelPlanConfirm()"></div>
   <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
     <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ L().confirmPlanTitle(name(pc.feature), planName(pc.plan), pc.next) }}</span>
+      <span class="dialog__title">{{
+        L().confirmPlanTitle(name(pc.feature), planName(pc.plan), pc.next)
+      }}</span>
       <p class="dialog__text">{{ L().confirmPlanBody(planCompanies(pc.plan), pc.next) }}</p>
     </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelPlanConfirm()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" (click)="confirmPlanToggle()">{{ L().confirm }}</button>
+      <button type="button" class="btn btn--ghost" (click)="cancelPlanConfirm()">
+        {{ L().cancel }}
+      </button>
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="saving()"
+        (click)="confirmPlanToggle()"
+      >
+        {{ L().confirm }}
+      </button>
     </div>
   </div>
 }
@@ -115,19 +176,25 @@
           <textarea class="textarea" rows="2" [(ngModel)]="flagReason" name="flagReason"></textarea>
         </label>
         <button type="button" class="ack-row" (click)="toggleAck()">
-          <span class="ack-box" [class.ack-box--on]="flagAck()">@if (flagAck()) { ✓ }</span>
+          <span class="ack-box" [class.ack-box--on]="flagAck()">
+            @if (flagAck()) {
+              ✓
+            }
+          </span>
           <span class="ack-text">{{ L().ackText }}</span>
         </button>
       }
     </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelFlagConfirm()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--ghost" (click)="cancelFlagConfirm()">
+        {{ L().cancel }}
+      </button>
       <button
         type="button"
         class="btn"
         [class.btn--danger]="!fc.next"
         [class.btn--primary]="fc.next"
-        [disabled]="flagConfirmBlocked()"
+        [disabled]="saving() || flagConfirmBlocked()"
         (click)="confirmFlagToggle()"
       >
         {{ L().confirm }}
@@ -155,8 +222,12 @@
       </label>
     </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeRollout()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" (click)="saveRollout()">{{ L().confirm }}</button>
+      <button type="button" class="btn btn--ghost" (click)="closeRollout()">
+        {{ L().cancel }}
+      </button>
+      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="saveRollout()">
+        {{ L().confirm }}
+      </button>
     </div>
   </div>
 }
@@ -169,12 +240,66 @@
       <p class="dialog__text">{{ L().removeBody }}</p>
     </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelRemove()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--danger" (click)="confirmRemove()">{{ L().confirm }}</button>
+      <button type="button" class="btn btn--ghost" (click)="cancelRemove()">
+        {{ L().cancel }}
+      </button>
+      <button type="button" class="btn btn--danger" [disabled]="saving()" (click)="confirmRemove()">
+        {{ L().confirm }}
+      </button>
     </div>
   </div>
 }
 
 @if (toast(); as msg) {
   <div class="toast">{{ msg }}</div>
+}
+
+@if (adding()) {
+  <div class="scrim" (click)="adding.set(false)"></div>
+  <div class="dialog">
+    <form
+      style="padding: 24px; display: grid; gap: 14px"
+      (submit)="$event.preventDefault(); saveOverride()"
+    >
+      <h2>{{ lang() === 'ar' ? 'استثناء الشركة' : 'Company override' }}</h2>
+      <label
+        >{{ L().colCompany
+        }}<select name="company" [(ngModel)]="draft.companyId" required>
+          <option value="">—</option>
+          @for (c of companies(); track c.id) {
+            <option [value]="c.id">{{ c.nameEn }}</option>
+          }
+        </select></label
+      ><label
+        >{{ L().colFeatureOv
+        }}<select name="feature" [(ngModel)]="draft.featureKey" required>
+          <option value="">—</option>
+          @for (f of features(); track f.key) {
+            <option [value]="f.key">{{ name(f) }}</option>
+          }
+        </select></label
+      ><label
+        ><input type="checkbox" name="enabled" [(ngModel)]="draft.enabled" />{{
+          L().valueOn
+        }}</label
+      ><label
+        >{{ L().colExpires
+        }}<input type="date" name="expires" [(ngModel)]="draft.expiresAt" required /></label
+      ><label
+        >{{ L().reasonLabel
+        }}<textarea
+          name="reason"
+          [(ngModel)]="draft.reason"
+          required
+          minlength="5"
+          maxlength="500"
+        ></textarea>
+      </label>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
+      <button class="btn btn--primary" [disabled]="saving()">{{ L().confirm }}</button
+      ><button type="button" class="btn" (click)="adding.set(false)">{{ L().cancel }}</button>
+    </form>
+  </div>
 }

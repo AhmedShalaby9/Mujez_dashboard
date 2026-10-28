@@ -1,10 +1,13 @@
+import { FeaturesApi } from '../../../features-api.service';
+import { CompaniesApi } from '../../../companies-api.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
-type PlanKey = 'starter' | 'pro' | 'business' | 'enterprise';
+type PlanKey = string;
 
 interface FeatureDef {
+  version: number;
   key: string;
   nameEn: string;
   nameAr: string;
@@ -13,27 +16,9 @@ interface FeatureDef {
   plans: Record<PlanKey, boolean>;
 }
 
-const PLAN_COMPANIES: Record<PlanKey, number> = {
-  starter: 9,
-  pro: 8,
-  business: 5,
-  enterprise: 2,
-};
-
-const SEED: FeatureDef[] = [
-  { key: 'whatsapp', nameEn: 'WhatsApp Business integration', nameAr: 'تكامل واتساب بيزنس', platformOn: true, rollout: 100, plans: { starter: false, pro: true, business: true, enterprise: true } },
-  { key: 'routing_adv', nameEn: 'Advanced lead routing', nameAr: 'توجيه العملاء المتقدم', platformOn: true, rollout: 100, plans: { starter: false, pro: false, business: true, enterprise: true } },
-  { key: 'ai_summary', nameEn: 'AI customer summary', nameAr: 'ملخص العميل بالذكاء الاصطناعي', platformOn: true, rollout: 60, plans: { starter: false, pro: false, business: true, enterprise: true } },
-  { key: 'bulk_import', nameEn: 'Inventory bulk import', nameAr: 'استيراد المخزون بالجملة', platformOn: true, rollout: 100, plans: { starter: true, pro: true, business: true, enterprise: true } },
-  { key: 'commissions', nameEn: 'Commission management', nameAr: 'إدارة العمولات', platformOn: true, rollout: 100, plans: { starter: false, pro: true, business: true, enterprise: true } },
-  { key: 'custom_roles', nameEn: 'Custom roles', nameAr: 'أدوار مخصصة', platformOn: true, rollout: 100, plans: { starter: false, pro: false, business: true, enterprise: true } },
-  { key: 'api_access', nameEn: 'API access', nameAr: 'الوصول عبر API', platformOn: true, rollout: 35, plans: { starter: false, pro: false, business: false, enterprise: true } },
-  { key: 'white_label', nameEn: 'White-label branding', nameAr: 'العلامة التجارية الخاصة', platformOn: true, rollout: 100, plans: { starter: false, pro: false, business: false, enterprise: true } },
-  { key: 'sms', nameEn: 'SMS notifications', nameAr: 'إشعارات SMS', platformOn: true, rollout: 100, plans: { starter: true, pro: true, business: true, enterprise: true } },
-  { key: 'reports_adv', nameEn: 'Advanced reports', nameAr: 'تقارير متقدمة', platformOn: false, rollout: 0, plans: { starter: false, pro: true, business: true, enterprise: true } },
-];
-
 interface Override {
+  version: number;
+  companyId: string;
   id: string;
   companyEn: string;
   companyAr: string;
@@ -43,14 +28,6 @@ interface Override {
   reasonEn: string;
   reasonAr: string;
 }
-
-const OVERRIDES_SEED: Override[] = [
-  { id: 'ov-1', companyEn: 'Al Qahira Developments', companyAr: 'القاهرة للتطوير', featureKey: 'ai_summary', value: true, expires: 'Nov 15, 2026', reasonEn: 'Pilot for enterprise renewal', reasonAr: 'تجربة قبل التجديد' },
-  { id: 'ov-2', companyEn: 'Blue Lagoon Realty', companyAr: 'بلو لاغون العقارية', featureKey: 'api_access', value: true, expires: 'Dec 1, 2026', reasonEn: 'Early access program', reasonAr: 'برنامج الوصول المبكر' },
-  { id: 'ov-3', companyEn: 'Deira Properties', companyAr: 'ديرة العقارية', featureKey: 'routing_adv', value: false, expires: 'Never', reasonEn: 'Disabled after support ticket #2031', reasonAr: 'معطّلة بعد تذكرة الدعم #2031' },
-];
-
-const PLAN_ORDER: PlanKey[] = ['starter', 'pro', 'business', 'enterprise'];
 
 interface Copy {
   eyebrow: string;
@@ -147,7 +124,8 @@ const COPY: Record<Lang, Copy> = {
     valueOn: 'مفعّلة',
     valueOff: 'معطّلة',
     confirmPlanTitle: (feature, plan, on) => `${on ? 'تفعيل' : 'تعطيل'} ${feature} لباقة ${plan}`,
-    confirmPlanBody: (count, on) => `سيتم ${on ? 'إضافة' : 'إزالة'} الخاصية لعدد ${count} شركة على هذه الباقة.`,
+    confirmPlanBody: (count, on) =>
+      `سيتم ${on ? 'إضافة' : 'إزالة'} الخاصية لعدد ${count} شركة على هذه الباقة.`,
     flagTitle: (feature, on) => `${on ? 'تفعيل' : 'تعطيل'} علم المنصة: ${feature}`,
     flagBody: (on) =>
       on
@@ -179,10 +157,77 @@ export class FeatureManagement {
 
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
-  readonly planOrder = PLAN_ORDER;
+  private readonly api = inject(FeaturesApi);
+  private readonly companiesApi = inject(CompaniesApi);
+  readonly loading = signal(false);
+  readonly saving = signal(false);
+  readonly error = signal('');
+  readonly catalogPlans = signal<
+    Array<{ key: string; nameEn: string; nameAr: string; companies: number }>
+  >([]);
+  get planOrder() {
+    return this.catalogPlans().map((p) => p.key);
+  }
+  readonly companies = signal<Array<{ id: string; nameEn: string }>>([]);
+  readonly effective = signal<any>(null);
+  readonly adding = signal(false);
+  draft = {
+    companyId: '',
+    featureKey: '',
+    enabled: true,
+    expiresAt: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+    reason: '',
+  };
+  constructor() {
+    void this.reload();
+  }
+  async reload() {
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      const data = await this.api.catalog();
+      this.features.set(data.features);
+      this.overrides.set(data.overrides);
+      this.catalogPlans.set(data.plans);
+      this.companies.set(await this.companiesApi.list());
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to load features');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+  async saveOverride() {
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.error.set('');
+    try {
+      const state = await this.api.effective(this.draft.companyId);
+      await this.api.override({
+        companyId: this.draft.companyId,
+        featureKey: this.draft.featureKey,
+        enabled: this.draft.enabled,
+        expiresAt: new Date(this.draft.expiresAt + 'T23:59:59Z').toISOString(),
+        reason: this.draft.reason,
+        version: state.version,
+      });
+      this.adding.set(false);
+      await this.reload();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to save override');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+  async previewCompany(id: string) {
+    try {
+      this.effective.set(await this.api.effective(id));
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to evaluate company');
+    }
+  }
 
-  readonly features = signal<FeatureDef[]>(SEED);
-  readonly overrides = signal<Override[]>(OVERRIDES_SEED);
+  readonly features = signal<FeatureDef[]>([]);
+  readonly overrides = signal<Override[]>([]);
 
   readonly planConfirm = signal<{ feature: FeatureDef; plan: PlanKey; next: boolean } | null>(null);
   readonly flagConfirm = signal<{ feature: FeatureDef; next: boolean } | null>(null);
@@ -200,11 +245,12 @@ export class FeatureManagement {
   }
 
   planName(p: PlanKey): string {
-    return this.L().planLabel[p];
+    const plan = this.catalogPlans().find((v) => v.key === p);
+    return plan ? (this.lang() === 'ar' ? plan.nameAr : plan.nameEn) : p;
   }
 
   planCompanies(p: PlanKey): number {
-    return PLAN_COMPANIES[p];
+    return this.catalogPlans().find((v) => v.key === p)?.companies ?? 0;
   }
 
   overrideCompany(o: Override): string {
@@ -228,16 +274,25 @@ export class FeatureManagement {
     this.planConfirm.set(null);
   }
 
-  confirmPlanToggle(): void {
-    const target = this.planConfirm();
-    if (!target) return;
-    this.features.update((list) =>
-      list.map((f) =>
-        f.key === target.feature.key ? { ...f, plans: { ...f.plans, [target.plan]: target.next } } : f,
-      ),
-    );
-    this.showToast(this.L().planToast(this.name(target.feature), this.planName(target.plan), target.next));
-    this.planConfirm.set(null);
+  async confirmPlanToggle() {
+    const t = this.planConfirm();
+    if (!t || this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.api.change(t.feature.key, {
+        action: 'plan',
+        version: t.feature.version,
+        plan: t.plan,
+        enabled: t.next,
+        reason: 'Plan entitlement updated by platform administrator',
+      });
+      this.planConfirm.set(null);
+      await this.reload();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to save entitlement');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   askFlagToggle(f: FeatureDef): void {
@@ -254,15 +309,24 @@ export class FeatureManagement {
     this.flagAck.set(!this.flagAck());
   }
 
-  confirmFlagToggle(): void {
-    const target = this.flagConfirm();
-    if (!target) return;
-    if (!target.next && (this.flagReason().trim().length < 5 || !this.flagAck())) return;
-    this.features.update((list) =>
-      list.map((f) => (f.key === target.feature.key ? { ...f, platformOn: target.next } : f)),
-    );
-    this.showToast(this.L().flagToast(this.name(target.feature), target.next));
-    this.flagConfirm.set(null);
+  async confirmFlagToggle() {
+    const t = this.flagConfirm();
+    if (!t || this.saving() || this.flagConfirmBlocked()) return;
+    this.saving.set(true);
+    try {
+      await this.api.change(t.feature.key, {
+        action: 'flag',
+        version: t.feature.version,
+        enabled: t.next,
+        reason: this.flagReason().trim() || 'Feature enabled by platform administrator',
+      });
+      this.flagConfirm.set(null);
+      await this.reload();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to save flag');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   flagConfirmBlocked(): boolean {
@@ -280,13 +344,24 @@ export class FeatureManagement {
     this.rolloutEditing.set(null);
   }
 
-  saveRollout(): void {
+  async saveRollout() {
     const f = this.rolloutEditing();
-    if (!f) return;
-    const pct = Math.max(0, Math.min(100, Math.round(this.rolloutDraft())));
-    this.features.update((list) => list.map((x) => (x.key === f.key ? { ...x, rollout: pct } : x)));
-    this.showToast(this.L().rolloutToast(this.name(f), pct));
-    this.rolloutEditing.set(null);
+    if (!f || this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.api.change(f.key, {
+        action: 'rollout',
+        version: f.version,
+        rollout: Number(this.rolloutDraft()),
+        reason: 'Rollout updated by platform administrator',
+      });
+      this.rolloutEditing.set(null);
+      await this.reload();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to save rollout');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   askRemove(o: Override): void {
@@ -297,12 +372,22 @@ export class FeatureManagement {
     this.removeConfirm.set(null);
   }
 
-  confirmRemove(): void {
-    const target = this.removeConfirm();
-    if (!target) return;
-    this.overrides.update((list) => list.filter((o) => o.id !== target.id));
-    this.showToast(this.L().removeToast);
-    this.removeConfirm.set(null);
+  async confirmRemove() {
+    const o = this.removeConfirm();
+    if (!o || this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.api.remove(o.id, {
+        version: o.version,
+        reason: 'Company feature override removed by administrator',
+      });
+      this.removeConfirm.set(null);
+      await this.reload();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to remove override');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   private showToast(msg: string): void {

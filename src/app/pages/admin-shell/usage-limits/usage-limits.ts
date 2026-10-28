@@ -1,16 +1,21 @@
+import { FeaturesApi } from '../../../features-api.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
 type ResourceKey = 'users' | 'listings' | 'storage';
-type PlanKey = 'starter' | 'pro' | 'business';
+type PlanKey = string;
 
 interface Resource {
-  used: number;
-  limit: number;
+  used: number | null;
+  limit: number | null;
+  measured: boolean;
+  overrideExpires: string | null;
 }
 
 interface UsageRow {
+  version: number;
+  accessible: boolean;
   id: string;
   nameEn: string;
   nameAr: string;
@@ -19,19 +24,6 @@ interface UsageRow {
   listings: Resource;
   storage: Resource;
 }
-
-const SEED: UsageRow[] = [
-  { id: 'MJ-1001', nameEn: 'Al Qahira Developments', nameAr: 'القاهرة للتطوير', plan: 'business', users: { used: 84, limit: 100 }, listings: { used: 7800, limit: 10000 }, storage: { used: 210, limit: 250 } },
-  { id: 'MJ-1018', nameEn: 'Blue Lagoon Realty', nameAr: 'بلو لاغون العقارية', plan: 'starter', users: { used: 5, limit: 5 }, listings: { used: 196, limit: 200 }, storage: { used: 4.8, limit: 5 } },
-  { id: 'MJ-1017', nameEn: 'Capital Gate Developers', nameAr: 'كابيتال جيت للتطوير', plan: 'business', users: { used: 61, limit: 100 }, listings: { used: 5200, limit: 10000 }, storage: { used: 140, limit: 250 } },
-  { id: 'MJ-1004', nameEn: 'Coastal Homes', nameAr: 'كوستال هومز', plan: 'starter', users: { used: 4, limit: 5 }, listings: { used: 120, limit: 200 }, storage: { used: 2.1, limit: 5 } },
-  { id: 'MJ-1003', nameEn: 'Deira Properties', nameAr: 'ديرة العقارية', plan: 'pro', users: { used: 23, limit: 25 }, listings: { used: 1890, limit: 2000 }, storage: { used: 46, limit: 50 } },
-  { id: 'MJ-1009', nameEn: 'Golden Sands Developments', nameAr: 'الرمال الذهبية للتطوير', plan: 'business', users: { used: 45, limit: 100 }, listings: { used: 3100, limit: 10000 }, storage: { used: 88, limit: 250 } },
-  { id: 'MJ-1002', nameEn: 'Nile View Realty', nameAr: 'نايل فيو العقارية', plan: 'starter', users: { used: 2, limit: 5 }, listings: { used: 38, limit: 200 }, storage: { used: 0.6, limit: 5 } },
-  { id: 'MJ-1008', nameEn: 'Marina Bay Properties', nameAr: 'مارينا باي العقارية', plan: 'pro', users: { used: 18, limit: 25 }, listings: { used: 1400, limit: 2000 }, storage: { used: 30, limit: 50 } },
-];
-
-const PLAN_LABEL: Record<PlanKey, string> = { starter: 'Starter', pro: 'Pro', business: 'Business' };
 
 type Threshold = 'all' | 80 | 90 | 100;
 
@@ -65,7 +57,12 @@ const COPY: Record<Lang, Copy> = {
   en: {
     eyebrow: 'Platform',
     title: 'Usage & limits',
-    kpis: { total: 'Companies tracked', atRisk: 'At 80%+', atLimit: 'At limit (blocked)', avg: 'Avg. utilization' },
+    kpis: {
+      total: 'Companies tracked',
+      atRisk: 'At 80%+',
+      atLimit: 'At limit',
+      avg: 'Avg. utilization',
+    },
     colCompany: 'Company',
     colPlan: 'Plan',
     colUsers: 'Users',
@@ -78,7 +75,8 @@ const COPY: Record<Lang, Copy> = {
     filter100: 'At 100%',
     override: 'Override limit',
     overrideTitle: (company, resource) => `Override ${resource} limit — ${company}`,
-    overrideBody: (current, next) => `Raises the limit from ${current} to ${next} (+20%) for 30 days.`,
+    overrideBody: (current, next) =>
+      `Raises the limit from ${current} to ${next} (+20%) for 30 days.`,
     resourceLabel: { users: 'users', listings: 'listings', storage: 'storage' },
     reasonLabel: 'Reason',
     reasonError: 'A reason is required.',
@@ -90,7 +88,7 @@ const COPY: Record<Lang, Copy> = {
   ar: {
     eyebrow: 'المنصة',
     title: 'الاستخدام والحدود',
-    kpis: { total: 'شركات مرصودة', atRisk: '80%+', atLimit: 'عند الحد (محظورة)', avg: 'متوسط الاستخدام' },
+    kpis: { total: 'شركات مرصودة', atRisk: '80%+', atLimit: 'عند الحد', avg: 'متوسط الاستخدام' },
     colCompany: 'الشركة',
     colPlan: 'الباقة',
     colUsers: 'المستخدمون',
@@ -121,13 +119,47 @@ const COPY: Record<Lang, Copy> = {
   styleUrl: './usage-limits.scss',
 })
 export class UsageLimits {
+  private readonly api = inject(FeaturesApi);
+  readonly loading = signal(false);
+  readonly saving = signal(false);
+  readonly error = signal('');
+  constructor() {
+    void this.reload();
+  }
+  async reload() {
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      this.rows.set(await this.api.usage());
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to load usage');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+  async removeOverride(r: UsageRow, resource: ResourceKey) {
+    if (this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.api.limit(r.id, 'remove', {
+        version: r.version,
+        resource,
+        reason: 'Temporary quota override removed by administrator',
+      });
+      await this.reload();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to remove override');
+    } finally {
+      this.saving.set(false);
+    }
+  }
   private readonly ui = inject(AdminUiState);
 
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
   readonly resourceKeys: ResourceKey[] = ['users', 'listings', 'storage'];
 
-  readonly rows = signal<UsageRow[]>(SEED);
+  readonly rows = signal<UsageRow[]>([]);
   readonly filter = signal<Threshold>('all');
 
   readonly overriding = signal<{ row: UsageRow; resource: ResourceKey } | null>(null);
@@ -142,11 +174,12 @@ export class UsageLimits {
   }
 
   planName(p: PlanKey): string {
-    return PLAN_LABEL[p];
+    return p === 'none' ? (this.lang() === 'ar' ? 'بدون اشتراك' : 'No current subscription') : p;
   }
 
   pct(res: Resource): number {
-    return res.limit > 0 ? Math.round((res.used / res.limit) * 100) : 0;
+    if (!res.measured || res.used === null || res.limit === null) return 0;
+    return res.limit === 0 ? 100 : Math.round((res.used / res.limit) * 100);
   }
 
   highestPct(r: UsageRow): number {
@@ -159,7 +192,11 @@ export class UsageLimits {
     return 'bar__fill--ok';
   }
 
-  format(n: number): string {
+  limitLabel(n: number | null) {
+    return n === null ? (this.lang() === 'ar' ? 'بلا حد' : 'Unlimited') : this.format(n);
+  }
+  format(n: number | null): string {
+    if (n === null) return this.lang() === 'ar' ? 'غير مقاس' : 'Not measured';
     return n % 1 === 0 ? n.toLocaleString('en-US') : n.toFixed(1);
   }
 
@@ -198,27 +235,27 @@ export class UsageLimits {
   nextLimit(): number {
     const target = this.overriding();
     if (!target) return 0;
-    const current = target.row[target.resource].limit;
-    return Math.round(current * 1.2 * 10) / 10;
+    const current = target.row[target.resource].limit ?? 0;
+    return Math.ceil(current * 1.2);
   }
 
-  confirmOverride(): void {
-    const target = this.overriding();
-    if (!target) return;
-    if (this.overrideReason().trim().length < 5) {
-      this.overrideError.set(true);
-      return;
+  async confirmOverride() {
+    const t = this.overriding();
+    if (!t || this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.api.limit(t.row.id, 'override', {
+        version: t.row.version,
+        resource: t.resource,
+        reason: this.overrideReason(),
+      });
+      this.overriding.set(null);
+      await this.reload();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to override limit');
+    } finally {
+      this.saving.set(false);
     }
-    const next = this.nextLimit();
-    this.rows.update((list) =>
-      list.map((r) =>
-        r.id === target.row.id
-          ? { ...r, [target.resource]: { ...r[target.resource], limit: next } }
-          : r,
-      ),
-    );
-    this.showToast(this.L().overrideToast(this.name(target.row), this.L().resourceLabel[target.resource]));
-    this.overriding.set(null);
   }
 
   private showToast(msg: string): void {

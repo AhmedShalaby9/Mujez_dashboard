@@ -4,7 +4,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
-type PlanKey = 'starter' | 'pro' | 'business' | 'enterprise';
+type PlanKey = string;
 type EditScope = 'new' | 'renewal' | 'migrate';
 
 interface PlanLimit {

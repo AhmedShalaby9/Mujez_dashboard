@@ -5,7 +5,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
-type Plan = 'starter' | 'pro' | 'business' | 'enterprise';
+type Plan = string;
 type SubStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'expired' | 'suspended';
 type PaymentMethod = 'card' | 'bank' | 'instapay';
 type SortKey = 'company' | 'plan' | 'status' | 'payment' | 'renews' | 'mrr';
@@ -266,7 +266,9 @@ export class Subscriptions {
     'expired',
     'suspended',
   ];
-  readonly planTypes: Plan[] = ['starter', 'pro', 'business', 'enterprise'];
+  get planTypes(): Plan[] {
+    return this.availablePlans().map((p) => p.key);
+  }
   readonly paymentTypes: PaymentMethod[] = ['card', 'bank', 'instapay'];
 
   private readonly subs = signal<Subscription[]>([]);
@@ -337,7 +339,7 @@ export class Subscriptions {
   constructor() {
     void this.reload();
     const planParam = this.route.snapshot.queryParamMap.get('plan') as Plan | null;
-    if (planParam && this.planTypes.includes(planParam)) {
+    if (planParam) {
       this.planFilter.set(planParam);
     }
   }
@@ -436,11 +438,11 @@ export class Subscriptions {
       ? this.lang() === 'ar'
         ? option.nameAr
         : option.nameEn
-      : PLAN_LABEL[this.lang()][p];
+      : (PLAN_LABEL[this.lang()][p] ?? p);
   }
 
   planDot(p: Plan): string {
-    return PLAN_DOT[p];
+    return PLAN_DOT[p] ?? '#3D4FD6';
   }
 
   statusLabel(s: SubStatus): string {

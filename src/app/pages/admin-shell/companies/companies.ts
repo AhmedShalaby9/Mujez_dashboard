@@ -559,11 +559,11 @@ export class Companies {
   }
 
   planLabel(p: Plan): string {
-    return PLAN_LABEL[this.lang()][p];
+    return PLAN_LABEL[this.lang()][p] ?? p;
   }
 
   planDot(p: Plan): string {
-    return PLAN_DOT[p];
+    return PLAN_DOT[p] ?? '#3D4FD6';
   }
 
   statusLabel(s: CompanyStatus): string {

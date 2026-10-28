@@ -84,13 +84,12 @@
       @if (creating()) {
         <label
           >{{ lang() === 'ar' ? 'رمز الخطة' : 'Plan key'
-          }}<select [(ngModel)]="draft.key">
-            <option value="starter">Starter</option>
-            <option value="pro">Pro</option>
-            <option value="business">Business</option>
-            <option value="enterprise">Enterprise</option>
-          </select></label
-        >
+          }}<input
+            [(ngModel)]="draft.key"
+            pattern="[a-z0-9]+(-[a-z0-9]+)*"
+            maxlength="64"
+            placeholder="growth-plan"
+        /></label>
       }
       <div style="display: grid; gap: 12px; margin-bottom: 20px">
         <label

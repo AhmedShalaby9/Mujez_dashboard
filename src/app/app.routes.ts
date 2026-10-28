@@ -8,6 +8,10 @@ import { SubscriptionPlans } from './pages/admin-shell/subscription-plans/subscr
 import { Subscriptions } from './pages/admin-shell/subscriptions/subscriptions';
 import { Billing } from './pages/admin-shell/billing/billing';
 import { Payments } from './pages/admin-shell/payments/payments';
+import { FeatureManagement } from './pages/admin-shell/feature-management/feature-management';
+import { UsageLimits } from './pages/admin-shell/usage-limits/usage-limits';
+import { Integrations } from './pages/admin-shell/integrations/integrations';
+import { SystemHealth } from './pages/admin-shell/system-health/system-health';
 
 export const routes: Routes = [
   { path: '', component: Login },
@@ -23,6 +27,10 @@ export const routes: Routes = [
       { path: 'subscriptions', component: Subscriptions },
       { path: 'billing', component: Billing },
       { path: 'payments', component: Payments },
+      { path: 'feature-management', component: FeatureManagement },
+      { path: 'usage-limits', component: UsageLimits },
+      { path: 'integrations', component: Integrations },
+      { path: 'system-health', component: SystemHealth },
     ],
   },
 ];

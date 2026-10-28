@@ -1,0 +1,180 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <div class="matrix">
+      <div class="matrix__head">
+        <span class="matrix__headCell matrix__headCell--feature">{{ L().colFeature }}</span>
+        <span class="matrix__headCell matrix__headCell--center">{{ L().colPlatform }}</span>
+        @for (p of planOrder; track p) {
+          <span class="matrix__headCell matrix__headCell--center">{{ planName(p) }}</span>
+        }
+        <span class="matrix__headCell matrix__headCell--center">{{ L().colRollout }}</span>
+      </div>
+
+      @for (f of features(); track f.key) {
+        <div class="matrix__row" [class.matrix__row--off]="!f.platformOn">
+          <span class="matrix__cell matrix__cell--feature">{{ name(f) }}</span>
+          <span class="matrix__cell matrix__cell--center">
+            <button type="button" class="toggle" [class.toggle--on]="f.platformOn" (click)="askFlagToggle(f)">
+              <span class="toggle__knob"></span>
+            </button>
+          </span>
+          @for (p of planOrder; track p) {
+            <span class="matrix__cell matrix__cell--center">
+              <button
+                type="button"
+                class="toggle toggle--sm"
+                [class.toggle--on]="f.plans[p]"
+                [disabled]="!f.platformOn"
+                (click)="askPlanToggle(f, p)"
+              >
+                <span class="toggle__knob"></span>
+              </button>
+            </span>
+          }
+          <span class="matrix__cell matrix__cell--center">
+            <button type="button" class="rollout-btn" (click)="openRollout(f)">{{ f.rollout }}%</button>
+          </span>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<div class="section-head">
+  <div class="page-head__text">
+    <h2 class="section-head__title">{{ L().overridesTitle }}</h2>
+    <span class="page-head__sub">{{ L().overridesSub }}</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <div class="ov-table">
+      <div class="ov-head">
+        <span>{{ L().colCompany }}</span>
+        <span>{{ L().colFeatureOv }}</span>
+        <span>{{ L().colValue }}</span>
+        <span>{{ L().colExpires }}</span>
+        <span>{{ L().colReason }}</span>
+        <span></span>
+      </div>
+      @for (o of overrides(); track o.id) {
+        <div class="ov-row">
+          <span class="ov-cell__main">{{ overrideCompany(o) }}</span>
+          <span>{{ overrideFeatureName(o) }}</span>
+          <span>
+            <span class="pill" [class.pill--on]="o.value" [class.pill--off]="!o.value">
+              {{ o.value ? L().valueOn : L().valueOff }}
+            </span>
+          </span>
+          <span class="mono">{{ o.expires }}</span>
+          <span class="ov-cell__sub">{{ overrideReason(o) }}</span>
+          <span>
+            <button type="button" class="row-btn" (click)="askRemove(o)">{{ L().remove }}</button>
+          </span>
+        </div>
+      }
+      @if (!overrides().length) {
+        <div class="t-empty">{{ L().remove }}</div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (planConfirm(); as pc) {
+  <div class="scrim" (click)="cancelPlanConfirm()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().confirmPlanTitle(name(pc.feature), planName(pc.plan), pc.next) }}</span>
+      <p class="dialog__text">{{ L().confirmPlanBody(planCompanies(pc.plan), pc.next) }}</p>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="cancelPlanConfirm()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="confirmPlanToggle()">{{ L().confirm }}</button>
+    </div>
+  </div>
+}
+
+@if (flagConfirm(); as fc) {
+  <div class="scrim" (click)="cancelFlagConfirm()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().flagTitle(name(fc.feature), fc.next) }}</span>
+      <p class="dialog__text">{{ L().flagBody(fc.next) }}</p>
+      @if (!fc.next) {
+        <label class="field">
+          <span class="field__label">{{ L().reasonLabel }}</span>
+          <textarea class="textarea" rows="2" [(ngModel)]="flagReason" name="flagReason"></textarea>
+        </label>
+        <button type="button" class="ack-row" (click)="toggleAck()">
+          <span class="ack-box" [class.ack-box--on]="flagAck()">@if (flagAck()) { ✓ }</span>
+          <span class="ack-text">{{ L().ackText }}</span>
+        </button>
+      }
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="cancelFlagConfirm()">{{ L().cancel }}</button>
+      <button
+        type="button"
+        class="btn"
+        [class.btn--danger]="!fc.next"
+        [class.btn--primary]="fc.next"
+        [disabled]="flagConfirmBlocked()"
+        (click)="confirmFlagToggle()"
+      >
+        {{ L().confirm }}
+      </button>
+    </div>
+  </div>
+}
+
+@if (rolloutEditing(); as rf) {
+  <div class="scrim" (click)="closeRollout()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().rolloutTitle(name(rf)) }}</span>
+      <label class="field">
+        <span class="field__label">{{ L().rolloutLabel }}</span>
+        <input
+          class="textarea"
+          type="number"
+          min="0"
+          max="100"
+          [ngModel]="rolloutDraft()"
+          (ngModelChange)="rolloutDraft.set($event)"
+          name="rolloutDraft"
+        />
+      </label>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeRollout()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="saveRollout()">{{ L().confirm }}</button>
+    </div>
+  </div>
+}
+
+@if (removeConfirm(); as rc) {
+  <div class="scrim" (click)="cancelRemove()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().removeTitle(overrideCompany(rc)) }}</span>
+      <p class="dialog__text">{{ L().removeBody }}</p>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="cancelRemove()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--danger" (click)="confirmRemove()">{{ L().confirm }}</button>
+    </div>
+  </div>
+}
+
+@if (toast(); as msg) {
+  <div class="toast">{{ msg }}</div>
+}

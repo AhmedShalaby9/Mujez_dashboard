@@ -1,0 +1,103 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.availability }}</span>
+    <span class="kpi__value kpi__value--ok">99.96%</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.p50 }}</span>
+    <span class="kpi__value">82 ms</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.p95 }}</span>
+    <span class="kpi__value">310 ms</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.errorRate }}</span>
+    <span class="kpi__value">0.08%</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.jobs }}</span>
+    <span class="kpi__value">12</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.db }}</span>
+    <span class="kpi__value">48/200</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.storage }}</span>
+    <span class="kpi__value">2.1 TB</span>
+  </div>
+</div>
+
+<div class="card chart-card">
+  <div class="chart-card__head">
+    <span class="chart-card__title">{{ L().chartTitle }}</span>
+    <span class="chart-legend">
+      <span class="chart-legend__item"><span class="chart-legend__dot chart-legend__dot--req"></span>{{ L().chartLegendReq }}</span>
+      <span class="chart-legend__item"><span class="chart-legend__dot chart-legend__dot--err"></span>{{ L().chartLegendErr }}</span>
+    </span>
+  </div>
+  <div class="chart">
+    @for (b of chartBars; track $index) {
+      <div class="chart__col" [title]="b.req + ' req · ' + b.err + ' err'">
+        <div class="chart__bar" [style.height.%]="b.reqPct">
+          <div class="chart__err" [style.height.%]="b.errPct"></div>
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+<div class="section-head">
+  <h2 class="section-head__title">{{ L().alertsTitle }}</h2>
+</div>
+
+<div class="chip-row">
+  <button type="button" class="chip" [class.chip--active]="sevFilter() === 'all'" (click)="setSev('all')">
+    {{ L().sevAll }}
+  </button>
+  @for (s of severities; track s) {
+    <button type="button" class="chip" [class.chip--active]="sevFilter() === s" (click)="setSev(s)">
+      {{ sevName(s) }}
+    </button>
+  }
+</div>
+
+<div class="chip-row chip-row--second">
+  <button type="button" class="chip" [class.chip--active]="svcFilter() === 'all'" (click)="setSvc('all')">
+    {{ L().svcAll }}
+  </button>
+  @for (s of services; track s) {
+    <button type="button" class="chip" [class.chip--active]="svcFilter() === s" (click)="setSvc(s)">
+      {{ svcName(s) }}
+    </button>
+  }
+</div>
+
+<div class="card">
+  <div class="alert-list">
+    @for (a of filtered(); track a.id) {
+      <div class="alert-row">
+        <span class="sev-dot" [class]="'sev-dot--' + a.severity"></span>
+        <div class="alert-row__text">
+          <span class="alert-row__msg">{{ alertMessage(a) }}</span>
+          <span class="alert-row__meta">
+            <span class="mono">{{ a.id }}</span> · {{ svcName(a.service) }} · {{ a.time }}
+          </span>
+        </div>
+        <span class="pill" [class]="'pill--' + a.severity">{{ sevName(a.severity) }}</span>
+      </div>
+    }
+    @if (!filtered().length) {
+      <div class="t-empty">{{ L().emptyTitle }}</div>
+    }
+  </div>
+</div>

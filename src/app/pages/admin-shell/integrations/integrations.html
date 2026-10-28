@@ -1,0 +1,152 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.total }}</span>
+    <span class="kpi__value">{{ kpis().total }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.healthy }}</span>
+    <span class="kpi__value">{{ kpis().healthy }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.degraded }}</span>
+    <span class="kpi__value kpi__value--warn">{{ kpis().degraded }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.unavailable }}</span>
+    <span class="kpi__value kpi__value--danger">{{ kpis().unavailable }}</span>
+  </div>
+</div>
+
+<div class="chip-row">
+  <button type="button" class="chip" [class.chip--active]="catFilter() === 'all'" (click)="setCat('all')">
+    {{ L().catAll }}
+  </button>
+  @for (c of categories; track c) {
+    <button type="button" class="chip" [class.chip--active]="catFilter() === c" (click)="setCat(c)">
+      {{ catName(c) }}
+    </button>
+  }
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <div class="i-table">
+      <div class="i-head">
+        <span>{{ L().colIntegration }}</span>
+        <span>{{ L().colCategory }}</span>
+        <span>{{ L().colStatus }}</span>
+        <span class="t-end">{{ L().colCompanies }}</span>
+        <span>{{ L().colLastSync }}</span>
+        <span class="t-end">{{ L().colErrors }}</span>
+        <span>{{ L().colAvailable }}</span>
+      </div>
+      @for (i of filtered(); track i.key) {
+        <div class="i-row" (click)="openView(i)">
+          <span class="i-cell__main">{{ name(i) }}</span>
+          <span>{{ catName(i.category) }}</span>
+          <span>
+            <span class="pill" [class]="'pill--' + i.status">{{ statusName(i.status) }}</span>
+          </span>
+          <span class="mono t-end">{{ i.companies }}</span>
+          <span>{{ i.lastSync }}</span>
+          <span class="mono t-end" [class.t-danger]="i.errors24h > 0">{{ i.errors24h }}</span>
+          <span (click)="$event.stopPropagation()">
+            <button type="button" class="toggle" [class.toggle--on]="i.status !== 'disabled'" (click)="askToggle(i)">
+              <span class="toggle__knob"></span>
+            </button>
+          </span>
+        </div>
+      }
+      @if (!filtered().length) {
+        <div class="t-empty">{{ L().emptyTitle }}</div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (viewing(); as v) {
+  <div class="scrim" (click)="closeView()"></div>
+  <div class="drawer" (click)="$event.stopPropagation()">
+    <div class="drawer__header">
+      <div class="drawer__headerText">
+        <span class="drawer__name">{{ name(v) }}</span>
+        <span class="drawer__sub">{{ catName(v.category) }}</span>
+      </div>
+      <button type="button" class="drawer__close" (click)="closeView()">✕</button>
+    </div>
+    <div class="drawer__body">
+      <span class="drawer__sectionTitle">{{ L().drawerConfig }}</span>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().drawerCredentials }}</span>
+        <span class="drawer__v mono">•••••••• ({{ L().drawerVaultRef }}: kv/integrations/{{ v.key }})</span>
+      </div>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().drawerWebhook }}</span>
+        <span class="drawer__v mono" dir="ltr">https://hooks.mujez.com/{{ v.webhookSlug }}</span>
+      </div>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().drawerConnected }}</span>
+        <span class="drawer__v mono">{{ v.companies }}</span>
+      </div>
+
+      <span class="drawer__sectionTitle">{{ L().drawerLog }}</span>
+      <div class="drawer__log">
+        @for (e of v.log; track e.time) {
+          <div class="drawer__logRow">
+            <span class="mono drawer__logTime">{{ e.time }}</span>
+            <span>{{ logMessage(e) }}</span>
+          </div>
+        }
+      </div>
+    </div>
+    <div class="drawer__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeView()">{{ L().drawerClose }}</button>
+    </div>
+  </div>
+}
+
+@if (toggling(); as t) {
+  <div class="scrim" (click)="cancelToggle()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">
+        {{ t.status !== 'disabled' ? L().disableTitle(name(t)) : L().enableTitle(name(t)) }}
+      </span>
+      <p class="dialog__text">
+        {{ t.status !== 'disabled' ? L().disableBody(t.companies) : L().enableBody }}
+      </p>
+      @if (t.status !== 'disabled') {
+        <label class="field">
+          <span class="field__label">{{ L().reasonLabel }}</span>
+          <textarea class="textarea" rows="2" [(ngModel)]="toggleReason" name="toggleReason"></textarea>
+          @if (toggleError()) {
+            <span class="field__error">{{ L().reasonError }}</span>
+          }
+        </label>
+      }
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="cancelToggle()">{{ L().cancel }}</button>
+      <button
+        type="button"
+        class="btn"
+        [class.btn--danger]="t.status !== 'disabled'"
+        [class.btn--primary]="t.status === 'disabled'"
+        (click)="confirmToggle()"
+      >
+        {{ L().confirm }}
+      </button>
+    </div>
+  </div>
+}
+
+@if (toast(); as msg) {
+  <div class="toast">{{ msg }}</div>
+}

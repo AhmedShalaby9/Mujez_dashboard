@@ -1,0 +1,188 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.open }}</span>
+    <span class="kpi__value">{{ kpis().open }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.waiting }}</span>
+    <span class="kpi__value">{{ kpis().waiting }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.overdue }}</span>
+    <span class="kpi__value kpi__value--danger">{{ kpis().overdue }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.resolved }}</span>
+    <span class="kpi__value">{{ kpis().resolved }}</span>
+  </div>
+</div>
+
+<input
+  class="search"
+  type="text"
+  [placeholder]="L().searchPh"
+  [ngModel]="search()"
+  (ngModelChange)="search.set($event)"
+  name="search"
+/>
+
+<div class="chip-row">
+  <button type="button" class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="setStatusFilter('all')">
+    {{ L().statusAll }}
+  </button>
+  @for (s of statuses; track s) {
+    <button type="button" class="chip" [class.chip--active]="statusFilter() === s" (click)="setStatusFilter(s)">
+      {{ statusName(s) }}
+    </button>
+  }
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <div class="tix-table">
+      <div class="tix-head">
+        <span>{{ L().colTicket }}</span>
+        <span>{{ L().colCompany }}</span>
+        <span>{{ L().colSubject }}</span>
+        <span>{{ L().colCategory }}</span>
+        <span>{{ L().colPriority }}</span>
+        <span>{{ L().colStatus }}</span>
+        <span>{{ L().colAssigned }}</span>
+        <span>{{ L().colUpdated }}</span>
+      </div>
+      @for (t of filtered(); track t.id) {
+        <div class="tix-row" (click)="openTicket(t)">
+          <span class="mono">{{ t.id }}</span>
+          <span class="tix-cell__ellipsis">{{ company(t) }}</span>
+          <span class="tix-cell__ellipsis">{{ subject(t) }}</span>
+          <span>{{ categoryName(t.category) }}</span>
+          <span><span class="pill" [class]="'pill--' + t.priority">{{ priorityName(t.priority) }}</span></span>
+          <span><span class="pill" [class]="'pill--' + t.status">{{ statusName(t.status) }}</span></span>
+          <span class="tix-cell__ellipsis">{{ t.assigned || L().unassigned }}</span>
+          <span>{{ t.updated }}</span>
+        </div>
+      }
+      @if (!filtered().length) {
+        <div class="t-empty">{{ L().emptyTitle }}</div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (viewing(); as t) {
+  <div class="scrim" (click)="closeTicket()"></div>
+  <div class="drawer" (click)="$event.stopPropagation()">
+    <div class="drawer__header">
+      <div class="drawer__headerText">
+        <span class="drawer__name">{{ subject(t) }}</span>
+        <span class="drawer__sub"><span class="mono">{{ t.id }}</span> · {{ company(t) }}</span>
+      </div>
+      <button type="button" class="drawer__close" (click)="closeTicket()">✕</button>
+    </div>
+    <div class="drawer__body">
+      <div class="meta-row">
+        <span class="pill" [class]="'pill--' + t.priority">{{ priorityName(t.priority) }}</span>
+        <span class="pill" [class]="'pill--' + t.status">{{ statusName(t.status) }}</span>
+        <span class="pill">{{ categoryName(t.category) }}</span>
+      </div>
+
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().requester }}</span>
+        <span class="drawer__v">{{ t.requester }}</span>
+      </div>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().created }}</span>
+        <span class="drawer__v">{{ t.created }}</span>
+      </div>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().slaDue }}</span>
+        <span class="drawer__v mono">{{ t.slaDue }}</span>
+      </div>
+
+      <span class="section-title">{{ L().changeStatus }}</span>
+      <div class="status-chips">
+        @for (s of statuses; track s) {
+          <button type="button" class="chip chip--sm" [class.chip--active]="t.status === s" (click)="setStatus(s)">
+            {{ statusName(s) }}
+          </button>
+        }
+      </div>
+
+      <span class="section-title">{{ L().conversation }}</span>
+      <div class="thread">
+        @for (m of t.messages; track $index) {
+          <div class="bubble" [class.bubble--agent]="m.author !== 'customer'" [class.bubble--system]="m.author === 'system'">
+            <span class="bubble__text">{{ msgText(m) }}</span>
+            <span class="bubble__time">{{ m.time }}</span>
+          </div>
+        }
+      </div>
+      <div class="reply-box">
+        <textarea class="textarea" rows="2" [placeholder]="L().replyPh" [ngModel]="replyDraft()" (ngModelChange)="replyDraft.set($event)" name="replyDraft"></textarea>
+        <button type="button" class="btn btn--primary" [disabled]="!replyDraft().trim()" (click)="sendReply()">{{ L().sendReply }}</button>
+      </div>
+
+      <span class="section-title">{{ L().internalNotes }}</span>
+      <span class="hint">{{ L().internalNotesHint }}</span>
+      <div class="notes">
+        @for (n of t.notes; track $index) {
+          <div class="note">
+            <span class="note__text">{{ noteText(n) }}</span>
+            <span class="note__meta">{{ n.authorName }} · {{ n.time }}</span>
+          </div>
+        }
+      </div>
+      <div class="reply-box">
+        <textarea class="textarea textarea--amber" rows="2" [placeholder]="L().notePh" [ngModel]="noteDraft()" (ngModelChange)="noteDraft.set($event)" name="noteDraft"></textarea>
+        <button type="button" class="btn btn--ghost" [disabled]="noteDraft().trim().length < 2" (click)="addNote()">{{ L().addNote }}</button>
+      </div>
+    </div>
+    <div class="drawer__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeTicket()">{{ L().close }}</button>
+      <button type="button" class="btn btn--primary" (click)="askWorkspace(t)">{{ L().requestWorkspace }}</button>
+    </div>
+  </div>
+}
+
+@if (requesting(); as rt) {
+  <div class="scrim" (click)="cancelWorkspace()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().requestWorkspaceTitle(company(rt)) }}</span>
+      <p class="dialog__text">{{ L().requestWorkspaceBody }}</p>
+      <label class="field">
+        <span class="field__label">{{ L().reasonLabel }}</span>
+        <textarea class="textarea" rows="2" [ngModel]="requestReason()" (ngModelChange)="requestReason.set($event)" name="requestReason"></textarea>
+        @if (requestError()) {
+          <span class="field__error">{{ L().reasonError }}</span>
+        }
+      </label>
+      <div class="field">
+        <span class="field__label">{{ L().durationLabel }}</span>
+        <div class="dur-row">
+          @for (d of durations; track d) {
+            <button type="button" class="chip chip--sm" [class.chip--active]="requestDuration() === d" (click)="requestDuration.set(d)">
+              {{ d }}m
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="cancelWorkspace()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="confirmWorkspace()">{{ L().confirm }}</button>
+    </div>
+  </div>
+}
+
+@if (toast(); as msg) {
+  <div class="toast">{{ msg }}</div>
+}

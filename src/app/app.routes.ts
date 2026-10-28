@@ -12,6 +12,8 @@ import { FeatureManagement } from './pages/admin-shell/feature-management/featur
 import { UsageLimits } from './pages/admin-shell/usage-limits/usage-limits';
 import { Integrations } from './pages/admin-shell/integrations/integrations';
 import { SystemHealth } from './pages/admin-shell/system-health/system-health';
+import { SupportTickets } from './pages/admin-shell/support-tickets/support-tickets';
+import { Announcements } from './pages/admin-shell/announcements/announcements';
 
 export const routes: Routes = [
   { path: '', component: Login },
@@ -31,6 +33,8 @@ export const routes: Routes = [
       { path: 'usage-limits', component: UsageLimits },
       { path: 'integrations', component: Integrations },
       { path: 'system-health', component: SystemHealth },
+      { path: 'support-tickets', component: SupportTickets },
+      { path: 'announcements', component: Announcements },
     ],
   },
 ];

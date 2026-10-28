@@ -1,0 +1,198 @@
+<div class="page-head" (click)="closeKebab()">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+  <div class="page-head__actions">
+    <button type="button" class="btn btn--primary" (click)="openInvite()">{{ L().inviteBtn }}</button>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.total }}</span>
+    <span class="kpi__value">{{ kpis().total }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.active }}</span>
+    <span class="kpi__value">{{ kpis().active }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.invited }}</span>
+    <span class="kpi__value">{{ kpis().invited }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.mfaOff }}</span>
+    <span class="kpi__value kpi__value--warn">{{ kpis().mfaOff }}</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <div class="u-table">
+      <div class="u-head">
+        <span>{{ L().colUser }}</span>
+        <span>{{ L().colRole }}</span>
+        <span>{{ L().colStatus }}</span>
+        <span>{{ L().colMfa }}</span>
+        <span>{{ L().colLastLogin }}</span>
+        <span></span>
+      </div>
+      @for (u of users(); track u.id) {
+        <div class="u-row">
+          <span class="u-cell__text">
+            <span class="u-cell__name">{{ u.name }} @if (isMe(u)) { <span class="you-badge">{{ L().you }}</span> }</span>
+            <span class="u-cell__email mono" dir="ltr">{{ u.email }}</span>
+          </span>
+          <span>{{ roleName(u.role) }}</span>
+          <span><span class="pill" [class]="'pill--' + u.status">{{ statusName(u.status) }}</span></span>
+          <span>
+            @if (u.mfaEnabled) {
+              <span class="mfa-dot mfa-dot--on"></span>
+            } @else {
+              <span class="mfa-dot mfa-dot--off"></span>
+            }
+          </span>
+          <span>{{ u.lastLogin }}</span>
+          <span class="kebab-wrap" (click)="$event.stopPropagation()">
+            @if (!isMe(u)) {
+              <button type="button" class="row-btn row-btn--icon" (click)="toggleKebab(u)">⋯</button>
+              @if (kebabFor() === u.id) {
+                <div class="dropdown">
+                  <button type="button" class="dropdown__item" (click)="askChangeRole(u)">{{ L().changeRole }}</button>
+                  <button type="button" class="dropdown__item" (click)="askRevoke(u)">{{ L().revokeSessions }}</button>
+                  <button type="button" class="dropdown__item" (click)="askResetMfa(u)">{{ L().resetMfa }}</button>
+                  <button type="button" class="dropdown__item dropdown__item--danger" (click)="askToggleStatus(u)">
+                    {{ u.status === 'disabled' ? L().enable : L().disable }}
+                  </button>
+                </div>
+              }
+            }
+          </span>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (inviting()) {
+  <div class="scrim" (click)="closeInvite()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().inviteTitle }}</span>
+      <label class="field">
+        <span class="field__label">{{ L().inviteEmailLabel }}</span>
+        <input class="textbox" type="text" dir="ltr" [ngModel]="inviteEmail()" (ngModelChange)="inviteEmail.set($event)" name="inviteEmail" />
+        @if (inviteError()) {
+          <span class="field__error">{{ L().inviteEmailError }}</span>
+        }
+      </label>
+      <div class="field">
+        <span class="field__label">{{ L().inviteRoleLabel }}</span>
+        <div class="chip-row">
+          @for (r of roleOrder; track r) {
+            @if (r !== 'super') {
+              <button type="button" class="chip" [class.chip--active]="inviteRole() === r" (click)="inviteRole.set(r)">
+                {{ roleName(r) }}
+              </button>
+            }
+          }
+        </div>
+      </div>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeInvite()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="confirmInvite()">{{ L().send }}</button>
+    </div>
+  </div>
+}
+
+@if (roleChanging(); as ru) {
+  <div class="scrim" (click)="cancelChangeRole()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().changeRoleTitle(ru.name) }}</span>
+      <div class="chip-row">
+        @for (r of roleOrder; track r) {
+          @if (r !== 'super') {
+            <button type="button" class="chip" [class.chip--active]="roleDraft() === r" (click)="roleDraft.set(r)">
+              {{ roleName(r) }}
+            </button>
+          }
+        }
+      </div>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="cancelChangeRole()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="confirmChangeRole()">{{ L().confirm }}</button>
+    </div>
+  </div>
+}
+
+@if (revoking(); as rv) {
+  <div class="scrim" (click)="cancelRevoke()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().revokeTitle(rv.name) }}</span>
+      <p class="dialog__text">{{ L().revokeBody }}</p>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="cancelRevoke()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--danger" (click)="confirmRevoke()">{{ L().confirm }}</button>
+    </div>
+  </div>
+}
+
+@if (resettingMfa(); as mu) {
+  <div class="scrim" (click)="cancelResetMfa()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().resetMfaTitle(mu.name) }}</span>
+      <p class="dialog__text">{{ L().resetMfaBody }}</p>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="cancelResetMfa()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="confirmResetMfa()">{{ L().requestApproval }}</button>
+    </div>
+  </div>
+}
+
+@if (togglingStatus(); as su) {
+  <div class="scrim" (click)="cancelToggleStatus()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">
+        {{ su.status !== 'disabled' ? L().disableTitle(su.name) : L().enableTitle(su.name) }}
+      </span>
+      <p class="dialog__text">
+        {{ su.status !== 'disabled' ? L().disableBody : L().enableBody }}
+      </p>
+      @if (su.status !== 'disabled') {
+        <label class="field">
+          <span class="field__label">{{ L().reasonLabel }}</span>
+          <textarea class="textarea" rows="2" [ngModel]="statusReason()" (ngModelChange)="statusReason.set($event)" name="statusReason"></textarea>
+          @if (statusError()) {
+            <span class="field__error">{{ L().reasonError }}</span>
+          }
+        </label>
+      }
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="cancelToggleStatus()">{{ L().cancel }}</button>
+      <button
+        type="button"
+        class="btn"
+        [class.btn--danger]="su.status !== 'disabled'"
+        [class.btn--primary]="su.status === 'disabled'"
+        (click)="confirmToggleStatus()"
+      >
+        {{ L().confirm }}
+      </button>
+    </div>
+  </div>
+}
+
+@if (toast(); as msg) {
+  <div class="toast">{{ msg }}</div>
+}

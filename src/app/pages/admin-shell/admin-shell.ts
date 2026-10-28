@@ -56,10 +56,10 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Support Tickets', path: 'support-tickets', count: '12', enabled: true },
   { kind: 'item', label: 'Announcements', path: 'announcements', enabled: true },
   { kind: 'head', label: 'Administration' },
-  { kind: 'item', label: 'Platform Users', enabled: false },
-  { kind: 'item', label: 'Roles & Permissions', enabled: false },
-  { kind: 'item', label: 'Audit Logs', enabled: false },
-  { kind: 'item', label: 'Settings', enabled: false },
+  { kind: 'item', label: 'Platform Users', path: 'platform-users', enabled: true },
+  { kind: 'item', label: 'Roles & Permissions', path: 'roles-permissions', enabled: true },
+  { kind: 'item', label: 'Audit Logs', path: 'audit-logs', enabled: true },
+  { kind: 'item', label: 'Settings', path: 'settings', enabled: true },
 ];
 
 const AR_NAV: NavEntry[] = [
@@ -82,10 +82,10 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'تذاكر الدعم', path: 'support-tickets', count: '12', enabled: true },
   { kind: 'item', label: 'الإعلانات', path: 'announcements', enabled: true },
   { kind: 'head', label: 'الإدارة' },
-  { kind: 'item', label: 'موظفو المنصة', enabled: false },
-  { kind: 'item', label: 'الأدوار والصلاحيات', enabled: false },
-  { kind: 'item', label: 'سجلات التدقيق', enabled: false },
-  { kind: 'item', label: 'الإعدادات', enabled: false },
+  { kind: 'item', label: 'موظفو المنصة', path: 'platform-users', enabled: true },
+  { kind: 'item', label: 'الأدوار والصلاحيات', path: 'roles-permissions', enabled: true },
+  { kind: 'item', label: 'سجلات التدقيق', path: 'audit-logs', enabled: true },
+  { kind: 'item', label: 'الإعدادات', path: 'settings', enabled: true },
 ];
 
 const COPY: Record<Lang, Copy> = {

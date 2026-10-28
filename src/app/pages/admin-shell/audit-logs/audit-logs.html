@@ -1,0 +1,139 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub(kpis().total) }}</span>
+  </div>
+  <div class="page-head__actions">
+    <button type="button" class="btn btn--ghost" (click)="openExport()">{{ L().exportBtn }}</button>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.total }}</span>
+    <span class="kpi__value">{{ kpis().total }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.high }}</span>
+    <span class="kpi__value kpi__value--danger">{{ kpis().high }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.workspace }}</span>
+    <span class="kpi__value">{{ kpis().workspace }}</span>
+  </div>
+</div>
+
+<input
+  class="search"
+  type="text"
+  [placeholder]="L().searchPh"
+  [ngModel]="search()"
+  (ngModelChange)="search.set($event)"
+  name="search"
+/>
+
+<div class="chip-row">
+  <button type="button" class="chip" [class.chip--active]="filter() === 'all'" (click)="setFilter('all')">
+    {{ L().filterAll }}
+  </button>
+  <button type="button" class="chip" [class.chip--active]="filter() === 'ws'" (click)="setFilter('ws')">
+    {{ L().filterWs }}
+  </button>
+  @for (s of severities; track s) {
+    <button type="button" class="chip" [class.chip--active]="filter() === s" (click)="setFilter(s)">
+      {{ sevName(s) }}
+    </button>
+  }
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <div class="aud-table">
+      <div class="aud-head">
+        <span>{{ L().colTime }}</span>
+        <span>{{ L().colActor }}</span>
+        <span>{{ L().colAction }}</span>
+        <span>{{ L().colResource }}</span>
+        <span>{{ L().colSeverity }}</span>
+      </div>
+      @for (e of filtered(); track e.id) {
+        <div class="aud-row" (click)="openView(e)">
+          <span class="mono">{{ e.time }}</span>
+          <span class="aud-cell__ellipsis">{{ e.actor }}</span>
+          <span class="aud-cell__ellipsis">{{ action(e) }}</span>
+          <span class="aud-cell__ellipsis">{{ e.resource }}</span>
+          <span><span class="pill" [class]="'pill--' + e.severity">{{ sevName(e.severity) }}</span></span>
+        </div>
+      }
+      @if (!filtered().length) {
+        <div class="t-empty">{{ L().emptyTitle }}</div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (viewing(); as e) {
+  <div class="scrim" (click)="closeView()"></div>
+  <div class="drawer" (click)="$event.stopPropagation()">
+    <div class="drawer__header">
+      <div class="drawer__headerText">
+        <span class="drawer__name">{{ action(e) }}</span>
+        <span class="drawer__sub"><span class="mono">{{ e.id }}</span> · {{ e.resource }}</span>
+      </div>
+      <button type="button" class="drawer__close" (click)="closeView()">✕</button>
+    </div>
+    <div class="drawer__body">
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().colActor }}</span>
+        <span class="drawer__v">{{ e.actor }}</span>
+      </div>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().colTime }}</span>
+        <span class="drawer__v mono">{{ e.time }}</span>
+      </div>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().colSeverity }}</span>
+        <span class="drawer__v"><span class="pill" [class]="'pill--' + e.severity">{{ sevName(e.severity) }}</span></span>
+      </div>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().drawerIp }}</span>
+        <span class="drawer__v mono" dir="ltr">{{ e.ip }}</span>
+      </div>
+
+      <span class="section-title">{{ L().drawerBefore }}</span>
+      <div class="diff-box diff-box--before">{{ before(e) }}</div>
+
+      <span class="section-title">{{ L().drawerAfter }}</span>
+      <div class="diff-box diff-box--after">{{ after(e) }}</div>
+    </div>
+    <div class="drawer__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeView()">{{ L().drawerClose }}</button>
+    </div>
+  </div>
+}
+
+@if (exporting()) {
+  <div class="scrim" (click)="closeExport()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().exportTitle }}</span>
+      <p class="dialog__text">{{ L().exportBody }}</p>
+      <label class="field">
+        <span class="field__label">{{ L().codeLabel }}</span>
+        <input class="textbox" type="text" dir="ltr" maxlength="6" [ngModel]="exportCode()" (ngModelChange)="exportCode.set($event)" name="exportCode" placeholder="123456" />
+        @if (exportError()) {
+          <span class="field__error">{{ L().codeError }}</span>
+        }
+      </label>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeExport()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="confirmExport()">{{ L().confirm }}</button>
+    </div>
+  </div>
+}
+
+@if (toast(); as msg) {
+  <div class="toast">{{ msg }}</div>
+}

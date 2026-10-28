@@ -1,0 +1,133 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+  <div class="page-head__actions">
+    <button type="button" class="btn btn--primary" (click)="openCreateRole()">{{ L().newRoleBtn }}</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <div class="matrix" [style.grid-template-columns]="'minmax(220px, 1.6fr) repeat(' + roles().length + ', 150px)'">
+      <div class="matrix__row matrix__row--head">
+        <span class="matrix__cell matrix__cell--feature">{{ L().colPermission }}</span>
+        @for (r of roles(); track r.key) {
+          <span class="matrix__cell matrix__cell--roleHead">
+            <span class="role-name">{{ name(r) }}</span>
+            @if (r.locked) {
+              <span class="role-sub">{{ L().locked }}</span>
+            } @else {
+              <span class="role-sub">{{ L().membersLabel(r.members) }}</span>
+            }
+            @if (!r.locked) {
+              <button type="button" class="role-delete" (click)="askDelete(r)">{{ L().deleteRole }}</button>
+            }
+          </span>
+        }
+      </div>
+
+      @for (p of permissions; track p.key) {
+        <div class="matrix__row">
+          <span class="matrix__cell matrix__cell--feature">
+            {{ permName(p) }}
+            @if (isSensitive(p)) {
+              <span class="sensitive-dot" title="Sensitive"></span>
+            }
+          </span>
+          @for (r of roles(); track r.key) {
+            <span class="matrix__cell matrix__cell--center">
+              <button
+                type="button"
+                class="toggle"
+                [class.toggle--on]="has(r, p)"
+                [class.toggle--locked]="r.locked"
+                (click)="toggle(r, p)"
+              >
+                <span class="toggle__knob"></span>
+              </button>
+            </span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (grantConfirm(); as gc) {
+  <div class="scrim" (click)="cancelGrant()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().grantTitle(permName(gc.perm), name(gc.role)) }}</span>
+      <p class="dialog__text">{{ L().grantBody(name(gc.role)) }}</p>
+      <label class="field">
+        <span class="field__label">{{ L().codeLabel }}</span>
+        <input class="textbox" type="text" dir="ltr" maxlength="6" [ngModel]="grantCode()" (ngModelChange)="grantCode.set($event)" name="grantCode" placeholder="123456" />
+        @if (grantError()) {
+          <span class="field__error">{{ L().codeError }}</span>
+        }
+      </label>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="cancelGrant()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="confirmGrant()">{{ L().confirm }}</button>
+    </div>
+  </div>
+}
+
+@if (deleteBlocked(); as db) {
+  <div class="scrim" (click)="closeDeleteBlocked()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().deleteBlockedTitle(name(db)) }}</span>
+      <p class="dialog__text">{{ L().deleteBlockedBody(name(db), db.members) }}</p>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--primary" (click)="closeDeleteBlocked()">{{ L().ok }}</button>
+    </div>
+  </div>
+}
+
+@if (deleteConfirm(); as dc) {
+  <div class="scrim" (click)="cancelDelete()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().deleteTitle(name(dc)) }}</span>
+      <p class="dialog__text">{{ L().deleteBody }}</p>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="cancelDelete()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--danger" (click)="confirmDelete()">{{ L().confirm }}</button>
+    </div>
+  </div>
+}
+
+@if (creatingRole()) {
+  <div class="scrim" (click)="closeCreateRole()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().newRoleTitle }}</span>
+      <label class="field">
+        <span class="field__label">{{ L().roleNameEn }}</span>
+        <input class="textbox" type="text" [ngModel]="newRoleNameEn()" (ngModelChange)="newRoleNameEn.set($event)" name="newRoleNameEn" />
+      </label>
+      <label class="field">
+        <span class="field__label">{{ L().roleNameAr }}</span>
+        <input class="textbox" type="text" dir="rtl" [ngModel]="newRoleNameAr()" (ngModelChange)="newRoleNameAr.set($event)" name="newRoleNameAr" />
+      </label>
+      @if (newRoleError()) {
+        <span class="field__error">{{ L().roleNameError }}</span>
+      }
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeCreateRole()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="confirmCreateRole()">{{ L().create }}</button>
+    </div>
+  </div>
+}
+
+@if (toast(); as msg) {
+  <div class="toast">{{ msg }}</div>
+}

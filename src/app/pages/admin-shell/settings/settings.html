@@ -1,0 +1,176 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+  <div class="page-head__actions">
+    <button type="button" class="btn btn--primary" (click)="openSave()">{{ L().saveBtn }}</button>
+  </div>
+</div>
+
+<div class="tabs">
+  @for (t of tabOrder; track t) {
+    <button type="button" class="tab" [class.tab--active]="activeTab() === t" (click)="setTab(t)">
+      {{ tabName(t) }}
+    </button>
+  }
+</div>
+
+<div class="card">
+  @switch (activeTab()) {
+    @case ('general') {
+      <div class="form-grid">
+        <label class="field">
+          <span class="field__label">{{ L().fields['platformName'] }}</span>
+          <input class="textbox" type="text" [(ngModel)]="state.platformName" name="platformName" />
+        </label>
+        <label class="field">
+          <span class="field__label">{{ L().fields['supportEmail'] }}</span>
+          <input class="textbox" type="text" dir="ltr" [(ngModel)]="state.supportEmail" name="supportEmail" />
+        </label>
+        <div class="field">
+          <span class="field__label">{{ L().fields['defaultLang'] }}</span>
+          <div class="chip-row">
+            <button type="button" class="chip" [class.chip--active]="state.defaultLang === 'en'" (click)="state.defaultLang = 'en'">English</button>
+            <button type="button" class="chip" [class.chip--active]="state.defaultLang === 'ar'" (click)="state.defaultLang = 'ar'">العربية</button>
+          </div>
+        </div>
+        <label class="field">
+          <span class="field__label">{{ L().fields['defaultTimezone'] }}</span>
+          <input class="textbox" type="text" dir="ltr" [(ngModel)]="state.defaultTimezone" name="defaultTimezone" />
+        </label>
+      </div>
+    }
+    @case ('defaults') {
+      <div class="form-grid">
+        <label class="field">
+          <span class="field__label">{{ L().fields['trialDays'] }}</span>
+          <input class="textbox" type="number" min="0" [(ngModel)]="state.trialDays" name="trialDays" />
+        </label>
+        <div class="field">
+          <span class="field__label">{{ L().fields['defaultPlan'] }}</span>
+          <div class="chip-row">
+            <button type="button" class="chip" [class.chip--active]="state.defaultPlan === 'starter'" (click)="state.defaultPlan = 'starter'">{{ L().plans.starter }}</button>
+            <button type="button" class="chip" [class.chip--active]="state.defaultPlan === 'pro'" (click)="state.defaultPlan = 'pro'">{{ L().plans.pro }}</button>
+            <button type="button" class="chip" [class.chip--active]="state.defaultPlan === 'business'" (click)="state.defaultPlan = 'business'">{{ L().plans.business }}</button>
+            <button type="button" class="chip" [class.chip--active]="state.defaultPlan === 'enterprise'" (click)="state.defaultPlan = 'enterprise'">{{ L().plans.enterprise }}</button>
+          </div>
+        </div>
+        <label class="field">
+          <span class="field__label">{{ L().fields['defaultCurrency'] }}</span>
+          <input class="textbox" type="text" dir="ltr" [(ngModel)]="state.defaultCurrency" name="defaultCurrency" />
+        </label>
+      </div>
+    }
+    @case ('billing') {
+      <div class="form-grid">
+        <label class="field">
+          <span class="field__label">{{ L().fields['invoiceFormat'] }}</span>
+          <input class="textbox mono" type="text" dir="ltr" [(ngModel)]="state.invoiceFormat" name="invoiceFormat" />
+        </label>
+        <label class="field">
+          <span class="field__label">{{ L().fields['paymentTerms'] }}</span>
+          <input class="textbox" type="number" min="0" [(ngModel)]="state.paymentTerms" name="paymentTerms" />
+        </label>
+        <label class="field">
+          <span class="field__label">{{ L().fields['taxRate'] }}</span>
+          <input class="textbox" type="number" min="0" max="100" [(ngModel)]="state.taxRate" name="taxRate" />
+        </label>
+        <div class="field">
+          <span class="field__label">{{ L().fields['taxProfile'] }}</span>
+          <div class="chip-row">
+            <button type="button" class="chip" [class.chip--active]="state.taxProfile === 'standard'" (click)="state.taxProfile = 'standard'">{{ L().taxProfiles.standard }}</button>
+            <button type="button" class="chip" [class.chip--active]="state.taxProfile === 'reverse_charge'" (click)="state.taxProfile = 'reverse_charge'">{{ L().taxProfiles.reverse_charge }}</button>
+          </div>
+        </div>
+      </div>
+    }
+    @case ('security') {
+      <div class="form-grid">
+        <button type="button" class="toggle-row" (click)="state.requireMfa = !state.requireMfa">
+          <span class="toggle" [class.toggle--on]="state.requireMfa"><span class="toggle__knob"></span></span>
+          <span class="toggle-row__label">{{ L().fields['requireMfa'] }}</span>
+        </button>
+        <label class="field">
+          <span class="field__label">{{ L().fields['sessionLength'] }}</span>
+          <input class="textbox" type="number" min="5" [(ngModel)]="state.sessionLength" name="sessionLength" />
+        </label>
+        <label class="field">
+          <span class="field__label">{{ L().fields['managementMaxMinutes'] }}</span>
+          <input class="textbox" type="number" min="5" [(ngModel)]="state.managementMaxMinutes" name="managementMaxMinutes" />
+        </label>
+        <label class="field">
+          <span class="field__label">{{ L().fields['lockoutAttempts'] }}</span>
+          <input class="textbox" type="number" min="1" [(ngModel)]="state.lockoutAttempts" name="lockoutAttempts" />
+        </label>
+        <label class="field field--wide">
+          <span class="field__label">{{ L().fields['ipAllowlist'] }}</span>
+          <textarea class="textarea" rows="3" dir="ltr" [(ngModel)]="state.ipAllowlist" name="ipAllowlist" placeholder="41.33.12.0/24"></textarea>
+        </label>
+      </div>
+    }
+    @case ('notifs') {
+      <div class="form-grid">
+        <button type="button" class="toggle-row" (click)="state.notifyPaymentFailed = !state.notifyPaymentFailed">
+          <span class="toggle" [class.toggle--on]="state.notifyPaymentFailed"><span class="toggle__knob"></span></span>
+          <span class="toggle-row__label">{{ L().fields['notifyPaymentFailed'] }}</span>
+        </button>
+        <button type="button" class="toggle-row" (click)="state.notifyTrialEnding = !state.notifyTrialEnding">
+          <span class="toggle" [class.toggle--on]="state.notifyTrialEnding"><span class="toggle__knob"></span></span>
+          <span class="toggle-row__label">{{ L().fields['notifyTrialEnding'] }}</span>
+        </button>
+        <button type="button" class="toggle-row" (click)="state.notifyTicketAssigned = !state.notifyTicketAssigned">
+          <span class="toggle" [class.toggle--on]="state.notifyTicketAssigned"><span class="toggle__knob"></span></span>
+          <span class="toggle-row__label">{{ L().fields['notifyTicketAssigned'] }}</span>
+        </button>
+        <button type="button" class="toggle-row" (click)="state.notifyIncident = !state.notifyIncident">
+          <span class="toggle" [class.toggle--on]="state.notifyIncident"><span class="toggle__knob"></span></span>
+          <span class="toggle-row__label">{{ L().fields['notifyIncident'] }}</span>
+        </button>
+      </div>
+    }
+    @case ('brand') {
+      <div class="form-grid">
+        <label class="field">
+          <span class="field__label">{{ L().fields['supportUrl'] }}</span>
+          <input class="textbox" type="text" dir="ltr" [(ngModel)]="state.supportUrl" name="supportUrl" />
+        </label>
+        <div class="field">
+          <span class="field__label">{{ L().fields['primaryColor'] }}</span>
+          <div class="color-row">
+            <span class="color-swatch" [style.background]="state.primaryColor"></span>
+            <input class="textbox mono" type="text" dir="ltr" [(ngModel)]="state.primaryColor" name="primaryColor" />
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>
+
+@if (saving()) {
+  <div class="scrim" (click)="closeSave()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().saveTitle }}</span>
+      <p class="dialog__text">{{ activeTab() === 'security' ? L().saveBodySecurity : L().saveBody }}</p>
+      @if (activeTab() === 'security') {
+        <label class="field">
+          <span class="field__label">{{ L().codeLabel }}</span>
+          <input class="textbox" type="text" dir="ltr" maxlength="6" [ngModel]="saveCode()" (ngModelChange)="saveCode.set($event)" name="saveCode" placeholder="123456" />
+          @if (saveError()) {
+            <span class="field__error">{{ L().codeError }}</span>
+          }
+        </label>
+      }
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeSave()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="confirmSave()">{{ L().confirm }}</button>
+    </div>
+  </div>
+}
+
+@if (toast(); as msg) {
+  <div class="toast">{{ msg }}</div>
+}

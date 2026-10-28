@@ -14,6 +14,10 @@ import { Integrations } from './pages/admin-shell/integrations/integrations';
 import { SystemHealth } from './pages/admin-shell/system-health/system-health';
 import { SupportTickets } from './pages/admin-shell/support-tickets/support-tickets';
 import { Announcements } from './pages/admin-shell/announcements/announcements';
+import { PlatformUsers } from './pages/admin-shell/platform-users/platform-users';
+import { RolesPermissions } from './pages/admin-shell/roles-permissions/roles-permissions';
+import { AuditLogs } from './pages/admin-shell/audit-logs/audit-logs';
+import { Settings } from './pages/admin-shell/settings/settings';
 
 export const routes: Routes = [
   { path: '', component: Login },
@@ -35,6 +39,10 @@ export const routes: Routes = [
       { path: 'system-health', component: SystemHealth },
       { path: 'support-tickets', component: SupportTickets },
       { path: 'announcements', component: Announcements },
+      { path: 'platform-users', component: PlatformUsers },
+      { path: 'roles-permissions', component: RolesPermissions },
+      { path: 'audit-logs', component: AuditLogs },
+      { path: 'settings', component: Settings },
     ],
   },
 ];

@@ -70,7 +70,7 @@ button {
 }
 
 .btn--primary {
-  background: #3d4fd6;
+  background: var(--platform-primary, #3d4fd6);
   color: #fff;
 
   &:hover {
@@ -205,8 +205,8 @@ button {
 }
 
 .toggle--on {
-  background: #3d4fd6;
-  border-color: #3d4fd6;
+  background: var(--platform-primary, #3d4fd6);
+  border-color: var(--platform-primary, #3d4fd6);
 
   .toggle__knob {
     inset-inline-start: 15px;
@@ -305,7 +305,7 @@ button {
   outline: none;
 
   &:focus {
-    border-color: #3d4fd6;
+    border-color: var(--platform-primary, #3d4fd6);
     box-shadow: 0 0 0 3px #e6e8fb;
   }
 }

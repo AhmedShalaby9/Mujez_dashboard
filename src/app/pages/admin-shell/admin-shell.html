@@ -14,7 +14,7 @@
         <rect x="28.5" y="35" width="7" height="11" rx="1.5" fill="#F5B841" />
       </svg>
       <div class="sidebar__brandText">
-        <span class="sidebar__brandName">{{ L().brand }}</span>
+        <span class="sidebar__brandName">{{ config.branding().platformName }}</span>
         <span class="sidebar__brandTag">{{ L().platformTag }}</span>
       </div>
     </div>
@@ -37,7 +37,12 @@
               }
             </a>
           } @else {
-            <button type="button" class="sidebar__item sidebar__item--disabled" title="Coming soon" disabled>
+            <button
+              type="button"
+              class="sidebar__item sidebar__item--disabled"
+              title="Coming soon"
+              disabled
+            >
               <span class="sidebar__itemLabel">{{ entry.label }}</span>
               @if (entry.count) {
                 <span class="sidebar__itemCount">{{ entry.count }}</span>
@@ -63,7 +68,12 @@
 
   <div class="main">
     <header class="topbar">
-      <button type="button" class="topbar__menuBtn" aria-label="Menu" (click)="$event.stopPropagation(); toggleMobileNav()">
+      <button
+        type="button"
+        class="topbar__menuBtn"
+        aria-label="Menu"
+        (click)="$event.stopPropagation(); toggleMobileNav()"
+      >
         ≡
       </button>
 
@@ -95,7 +105,16 @@
             aria-label="Notifications"
             (click)="$event.stopPropagation(); toggleNotif()"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
               <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
             </svg>
@@ -123,7 +142,11 @@
         </div>
 
         <div class="topbar__menuWrap">
-          <button type="button" class="topbar__profileBtn" (click)="$event.stopPropagation(); toggleProfile()">
+          <button
+            type="button"
+            class="topbar__profileBtn"
+            (click)="$event.stopPropagation(); toggleProfile()"
+          >
             <span class="topbar__profileAvatar">{{ me.initials }}</span>
             <span class="topbar__profileRole">{{ me.role }}</span>
           </button>
@@ -132,7 +155,13 @@
             <div class="dropdown dropdown--profile" (click)="$event.stopPropagation()">
               <button type="button" class="dropdown__item">{{ L().profileMenu.profile }}</button>
               <button type="button" class="dropdown__item">{{ L().profileMenu.settings }}</button>
-              <a class="dropdown__item dropdown__item--danger" (click)="signOut()" role="button" tabindex="0">{{ L().profileMenu.signOut }}</a>
+              <a
+                class="dropdown__item dropdown__item--danger"
+                (click)="signOut()"
+                role="button"
+                tabindex="0"
+                >{{ L().profileMenu.signOut }}</a
+              >
             </div>
           }
         </div>

@@ -134,7 +134,7 @@
 }
 
 .chart-legend__dot--req {
-  background: #3d4fd6;
+  background: var(--platform-primary, #3d4fd6);
 }
 
 .chart-legend__dot--err {
@@ -203,7 +203,7 @@
 }
 
 .chip--active {
-  border-color: #3d4fd6;
+  border-color: var(--platform-primary, #3d4fd6);
   background: #e6e8fb;
   color: #2b37a0;
 }
@@ -244,7 +244,7 @@
 }
 
 .sev-dot--info {
-  background: #3d4fd6;
+  background: var(--platform-primary, #3d4fd6);
 }
 
 .sev-dot--resolved {

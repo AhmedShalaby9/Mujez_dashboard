@@ -81,7 +81,7 @@ textarea {
 
 .btn--primary {
   border: 0;
-  background: #3d4fd6;
+  background: var(--platform-primary, #3d4fd6);
   color: #fff;
 
   &:hover:not(:disabled) {
@@ -128,7 +128,7 @@ textarea {
 }
 
 .kpi--active {
-  box-shadow: inset 0 0 0 2px #3d4fd6;
+  box-shadow: inset 0 0 0 2px var(--platform-primary, #3d4fd6);
 }
 
 .kpi__label {
@@ -165,7 +165,7 @@ textarea {
   outline: none;
 
   &:focus {
-    border-color: #3d4fd6;
+    border-color: var(--platform-primary, #3d4fd6);
     box-shadow: 0 0 0 3px #e6e8fb;
   }
 }
@@ -194,7 +194,7 @@ textarea {
 }
 
 .chip--active {
-  border-color: #3d4fd6;
+  border-color: var(--platform-primary, #3d4fd6);
   background: #e6e8fb;
   color: #2b37a0;
 }
@@ -250,7 +250,7 @@ textarea {
 }
 
 .sort-arrow--on {
-  color: #3d4fd6;
+  color: var(--platform-primary, #3d4fd6);
 }
 
 .t-row {
@@ -622,7 +622,7 @@ textarea {
 }
 
 .ws-mode--active {
-  border-color: #3d4fd6;
+  border-color: var(--platform-primary, #3d4fd6);
   background: #f1f2fd;
 }
 
@@ -637,7 +637,7 @@ textarea {
 }
 
 .ws-mode__radio--active {
-  border-color: #3d4fd6;
+  border-color: var(--platform-primary, #3d4fd6);
 }
 
 .ws-mode__text {
@@ -681,7 +681,7 @@ textarea {
   resize: vertical;
 
   &:focus {
-    border-color: #3d4fd6;
+    border-color: var(--platform-primary, #3d4fd6);
     box-shadow: 0 0 0 3px #e6e8fb;
   }
 }
@@ -721,8 +721,8 @@ textarea {
 }
 
 .ack-box--on {
-  border-color: #3d4fd6;
-  background: #3d4fd6;
+  border-color: var(--platform-primary, #3d4fd6);
+  background: var(--platform-primary, #3d4fd6);
 }
 
 .ack-text {

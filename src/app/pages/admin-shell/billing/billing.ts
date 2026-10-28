@@ -1,3 +1,4 @@
+import { AuthService } from '../../../auth.service';
 import { FormsModule } from '@angular/forms';
 import { BillingApi, toMinor } from '../../../billing-api.service';
 import { CompaniesApi } from '../../../companies-api.service';
@@ -276,6 +277,7 @@ const PAGE_SIZE = 10;
   styleUrl: './billing.scss',
 })
 export class Billing {
+  private readonly auth = inject(AuthService);
   readonly NumberValue = Number;
   private readonly api = inject(BillingApi);
   private readonly companiesApi = inject(CompaniesApi);
@@ -318,7 +320,15 @@ export class Billing {
       this.loading.set(false);
     }
   }
-  openCreate() {
+  async openCreate() {
+    try {
+      const d = await this.auth.request('/admin/api/v1/platform-defaults');
+      this.draft.issueDate = new Date().toISOString().slice(0, 10);
+      this.draft.taxPercent = String(d.taxRate);
+      this.draft.dueDate = new Date(Date.now() + d.paymentTerms * 86400000)
+        .toISOString()
+        .slice(0, 10);
+    } catch {}
     this.requestId = crypto.randomUUID();
     this.creating.set(true);
     this.error.set('');

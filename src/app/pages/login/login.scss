@@ -232,7 +232,7 @@ input {
   border: 0;
   background: transparent;
   padding: 0;
-  color: #3d4fd6;
+  color: var(--platform-primary, #4945cc);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -256,7 +256,7 @@ input {
   text-align: start;
 
   &:focus {
-    border-color: #3d4fd6;
+    border-color: var(--platform-primary, #4945cc);
     box-shadow: 0 0 0 3px #e6e8fb;
   }
 }
@@ -300,7 +300,7 @@ input {
   input {
     width: 16px;
     height: 16px;
-    accent-color: #3d4fd6;
+    accent-color: var(--platform-primary, #4945cc);
     margin: 0;
   }
 }
@@ -309,7 +309,7 @@ input {
   height: 44px;
   border: 0;
   border-radius: 6px;
-  background: #3d4fd6;
+  background: var(--platform-primary, #4945cc);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
@@ -342,7 +342,7 @@ input {
   height: 18px;
   border-radius: 50%;
   background: #e6e8fb;
-  color: #3d4fd6;
+  color: var(--platform-primary, #4945cc);
   display: grid;
   place-items: center;
   font-weight: 600;
@@ -364,7 +364,7 @@ input {
   border: 0;
   background: transparent;
   padding: 0;
-  color: #3d4fd6;
+  color: var(--platform-primary, #4945cc);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;

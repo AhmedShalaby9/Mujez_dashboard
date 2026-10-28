@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { AuthService } from '../../../auth.service';
 import { FormsModule } from '@angular/forms';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
@@ -8,6 +9,9 @@ type FilterKey = 'all' | 'ws' | Severity;
 interface AuditEntry {
   id: string;
   time: string;
+  result: string;
+  before?: unknown;
+  after?: unknown;
   actor: string;
   actionEn: string;
   actionAr: string;
@@ -20,23 +24,6 @@ interface AuditEntry {
   afterAr: string;
   ip: string;
 }
-
-const SEED: AuditEntry[] = [
-  { id: 'AUD-901', time: 'Oct 28 10:40', actor: 'Omar Khaled', actionEn: 'Entered workspace (read-only)', actionAr: 'دخول مساحة العمل (قراءة)', resource: 'Deira Properties', severity: 'med', isWorkspace: true, beforeEn: '—', beforeAr: '—', afterEn: 'mode: read-only · 30m', afterAr: 'الوضع: قراءة · 30 دقيقة', ip: '41.33.12.9' },
-  { id: 'AUD-900', time: 'Oct 28 10:22', actor: 'Omar Khaled', actionEn: 'Feature platform flag disabled', actionAr: 'تعطيل علم المنصة للخاصية', resource: 'Advanced reports', severity: 'high', isWorkspace: false, beforeEn: 'on', beforeAr: 'مفعّل', afterEn: 'off · reason: pricing review', afterAr: 'معطّل · السبب: مراجعة التسعير', ip: '41.33.12.9' },
-  { id: 'AUD-899', time: 'Oct 28 09:52', actor: 'Sara Fouad', actionEn: 'Integration availability changed', actionAr: 'تغيير إتاحة التكامل', resource: 'Property Finder', severity: 'high', isWorkspace: false, beforeEn: 'available', beforeAr: 'متاح', afterEn: 'unavailable · reason: repeated sync failures', afterAr: 'غير متاح · السبب: فشل متكرر بالمزامنة', ip: '156.202.44.1' },
-  { id: 'AUD-898', time: 'Oct 28 08:50', actor: 'Omar Khaled', actionEn: 'Account flagged to avoid auto-suspend', actionAr: 'وضع علامة لتفادي الإيقاف التلقائي', resource: 'Smart Spaces', severity: 'high', isWorkspace: false, beforeEn: 'auto-suspend: Oct 29', beforeAr: 'الإيقاف التلقائي: 29 أكتوبر', afterEn: 'auto-suspend: Nov 5', afterAr: 'الإيقاف التلقائي: 5 نوفمبر', ip: '41.33.12.9' },
-  { id: 'AUD-897', time: 'Oct 27 16:40', actor: 'Hany Fathy', actionEn: 'Manual payment recorded', actionAr: 'تسجيل دفعة يدوية', resource: 'INV-2026-0014', severity: 'med', isWorkspace: false, beforeEn: 'status: overdue', beforeAr: 'الحالة: متأخرة', afterEn: 'status: paid · bank ref: 88213', afterAr: 'الحالة: مدفوعة · مرجع: 88213', ip: '197.45.6.2' },
-  { id: 'AUD-896', time: 'Oct 26 14:10', actor: 'Omar Khaled', actionEn: 'Subscription plan changed', actionAr: 'تغيير خطة الاشتراك', resource: 'SUB-2014 · Horizon Estates', severity: 'med', isWorkspace: false, beforeEn: 'plan: starter', beforeAr: 'الخطة: starter', afterEn: 'plan: pro · prorated', afterAr: 'الخطة: pro · احتساب نسبي', ip: '41.33.12.9' },
-  { id: 'AUD-895', time: 'Oct 25 11:15', actor: 'Omar Khaled', actionEn: 'Usage limit override applied', actionAr: 'تطبيق تجاوز حد الاستخدام', resource: 'Capital Gate Developers · users', severity: 'low', isWorkspace: false, beforeEn: 'limit: 100', beforeAr: 'الحد: 100', afterEn: 'limit: 120 · expires Nov 7', afterAr: 'الحد: 120 · ينتهي 7 نوفمبر', ip: '41.33.12.9' },
-  { id: 'AUD-894', time: 'Oct 24 13:22', actor: 'Omar Khaled', actionEn: 'Feature override removed', actionAr: 'إزالة استثناء خاصية', resource: 'Metro Realty Group · routing_adv', severity: 'med', isWorkspace: false, beforeEn: 'override: off', beforeAr: 'الاستثناء: معطّل', afterEn: 'reverted to plan entitlement', afterAr: 'عاد لحدود الباقة', ip: '41.33.12.9' },
-  { id: 'AUD-893', time: 'Oct 22 09:05', actor: 'Sara Fouad', actionEn: 'Administrator invited', actionAr: 'دعوة مسؤول', resource: 'laila@mujez.io', severity: 'high', isWorkspace: false, beforeEn: '—', beforeAr: '—', afterEn: 'role: support_admin · status: invited', afterAr: 'الدور: support_admin · الحالة: مدعو', ip: '156.202.44.1' },
-  { id: 'AUD-892', time: 'Oct 21 17:30', actor: 'Omar Khaled', actionEn: 'Settings changed', actionAr: 'تغيير الإعدادات', resource: 'Settings · Security', severity: 'high', isWorkspace: false, beforeEn: 'session length: 60m', beforeAr: 'مدة الجلسة: 60 د', afterEn: 'session length: 45m', afterAr: 'مدة الجلسة: 45 د', ip: '41.33.12.9' },
-  { id: 'AUD-891', time: 'Oct 20 15:00', actor: 'Omar Khaled', actionEn: 'Announcement published', actionAr: 'نشر إعلان', resource: 'ANN-2 · Advanced lead routing', severity: 'low', isWorkspace: false, beforeEn: 'status: draft', beforeAr: 'الحالة: مسودة', afterEn: 'status: published', afterAr: 'الحالة: منشور', ip: '41.33.12.9' },
-  { id: 'AUD-890', time: 'Oct 19 10:05', actor: 'Sara Fouad', actionEn: 'Entered workspace (read-only)', actionAr: 'دخول مساحة العمل (قراءة)', resource: 'Deira Properties', severity: 'med', isWorkspace: true, beforeEn: '—', beforeAr: '—', afterEn: 'mode: read-only · 30m', afterAr: 'الوضع: قراءة · 30 دقيقة', ip: '156.202.44.1' },
-  { id: 'AUD-889', time: 'Oct 14 10:41', actor: 'Sara Fouad', actionEn: 'Support ticket resolved', actionAr: 'حل تذكرة دعم', resource: 'T-2032', severity: 'low', isWorkspace: false, beforeEn: 'status: open', beforeAr: 'الحالة: مفتوحة', afterEn: 'status: resolved', afterAr: 'الحالة: تم الحل', ip: '156.202.44.1' },
-  { id: 'AUD-888', time: 'Oct 10 13:20', actor: 'Omar Khaled', actionEn: 'Blocked workspace write attempt', actionAr: 'منع محاولة كتابة في مساحة العمل', resource: 'October Living', severity: 'high', isWorkspace: true, beforeEn: 'mode: read-only', beforeAr: 'الوضع: قراءة', afterEn: 'write attempt denied · 403', afterAr: 'رُفضت محاولة الكتابة · 403', ip: '41.33.12.9' },
-];
 
 interface Copy {
   eyebrow: string;
@@ -71,7 +58,7 @@ const COPY: Record<Lang, Copy> = {
   en: {
     eyebrow: 'Administration',
     title: 'Audit logs',
-    sub: (n) => `Append-only · ${n} events · secrets are never logged`,
+    sub: (n) => `Append-only · ${n} matching events · credential fields are redacted`,
     kpis: { total: 'Events', high: 'High severity', workspace: 'Workspace access' },
     searchPh: 'Administrator, company, action…',
     filterAll: 'All',
@@ -88,12 +75,13 @@ const COPY: Record<Lang, Copy> = {
     drawerClose: 'Close',
     exportBtn: 'Export audit report',
     exportTitle: 'Export audit report',
-    exportBody: 'Exports may contain personal data. Re-enter your authenticator code.',
-    codeLabel: 'TOTP code',
-    codeError: 'Enter the 6-digit code.',
+    exportBody:
+      'CSV exports may contain personal data. Confirm your password and reason. Exports are limited to 5,000 matching events.',
+    codeLabel: 'Current password',
+    codeError: 'Enter your current password.',
     cancel: 'Cancel',
     confirm: 'Export',
-    exportToast: 'Export queued (static design preview).',
+    exportToast: 'CSV report downloaded.',
     emptyTitle: 'No events match this filter',
   },
   ar: {
@@ -116,12 +104,12 @@ const COPY: Record<Lang, Copy> = {
     drawerClose: 'إغلاق',
     exportBtn: 'تصدير تقرير التدقيق',
     exportTitle: 'تصدير تقرير التدقيق',
-    exportBody: 'قد يحتوي التصدير على بيانات شخصية. أعد إدخال رمز المصادقة.',
-    codeLabel: 'رمز TOTP',
+    exportBody: 'قد يحتوي التقرير على بيانات شخصية. أكد كلمة المرور والسبب. الحد الأقصى 5000 حدث.',
+    codeLabel: 'كلمة المرور الحالية',
     codeError: 'أدخل الرمز المكوّن من 6 أرقام.',
     cancel: 'إلغاء',
     confirm: 'تصدير',
-    exportToast: 'تم جدولة التصدير (معاينة تصميم ثابتة).',
+    exportToast: 'تم تنزيل تقرير CSV.',
     emptyTitle: 'لا توجد أحداث مطابقة لهذا الفلتر',
   },
 };
@@ -139,7 +127,58 @@ export class AuditLogs {
   readonly L = computed(() => COPY[this.lang()]);
   readonly severities: Severity[] = ['high', 'med', 'low'];
 
-  readonly entries = signal<AuditEntry[]>(SEED);
+  readonly api = inject(AuthService);
+  readonly entries = signal<AuditEntry[]>([]);
+  readonly loading = signal(false);
+  readonly error = signal('');
+  readonly busy = signal(false);
+  readonly reason = signal('');
+  readonly from = signal('');
+  readonly untilInput = signal('');
+  readonly nextCursor = signal<string | null>(null);
+  readonly stats = signal({ total: 0, high: 0, workspace: 0 });
+  private cutoff = '';
+  constructor() {
+    void this.load();
+  }
+  query(cursor = false) {
+    return {
+      q: this.search().trim(),
+      filter: this.filter(),
+      ...(this.from() ? { from: new Date(this.from()).toISOString() } : {}),
+      ...(this.untilInput()
+        ? { until: new Date(this.untilInput()).toISOString() }
+        : this.cutoff
+          ? { until: this.cutoff }
+          : {}),
+      ...(cursor && this.nextCursor() ? { cursor: this.nextCursor()! } : {}),
+    };
+  }
+  async load(more = false) {
+    if (this.loading()) return;
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      if (!more) this.cutoff = '';
+      const q = new URLSearchParams({ ...this.query(more), limit: '50' });
+      const r = await this.api.request('/admin/api/v1/audit-logs?' + q);
+      this.entries.set(more ? [...this.entries(), ...r.items] : r.items);
+      this.nextCursor.set(r.nextCursor);
+      this.stats.set(r.kpis);
+      this.cutoff = r.until;
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.loading.set(false);
+    }
+  }
+  time(value: string) {
+    return new Intl.DateTimeFormat(this.lang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', {
+      timeZone: 'Africa/Cairo',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(value));
+  }
   readonly filter = signal<FilterKey>('all');
   readonly search = signal('');
   readonly viewing = signal<AuditEntry | null>(null);
@@ -156,48 +195,32 @@ export class AuditLogs {
   }
 
   before(e: AuditEntry): string {
-    return this.lang() === 'ar' ? e.beforeAr : e.beforeEn;
+    return e.before === null || e.before === undefined ? '---' : JSON.stringify(e.before, null, 2);
   }
 
   after(e: AuditEntry): string {
-    return this.lang() === 'ar' ? e.afterAr : e.afterEn;
+    return e.after === null || e.after === undefined ? '---' : JSON.stringify(e.after, null, 2);
   }
 
   sevName(s: Severity): string {
     return this.L().sev[s];
   }
 
-  readonly kpis = computed(() => {
-    const list = this.entries();
-    return {
-      total: list.length,
-      high: list.filter((e) => e.severity === 'high').length,
-      workspace: list.filter((e) => e.isWorkspace).length,
-    };
-  });
-
-  readonly filtered = computed(() => {
-    const f = this.filter();
-    const q = this.search().trim().toLowerCase();
-    return this.entries().filter((e) => {
-      if (f === 'ws' && !e.isWorkspace) return false;
-      if (f !== 'all' && f !== 'ws' && e.severity !== f) return false;
-      if (!q) return true;
-      return (
-        e.actor.toLowerCase().includes(q) ||
-        e.resource.toLowerCase().includes(q) ||
-        e.actionEn.toLowerCase().includes(q) ||
-        e.actionAr.includes(q)
-      );
-    });
-  });
+  readonly kpis = this.stats;
+  readonly filtered = this.entries;
 
   setFilter(f: FilterKey): void {
     this.filter.set(f);
+    void this.load();
   }
 
-  openView(e: AuditEntry): void {
-    this.viewing.set(e);
+  async openView(e: AuditEntry) {
+    this.error.set('');
+    try {
+      this.viewing.set(await this.api.request('/admin/api/v1/audit-logs/' + e.id));
+    } catch (error) {
+      this.error.set((error as Error).message);
+    }
   }
 
   closeView(): void {
@@ -206,6 +229,8 @@ export class AuditLogs {
 
   openExport(): void {
     this.exporting.set(true);
+    this.reason.set('');
+    this.error.set('');
     this.exportCode.set('');
     this.exportError.set(false);
   }
@@ -214,13 +239,30 @@ export class AuditLogs {
     this.exporting.set(false);
   }
 
-  confirmExport(): void {
-    if (!/^\d{6}$/.test(this.exportCode().trim())) {
-      this.exportError.set(true);
-      return;
+  async confirmExport() {
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      const r = await this.api.request('/admin/api/v1/audit-logs/export', {
+        password: this.exportCode(),
+        reason: this.reason().trim(),
+        filters: this.query(),
+      });
+      const url = URL.createObjectURL(new Blob([r.content], { type: r.contentType }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = r.filename;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this.exportCode.set('');
+      this.exporting.set(false);
+      this.showToast(this.L().exportToast);
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.busy.set(false);
     }
-    this.exporting.set(false);
-    this.showToast(this.L().exportToast);
   }
 
   private showToast(msg: string): void {

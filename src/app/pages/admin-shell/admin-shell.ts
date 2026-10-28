@@ -1,3 +1,4 @@
+import { PlatformConfig } from '../../platform-config.service';
 import { SupportApi } from '../../support-api.service';
 import { BillingApi } from '../../billing-api.service';
 import { SubscriptionsApi } from '../../subscriptions-api.service';
@@ -150,6 +151,7 @@ const COPY: Record<Lang, Copy> = {
   styleUrl: './admin-shell.scss',
 })
 export class AdminShell {
+  readonly config = inject(PlatformConfig);
   readonly supportApi = inject(SupportApi);
   constructor() {
     if (this.auth.user()?.permissions.includes('support')) void this.supportApi.summary();

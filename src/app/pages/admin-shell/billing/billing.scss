@@ -74,7 +74,7 @@ textarea {
 
 .btn--primary {
   border: 0;
-  background: #3d4fd6;
+  background: var(--platform-primary, #3d4fd6);
   color: #fff;
 
   &:hover:not(:disabled) {
@@ -144,7 +144,7 @@ textarea {
   outline: none;
 
   &:focus {
-    border-color: #3d4fd6;
+    border-color: var(--platform-primary, #3d4fd6);
     box-shadow: 0 0 0 3px #e6e8fb;
   }
 }
@@ -173,7 +173,7 @@ textarea {
 }
 
 .chip--active {
-  border-color: #3d4fd6;
+  border-color: var(--platform-primary, #3d4fd6);
   background: #e6e8fb;
   color: #2b37a0;
 }
@@ -233,7 +233,7 @@ textarea {
 }
 
 .sort-arrow--on {
-  color: #3d4fd6;
+  color: var(--platform-primary, #3d4fd6);
 }
 
 .t-row {
@@ -612,7 +612,7 @@ textarea {
   background: #fff;
 
   &:focus {
-    border-color: #3d4fd6;
+    border-color: var(--platform-primary, #3d4fd6);
     box-shadow: 0 0 0 3px #e6e8fb;
   }
 
@@ -631,7 +631,7 @@ textarea {
   resize: vertical;
 
   &:focus {
-    border-color: #3d4fd6;
+    border-color: var(--platform-primary, #3d4fd6);
     box-shadow: 0 0 0 3px #e6e8fb;
   }
 }

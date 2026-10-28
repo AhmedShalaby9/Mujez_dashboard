@@ -268,7 +268,7 @@ a.sidebar__item:hover {
   outline: none;
 
   &:focus {
-    border-color: #3d4fd6;
+    border-color: var(--platform-primary, #4945cc);
     box-shadow: 0 0 0 3px #e6e8fb;
   }
 }
@@ -427,7 +427,7 @@ a.sidebar__item:hover {
 }
 
 .notif-row__dot--unread {
-  background: #3d4fd6;
+  background: var(--platform-primary, #4945cc);
 }
 
 .notif-row__body {

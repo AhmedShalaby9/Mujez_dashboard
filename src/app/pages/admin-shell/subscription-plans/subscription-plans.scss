@@ -83,7 +83,7 @@ button {
 
 .btn--primary {
   border: 0;
-  background: #3d4fd6;
+  background: var(--platform-primary, #3d4fd6);
   color: #fff;
 
   &:hover:not(:disabled) {
@@ -224,7 +224,7 @@ button {
   padding: 0;
   background: transparent;
   font-size: 12px;
-  color: #3d4fd6;
+  color: var(--platform-primary, #3d4fd6);
   cursor: pointer;
   font-family: inherit;
 
@@ -335,7 +335,7 @@ button {
 }
 
 .ws-mode--active {
-  border-color: #3d4fd6;
+  border-color: var(--platform-primary, #3d4fd6);
   background: #f1f2fd;
 }
 
@@ -350,7 +350,7 @@ button {
 }
 
 .ws-mode__radio--active {
-  border-color: #3d4fd6;
+  border-color: var(--platform-primary, #3d4fd6);
 }
 
 .ws-mode__text {

@@ -1,4 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { AuthService } from '../../../auth.service';
+import { PlatformConfig } from '../../../platform-config.service';
 import { FormsModule } from '@angular/forms';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
@@ -29,31 +31,6 @@ interface SettingsState {
   primaryColor: string;
 }
 
-const INITIAL: SettingsState = {
-  platformName: 'Mujez',
-  supportEmail: 'support@mujez.io',
-  defaultLang: 'en',
-  defaultTimezone: 'Africa/Cairo',
-  trialDays: 21,
-  defaultPlan: 'starter',
-  defaultCurrency: 'EGP',
-  invoiceFormat: 'INV-{YYYY}-{####}',
-  paymentTerms: 14,
-  taxRate: 14,
-  taxProfile: 'standard',
-  requireMfa: true,
-  sessionLength: 45,
-  managementMaxMinutes: 120,
-  ipAllowlist: '',
-  lockoutAttempts: 5,
-  notifyPaymentFailed: true,
-  notifyTrialEnding: true,
-  notifyTicketAssigned: true,
-  notifyIncident: true,
-  supportUrl: 'https://support.mujez.io',
-  primaryColor: '#3D4FD6',
-};
-
 interface Copy {
   eyebrow: string;
   title: string;
@@ -78,13 +55,20 @@ const COPY: Record<Lang, Copy> = {
     eyebrow: 'Administration',
     title: 'Settings',
     sub: 'Global platform configuration',
-    tabs: { general: 'General', defaults: 'Company defaults', billing: 'Billing', security: 'Security', notifs: 'Notifications', brand: 'Branding' },
+    tabs: {
+      general: 'General',
+      defaults: 'Company defaults',
+      billing: 'Billing',
+      security: 'Security',
+      notifs: 'Notifications',
+      brand: 'Branding',
+    },
     saveBtn: 'Save changes',
     saveTitle: 'Save platform settings',
-    saveBody: 'Changes apply platform-wide.',
+    saveBody: 'Defaults apply to new records. Security changes take effect as described below.',
     saveBodySecurity: 'Changes apply platform-wide. Security changes require re-authentication.',
-    codeLabel: 'TOTP code',
-    codeError: 'Enter the 6-digit code.',
+    codeLabel: 'Current password',
+    codeError: 'Enter your current password.',
     cancel: 'Cancel',
     confirm: 'Save',
     savedToast: 'Settings saved.',
@@ -119,13 +103,20 @@ const COPY: Record<Lang, Copy> = {
     eyebrow: 'الإدارة',
     title: 'الإعدادات',
     sub: 'إعدادات المنصة العامة',
-    tabs: { general: 'عام', defaults: 'افتراضيات الشركات', billing: 'الفوترة', security: 'الأمان', notifs: 'الإشعارات', brand: 'الهوية' },
+    tabs: {
+      general: 'عام',
+      defaults: 'افتراضيات الشركات',
+      billing: 'الفوترة',
+      security: 'الأمان',
+      notifs: 'الإشعارات',
+      brand: 'الهوية',
+    },
     saveBtn: 'حفظ التغييرات',
     saveTitle: 'حفظ إعدادات المنصة',
     saveBody: 'تُطبّق التغييرات على مستوى المنصة.',
     saveBodySecurity: 'تُطبّق التغييرات على مستوى المنصة. تغييرات الأمان تتطلب إعادة المصادقة.',
-    codeLabel: 'رمز TOTP',
-    codeError: 'أدخل الرمز المكوّن من 6 أرقام.',
+    codeLabel: 'كلمة المرور الحالية',
+    codeError: 'أدخل كلمة المرور الحالية.',
     cancel: 'إلغاء',
     confirm: 'حفظ',
     savedToast: 'تم حفظ الإعدادات.',
@@ -172,7 +163,31 @@ export class Settings {
   readonly tabOrder: Tab[] = ['general', 'defaults', 'billing', 'security', 'notifs', 'brand'];
   readonly activeTab = signal<Tab>('general');
 
-  state: SettingsState = { ...INITIAL };
+  readonly api = inject(AuthService);
+  readonly config = inject(PlatformConfig);
+  readonly loading = signal(true);
+  readonly error = signal('');
+  readonly busy = signal(false);
+  readonly reason = signal('');
+  readonly canEdit = computed(() => this.api.user()?.role === 'super_admin');
+  version = 0;
+  state = {} as SettingsState;
+  constructor() {
+    void this.load();
+  }
+  async load() {
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      const r = await this.api.request('/admin/api/v1/settings');
+      this.state = { ...r.value };
+      this.version = r.version;
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.loading.set(false);
+    }
+  }
 
   readonly saving = signal(false);
   readonly saveCode = signal('');
@@ -190,6 +205,8 @@ export class Settings {
   }
 
   openSave(): void {
+    this.reason.set('');
+    this.error.set('');
     this.saving.set(true);
     this.saveCode.set('');
     this.saveError.set(false);
@@ -199,15 +216,27 @@ export class Settings {
     this.saving.set(false);
   }
 
-  confirmSave(): void {
-    if (this.activeTab() === 'security') {
-      if (!/^\d{6}$/.test(this.saveCode().trim())) {
-        this.saveError.set(true);
-        return;
-      }
+  async confirmSave() {
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      await this.api.request('/admin/api/v1/settings', {
+        version: this.version,
+        value: { ...this.state },
+        password: this.saveCode(),
+        reason: this.reason().trim(),
+      });
+      this.saveCode.set('');
+      this.saving.set(false);
+      await this.load();
+      await this.config.load();
+      this.showToast(this.L().savedToast);
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.busy.set(false);
     }
-    this.saving.set(false);
-    this.showToast(this.L().savedToast);
   }
 
   private showToast(msg: string): void {

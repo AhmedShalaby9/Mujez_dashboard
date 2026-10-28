@@ -61,7 +61,7 @@ button {
 }
 
 .btn--primary {
-  background: #3d4fd6;
+  background: var(--platform-primary, #3d4fd6);
   color: #fff;
 
   &:hover {
@@ -140,7 +140,7 @@ button {
 }
 
 .chip--active {
-  border-color: #3d4fd6;
+  border-color: var(--platform-primary, #3d4fd6);
   background: #e6e8fb;
   color: #2b37a0;
 }
@@ -242,7 +242,7 @@ button {
 }
 
 .bar__fill--ok {
-  background: #3d4fd6;
+  background: var(--platform-primary, #3d4fd6);
 }
 
 .bar__fill--warn {
@@ -373,7 +373,7 @@ button {
   font-family: inherit;
 
   &:focus {
-    border-color: #3d4fd6;
+    border-color: var(--platform-primary, #3d4fd6);
     box-shadow: 0 0 0 3px #e6e8fb;
   }
 }

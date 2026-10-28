@@ -14,7 +14,7 @@
           />
           <rect x="28.5" y="35" width="7" height="11" rx="1.5" fill="#F5B841" />
         </svg>
-        <span class="login-aside__brandName">{{ L().brand }}</span>
+        <span class="login-aside__brandName">{{ config.branding().platformName }}</span>
         <span class="login-aside__badge">{{ L().platformPortal }}</span>
       </div>
     </div>
@@ -50,7 +50,7 @@
           />
           <rect x="28.5" y="35" width="7" height="11" rx="1.5" fill="#F5B841" />
         </svg>
-        <span class="login-main__brandName">{{ L().brand }}</span>
+        <span class="login-main__brandName">{{ config.branding().platformName }}</span>
       </div>
       <button type="button" class="lang-btn" (click)="toggleLang()">{{ L().otherLang }}</button>
     </div>
@@ -91,7 +91,9 @@
           <label class="field">
             <span class="field__row">
               <span class="field__label">{{ L().password }}</span>
-              <button type="button" class="field__link" (click)="openForgot()">{{ L().forgot }}</button>
+              <button type="button" class="field__link" (click)="openForgot()">
+                {{ L().forgot }}
+              </button>
             </span>
             <div class="password-field" dir="ltr">
               <input
@@ -129,7 +131,9 @@
         </form>
       } @else {
         <div class="login-form">
-          @if (formError()) { <div class="login-form__error" role="alert">{{ formError() }}</div> }
+          @if (formError()) {
+            <div class="login-form__error" role="alert">{{ formError() }}</div>
+          }
           <div class="login-form__header">
             <h2 class="login-form__title">{{ L().fTitle }}</h2>
             <span class="login-form__subtitle">{{ L().forgotSub }}</span>
@@ -151,7 +155,12 @@
                 <span class="field__error">{{ L().emailErr }}</span>
               }
             </label>
-            <button type="button" class="submit-btn" [disabled]="forgotLoading()" (click)="sendReset()">
+            <button
+              type="button"
+              class="submit-btn"
+              [disabled]="forgotLoading()"
+              (click)="sendReset()"
+            >
               {{ L().fBtn }}
             </button>
           } @else {
@@ -164,8 +173,19 @@
     </div>
 
     <div class="login-main__footer">
-      <span>© 2026 Mujez</span>
-      <span>{{ L().foot }}</span>
+      <span>© 2026 {{ config.branding().platformName }}</span>
+      @if (config.branding().supportEmail) {
+        <a [href]="'mailto:' + config.branding().supportEmail">{{
+          config.branding().supportEmail
+        }}</a>
+      }
+      @if (config.branding().supportUrl) {
+        <a [href]="config.branding().supportUrl" target="_blank" rel="noopener noreferrer">{{
+          L().foot
+        }}</a>
+      } @else {
+        <span>{{ L().foot }}</span>
+      }
     </div>
   </div>
 </div>

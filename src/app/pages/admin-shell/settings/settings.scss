@@ -70,7 +70,7 @@ button {
 }
 
 .btn--primary {
-  background: #3d4fd6;
+  background: var(--platform-primary, #4945cc);
   color: #fff;
 
   &:hover {
@@ -106,7 +106,7 @@ button {
 
 .tab--active {
   color: #2b37a0;
-  border-bottom-color: #3d4fd6;
+  border-bottom-color: var(--platform-primary, #4945cc);
   font-weight: 500;
 }
 
@@ -156,7 +156,7 @@ button {
   outline: none;
 
   &:focus {
-    border-color: #3d4fd6;
+    border-color: var(--platform-primary, #4945cc);
     box-shadow: 0 0 0 3px #e6e8fb;
   }
 }
@@ -171,7 +171,7 @@ button {
   font-family: inherit;
 
   &:focus {
-    border-color: #3d4fd6;
+    border-color: var(--platform-primary, #4945cc);
     box-shadow: 0 0 0 3px #e6e8fb;
   }
 }
@@ -204,7 +204,7 @@ button {
 }
 
 .chip--active {
-  border-color: #3d4fd6;
+  border-color: var(--platform-primary, #4945cc);
   background: #e6e8fb;
   color: #2b37a0;
 }
@@ -251,8 +251,8 @@ button {
 }
 
 .toggle--on {
-  background: #3d4fd6;
-  border-color: #3d4fd6;
+  background: var(--platform-primary, #4945cc);
+  border-color: var(--platform-primary, #4945cc);
 
   .toggle__knob {
     inset-inline-start: 16px;

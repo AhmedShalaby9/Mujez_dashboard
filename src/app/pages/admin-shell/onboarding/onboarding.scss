@@ -61,7 +61,7 @@ button {
 
 .btn--primary {
   border: 0;
-  background: #3d4fd6;
+  background: var(--platform-primary, #3d4fd6);
   color: #fff;
 
   &:hover {
@@ -130,7 +130,7 @@ button {
 }
 
 .chip--active {
-  border-color: #3d4fd6;
+  border-color: var(--platform-primary, #3d4fd6);
   background: #e6e8fb;
   color: #2b37a0;
 }
@@ -272,14 +272,14 @@ button {
 }
 
 .stepper__dot--done {
-  background: #3d4fd6;
+  background: var(--platform-primary, #3d4fd6);
   color: #fff;
 }
 
 .stepper__dot--current {
   background: #e6e8fb;
   color: #2b37a0;
-  box-shadow: 0 0 0 2px #3d4fd6;
+  box-shadow: 0 0 0 2px var(--platform-primary, #3d4fd6);
 }
 
 .stepper__line {
@@ -290,7 +290,7 @@ button {
 }
 
 .stepper__line--done {
-  background: #3d4fd6;
+  background: var(--platform-primary, #3d4fd6);
 }
 
 .stepper__label {

@@ -1,6 +1,7 @@
+import { PlatformConfig } from '../../platform-config.service';
 import { Router } from '@angular/router';
 import { AuthService } from '../../auth.service';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, effect } from '@angular/core';
 
 type Lang = 'en' | 'ar';
 type View = 'signin' | 'forgot';
@@ -109,9 +110,17 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   styleUrl: './login.scss',
 })
 export class Login {
+  readonly config = inject(PlatformConfig);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private chosenLang = false;
   readonly lang = signal<Lang>('en');
+  constructor() {
+    effect(() => {
+      const l = this.config.branding().defaultLang;
+      if (!this.chosenLang) this.lang.set(l === 'ar' ? 'ar' : 'en');
+    });
+  }
   readonly dir = computed(() => (this.lang() === 'ar' ? 'rtl' : 'ltr'));
   readonly L = computed(() => COPY[this.lang()]);
 
@@ -141,6 +150,7 @@ export class Login {
   );
 
   toggleLang(): void {
+    this.chosenLang = true;
     this.lang.set(this.lang() === 'en' ? 'ar' : 'en');
   }
 

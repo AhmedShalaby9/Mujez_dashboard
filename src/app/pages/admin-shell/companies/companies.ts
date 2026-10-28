@@ -342,6 +342,9 @@ const PAGE_SIZE = 10;
   styleUrl: './companies.scss',
 })
 export class Companies {
+  authDefaults() {
+    return this.auth.request('/admin/api/v1/platform-defaults');
+  }
   private readonly api = inject(CompaniesApi);
   readonly auth = inject(AuthService);
   readonly loading = signal(false);
@@ -374,7 +377,13 @@ export class Companies {
       this.loading.set(false);
     }
   }
-  openForm(company?: Company) {
+  async openForm(company?: Company) {
+    let defaultPlan = 'starter';
+    if (!company) {
+      try {
+        defaultPlan = (await this.authDefaults()).defaultPlan;
+      } catch {}
+    }
     this.editing.set(company ?? null);
     this.draft = company
       ? {
@@ -397,7 +406,7 @@ export class Companies {
           adminEmail: '',
           phone: '',
           website: '',
-          plan: 'starter',
+          plan: defaultPlan,
         };
     this.error.set('');
     this.formOpen.set(true);

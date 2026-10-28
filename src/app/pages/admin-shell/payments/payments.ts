@@ -1,3 +1,4 @@
+import { BillingApi, toMinor } from '../../../billing-api.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
@@ -7,6 +8,11 @@ type Reconciliation = 'matched' | 'unmatched' | 'pending';
 type SortKey = 'txId' | 'company' | 'amount' | 'date' | 'status';
 
 interface Payment {
+  refunds?: Array<{ number: string; amountMinor: string; reason: string; createdAt: string }>;
+  version: number;
+  amountMinor: string;
+  refundedMinor: string;
+  netMinor: string;
   txId: string;
   companyId: string;
   companyEn: string;
@@ -20,35 +26,26 @@ interface Payment {
   reconciliation: Reconciliation;
 }
 
-const SEED: Payment[] = [
-  { txId: 'TX-50001', companyId: 'MJ-1001', companyEn: 'Al Qahira Developments', companyAr: 'القاهرة للتطوير', invoiceNumber: 'INV-2026-0001', method: 'bank', amount: 20976, paidAt: 'Oct 9, 2026', status: 'completed', gatewayRef: 'PGW-88213', reconciliation: 'matched' },
-  { txId: 'TX-50002', companyId: 'MJ-1003', companyEn: 'Deira Properties', companyAr: 'ديرة العقارية', invoiceNumber: 'INV-2026-0002', method: 'card', amount: 8208, paidAt: 'Oct 6, 2026', status: 'completed', gatewayRef: 'PGW-88244', reconciliation: 'matched' },
-  { txId: 'TX-50003', companyId: 'MJ-1005', companyEn: 'Smart Spaces', companyAr: 'سمارت سبيسز', invoiceNumber: 'INV-2026-0004', method: 'bank', amount: 18012, paidAt: 'Sep 16, 2026', status: 'completed', gatewayRef: 'PGW-87190', reconciliation: 'matched' },
-  { txId: 'TX-50004', companyId: 'MJ-1006', companyEn: 'Zamalek Realty Group', companyAr: 'مجموعة الزمالك العقارية', invoiceNumber: 'INV-2026-0005', method: 'card', amount: 5400, paidAt: 'Oct 4, 2026', status: 'failed', gatewayRef: 'PGW-88301', reconciliation: 'unmatched' },
-  { txId: 'TX-50005', companyId: 'MJ-1007', companyEn: 'October Living', companyAr: 'أكتوبر ليفينج', invoiceNumber: 'INV-2026-0006', method: 'bank', amount: 61788, paidAt: 'Oct 2, 2026', status: 'completed', gatewayRef: 'PGW-88102', reconciliation: 'matched' },
-  { txId: 'TX-50006', companyId: 'MJ-1011', companyEn: 'New Capital Homes', companyAr: 'نيو كابيتال هومز', invoiceNumber: 'INV-2026-0008', method: 'bank', amount: 61500, paidAt: 'Aug 10, 2026', status: 'completed', gatewayRef: 'PGW-82044', reconciliation: 'matched' },
-  { txId: 'TX-50007', companyId: 'MJ-1012', companyEn: 'Heliopolis Estates', companyAr: 'مصر الجديدة العقارية', invoiceNumber: 'INV-2026-0009', method: 'card', amount: 4000, paidAt: 'Oct 10, 2026', status: 'completed', gatewayRef: 'PGW-88290', reconciliation: 'pending' },
-  { txId: 'TX-50008', companyId: 'MJ-1015', companyEn: 'Smart Homes Egypt', companyAr: 'سمارت هومز إيجيبت', invoiceNumber: 'INV-2026-0012', method: 'card', amount: 10146, paidAt: 'Oct 1, 2026', status: 'completed', gatewayRef: 'PGW-88020', reconciliation: 'matched' },
-  { txId: 'TX-50009', companyId: 'MJ-1017', companyEn: 'Capital Gate Developers', companyAr: 'كابيتال جيت للتطوير', invoiceNumber: 'INV-2026-0013', method: 'bank', amount: 27018, paidAt: 'Feb 6, 2026', status: 'completed', gatewayRef: 'PGW-61820', reconciliation: 'matched' },
-  { txId: 'TX-50010', companyId: 'MJ-1018', companyEn: 'Blue Lagoon Realty', companyAr: 'بلو لاجون العقارية', invoiceNumber: 'INV-2026-0014', method: 'card', amount: 2394, paidAt: 'Oct 7, 2026', status: 'completed', gatewayRef: 'PGW-88260', reconciliation: 'matched' },
-  { txId: 'TX-50011', companyId: 'MJ-1001', companyEn: 'Al Qahira Developments', companyAr: 'القاهرة للتطوير', invoiceNumber: 'INV-2026-0019', method: 'bank', amount: 20976, paidAt: 'Sep 8, 2026', status: 'refunded', gatewayRef: 'PGW-85110', reconciliation: 'matched' },
-  { txId: 'TX-50012', companyId: 'MJ-1009', companyEn: 'Golden Sands Developers', companyAr: 'الرمال الذهبية للتطوير', invoiceNumber: 'INV-2026-0020', method: 'instapay', amount: 22344, paidAt: 'Sep 18, 2026', status: 'completed', gatewayRef: 'PGW-85540', reconciliation: 'matched' },
-  { txId: 'TX-50013', companyId: 'MJ-1022', companyEn: 'Palm Hills Partners', companyAr: 'بالم هيلز بارتنرز', invoiceNumber: 'INV-2026-0016', method: 'bank', amount: 14300, paidAt: 'Sep 29, 2026', status: 'failed', gatewayRef: 'PGW-86650', reconciliation: 'unmatched' },
-  { txId: 'TX-50014', companyId: 'MJ-1014', companyEn: 'Nasr City Realty', companyAr: 'مدينة نصر العقارية', invoiceNumber: 'INV-2026-0011', method: 'instapay', amount: 1500, paidAt: 'Oct 20, 2026', status: 'completed', gatewayRef: 'PGW-88410', reconciliation: 'pending' },
-  { txId: 'TX-50015', companyId: 'MJ-1012', companyEn: 'Heliopolis Estates', companyAr: 'مصر الجديدة العقارية', invoiceNumber: 'INV-2026-0009', method: 'card', amount: 3400, paidAt: 'Oct 22, 2026', status: 'partial_refund', gatewayRef: 'PGW-88450', reconciliation: 'matched' },
-  { txId: 'TX-50016', companyId: 'MJ-1004', companyEn: 'Coastal Homes', companyAr: 'كوستال هومز', invoiceNumber: 'INV-2026-0003', method: 'card', amount: 2964, paidAt: 'Oct 24, 2026', status: 'pending', gatewayRef: 'PGW-88501', reconciliation: 'pending' },
-  { txId: 'TX-50017', companyId: 'MJ-1023', companyEn: 'Metro Realty Group', companyAr: 'مترو العقارية', invoiceNumber: 'INV-2026-0017', method: 'card', amount: 6726, paidAt: 'Oct 25, 2026', status: 'pending', gatewayRef: 'PGW-88520', reconciliation: 'pending' },
-  { txId: 'TX-50018', companyId: 'MJ-1009', companyEn: 'Golden Sands Developers', companyAr: 'الرمال الذهبية للتطوير', invoiceNumber: 'INV-2026-0007', method: 'bank', amount: 22344, paidAt: 'Oct 26, 2026', status: 'pending', gatewayRef: 'PGW-88530', reconciliation: 'unmatched' },
-];
-
 const METHOD_LABEL: Record<Lang, Record<PaymentMethod, string>> = {
   en: { card: 'Card', bank: 'Bank transfer', instapay: 'InstaPay' },
   ar: { card: 'بطاقة', bank: 'تحويل بنكي', instapay: 'إنستاباي' },
 };
 
 const STATUS_LABEL: Record<Lang, Record<PaymentStatus, string>> = {
-  en: { pending: 'Pending', completed: 'Completed', failed: 'Failed', refunded: 'Refunded', partial_refund: 'Partially refunded' },
-  ar: { pending: 'معلّقة', completed: 'مكتملة', failed: 'فاشلة', refunded: 'مستردة', partial_refund: 'مستردة جزئيًا' },
+  en: {
+    pending: 'Pending',
+    completed: 'Completed',
+    failed: 'Failed',
+    refunded: 'Refunded',
+    partial_refund: 'Partially refunded',
+  },
+  ar: {
+    pending: 'معلّقة',
+    completed: 'مكتملة',
+    failed: 'فاشلة',
+    refunded: 'مستردة',
+    partial_refund: 'مستردة جزئيًا',
+  },
 };
 
 const STATUS_COLOR: Record<PaymentStatus, { bg: string; fg: string }> = {
@@ -77,7 +74,16 @@ interface Copy {
   statusAll: string;
   methodAll: string;
   kpis: { collected: string; completed: string; failed: string; refunded: string };
-  columns: { txId: string; company: string; invoice: string; method: string; amount: string; date: string; status: string; reconciliation: string };
+  columns: {
+    txId: string;
+    company: string;
+    invoice: string;
+    method: string;
+    amount: string;
+    date: string;
+    status: string;
+    reconciliation: string;
+  };
   actions: { view: string; refund: string };
   pager: (from: number, to: number, total: number) => string;
   prev: string;
@@ -118,9 +124,23 @@ const COPY: Record<Lang, Copy> = {
     searchPh: 'Search transaction, company, invoice…',
     statusAll: 'All statuses',
     methodAll: 'All methods',
-    kpis: { collected: 'Collected', completed: 'Completed', failed: 'Failed', refunded: 'Refunded' },
-    columns: { txId: 'Transaction', company: 'Company', invoice: 'Invoice', method: 'Method', amount: 'Amount', date: 'Date', status: 'Status', reconciliation: 'Reconciliation' },
-    actions: { view: 'View', refund: 'Refund' },
+    kpis: {
+      collected: 'Collected',
+      completed: 'Completed',
+      failed: 'Failed',
+      refunded: 'Refunded',
+    },
+    columns: {
+      txId: 'Transaction',
+      company: 'Company',
+      invoice: 'Invoice',
+      method: 'Method',
+      amount: 'Amount',
+      date: 'Date',
+      status: 'Status',
+      reconciliation: 'Reconciliation',
+    },
+    actions: { view: 'View', refund: 'Record refund' },
     pager: (from, to, total) => `Showing ${from}–${to} of ${total}`,
     prev: 'Previous',
     next: 'Next',
@@ -138,16 +158,17 @@ const COPY: Record<Lang, Copy> = {
       gatewayRef: 'Gateway response',
       reconciliation: 'Reconciliation match',
     },
-    refundTitle: 'Refund payment',
-    refundSub: (txId) => `${txId} · refunds require a reason and a TOTP code.`,
+    refundTitle: 'Record external refund',
+    refundSub: (txId) =>
+      `${txId} · record an already completed external refund. No money is transferred.`,
     refundFull: 'Full refund',
     refundPartial: 'Partial refund',
     refundAmount: 'Refund amount (EGP)',
     refundReasonPh: 'Reason for the refund',
-    refundTotp: 'TOTP code',
-    refundTotpPh: '6-digit authenticator code',
+    refundTotp: 'Confirm your password',
+    refundTotpPh: 'Your current password',
     cancel: 'Cancel',
-    confirmGo: 'Confirm refund',
+    confirmGo: 'Record refund',
     reasonErr: 'A reason is required.',
     totpErr: 'Enter the 6-digit code.',
     toastRefunded: (txId) => `${txId} was refunded.`,
@@ -159,7 +180,16 @@ const COPY: Record<Lang, Copy> = {
     statusAll: 'كل الحالات',
     methodAll: 'كل طرق الدفع',
     kpis: { collected: 'المُحصَّل', completed: 'مكتملة', failed: 'فاشلة', refunded: 'مستردة' },
-    columns: { txId: 'المعاملة', company: 'الشركة', invoice: 'الفاتورة', method: 'طريقة الدفع', amount: 'المبلغ', date: 'التاريخ', status: 'الحالة', reconciliation: 'المطابقة' },
+    columns: {
+      txId: 'المعاملة',
+      company: 'الشركة',
+      invoice: 'الفاتورة',
+      method: 'طريقة الدفع',
+      amount: 'المبلغ',
+      date: 'التاريخ',
+      status: 'الحالة',
+      reconciliation: 'المطابقة',
+    },
     actions: { view: 'عرض', refund: 'استرداد' },
     pager: (from, to, total) => `عرض ${from}–${to} من ${total}`,
     prev: 'السابق',
@@ -178,14 +208,14 @@ const COPY: Record<Lang, Copy> = {
       gatewayRef: 'استجابة بوابة الدفع',
       reconciliation: 'مطابقة التسوية',
     },
-    refundTitle: 'استرداد الدفعة',
-    refundSub: (txId) => `${txId} · يتطلب الاسترداد سببًا ورمز TOTP.`,
+    refundTitle: 'تسجيل استرداد خارجي',
+    refundSub: (txId) => `${txId} · تسجيل استرداد تم خارج المنصة. لا يتم تحويل أموال.`,
     refundFull: 'استرداد كامل',
     refundPartial: 'استرداد جزئي',
     refundAmount: 'مبلغ الاسترداد (ج.م)',
     refundReasonPh: 'سبب الاسترداد',
-    refundTotp: 'رمز TOTP',
-    refundTotpPh: 'رمز المصادقة المكوّن من 6 أرقام',
+    refundTotp: 'تأكيد كلمة المرور',
+    refundTotpPh: 'كلمة المرور الحالية',
     cancel: 'إلغاء',
     confirmGo: 'تأكيد الاسترداد',
     reasonErr: 'السبب مطلوب.',
@@ -202,15 +232,63 @@ const PAGE_SIZE = 10;
   styleUrl: './payments.scss',
 })
 export class Payments {
+  readonly NumberValue = Number;
+  private readonly api = inject(BillingApi);
+  readonly loading = signal(false);
+  readonly saving = signal(false);
+  readonly error = signal('');
+  private requestId = crypto.randomUUID();
+  constructor() {
+    void this.reload();
+  }
+  async reload() {
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      this.payments.set(
+        (await this.api.list<Payment>('payments')).map((p) => ({
+          ...p,
+          amount: Number(p.amountMinor) / 100,
+        })),
+      );
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to load payments');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+  async reconcile(p: Payment, value: string) {
+    if (this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.api.payment(p.txId, 'reconcile', {
+        version: p.version,
+        requestId: crypto.randomUUID(),
+        reconciliation: value,
+      });
+      this.viewing.set(null);
+      await this.reload();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to update reconciliation');
+    } finally {
+      this.saving.set(false);
+    }
+  }
   private readonly ui = inject(AdminUiState);
 
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
 
-  readonly statusTypes: PaymentStatus[] = ['pending', 'completed', 'failed', 'refunded', 'partial_refund'];
+  readonly statusTypes: PaymentStatus[] = [
+    'pending',
+    'completed',
+    'failed',
+    'refunded',
+    'partial_refund',
+  ];
   readonly methodTypes: PaymentMethod[] = ['card', 'bank', 'instapay'];
 
-  private readonly payments = signal<Payment[]>(SEED);
+  private readonly payments = signal<Payment[]>([]);
 
   readonly search = signal('');
   readonly statusFilter = signal<PaymentStatus | 'all'>('all');
@@ -235,7 +313,7 @@ export class Payments {
   readonly kpis = computed(() => {
     const list = this.payments();
     return {
-      collected: list.filter((p) => p.status === 'completed').reduce((s, p) => s + p.amount, 0),
+      collected: list.reduce((s, p) => s + Number(p.netMinor) / 100, 0),
       completed: list.filter((p) => p.status === 'completed').length,
       failed: list.filter((p) => p.status === 'failed').length,
       refunded: list.filter((p) => p.status === 'refunded' || p.status === 'partial_refund').length,
@@ -336,7 +414,9 @@ export class Payments {
   }
 
   formatMoney(v: number): string {
-    return this.lang() === 'ar' ? `${v.toLocaleString('en-US')} ج.م` : `EGP ${v.toLocaleString('en-US')}`;
+    return this.lang() === 'ar'
+      ? `${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`
+      : `EGP ${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
   canRefund(p: Payment): boolean {
@@ -391,9 +471,14 @@ export class Payments {
     this.page.set(Math.min(this.totalPages(), this.page() + 1));
   }
 
-  openView(p: Payment): void {
-    this.viewing.set(p);
+  async openView(p: Payment) {
     this.kebabFor.set(null);
+    try {
+      const detail = await this.api.details('payments', p.txId);
+      this.viewing.set({ ...detail, amount: Number(detail.amountMinor) / 100 });
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to load payment');
+    }
   }
 
   closeView(): void {
@@ -409,9 +494,10 @@ export class Payments {
   }
 
   openRefund(p: Payment): void {
+    this.requestId = crypto.randomUUID();
     this.refunding.set(p);
     this.refundMode.set('full');
-    this.refundAmount.set(String(p.amount));
+    this.refundAmount.set(String((Number(p.amountMinor) - Number(p.refundedMinor)) / 100));
     this.refundReason.set('');
     this.refundTotp.set('');
     this.refundError.set('');
@@ -419,6 +505,7 @@ export class Payments {
   }
 
   closeRefund(): void {
+    this.refundTotp.set('');
     this.refunding.set(null);
   }
 
@@ -426,25 +513,31 @@ export class Payments {
     this.refundMode.set(mode);
     const p = this.refunding();
     if (!p) return;
-    if (mode === 'full') this.refundAmount.set(String(p.amount));
+    if (mode === 'full')
+      this.refundAmount.set(String((Number(p.amountMinor) - Number(p.refundedMinor)) / 100));
   }
 
-  submitRefund(): void {
-    const target = this.refunding();
-    if (!target) return;
-    if (this.refundReason().trim().length < 5) {
-      this.refundError.set(this.L().reasonErr);
-      return;
+  async submitRefund() {
+    const p = this.refunding();
+    if (!p || this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.api.payment(p.txId, 'refunds', {
+        version: p.version,
+        requestId: this.requestId,
+        amountMinor: toMinor(this.refundAmount()),
+        reason: this.refundReason(),
+        password: this.refundTotp(),
+      });
+      this.refundTotp.set('');
+      this.closeRefund();
+      this.viewing.set(null);
+      await this.reload();
+    } catch (error) {
+      this.refundError.set(error instanceof Error ? error.message : 'Unable to record refund');
+    } finally {
+      this.saving.set(false);
     }
-    if (!/^\d{6}$/.test(this.refundTotp().trim())) {
-      this.refundError.set(this.L().totpErr);
-      return;
-    }
-    const amount = Number(this.refundAmount()) || 0;
-    const status: PaymentStatus = amount >= target.amount ? 'refunded' : 'partial_refund';
-    this.payments.update((list) => list.map((p) => (p.txId === target.txId ? { ...p, status } : p)));
-    this.closeRefund();
-    this.showToast(this.L().toastRefunded(target.txId));
   }
 
   private showToast(msg: string): void {

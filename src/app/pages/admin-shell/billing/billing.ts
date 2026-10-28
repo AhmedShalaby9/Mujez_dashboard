@@ -1,3 +1,6 @@
+import { FormsModule } from '@angular/forms';
+import { BillingApi, toMinor } from '../../../billing-api.service';
+import { CompaniesApi } from '../../../companies-api.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
@@ -6,6 +9,16 @@ type TaxProfile = 'standard' | 'reverse_charge';
 type SortKey = 'number' | 'company' | 'issue' | 'due' | 'total' | 'status';
 
 interface Invoice {
+  creditNotes?: Array<{ number: string; amountMinor: string; reason: string; createdAt: string }>;
+  version: number;
+  subtotalMinor: string;
+  taxMinor: string;
+  totalMinor: string;
+  paidMinor: string;
+  creditedMinor: string;
+  balanceMinor: string;
+  taxBps: number;
+  description: string;
   number: string;
   companyId: string;
   companyEn: string;
@@ -18,37 +31,23 @@ interface Invoice {
   paidAmount: number;
 }
 
-function withTotal(subtotal: number, taxProfile: TaxProfile): { tax: number; total: number } {
-  const tax = taxProfile === 'reverse_charge' ? 0 : Math.round(subtotal * 0.14);
-  return { tax, total: subtotal + tax };
-}
-
-const SEED: Invoice[] = [
-  { number: 'INV-2026-0001', companyId: 'MJ-1001', companyEn: 'Al Qahira Developments', companyAr: 'القاهرة للتطوير', issueDate: 'Oct 1, 2026', dueDate: 'Oct 15, 2026', subtotal: 18400, taxProfile: 'standard', status: 'paid', paidAmount: 20976 },
-  { number: 'INV-2026-0002', companyId: 'MJ-1003', companyEn: 'Deira Properties', companyAr: 'ديرة العقارية', issueDate: 'Oct 1, 2026', dueDate: 'Oct 15, 2026', subtotal: 7200, taxProfile: 'standard', status: 'paid', paidAmount: 8208 },
-  { number: 'INV-2026-0003', companyId: 'MJ-1004', companyEn: 'Coastal Homes', companyAr: 'كوستال هومز', issueDate: 'Oct 1, 2026', dueDate: 'Oct 15, 2026', subtotal: 2600, taxProfile: 'standard', status: 'open', paidAmount: 0 },
-  { number: 'INV-2026-0004', companyId: 'MJ-1005', companyEn: 'Smart Spaces', companyAr: 'سمارت سبيسز', issueDate: 'Sep 11, 2026', dueDate: 'Sep 25, 2026', subtotal: 15800, taxProfile: 'standard', status: 'paid', paidAmount: 18012 },
-  { number: 'INV-2026-0005', companyId: 'MJ-1006', companyEn: 'Zamalek Realty Group', companyAr: 'مجموعة الزمالك العقارية', issueDate: 'Sep 20, 2026', dueDate: 'Oct 4, 2026', subtotal: 5400, taxProfile: 'standard', status: 'overdue', paidAmount: 0 },
-  { number: 'INV-2026-0006', companyId: 'MJ-1007', companyEn: 'October Living', companyAr: 'أكتوبر ليفينج', issueDate: 'Sep 29, 2026', dueDate: 'Oct 13, 2026', subtotal: 54200, taxProfile: 'standard', status: 'paid', paidAmount: 61788 },
-  { number: 'INV-2026-0007', companyId: 'MJ-1009', companyEn: 'Golden Sands Developers', companyAr: 'الرمال الذهبية للتطوير', issueDate: 'Oct 15, 2026', dueDate: 'Oct 29, 2026', subtotal: 19600, taxProfile: 'standard', status: 'open', paidAmount: 0 },
-  { number: 'INV-2026-0008', companyId: 'MJ-1011', companyEn: 'New Capital Homes', companyAr: 'نيو كابيتال هومز', issueDate: 'Aug 4, 2026', dueDate: 'Aug 18, 2026', subtotal: 61500, taxProfile: 'reverse_charge', status: 'paid', paidAmount: 61500 },
-  { number: 'INV-2026-0009', companyId: 'MJ-1012', companyEn: 'Heliopolis Estates', companyAr: 'مصر الجديدة العقارية', issueDate: 'Oct 1, 2026', dueDate: 'Oct 15, 2026', subtotal: 6800, taxProfile: 'standard', status: 'partial', paidAmount: 4000 },
-  { number: 'INV-2026-0010', companyId: 'MJ-1013', companyEn: 'Maadi Properties Group', companyAr: 'مجموعة المعادي العقارية', issueDate: 'Aug 9, 2026', dueDate: 'Aug 23, 2026', subtotal: 3100, taxProfile: 'standard', status: 'void', paidAmount: 0 },
-  { number: 'INV-2026-0011', companyId: 'MJ-1014', companyEn: 'Nasr City Realty', companyAr: 'مدينة نصر العقارية', issueDate: 'Oct 17, 2026', dueDate: 'Oct 31, 2026', subtotal: 3100, taxProfile: 'standard', status: 'open', paidAmount: 0 },
-  { number: 'INV-2026-0012', companyId: 'MJ-1015', companyEn: 'Smart Homes Egypt', companyAr: 'سمارت هومز إيجيبت', issueDate: 'Sep 28, 2026', dueDate: 'Oct 12, 2026', subtotal: 8900, taxProfile: 'standard', status: 'paid', paidAmount: 10146 },
-  { number: 'INV-2026-0013', companyId: 'MJ-1017', companyEn: 'Capital Gate Developers', companyAr: 'كابيتال جيت للتطوير', issueDate: 'Jan 30, 2026', dueDate: 'Feb 13, 2026', subtotal: 23700, taxProfile: 'standard', status: 'paid', paidAmount: 27018 },
-  { number: 'INV-2026-0014', companyId: 'MJ-1018', companyEn: 'Blue Lagoon Realty', companyAr: 'بلو لاجون العقارية', issueDate: 'Oct 3, 2026', dueDate: 'Oct 17, 2026', subtotal: 2100, taxProfile: 'standard', status: 'paid', paidAmount: 2394 },
-  { number: 'INV-2026-0015', companyId: 'MJ-1020', companyEn: 'Green Valley Homes', companyAr: 'جرين فالي هومز', issueDate: 'Nov 2, 2025', dueDate: 'Nov 16, 2025', subtotal: 6200, taxProfile: 'standard', status: 'void', paidAmount: 0 },
-  { number: 'INV-2026-0016', companyId: 'MJ-1022', companyEn: 'Palm Hills Partners', companyAr: 'بالم هيلز بارتنرز', issueDate: 'Sep 15, 2026', dueDate: 'Sep 29, 2026', subtotal: 14300, taxProfile: 'standard', status: 'overdue', paidAmount: 0 },
-  { number: 'INV-2026-0017', companyId: 'MJ-1023', companyEn: 'Metro Realty Group', companyAr: 'مترو العقارية', issueDate: 'Oct 19, 2026', dueDate: 'Nov 2, 2026', subtotal: 5900, taxProfile: 'standard', status: 'open', paidAmount: 0 },
-  { number: 'INV-2026-0018', companyId: 'MJ-1005', companyEn: 'Smart Spaces', companyAr: 'سمارت سبيسز', issueDate: 'Oct 11, 2026', dueDate: 'Oct 25, 2026', subtotal: 15800, taxProfile: 'standard', status: 'draft', paidAmount: 0 },
-  { number: 'INV-2026-0019', companyId: 'MJ-1001', companyEn: 'Al Qahira Developments', companyAr: 'القاهرة للتطوير', issueDate: 'Sep 1, 2026', dueDate: 'Sep 15, 2026', subtotal: 18400, taxProfile: 'standard', status: 'paid', paidAmount: 20976 },
-  { number: 'INV-2026-0020', companyId: 'MJ-1009', companyEn: 'Golden Sands Developers', companyAr: 'الرمال الذهبية للتطوير', issueDate: 'Sep 15, 2026', dueDate: 'Sep 29, 2026', subtotal: 19600, taxProfile: 'standard', status: 'paid', paidAmount: 22344 },
-];
-
 const STATUS_LABEL: Record<Lang, Record<InvoiceStatus, string>> = {
-  en: { draft: 'Draft', open: 'Open', paid: 'Paid', partial: 'Partial', overdue: 'Overdue', void: 'Void' },
-  ar: { draft: 'مسودة', open: 'مفتوحة', paid: 'مدفوعة', partial: 'مدفوعة جزئيًا', overdue: 'متأخرة', void: 'ملغاة' },
+  en: {
+    draft: 'Draft',
+    open: 'Open',
+    paid: 'Paid / settled',
+    partial: 'Partial',
+    overdue: 'Overdue',
+    void: 'Void',
+  },
+  ar: {
+    draft: 'مسودة',
+    open: 'مفتوحة',
+    paid: 'مدفوعة / مسوّاة',
+    partial: 'مدفوعة جزئيًا',
+    overdue: 'متأخرة',
+    void: 'ملغاة',
+  },
 };
 
 const STATUS_COLOR: Record<InvoiceStatus, { bg: string; fg: string }> = {
@@ -66,15 +65,40 @@ interface Copy {
   searchPh: string;
   statusAll: string;
   kpis: { billed: string; collected: string; outstanding: string; overdue: string; failed: string };
-  columns: { number: string; company: string; issue: string; due: string; total: string; status: string };
-  actions: { view: string; recordPayment: string; voidInvoice: string; creditNote: string; send: string; pdf: string };
+  columns: {
+    number: string;
+    company: string;
+    issue: string;
+    due: string;
+    total: string;
+    status: string;
+  };
+  actions: {
+    view: string;
+    recordPayment: string;
+    voidInvoice: string;
+    creditNote: string;
+    send: string;
+    pdf: string;
+  };
   pager: (from: number, to: number, total: number) => string;
   prev: string;
   next: string;
   emptyTitle: string;
   emptySub: string;
   drawerClose: string;
-  drawerFields: { number: string; company: string; issue: string; due: string; subtotal: string; tax: string; reverseCharge: string; total: string; paid: string; status: string };
+  drawerFields: {
+    number: string;
+    company: string;
+    issue: string;
+    due: string;
+    subtotal: string;
+    tax: string;
+    reverseCharge: string;
+    total: string;
+    paid: string;
+    status: string;
+  };
   recordTitle: string;
   recordSub: (number: string) => string;
   recordFull: string;
@@ -106,16 +130,47 @@ const COPY: Record<Lang, Copy> = {
     title: 'Billing & invoices',
     searchPh: 'Search invoice number, company, ID…',
     statusAll: 'All statuses',
-    kpis: { billed: 'Billed', collected: 'Collected', outstanding: 'Outstanding', overdue: 'Overdue', failed: 'Void' },
-    columns: { number: 'Invoice', company: 'Company', issue: 'Issue date', due: 'Due date', total: 'Total', status: 'Status' },
-    actions: { view: 'View', recordPayment: 'Record manual payment', voidInvoice: 'Void invoice', creditNote: 'Issue credit note', send: 'Send to customer', pdf: 'Download PDF' },
+    kpis: {
+      billed: 'Billed',
+      collected: 'Collected',
+      outstanding: 'Outstanding',
+      overdue: 'Overdue',
+      failed: 'Void',
+    },
+    columns: {
+      number: 'Invoice',
+      company: 'Company',
+      issue: 'Issue date',
+      due: 'Due date',
+      total: 'Total',
+      status: 'Status',
+    },
+    actions: {
+      view: 'View',
+      recordPayment: 'Record manual payment',
+      voidInvoice: 'Void invoice',
+      creditNote: 'Issue credit note',
+      send: 'Send to customer',
+      pdf: 'Download PDF',
+    },
     pager: (from, to, total) => `Showing ${from}–${to} of ${total}`,
     prev: 'Previous',
     next: 'Next',
     emptyTitle: 'No invoices match your filters',
     emptySub: 'Try clearing the search or filters.',
     drawerClose: 'Close',
-    drawerFields: { number: 'Invoice', company: 'Company', issue: 'Issue date', due: 'Due date', subtotal: 'Subtotal', tax: 'VAT (14%)', reverseCharge: 'Reverse charge', total: 'Total', paid: 'Paid so far', status: 'Status' },
+    drawerFields: {
+      number: 'Invoice',
+      company: 'Company',
+      issue: 'Issue date',
+      due: 'Due date',
+      subtotal: 'Subtotal',
+      tax: 'Tax (entered rate)',
+      reverseCharge: 'No tax recorded',
+      total: 'Total',
+      paid: 'Paid so far',
+      status: 'Status',
+    },
     recordTitle: 'Record manual payment',
     recordSub: (number) => `${number} · log a payment received outside the platform.`,
     recordFull: 'Full amount',
@@ -145,16 +200,47 @@ const COPY: Record<Lang, Copy> = {
     title: 'الفوترة والفواتير',
     searchPh: 'ابحث برقم الفاتورة أو الشركة أو المعرّف…',
     statusAll: 'كل الحالات',
-    kpis: { billed: 'المفوتر', collected: 'المُحصَّل', outstanding: 'المستحق', overdue: 'المتأخر', failed: 'الملغاة' },
-    columns: { number: 'الفاتورة', company: 'الشركة', issue: 'تاريخ الإصدار', due: 'تاريخ الاستحقاق', total: 'الإجمالي', status: 'الحالة' },
-    actions: { view: 'عرض', recordPayment: 'تسجيل دفعة يدوية', voidInvoice: 'إلغاء الفاتورة', creditNote: 'إصدار إشعار دائن', send: 'إرسال للعميل', pdf: 'تنزيل PDF' },
+    kpis: {
+      billed: 'المفوتر',
+      collected: 'المُحصَّل',
+      outstanding: 'المستحق',
+      overdue: 'المتأخر',
+      failed: 'الملغاة',
+    },
+    columns: {
+      number: 'الفاتورة',
+      company: 'الشركة',
+      issue: 'تاريخ الإصدار',
+      due: 'تاريخ الاستحقاق',
+      total: 'الإجمالي',
+      status: 'الحالة',
+    },
+    actions: {
+      view: 'عرض',
+      recordPayment: 'تسجيل دفعة يدوية',
+      voidInvoice: 'إلغاء الفاتورة',
+      creditNote: 'إصدار إشعار دائن',
+      send: 'إرسال للعميل',
+      pdf: 'تنزيل PDF',
+    },
     pager: (from, to, total) => `عرض ${from}–${to} من ${total}`,
     prev: 'السابق',
     next: 'التالي',
     emptyTitle: 'لا توجد فواتير مطابقة للفلاتر',
     emptySub: 'جرّب مسح البحث أو الفلاتر.',
     drawerClose: 'إغلاق',
-    drawerFields: { number: 'الفاتورة', company: 'الشركة', issue: 'تاريخ الإصدار', due: 'تاريخ الاستحقاق', subtotal: 'المجموع الفرعي', tax: 'ضريبة القيمة المضافة (14%)', reverseCharge: 'آلية التحويل العكسي', total: 'الإجمالي', paid: 'المدفوع حتى الآن', status: 'الحالة' },
+    drawerFields: {
+      number: 'الفاتورة',
+      company: 'الشركة',
+      issue: 'تاريخ الإصدار',
+      due: 'تاريخ الاستحقاق',
+      subtotal: 'المجموع الفرعي',
+      tax: 'الضريبة (النسبة المسجلة)',
+      reverseCharge: 'بدون ضريبة مسجلة',
+      total: 'الإجمالي',
+      paid: 'المدفوع حتى الآن',
+      status: 'الحالة',
+    },
     recordTitle: 'تسجيل دفعة يدوية',
     recordSub: (number) => `${number} · تسجيل دفعة تمت خارج المنصة.`,
     recordFull: 'المبلغ كاملاً',
@@ -185,10 +271,100 @@ const PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-billing',
+  imports: [FormsModule],
   templateUrl: './billing.html',
   styleUrl: './billing.scss',
 })
 export class Billing {
+  readonly NumberValue = Number;
+  private readonly api = inject(BillingApi);
+  private readonly companiesApi = inject(CompaniesApi);
+  readonly loading = signal(false);
+  readonly saving = signal(false);
+  readonly error = signal('');
+  readonly password = signal('');
+  readonly creating = signal(false);
+  readonly companies = signal<Array<{ id: string; nameEn: string }>>([]);
+  draft = {
+    companyId: '',
+    description: '',
+    issueDate: new Date().toISOString().slice(0, 10),
+    dueDate: new Date().toISOString().slice(0, 10),
+    subtotal: '',
+    taxPercent: '0',
+    subscriptionId: '',
+  };
+  private requestId = crypto.randomUUID();
+  constructor() {
+    void this.reload();
+  }
+  async reload() {
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      const records = await this.api.list<Invoice>('invoices');
+      this.invoices.set(
+        records.map((i) => ({
+          ...i,
+          subtotal: Number(i.subtotalMinor) / 100,
+          paidAmount: Number(i.paidMinor) / 100,
+          taxProfile: i.taxBps === 0 ? 'reverse_charge' : 'standard',
+        })),
+      );
+      this.companies.set(await this.companiesApi.list());
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to load invoices');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+  openCreate() {
+    this.requestId = crypto.randomUUID();
+    this.creating.set(true);
+    this.error.set('');
+  }
+  async createInvoice() {
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.error.set('');
+    try {
+      const tax = Number(this.draft.taxPercent);
+      if (!/^\d+(\.\d{1,2})?$/.test(this.draft.taxPercent) || tax > 100)
+        throw new Error('Enter a tax percentage from 0 to 100 with at most two decimals');
+      await this.api.create({
+        requestId: this.requestId,
+        companyId: this.draft.companyId,
+        description: this.draft.description,
+        issueDate: this.draft.issueDate,
+        dueDate: this.draft.dueDate,
+        subtotalMinor: toMinor(this.draft.subtotal),
+        taxBps: Math.round(tax * 100),
+        ...(this.draft.subscriptionId ? { subscriptionId: this.draft.subscriptionId } : {}),
+      });
+      this.creating.set(false);
+      await this.reload();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to create invoice');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+  async issue(i: Invoice) {
+    if (this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.api.invoice(i.number, 'issue', {
+        version: i.version,
+        requestId: crypto.randomUUID(),
+      });
+      this.viewing.set(null);
+      await this.reload();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to issue invoice');
+    } finally {
+      this.saving.set(false);
+    }
+  }
   private readonly ui = inject(AdminUiState);
 
   readonly lang = computed<Lang>(() => this.ui.lang());
@@ -196,7 +372,7 @@ export class Billing {
 
   readonly statusTypes: InvoiceStatus[] = ['draft', 'open', 'paid', 'partial', 'overdue', 'void'];
 
-  private readonly invoices = signal<Invoice[]>(SEED);
+  private readonly invoices = signal<Invoice[]>([]);
 
   readonly search = signal('');
   readonly statusFilter = signal<InvoiceStatus | 'all'>('all');
@@ -208,6 +384,8 @@ export class Billing {
   readonly kebabFor = signal<string | null>(null);
 
   readonly recording = signal<Invoice | null>(null);
+  readonly recordMethod = signal('bank');
+  readonly recordPaidAt = signal('');
   readonly recordMode = signal<'full' | 'partial'>('full');
   readonly recordAmount = signal('');
   readonly recordBankRef = signal('');
@@ -226,13 +404,20 @@ export class Billing {
 
   readonly kpis = computed(() => {
     const list = this.invoices();
-    const sum = (f: (i: Invoice) => boolean) =>
-      list.filter(f).reduce((s, i) => s + this.total(i), 0);
+    const sum = (fn: (i: Invoice) => number) => list.reduce((n, i) => n + fn(i), 0);
     return {
-      billed: sum(() => true),
-      collected: list.reduce((s, i) => s + i.paidAmount, 0),
-      outstanding: sum((i) => i.status === 'open' || i.status === 'partial' || i.status === 'overdue'),
-      overdue: sum((i) => i.status === 'overdue'),
+      billed: sum((i) =>
+        ['draft', 'void'].includes(i.status) ? 0 : this.total(i) - Number(i.creditedMinor) / 100,
+      ),
+      collected: sum((i) => i.paidAmount),
+      outstanding: sum((i) =>
+        ['draft', 'void'].includes(i.status) ? 0 : Number(i.balanceMinor) / 100,
+      ),
+      overdue: sum((i) =>
+        ['draft', 'void'].includes(i.status) || i.dueDate >= new Date().toISOString().slice(0, 10)
+          ? 0
+          : Number(i.balanceMinor) / 100,
+      ),
       failed: list.filter((i) => i.status === 'void').length,
     };
   });
@@ -309,11 +494,11 @@ export class Billing {
   });
 
   tax(i: Invoice): number {
-    return withTotal(i.subtotal, i.taxProfile).tax;
+    return Number(i.taxMinor) / 100;
   }
 
   total(i: Invoice): number {
-    return withTotal(i.subtotal, i.taxProfile).total;
+    return Number(i.totalMinor) / 100;
   }
 
   statusLabel(s: InvoiceStatus): string {
@@ -329,7 +514,9 @@ export class Billing {
   }
 
   formatMoney(v: number): string {
-    return this.lang() === 'ar' ? `${v.toLocaleString('en-US')} ج.م` : `EGP ${v.toLocaleString('en-US')}`;
+    return this.lang() === 'ar'
+      ? `${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`
+      : `EGP ${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
   private readonly logoPalette = ['#3D4FD6', '#7E89E6', '#16182A', '#9A6B1E', '#2F7A4F', '#B4442F'];
@@ -375,9 +562,19 @@ export class Billing {
     this.page.set(Math.min(this.totalPages(), this.page() + 1));
   }
 
-  openView(i: Invoice): void {
-    this.viewing.set(i);
+  async openView(i: Invoice) {
     this.kebabFor.set(null);
+    try {
+      const detail = await this.api.details('invoices', i.number);
+      this.viewing.set({
+        ...detail,
+        subtotal: Number(detail.subtotalMinor) / 100,
+        paidAmount: Number(detail.paidMinor) / 100,
+        taxProfile: detail.taxBps === 0 ? 'reverse_charge' : 'standard',
+      });
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to load invoice');
+    }
   }
 
   closeView(): void {
@@ -392,10 +589,25 @@ export class Billing {
     this.kebabFor.set(null);
   }
 
+  canRecord(i: Invoice) {
+    return !['draft', 'void'].includes(i.status) && BigInt(i.balanceMinor) > 0n;
+  }
+  canCredit(i: Invoice) {
+    return this.canRecord(i);
+  }
+  canVoid(i: Invoice) {
+    return i.status !== 'void' && i.paidMinor === '0' && i.creditedMinor === '0';
+  }
   openRecord(i: Invoice): void {
+    this.requestId = crypto.randomUUID();
+    this.error.set('');
     this.recording.set(i);
+    this.recordMethod.set('bank');
+    this.recordPaidAt.set(
+      new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+    );
     this.recordMode.set('full');
-    this.recordAmount.set(String(this.total(i) - i.paidAmount));
+    this.recordAmount.set(String(Number(i.balanceMinor) / 100));
     this.recordBankRef.set('');
     this.kebabFor.set(null);
   }
@@ -408,26 +620,36 @@ export class Billing {
     this.recordMode.set(mode);
     const i = this.recording();
     if (!i) return;
-    if (mode === 'full') this.recordAmount.set(String(this.total(i) - i.paidAmount));
+    if (mode === 'full') this.recordAmount.set(String(Number(i.balanceMinor) / 100));
   }
 
-  submitRecord(): void {
-    const target = this.recording();
-    if (!target) return;
-    const amount = Number(this.recordAmount()) || 0;
-    this.invoices.update((list) =>
-      list.map((i) => {
-        if (i.number !== target.number) return i;
-        const paidAmount = i.paidAmount + amount;
-        const status: InvoiceStatus = paidAmount >= this.total(i) ? 'paid' : 'partial';
-        return { ...i, paidAmount, status };
-      }),
-    );
-    this.closeRecord();
-    this.showToast(this.L().toastRecorded(target.number));
+  async submitRecord() {
+    const i = this.recording();
+    if (!i || this.saving()) return;
+    this.saving.set(true);
+    this.error.set('');
+    try {
+      await this.api.invoice(i.number, 'payments', {
+        requestId: this.requestId,
+        version: i.version,
+        amountMinor: toMinor(this.recordAmount()),
+        method: this.recordMethod(),
+        reference: this.recordBankRef(),
+        paidAt: new Date(this.recordPaidAt()).toISOString(),
+      });
+      this.closeRecord();
+      this.viewing.set(null);
+      await this.reload();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to record payment');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   openVoid(i: Invoice): void {
+    this.requestId = crypto.randomUUID();
+    this.password.set('');
     this.voiding.set(i);
     this.voidReason.set('');
     this.voidError.set('');
@@ -435,52 +657,74 @@ export class Billing {
   }
 
   closeVoidDialog(): void {
+    this.password.set('');
     this.voiding.set(null);
   }
 
-  submitVoid(): void {
-    const target = this.voiding();
-    if (!target) return;
-    if (this.voidReason().trim().length < 5) {
-      this.voidError.set(this.L().reasonErr);
-      return;
+  async submitVoid() {
+    const i = this.voiding();
+    if (!i || this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.api.invoice(i.number, 'void', {
+        requestId: this.requestId,
+        version: i.version,
+        reason: this.voidReason(),
+        password: this.password(),
+      });
+      this.password.set('');
+      this.closeVoidDialog();
+      this.viewing.set(null);
+      await this.reload();
+    } catch (error) {
+      this.voidError.set(error instanceof Error ? error.message : 'Unable to void invoice');
+    } finally {
+      this.saving.set(false);
     }
-    this.invoices.update((list) => list.map((i) => (i.number === target.number ? { ...i, status: 'void' } : i)));
-    this.closeVoidDialog();
-    this.showToast(this.L().toastVoided(target.number));
   }
 
   openCredit(i: Invoice): void {
+    this.requestId = crypto.randomUUID();
+    this.password.set('');
     this.crediting.set(i);
-    this.creditAmount.set(String(this.total(i)));
+    this.creditAmount.set(String(Number(i.balanceMinor) / 100));
     this.creditReason.set('');
     this.creditError.set('');
     this.kebabFor.set(null);
   }
 
   closeCredit(): void {
+    this.password.set('');
     this.crediting.set(null);
   }
 
-  submitCredit(): void {
-    const target = this.crediting();
-    if (!target) return;
-    if (this.creditReason().trim().length < 5) {
-      this.creditError.set(this.L().reasonErr);
-      return;
+  async submitCredit() {
+    const i = this.crediting();
+    if (!i || this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.api.invoice(i.number, 'credits', {
+        requestId: this.requestId,
+        version: i.version,
+        amountMinor: toMinor(this.creditAmount()),
+        reason: this.creditReason(),
+        password: this.password(),
+      });
+      this.password.set('');
+      this.closeCredit();
+      this.viewing.set(null);
+      await this.reload();
+    } catch (error) {
+      this.creditError.set(error instanceof Error ? error.message : 'Unable to issue credit');
+    } finally {
+      this.saving.set(false);
     }
-    this.closeCredit();
-    this.showToast(this.L().toastCredited(target.number));
   }
-
-  sendInvoice(i: Invoice): void {
-    this.kebabFor.set(null);
-    this.showToast(this.L().toastSent(i.number));
+  sendInvoice(i: Invoice) {
+    this.error.set('Email delivery is not configured.');
   }
-
-  downloadPdf(i: Invoice): void {
-    this.kebabFor.set(null);
-    this.showToast(this.L().toastPdf(i.number));
+  downloadPdf(i: Invoice) {
+    this.error.set('PDF export is not configured.');
   }
 
   private showToast(msg: string): void {

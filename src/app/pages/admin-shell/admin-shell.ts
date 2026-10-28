@@ -1,3 +1,4 @@
+import { BillingApi } from '../../billing-api.service';
 import { SubscriptionsApi } from '../../subscriptions-api.service';
 import { CompaniesApi } from '../../companies-api.service';
 import { AuthService } from '../../auth.service';
@@ -148,6 +149,7 @@ const COPY: Record<Lang, Copy> = {
   styleUrl: './admin-shell.scss',
 })
 export class AdminShell {
+  readonly billingApi = inject(BillingApi);
   readonly subscriptionsApi = inject(SubscriptionsApi);
   readonly companiesApi = inject(CompaniesApi);
   readonly auth = inject(AuthService);
@@ -182,7 +184,20 @@ export class AdminShell {
                     ? undefined
                     : String(this.subscriptionsApi.count()),
               }
-            : entry,
+            : entry.kind === 'item' && (entry.path === 'billing' || entry.path === 'payments')
+              ? {
+                  ...entry,
+                  count:
+                    this.billingApi.counts()[entry.path === 'billing' ? 'invoices' : 'payments'] ===
+                    undefined
+                      ? undefined
+                      : String(
+                          this.billingApi.counts()[
+                            entry.path === 'billing' ? 'invoices' : 'payments'
+                          ],
+                        ),
+                }
+              : entry,
       ),
     };
   });

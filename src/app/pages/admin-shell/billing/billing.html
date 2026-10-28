@@ -1,3 +1,15 @@
+@if (loading()) {
+  <p role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading invoices…' }}</p>
+}
+@if (error()) {
+  <p role="alert">
+    {{ error() }}
+    <button class="btn" (click)="reload()">{{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}</button>
+  </p>
+}
+<button class="btn btn--primary" (click)="openCreate()">
+  {{ lang() === 'ar' ? 'إنشاء فاتورة' : 'Create invoice' }}
+</button>
 <div (click)="closeKebab()">
   <div class="page-head">
     <div class="page-head__text">
@@ -13,11 +25,15 @@
     </div>
     <div class="kpi">
       <span class="kpi__label">{{ L().kpis.collected }}</span>
-      <span class="kpi__value mono" style="color: #2f7a4f">{{ formatMoney(kpis().collected) }}</span>
+      <span class="kpi__value mono" style="color: #2f7a4f">{{
+        formatMoney(kpis().collected)
+      }}</span>
     </div>
     <div class="kpi">
       <span class="kpi__label">{{ L().kpis.outstanding }}</span>
-      <span class="kpi__value mono" style="color: #2b37a0">{{ formatMoney(kpis().outstanding) }}</span>
+      <span class="kpi__value mono" style="color: #2b37a0">{{
+        formatMoney(kpis().outstanding)
+      }}</span>
     </div>
     <div class="kpi">
       <span class="kpi__label">{{ L().kpis.overdue }}</span>
@@ -39,11 +55,21 @@
     />
 
     <div class="chip-row">
-      <button type="button" class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="setStatusFilter('all')">
+      <button
+        type="button"
+        class="chip"
+        [class.chip--active]="statusFilter() === 'all'"
+        (click)="setStatusFilter('all')"
+      >
         {{ L().statusAll }}
       </button>
       @for (s of statusTypes; track s) {
-        <button type="button" class="chip" [class.chip--active]="statusFilter() === s" (click)="setStatusFilter(s)">
+        <button
+          type="button"
+          class="chip"
+          [class.chip--active]="statusFilter() === s"
+          (click)="setStatusFilter(s)"
+        >
           {{ statusLabel(s) }}
         </button>
       }
@@ -55,22 +81,48 @@
       <div class="table-min">
         <div class="t-head">
           <button type="button" class="t-head__cell" (click)="toggleSort('number')">
-            {{ L().columns.number }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'number'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+            {{ L().columns.number }}
+            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'number'">{{
+              sortDir() === 'asc' ? '↑' : '↓'
+            }}</span>
           </button>
-          <button type="button" class="t-head__cell t-head__cell--grow" (click)="toggleSort('company')">
-            {{ L().columns.company }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'company'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          <button
+            type="button"
+            class="t-head__cell t-head__cell--grow"
+            (click)="toggleSort('company')"
+          >
+            {{ L().columns.company }}
+            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'company'">{{
+              sortDir() === 'asc' ? '↑' : '↓'
+            }}</span>
           </button>
           <button type="button" class="t-head__cell" (click)="toggleSort('issue')">
-            {{ L().columns.issue }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'issue'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+            {{ L().columns.issue }}
+            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'issue'">{{
+              sortDir() === 'asc' ? '↑' : '↓'
+            }}</span>
           </button>
           <button type="button" class="t-head__cell" (click)="toggleSort('due')">
-            {{ L().columns.due }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'due'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+            {{ L().columns.due }}
+            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'due'">{{
+              sortDir() === 'asc' ? '↑' : '↓'
+            }}</span>
           </button>
-          <button type="button" class="t-head__cell t-head__cell--end" (click)="toggleSort('total')">
-            {{ L().columns.total }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'total'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          <button
+            type="button"
+            class="t-head__cell t-head__cell--end"
+            (click)="toggleSort('total')"
+          >
+            {{ L().columns.total }}
+            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'total'">{{
+              sortDir() === 'asc' ? '↑' : '↓'
+            }}</span>
           </button>
           <button type="button" class="t-head__cell" (click)="toggleSort('status')">
-            {{ L().columns.status }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'status'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+            {{ L().columns.status }}
+            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'status'">{{
+              sortDir() === 'asc' ? '↑' : '↓'
+            }}</span>
           </button>
           <span class="t-head__cell t-head__cell--end"></span>
         </div>
@@ -86,26 +138,63 @@
             <div class="t-cell">{{ i.dueDate }}</div>
             <div class="t-cell t-cell--end mono">{{ formatMoney(total(i)) }}</div>
             <div class="t-cell">
-              <span class="pill" [style.background]="statusColor(i.status).bg" [style.color]="statusColor(i.status).fg">
+              <span
+                class="pill"
+                [style.background]="statusColor(i.status).bg"
+                [style.color]="statusColor(i.status).fg"
+              >
                 {{ statusLabel(i.status) }}
               </span>
             </div>
             <div class="t-cell t-cell--end t-cell--actions" (click)="$event.stopPropagation()">
               <div class="kebab-wrap">
-                <button type="button" class="row-btn row-btn--icon" (click)="toggleKebab(i.number)" aria-label="More actions">⋯</button>
+                <button
+                  type="button"
+                  class="row-btn row-btn--icon"
+                  (click)="toggleKebab(i.number)"
+                  aria-label="More actions"
+                >
+                  ⋯
+                </button>
                 @if (kebabFor() === i.number) {
                   <div class="dropdown" (click)="$event.stopPropagation()">
-                    <button type="button" class="dropdown__item" (click)="openView(i)">{{ L().actions.view }}</button>
-                    @if (i.status !== 'paid' && i.status !== 'void') {
-                      <button type="button" class="dropdown__item" (click)="openRecord(i)">{{ L().actions.recordPayment }}</button>
+                    <button type="button" class="dropdown__item" (click)="openView(i)">
+                      {{ L().actions.view }}
+                    </button>
+                    @if (canRecord(i)) {
+                      <button type="button" class="dropdown__item" (click)="openRecord(i)">
+                        {{ L().actions.recordPayment }}
+                      </button>
                     }
-                    @if (i.status === 'paid' || i.status === 'partial') {
-                      <button type="button" class="dropdown__item" (click)="openCredit(i)">{{ L().actions.creditNote }}</button>
+                    @if (canCredit(i)) {
+                      <button type="button" class="dropdown__item" (click)="openCredit(i)">
+                        {{ L().actions.creditNote }}
+                      </button>
                     }
-                    <button type="button" class="dropdown__item" (click)="sendInvoice(i)">{{ L().actions.send }}</button>
-                    <button type="button" class="dropdown__item" (click)="downloadPdf(i)">{{ L().actions.pdf }}</button>
-                    @if (i.status !== 'void' && i.status !== 'paid') {
-                      <button type="button" class="dropdown__item dropdown__item--danger" (click)="openVoid(i)">{{ L().actions.voidInvoice }}</button>
+                    <button
+                      type="button"
+                      class="dropdown__item"
+                      disabled
+                      title="Email delivery is not configured"
+                    >
+                      {{ L().actions.send }}
+                    </button>
+                    <button
+                      type="button"
+                      class="dropdown__item"
+                      disabled
+                      title="PDF export is not configured"
+                    >
+                      {{ L().actions.pdf }}
+                    </button>
+                    @if (canVoid(i)) {
+                      <button
+                        type="button"
+                        class="dropdown__item dropdown__item--danger"
+                        (click)="openVoid(i)"
+                      >
+                        {{ L().actions.voidInvoice }}
+                      </button>
                     }
                   </div>
                 }
@@ -123,8 +212,17 @@
 
     <div class="pager">
       <span>{{ pagerText() }}</span>
-      <button type="button" class="btn btn--ghost" [disabled]="page() <= 1" (click)="prevPage()">{{ L().prev }}</button>
-      <button type="button" class="btn btn--ghost" [disabled]="page() >= totalPages()" (click)="nextPage()">{{ L().next }}</button>
+      <button type="button" class="btn btn--ghost" [disabled]="page() <= 1" (click)="prevPage()">
+        {{ L().prev }}
+      </button>
+      <button
+        type="button"
+        class="btn btn--ghost"
+        [disabled]="page() >= totalPages()"
+        (click)="nextPage()"
+      >
+        {{ L().next }}
+      </button>
     </div>
   </section>
 </div>
@@ -136,36 +234,93 @@
       <span class="t-logo t-logo--lg" [style.background]="logoBg(i)">{{ logoInitials(i) }}</span>
       <div class="drawer__headerText">
         <span class="drawer__name" dir="ltr">{{ i.number }}</span>
-        <span class="pill" [style.background]="statusColor(i.status).bg" [style.color]="statusColor(i.status).fg">
+        <span
+          class="pill"
+          [style.background]="statusColor(i.status).bg"
+          [style.color]="statusColor(i.status).fg"
+        >
           {{ statusLabel(i.status) }}
         </span>
       </div>
-      <button type="button" class="drawer__close" (click)="closeView()" aria-label="Close">×</button>
+      <button type="button" class="drawer__close" (click)="closeView()" aria-label="Close">
+        ×
+      </button>
     </div>
 
     <div class="drawer__body">
-      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.company }}</span><span class="drawer__v">{{ companyName(i) }}</span></div>
-      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.issue }}</span><span class="drawer__v">{{ i.issueDate }}</span></div>
-      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.due }}</span><span class="drawer__v">{{ i.dueDate }}</span></div>
+      <p>{{ i.description }}</p>
+      @for (note of i.creditNotes ?? []; track note.number) {
+        <p>
+          {{ note.number }} · {{ formatMoney(NumberValue(note.amountMinor) / 100) }} ·
+          {{ note.reason }}
+        </p>
+      }
+      <div class="drawer__row">
+        <span>{{ lang() === 'ar' ? 'الإشعارات الدائنة' : 'Credits' }}</span
+        ><span>{{ formatMoney(NumberValue(i.creditedMinor) / 100) }}</span>
+      </div>
+      <div class="drawer__row">
+        <span>{{ lang() === 'ar' ? 'الرصيد المستحق' : 'Outstanding balance' }}</span
+        ><span>{{ formatMoney(NumberValue(i.balanceMinor) / 100) }}</span>
+      </div>
+      @if (i.status === 'draft') {
+        <button class="btn btn--primary" [disabled]="saving()" (click)="issue(i)">
+          {{ lang() === 'ar' ? 'إصدار الفاتورة' : 'Issue invoice' }}
+        </button>
+      }
+
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().drawerFields.company }}</span
+        ><span class="drawer__v">{{ companyName(i) }}</span>
+      </div>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().drawerFields.issue }}</span
+        ><span class="drawer__v">{{ i.issueDate }}</span>
+      </div>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().drawerFields.due }}</span
+        ><span class="drawer__v">{{ i.dueDate }}</span>
+      </div>
 
       <div class="drawer__divider"></div>
 
-      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.subtotal }}</span><span class="drawer__v mono">{{ formatMoney(i.subtotal) }}</span></div>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().drawerFields.subtotal }}</span
+        ><span class="drawer__v mono">{{ formatMoney(i.subtotal) }}</span>
+      </div>
       @if (i.taxProfile === 'reverse_charge') {
-        <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.tax }}</span><span class="drawer__v">{{ L().drawerFields.reverseCharge }}</span></div>
+        <div class="drawer__row">
+          <span class="drawer__k">{{ L().drawerFields.tax }}</span
+          ><span class="drawer__v">{{ L().drawerFields.reverseCharge }}</span>
+        </div>
       } @else {
-        <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.tax }}</span><span class="drawer__v mono">{{ formatMoney(tax(i)) }}</span></div>
+        <div class="drawer__row">
+          <span class="drawer__k">{{ L().drawerFields.tax }}</span
+          ><span class="drawer__v mono">{{ formatMoney(tax(i)) }}</span>
+        </div>
       }
-      <div class="drawer__row drawer__row--total"><span class="drawer__k">{{ L().drawerFields.total }}</span><span class="drawer__v mono">{{ formatMoney(total(i)) }}</span></div>
-      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.paid }}</span><span class="drawer__v mono">{{ formatMoney(i.paidAmount) }}</span></div>
+      <div class="drawer__row drawer__row--total">
+        <span class="drawer__k">{{ L().drawerFields.total }}</span
+        ><span class="drawer__v mono">{{ formatMoney(total(i)) }}</span>
+      </div>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().drawerFields.paid }}</span
+        ><span class="drawer__v mono">{{ formatMoney(i.paidAmount) }}</span>
+      </div>
     </div>
 
     <div class="drawer__footer">
-      @if (i.status !== 'paid' && i.status !== 'void') {
-        <button type="button" class="btn btn--primary" (click)="openRecord(i)">{{ L().actions.recordPayment }}</button>
+      @if (canRecord(i)) {
+        <button type="button" class="btn btn--primary" (click)="openRecord(i)">
+          {{ L().actions.recordPayment }}
+        </button>
       }
-      <button type="button" class="btn btn--ghost" (click)="downloadPdf(i)">{{ L().actions.pdf }}</button>
-      <button type="button" class="btn btn--ghost" (click)="closeView()">{{ L().drawerClose }}</button>
+      <button type="button" class="btn btn--ghost" disabled title="PDF export is not configured">
+        {{ L().actions.pdf }}
+      </button>
+      <button type="button" class="btn btn--ghost" (click)="closeView()">
+        {{ L().drawerClose }}
+      </button>
     </div>
   </aside>
 }
@@ -175,14 +330,49 @@
   <div class="dialog" (click)="$event.stopPropagation()">
     <div class="dialog__header">
       <div class="drawer__headerText">
+        @if (error()) {
+          <p role="alert">{{ error() }}</p>
+        }
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'طريقة الدفع' : 'Payment method' }}</span
+          ><select [value]="recordMethod()" (change)="recordMethod.set($any($event.target).value)">
+            <option value="bank">{{ lang() === 'ar' ? 'تحويل بنكي' : 'Bank transfer' }}</option>
+            <option value="card">
+              {{ lang() === 'ar' ? 'بطاقة خارجية' : 'External card payment' }}
+            </option>
+            <option value="instapay">InstaPay</option>
+          </select></label
+        >
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'تاريخ استلام الدفعة' : 'Payment received at' }}</span
+          ><input
+            type="datetime-local"
+            class="input"
+            [value]="recordPaidAt()"
+            (input)="recordPaidAt.set($any($event.target).value)"
+        /></label>
         <span class="dialog__title">{{ L().recordTitle }}</span>
         <span class="dialog__sub" dir="ltr">{{ L().recordSub(i.number) }}</span>
       </div>
     </div>
     <div class="dialog__body">
       <div class="chip-row">
-        <button type="button" class="chip" [class.chip--active]="recordMode() === 'full'" (click)="setRecordMode('full')">{{ L().recordFull }}</button>
-        <button type="button" class="chip" [class.chip--active]="recordMode() === 'partial'" (click)="setRecordMode('partial')">{{ L().recordPartial }}</button>
+        <button
+          type="button"
+          class="chip"
+          [class.chip--active]="recordMode() === 'full'"
+          (click)="setRecordMode('full')"
+        >
+          {{ L().recordFull }}
+        </button>
+        <button
+          type="button"
+          class="chip"
+          [class.chip--active]="recordMode() === 'partial'"
+          (click)="setRecordMode('partial')"
+        >
+          {{ L().recordPartial }}
+        </button>
       </div>
       <label class="field">
         <span class="field__label">{{ L().recordAmount }}</span>
@@ -208,7 +398,9 @@
     </div>
     <div class="dialog__footer">
       <button type="button" class="btn btn--ghost" (click)="closeRecord()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" (click)="submitRecord()">{{ L().confirmGo }}</button>
+      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="submitRecord()">
+        {{ L().confirmGo }}
+      </button>
     </div>
   </div>
 }
@@ -229,13 +421,26 @@
           (input)="voidReason.set($any($event.target).value)"
         ></textarea>
       </label>
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'تأكيد كلمة المرور' : 'Confirm your password' }}</span
+        ><input
+          type="password"
+          autocomplete="current-password"
+          class="input"
+          [value]="password()"
+          (input)="password.set($any($event.target).value)"
+      /></label>
       @if (voidError()) {
         <span class="field__error">{{ voidError() }}</span>
       }
     </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeVoidDialog()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--danger" (click)="submitVoid()">{{ L().confirmGo }}</button>
+      <button type="button" class="btn btn--ghost" (click)="closeVoidDialog()">
+        {{ L().cancel }}
+      </button>
+      <button type="button" class="btn btn--danger" [disabled]="saving()" (click)="submitVoid()">
+        {{ L().confirmGo }}
+      </button>
     </div>
   </div>
 }
@@ -252,7 +457,13 @@
     <div class="dialog__body">
       <label class="field">
         <span class="field__label">{{ L().creditAmount }}</span>
-        <input type="number" class="input" dir="ltr" [value]="creditAmount()" (input)="creditAmount.set($any($event.target).value)" />
+        <input
+          type="number"
+          class="input"
+          dir="ltr"
+          [value]="creditAmount()"
+          (input)="creditAmount.set($any($event.target).value)"
+        />
       </label>
       <label class="field">
         <textarea
@@ -263,17 +474,106 @@
           (input)="creditReason.set($any($event.target).value)"
         ></textarea>
       </label>
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'تأكيد كلمة المرور' : 'Confirm your password' }}</span
+        ><input
+          type="password"
+          autocomplete="current-password"
+          class="input"
+          [value]="password()"
+          (input)="password.set($any($event.target).value)"
+      /></label>
       @if (creditError()) {
         <span class="field__error">{{ creditError() }}</span>
       }
     </div>
     <div class="dialog__footer">
       <button type="button" class="btn btn--ghost" (click)="closeCredit()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" (click)="submitCredit()">{{ L().confirmGo }}</button>
+      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="submitCredit()">
+        {{ L().confirmGo }}
+      </button>
     </div>
   </div>
 }
 
 @if (toast(); as msg) {
   <div class="toast">{{ msg }}</div>
+}
+
+@if (creating()) {
+  <div class="scrim" (click)="creating.set(false)"></div>
+  <div class="dialog" style="max-height: 85vh; overflow: auto">
+    <form
+      style="padding: 24px; display: grid; gap: 14px"
+      (submit)="$event.preventDefault(); createInvoice()"
+    >
+      <h2>{{ lang() === 'ar' ? 'فاتورة مسودة جديدة' : 'New draft invoice' }}</h2>
+      <label
+        >{{ lang() === 'ar' ? 'الشركة' : 'Company'
+        }}<select [(ngModel)]="draft.companyId" name="company" required>
+          <option value="">—</option>
+          @for (c of companies(); track c.id) {
+            <option [value]="c.id">{{ c.nameEn }}</option>
+          }
+        </select></label
+      >
+      <label
+        >{{ lang() === 'ar' ? 'الوصف' : 'Description'
+        }}<input
+          class="input"
+          type="text"
+          name="description"
+          [(ngModel)]="draft.description"
+          required /></label
+      ><label
+        >{{ lang() === 'ar' ? 'تاريخ الإصدار' : 'Issue date'
+        }}<input
+          class="input"
+          type="date"
+          name="issueDate"
+          [(ngModel)]="draft.issueDate"
+          required /></label
+      ><label
+        >{{ lang() === 'ar' ? 'تاريخ الاستحقاق' : 'Due date'
+        }}<input
+          class="input"
+          type="date"
+          name="dueDate"
+          [(ngModel)]="draft.dueDate"
+          required /></label
+      ><label
+        >{{ lang() === 'ar' ? 'المجموع الفرعي (ج.م)' : 'Subtotal (EGP)'
+        }}<input
+          class="input"
+          type="text"
+          name="subtotal"
+          [(ngModel)]="draft.subtotal"
+          required /></label
+      ><label
+        >{{ lang() === 'ar' ? 'نسبة الضريبة المسجلة' : 'Tax percentage (explicit)'
+        }}<input
+          class="input"
+          type="text"
+          name="taxPercent"
+          [(ngModel)]="draft.taxPercent"
+          required /></label
+      ><label
+        >{{ lang() === 'ar' ? 'مرجع الاشتراك (اختياري)' : 'Subscription reference (optional)'
+        }}<input class="input" type="text" name="subscriptionId" [(ngModel)]="draft.subscriptionId"
+      /></label>
+      <p>
+        {{
+          lang() === 'ar'
+            ? 'أدخل نسبة الضريبة المناسبة لهذه الفاتورة.'
+            : 'Enter the tax rate applicable to this invoice.'
+        }}
+      </p>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
+      <button class="btn btn--primary" [disabled]="saving()">
+        {{ lang() === 'ar' ? 'حفظ المسودة' : 'Save draft' }}</button
+      ><button type="button" class="btn" (click)="creating.set(false)">{{ L().cancel }}</button>
+    </form>
+  </div>
 }

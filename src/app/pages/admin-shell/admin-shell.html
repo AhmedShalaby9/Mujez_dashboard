@@ -126,16 +126,27 @@
           @if (notifOpen()) {
             <div class="dropdown dropdown--notif" (click)="$event.stopPropagation()">
               <div class="dropdown__title">{{ L().notifTitle }}</div>
-              @for (n of L().notifications; track n.title) {
-                <div class="notif-row" [class.notif-row--unread]="n.unread">
-                  <span class="notif-row__dot" [class.notif-row__dot--unread]="n.unread"></span>
+              @if (overview.alertError()) {
+                <p role="alert">{{ overview.alertError() }}</p>
+              }
+              @for (n of notifications(); track n.id) {
+                <a
+                  [routerLink]="n.path"
+                  (click)="notifOpen.set(false)"
+                  style="text-decoration: none; color: inherit"
+                  class="notif-row"
+                  [class.notif-row--unread]="n.attention"
+                >
+                  <span class="notif-row__dot" [class.notif-row__dot--unread]="n.attention"></span>
                   <div class="notif-row__body">
                     <span class="notif-row__title">{{ n.title }}</span>
                     <span class="notif-row__time">{{ n.time }}</span>
                   </div>
-                </div>
+                </a>
               } @empty {
-                <div class="dropdown__empty">{{ L().notifEmpty }}</div>
+                @if (!overview.alertError()) {
+                  <div class="dropdown__empty">{{ L().notifEmpty }}</div>
+                }
               }
             </div>
           }

@@ -1,3 +1,4 @@
+import { OverviewApi, overviewAlertText } from '../../overview-api.service';
 import { PlatformConfig } from '../../platform-config.service';
 import { SupportApi } from '../../support-api.service';
 import { BillingApi } from '../../billing-api.service';
@@ -24,12 +25,6 @@ interface NavItem {
 
 type NavEntry = NavHead | NavItem;
 
-interface Notification {
-  title: string;
-  time: string;
-  unread: boolean;
-}
-
 interface Copy {
   brand: string;
   platformTag: string;
@@ -40,7 +35,6 @@ interface Copy {
   notifTitle: string;
   notifEmpty: string;
   nav: NavEntry[];
-  notifications: Notification[];
 }
 
 const EN_NAV: NavEntry[] = [
@@ -103,19 +97,9 @@ const COPY: Record<Lang, Copy> = {
     searchPh: 'Search companies, invoices, tickets…',
     otherLang: 'العربية',
     profileMenu: { profile: 'Profile', settings: 'Settings', signOut: 'Sign out' },
-    notifTitle: 'Notifications',
-    notifEmpty: "You're all caught up.",
+    notifTitle: 'Current alerts',
+    notifEmpty: 'No current alerts in your permitted modules',
     nav: EN_NAV,
-    notifications: [
-      {
-        title: 'Al Qahira Developments — payment failed (3rd attempt)',
-        time: '12m ago',
-        unread: true,
-      },
-      { title: 'Nile View Realty — trial ends in 2 days', time: '1h ago', unread: true },
-      { title: 'Deira Properties — approaching 90% of unit limit', time: '3h ago', unread: true },
-      { title: 'New company created: Coastal Homes', time: 'Yesterday', unread: false },
-    ],
   },
   ar: {
     brand: 'مجاز',
@@ -124,23 +108,9 @@ const COPY: Record<Lang, Copy> = {
     searchPh: 'ابحث عن شركات أو فواتير أو تذاكر…',
     otherLang: 'English',
     profileMenu: { profile: 'الملف الشخصي', settings: 'الإعدادات', signOut: 'تسجيل الخروج' },
-    notifTitle: 'الإشعارات',
+    notifTitle: 'التنبيهات الحالية',
     notifEmpty: 'لا توجد إشعارات جديدة.',
     nav: AR_NAV,
-    notifications: [
-      {
-        title: 'القاهرة للتطوير — فشل الدفع (المحاولة الثالثة)',
-        time: 'منذ 12 دقيقة',
-        unread: true,
-      },
-      {
-        title: 'نايل فيو العقارية — تنتهي الفترة التجريبية خلال يومين',
-        time: 'منذ ساعة',
-        unread: true,
-      },
-      { title: 'ديرة العقارية — اقتربت من 90% من حد الوحدات', time: 'منذ 3 ساعات', unread: true },
-      { title: 'تم إنشاء شركة جديدة: كوستال هومز', time: 'أمس', unread: false },
-    ],
   },
 };
 
@@ -151,9 +121,20 @@ const COPY: Record<Lang, Copy> = {
   styleUrl: './admin-shell.scss',
 })
 export class AdminShell {
+  readonly overview = inject(OverviewApi);
+  readonly notifications = computed(() =>
+    this.overview.alerts().map((a) => ({
+      id: a.id,
+      path: a.path,
+      title: overviewAlertText(a, this.ui.lang()),
+      time: this.ui.lang() === 'ar' ? 'الحالة الحالية' : 'Current condition',
+      attention: a.severity !== 'low',
+    })),
+  );
   readonly config = inject(PlatformConfig);
   readonly supportApi = inject(SupportApi);
   constructor() {
+    void this.overview.refreshAlerts();
     if (this.auth.user()?.permissions.includes('support')) void this.supportApi.summary();
   }
   readonly billingApi = inject(BillingApi);
@@ -258,7 +239,7 @@ export class AdminShell {
   readonly profileOpen = signal(false);
   readonly search = signal('');
 
-  readonly unreadCount = computed(() => this.L().notifications.filter((n) => n.unread).length);
+  readonly unreadCount = computed(() => this.notifications().length);
 
   toggleLang(): void {
     this.ui.toggleLang();
@@ -273,6 +254,7 @@ export class AdminShell {
   }
 
   toggleNotif(): void {
+    if (!this.notifOpen()) void this.overview.refreshAlerts();
     this.notifOpen.set(!this.notifOpen());
     this.profileOpen.set(false);
   }

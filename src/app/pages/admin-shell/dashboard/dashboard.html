@@ -1,138 +1,242 @@
+@if (error()) {
+  <p role="alert">
+    {{ error() }} —
+    {{ lang() === 'ar' ? 'قد تكون البيانات السابقة قديمة' : 'Previous data may be stale' }}
+  </p>
+}
+@if (loading()) {
+  <p role="status">{{ lang() === 'ar' ? 'جار تحميل البيانات…' : 'Loading overview...' }}</p>
+}
 <div class="page-head">
   <div class="page-head__text">
     <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
     <h1 class="page-head__title">{{ L().title }}</h1>
   </div>
   <div class="page-head__actions">
-    <button type="button" class="btn btn--ghost">{{ L().exportBtn }}</button>
+    <button type="button" class="btn btn--ghost" [disabled]="loading()" (click)="reload()">
+      {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+    </button>
+    <button
+      type="button"
+      class="btn btn--ghost"
+      [disabled]="!data() || loading() || !!error()"
+      (click)="exportReport()"
+    >
+      {{ L().exportBtn }}
+    </button>
   </div>
 </div>
 
-<section class="kpis">
-  @for (k of L().kpis; track k.label) {
-    <div class="kpi">
-      <span class="kpi__label">{{ k.label }}</span>
-      <span class="kpi__value" [style.color]="k.fg || '#17181A'">{{ k.value }}</span>
-      <span class="kpi__sub">{{ k.sub }}</span>
-    </div>
+@if (range() === 'custom') {
+  <div class="chip-row">
+    <label
+      >{{ lang() === 'ar' ? 'من' : 'From' }}
+      <input type="date" [(ngModel)]="from" name="from" /></label
+    ><label
+      >{{ lang() === 'ar' ? 'إلى' : 'To' }} <input type="date" [(ngModel)]="to" name="to" /></label
+    ><button class="btn btn--ghost" (click)="reload()" [disabled]="loading()">
+      {{ lang() === 'ar' ? 'تطبيق الفترة' : 'Apply dates' }}
+    </button>
+  </div>
+}
+@if (data(); as d) {
+  <p>
+    {{ lang() === 'ar' ? 'وقت التقرير:' : 'As of:' }} {{ d.asOf }} · {{ d.window.from }} —
+    {{ d.window.to }} (Africa/Cairo)
+  </p>
+  @if (d.sampleDataIncluded) {
+    <p role="note">{{ L().sample }}</p>
   }
-</section>
 
-<div class="dash-grid">
-  <section class="card card--wide">
-    <div class="card__header">
-      <h2 class="card__title">{{ L().revenueTitle }}</h2>
-      <div class="chip-row chip-row--end">
-        @for (r of ranges; track r) {
-          <button
-            type="button"
-            class="chip"
-            [class.chip--active]="range() === r"
-            (click)="setRange(r)"
-          >
-            {{ L().ranges[r] }}
-          </button>
-        }
+  <section class="kpis">
+    @for (k of kpis(); track k.label) {
+      <div class="kpi">
+        <span class="kpi__label">{{ k.label }}</span>
+        <span class="kpi__value">{{ k.value }}</span>
+        <span class="kpi__sub">{{ k.sub }}</span>
       </div>
-    </div>
-
-    <div class="legend">
-      @for (item of revenueLegend(); track item.label) {
-        <span class="legend__item">
-          <span class="legend__dot" [style.background]="item.color"></span>
-          {{ item.label }}
-          <span class="legend__value">{{ item.value }}</span>
-        </span>
-      }
-    </div>
-
-    <div class="chart" dir="ltr">
-      <svg viewBox="-10 0 620 210" class="chart__svg">
-        <line x1="0" y1="165" x2="600" y2="165" stroke="#E4E2DC" />
-        <line x1="0" y1="120" x2="600" y2="120" stroke="#F2F1ED" />
-        @for (b of bars(); track b.x) {
-          <rect [attr.x]="b.x" [attr.y]="b.y" [attr.width]="b.w" [attr.height]="b.h" [attr.fill]="b.c" rx="1" />
-        }
-        <polyline [attr.points]="linePoints()" fill="none" stroke="#16182A" stroke-width="2.5" stroke-linejoin="round" />
-        @for (d of dots(); track d.cx) {
-          <circle [attr.cx]="d.cx" [attr.cy]="d.cy" r="3" fill="#fff" stroke="#16182A" stroke-width="2" />
-        }
-        @for (t of axisLabels(); track t.x) {
-          <text
-            [attr.x]="t.x"
-            y="204"
-            [attr.text-anchor]="t.a"
-            font-size="11"
-            fill="#8A8983"
-            font-family="IBM Plex Sans, IBM Plex Sans Arabic, sans-serif"
-          >
-            {{ t.t }}
-          </text>
-        }
-      </svg>
-    </div>
+    }
   </section>
 
-  <section class="card">
-    <div class="card__header">
-      <h2 class="card__title">{{ L().planTitle }}</h2>
-    </div>
-    <div class="donut-wrap">
-      <svg viewBox="0 0 100 100" class="donut">
-        <circle cx="50" cy="50" r="40" fill="none" stroke="#F2F1ED" stroke-width="14" />
-        @for (d of donut(); track d.label) {
-          <circle
-            cx="50"
-            cy="50"
-            r="40"
-            fill="none"
-            [attr.stroke]="d.color"
-            stroke-width="14"
-            [attr.stroke-dasharray]="d.dash"
-            [attr.stroke-dashoffset]="d.off"
-          />
+  <div class="dash-grid">
+    <section class="card card--wide">
+      <div class="card__header">
+        <h2 class="card__title">{{ L().revenueTitle }}</h2>
+        <div class="chip-row chip-row--end">
+          @for (r of ranges; track r) {
+            <button
+              type="button"
+              class="chip"
+              [class.chip--active]="range() === r"
+              (click)="setRange(r)"
+            >
+              {{ L().ranges[r] }}
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (d.finance) {
+        <p>{{ L().method }}</p>
+        <div class="legend">
+          @for (item of revenueLegend(); track item.label) {
+            <span class="legend__item">
+              <span class="legend__dot" [style.background]="item.color"></span>
+              {{ item.label }}
+              <span class="legend__value">{{ item.value }}</span>
+            </span>
+          }
+        </div>
+
+        @if (noPayments()) {
+          <p>{{ L().emptyFinance }}</p>
         }
-      </svg>
-      <div class="donut-legend">
-        @for (d of donut(); track d.label) {
-          <div class="donut-legend__row">
-            <span class="donut-legend__dot" [style.background]="d.color"></span>
-            <span class="donut-legend__label">{{ d.label }}</span>
-            <span class="donut-legend__count">{{ d.count }}</span>
-            <span class="donut-legend__pct">{{ d.pct }}%</span>
+        <div class="chart" dir="ltr">
+          <svg
+            viewBox="-10 0 620 210"
+            class="chart__svg"
+            role="img"
+            [attr.aria-label]="L().revenueTitle"
+          >
+            <line
+              x1="0"
+              [attr.y1]="bars()[0]?.zero ?? 165"
+              x2="600"
+              [attr.y2]="bars()[0]?.zero ?? 165"
+              stroke="#E4E2DC"
+            />
+            <line x1="0" y1="120" x2="600" y2="120" stroke="#F2F1ED" />
+            @for (b of bars(); track b.x) {
+              <rect
+                [attr.x]="b.x"
+                [attr.y]="b.y"
+                [attr.width]="b.w"
+                [attr.height]="b.h"
+                [attr.fill]="b.c"
+                rx="1"
+              >
+                <title>
+                  {{ b.label }} · {{ money(b.gross) }} / {{ money(b.refund) }} / {{ money(b.net) }}
+                </title>
+              </rect>
+            }
+            <polyline
+              [attr.points]="linePoints()"
+              fill="none"
+              stroke="#16182A"
+              stroke-width="2.5"
+              stroke-linejoin="round"
+            />
+            @for (d of dots(); track d.cx) {
+              <circle
+                [attr.cx]="d.cx"
+                [attr.cy]="d.cy"
+                r="3"
+                fill="#fff"
+                stroke="#16182A"
+                stroke-width="2"
+              />
+            }
+            @for (t of axisLabels(); track t.x) {
+              <text
+                [attr.x]="t.x"
+                y="204"
+                [attr.text-anchor]="t.a"
+                font-size="11"
+                fill="#8A8983"
+                font-family="IBM Plex Sans, IBM Plex Sans Arabic, sans-serif"
+              >
+                {{ t.t }}
+              </text>
+            }
+          </svg>
+        </div>
+      } @else {
+        <p>{{ L().noFinance }}</p>
+      }
+    </section>
+
+    @if (d.companies) {
+      <section class="card">
+        <div class="card__header">
+          <h2 class="card__title">{{ L().planTitle }}</h2>
+        </div>
+        <div class="donut-wrap">
+          <svg viewBox="0 0 100 100" class="donut">
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#F2F1ED" stroke-width="14" />
+            @for (d of donut(); track d.key) {
+              <circle
+                cx="50"
+                cy="50"
+                r="40"
+                fill="none"
+                [attr.stroke]="d.color"
+                stroke-width="14"
+                [attr.stroke-dasharray]="d.dash"
+                [attr.stroke-dashoffset]="d.off"
+              />
+            }
+          </svg>
+          <div class="donut-legend">
+            @for (d of donut(); track d.key) {
+              <div class="donut-legend__row">
+                <span class="donut-legend__dot" [style.background]="d.color"></span>
+                <span class="donut-legend__label">{{ d.label }}</span>
+                <span class="donut-legend__count">{{ d.count }}</span>
+                <span class="donut-legend__pct">{{ d.pct }}%</span>
+              </div>
+            }
           </div>
+        </div>
+        <p>{{ L().planNote }}</p>
+      </section>
+    }
+
+    <section class="card">
+      <div class="card__header">
+        <h2 class="card__title">{{ L().alertsTitle }}</h2>
+      </div>
+      <p>
+        {{
+          lang() === 'ar'
+            ? 'حتى 5 حالات لكل نوع من الوحدات المسموح بها'
+            : 'Up to five conditions per permitted alert category'
+        }}
+      </p>
+      <div class="alert-list">
+        @for (a of d.alerts; track a.id) {
+          <a class="alert-row" [routerLink]="a.path" style="text-decoration: none; color: inherit">
+            <span class="alert-row__dot" [style.background]="color(a)"></span>
+            <span class="alert-row__text">{{ alert(a) }}</span>
+            <span class="alert-row__arrow">›</span>
+          </a>
+        }
+        @if (!d.alerts.length) {
+          <p>{{ L().emptyAlerts }}</p>
         }
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="card">
-    <div class="card__header">
-      <h2 class="card__title">{{ L().alertsTitle }}</h2>
-    </div>
-    <div class="alert-list">
-      @for (a of L().alerts; track a.text) {
-        <div class="alert-row">
-          <span class="alert-row__dot" [style.background]="a.color"></span>
-          <span class="alert-row__text">{{ a.text }}</span>
-          <span class="alert-row__arrow">›</span>
+    @if (d.companies) {
+      <section class="card">
+        <div class="card__header">
+          <h2 class="card__title">{{ L().growthTitle }}</h2>
         </div>
-      }
-    </div>
-  </section>
-
-  <section class="card">
-    <div class="card__header">
-      <h2 class="card__title">{{ L().growthTitle }}</h2>
-    </div>
-    <div class="growth-list">
-      @for (g of L().growth; track g.label) {
-        <div class="growth-row">
-          <span class="growth-row__label">{{ g.label }}</span>
-          <span class="growth-row__value">{{ g.value }}</span>
-          <span class="growth-row__delta">{{ g.delta }}</span>
+        <div class="growth-list">
+          @for (g of d.growth; track g.id) {
+            <div class="growth-row">
+              <span class="growth-row__label">{{ g.name[lang()] }}</span>
+              <span class="growth-row__value"
+                >{{ g.users }} {{ lang() === 'ar' ? 'حساب CRM' : 'CRM accounts' }}</span
+              >
+              <span class="growth-row__delta">{{ date(g.createdAt) }}</span>
+            </div>
+          }
         </div>
-      }
-    </div>
-  </section>
-</div>
+        @if (!d.growth.length) {
+          <p>{{ L().emptyGrowth }}</p>
+        }
+      </section>
+    }
+  </div>
+}

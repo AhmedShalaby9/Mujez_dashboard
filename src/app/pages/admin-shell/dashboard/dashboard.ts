@@ -1,239 +1,307 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AdminUiState, type Lang } from '../admin-ui-state';
-
+import {
+  OverviewApi,
+  overviewMoney,
+  overviewAlertText,
+  type OverviewData,
+  type OverviewAlert,
+} from '../../../overview-api.service';
 type Range = '30d' | '90d' | '12m' | 'custom';
-
-interface Kpi {
-  label: string;
-  value: string;
-  sub: string;
-  fg?: string;
-}
-
-interface Alert {
-  text: string;
-  color: string;
-}
-
-interface GrowthRow {
-  label: string;
-  value: string;
-  delta: string;
-}
-
-interface DonutSlice {
-  label: string;
-  count: number;
-  pct: number;
-  color: string;
-}
-
-interface Copy {
-  eyebrow: string;
-  title: string;
-  exportBtn: string;
-  kpis: Kpi[];
-  revenueTitle: string;
-  ranges: Record<Range, string>;
-  legendMrr: string;
-  legendNew: string;
-  legendExpansion: string;
-  legendLost: string;
-  planTitle: string;
-  alertsTitle: string;
-  growthTitle: string;
-  alerts: Alert[];
-  growth: GrowthRow[];
-  planNames: string[];
-}
-
-// ---- fictional demo data (12 trailing months, EGP '000 MRR) ----
-const MONTHS_EN = ['Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'];
-const MONTHS_AR = ['نوف', 'ديس', 'ينا', 'فبر', 'مار', 'أبر', 'ماي', 'يون', 'يول', 'أغس', 'سبت', 'أكت'];
-const MRR_SERIES = [1420, 1455, 1480, 1510, 1540, 1525, 1575, 1610, 1650, 1695, 1780, 1860];
-const PLAN_COUNTS = [150, 128, 107, 43]; // Starter, Pro, Business, Enterprise — sums to total companies KPI
-const PLAN_COLORS = ['#C3C5D6', '#3D4FD6', '#7E89E6', '#F5B841'];
-
-const COPY: Record<Lang, Copy> = {
+const COLORS = ['#C3C5D6', '#3D4FD6', '#7E89E6', '#F5B841', '#2F7A4F', '#C8862E'];
+const COPY = {
   en: {
     eyebrow: 'Overview',
     title: 'Dashboard',
     exportBtn: 'Export report',
-    kpis: [
-      { label: 'Total companies', value: '428', sub: 'All companies' },
-      { label: 'Active', value: '391', sub: 'Currently active', fg: '#2F7A4F' },
-      { label: 'Trial', value: '24', sub: 'In trial period' },
-      { label: 'Suspended', value: '13', sub: 'Payment or security', fg: '#B4442F' },
-      { label: 'CRM users', value: '6,284', sub: 'Across all companies' },
-      { label: 'MRR', value: 'EGP 1.86M', sub: 'Monthly recurring revenue', fg: '#3D4FD6' },
-      { label: 'ARR', value: 'EGP 22.3M', sub: 'Annualized', fg: '#3D4FD6' },
-      { label: 'Churn', value: '2.1%', sub: 'Last 30 days', fg: '#B4442F' },
-    ],
-    revenueTitle: 'Revenue growth',
+    revenueTitle: 'Recorded payments and refunds',
     ranges: { '30d': '30 days', '90d': '90 days', '12m': '12 months', custom: 'Custom' },
-    legendMrr: 'MRR',
-    legendNew: 'New',
-    legendExpansion: 'Expansion',
-    legendLost: 'Lost',
-    planTitle: 'Plan distribution',
-    alertsTitle: 'Alerts',
-    growthTitle: 'Company growth',
-    alerts: [
-      { text: 'Al Qahira Developments — payment failed (3rd attempt)', color: '#B4442F' },
-      { text: 'Nile View Realty — trial ends in 2 days', color: '#C8862E' },
-      { text: 'Deira Properties — approaching 90% of unit limit', color: '#C8862E' },
-      { text: 'New company created: Coastal Homes', color: '#3D4FD6' },
-    ],
-    growth: [
-      { label: 'Al Qahira Developments', value: '+86 users', delta: '+18%' },
-      { label: 'Nile View Realty', value: '+54 users', delta: '+12%' },
-      { label: 'Deira Properties', value: '+41 users', delta: '+9%' },
-      { label: 'Coastal Homes', value: '+33 users', delta: '+22%' },
-      { label: 'Smart Spaces', value: '+28 users', delta: '+7%' },
-    ],
-    planNames: ['Starter', 'Pro', 'Business', 'Enterprise'],
+    planTitle: 'Current subscriptions by plan',
+    alertsTitle: 'Current alerts',
+    growthTitle: 'Recently registered companies in selected range',
+    emptyAlerts: 'No current alerts in your permitted modules',
+    emptyGrowth: 'No companies registered in this range',
+    sample:
+      'Includes initial sample records; sample payments represent test entries, not external collections.',
+    method:
+      'MRR/ARR are current active contract values. The chart shows recorded payments and refunds, not historical MRR. Historical churn is not available.',
+    emptyFinance: 'No recorded payments or refunds in this range',
+    noFinance: 'Billing permission is required to view financial figures.',
+    planNote:
+      'Unexpired active, trial, past-due and suspended contracts for non-archived companies. Companies without a current contract are excluded.',
   },
   ar: {
     eyebrow: 'نظرة عامة',
     title: 'لوحة التحكم',
     exportBtn: 'تصدير التقرير',
-    kpis: [
-      { label: 'إجمالي الشركات', value: '428', sub: 'كل الشركات' },
-      { label: 'نشطة', value: '391', sub: 'نشطة حاليًا', fg: '#2F7A4F' },
-      { label: 'تجريبية', value: '24', sub: 'في الفترة التجريبية' },
-      { label: 'موقوفة', value: '13', sub: 'لأسباب دفع أو أمنية', fg: '#B4442F' },
-      { label: 'مستخدمو CRM', value: '6,284', sub: 'عبر جميع الشركات' },
-      { label: 'MRR', value: '1.86M ج.م', sub: 'الإيراد الشهري المتكرر', fg: '#3D4FD6' },
-      { label: 'ARR', value: '22.3M ج.م', sub: 'الإيراد السنوي', fg: '#3D4FD6' },
-      { label: 'التسرب', value: '2.1%', sub: 'آخر 30 يومًا', fg: '#B4442F' },
-    ],
-    revenueTitle: 'نمو الإيرادات',
+    revenueTitle: 'المدفوعات والمبالغ المستردة المسجلة',
     ranges: { '30d': '30 يومًا', '90d': '90 يومًا', '12m': '12 شهرًا', custom: 'مخصص' },
-    legendMrr: 'الإيراد الشهري',
-    legendNew: 'جديد',
-    legendExpansion: 'توسّع',
-    legendLost: 'مفقود',
-    planTitle: 'توزيع الخطط',
-    alertsTitle: 'التنبيهات',
-    growthTitle: 'نمو الشركات',
-    alerts: [
-      { text: 'القاهرة للتطوير — فشل الدفع (المحاولة الثالثة)', color: '#B4442F' },
-      { text: 'نايل فيو العقارية — تنتهي الفترة التجريبية خلال يومين', color: '#C8862E' },
-      { text: 'ديرة العقارية — اقتربت من 90% من حد الوحدات', color: '#C8862E' },
-      { text: 'تم إنشاء شركة جديدة: كوستال هومز', color: '#3D4FD6' },
-    ],
-    growth: [
-      { label: 'القاهرة للتطوير', value: '+86 مستخدم', delta: '+18%' },
-      { label: 'نايل فيو العقارية', value: '+54 مستخدم', delta: '+12%' },
-      { label: 'ديرة العقارية', value: '+41 مستخدم', delta: '+9%' },
-      { label: 'كوستال هومز', value: '+33 مستخدم', delta: '+22%' },
-      { label: 'سمارت سبيسز', value: '+28 مستخدم', delta: '+7%' },
-    ],
-    planNames: ['أساسية', 'احترافية', 'أعمال', 'مؤسسات'],
+    planTitle: 'الاشتراكات الحالية حسب الباقة',
+    alertsTitle: 'التنبيهات الحالية',
+    growthTitle: 'الشركات المسجلة حديثًا خلال الفترة المحددة',
+    emptyAlerts: 'لا توجد تنبيهات حالية في الوحدات المسموح بها',
+    emptyGrowth: 'لا توجد شركات جديدة خلال الفترة',
+    sample: 'تشمل بيانات أولية تجريبية. المدفوعات التجريبية سجلات اختبار وليست تحصيلات خارجية.',
+    method:
+      'MRR وARR يعكسان العقود النشطة الحالية. الرسم يعرض المدفوعات والمبالغ المستردة المسجلة، وليس سجل MRR. التسرب التاريخي غير متاح.',
+    emptyFinance: 'لا توجد مدفوعات أو مبالغ مستردة مسجلة في الفترة',
+    noFinance: 'يلزم إذن الفوترة لعرض البيانات المالية.',
+    planNote:
+      'العقود غير المنتهية للشركات غير المؤرشفة، بما فيها التجريبية والمتأخرة والمعلقة. تستبعد الشركات دون عقد حالي.',
   },
 };
-
 @Component({
   selector: 'app-dashboard',
+  imports: [FormsModule, RouterLink],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
 export class Dashboard {
+  readonly api = inject(OverviewApi);
   private readonly ui = inject(AdminUiState);
-
+  private readonly destroy = inject(DestroyRef);
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
-
+  readonly data = signal<OverviewData | null>(null);
+  readonly loading = signal(false);
+  readonly error = signal('');
   readonly range = signal<Range>('12m');
   readonly ranges: Range[] = ['30d', '90d', '12m', 'custom'];
-
-  readonly months = computed(() => (this.lang() === 'ar' ? MONTHS_AR : MONTHS_EN));
-
-  private readonly chartMin = 1300;
-  private readonly chartMax = 1900;
-  private readonly chartTop = 20;
-  private readonly chartBase = 165;
-
-  private valueToY(v: number): number {
-    const ratio = (v - this.chartMin) / (this.chartMax - this.chartMin);
-    return this.chartBase - ratio * (this.chartBase - this.chartTop);
-  }
-
-  readonly bars = computed(() => {
-    const months = this.months();
-    return MRR_SERIES.map((v, i) => {
-      const x = i * 50 + 7;
-      const y = this.valueToY(v);
-      const prev = i === 0 ? 1390 : MRR_SERIES[i - 1];
-      return {
-        x,
-        y,
-        w: 36,
-        h: this.chartBase - y,
-        c: v < prev ? '#C8862E' : '#3D4FD6',
-        month: months[i],
-      };
+  readonly from = signal('');
+  readonly to = signal('');
+  private serial = 0;
+  constructor() {
+    void this.reload();
+    const timer = setInterval(() => {
+      if (this.range() !== 'custom' || (this.from() && this.to())) void this.reload();
+    }, 60000);
+    this.destroy.onDestroy(() => {
+      clearInterval(timer);
+      this.serial++;
     });
-  });
-
-  readonly linePoints = computed(() =>
-    this.bars()
-      .map((b) => `${b.x + b.w / 2},${b.y}`)
-      .join(' '),
-  );
-
-  readonly dots = computed(() => this.bars().map((b) => ({ cx: b.x + b.w / 2, cy: b.y })));
-
-  readonly axisLabels = computed(() =>
-    this.bars()
-      .filter((_, i) => i % 2 === 0)
-      .map((b, idx, arr) => ({
-        x: b.x + b.w / 2,
-        t: b.month,
-        a: idx === 0 ? 'start' : idx === arr.length - 1 ? 'end' : 'middle',
-      })),
-  );
-
-  readonly revenueLegend = computed(() => {
-    const l = this.L();
-    const newSum = MRR_SERIES.reduce((sum, v, i) => {
-      const prev = i === 0 ? 1390 : MRR_SERIES[i - 1];
-      return v > prev ? sum + (v - prev) : sum;
-    }, 0);
-    const lostSum = MRR_SERIES.reduce((sum, v, i) => {
-      const prev = i === 0 ? 1390 : MRR_SERIES[i - 1];
-      return v < prev ? sum + (prev - v) : sum;
-    }, 0);
+  }
+  async reload() {
+    if (this.range() === 'custom' && (!this.from() || !this.to())) {
+      this.error.set(
+        this.lang() === 'ar' ? 'اختر بداية ونهاية الفترة' : 'Choose start and end dates',
+      );
+      return;
+    }
+    const serial = ++this.serial;
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      const d = await this.api.load({
+        range: this.range(),
+        ...(this.range() === 'custom' ? { from: this.from(), to: this.to() } : {}),
+      });
+      if (serial === this.serial) this.data.set(d);
+    } catch (e) {
+      if (serial === this.serial) this.error.set((e as Error).message);
+    } finally {
+      if (serial === this.serial) this.loading.set(false);
+    }
+  }
+  setRange(r: Range) {
+    this.range.set(r);
+    if (r !== 'custom') void this.reload();
+  }
+  money(v: string) {
+    return overviewMoney(v, this.lang());
+  }
+  date(v: string) {
+    return new Intl.DateTimeFormat(this.lang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', {
+      timeZone: 'Africa/Cairo',
+      dateStyle: 'medium',
+    }).format(new Date(v));
+  }
+  alert(a: OverviewAlert) {
+    return overviewAlertText(a, this.lang());
+  }
+  color(a: OverviewAlert) {
+    return a.severity === 'high'
+      ? '#B4442F'
+      : a.severity === 'med'
+        ? '#C8862E'
+        : 'var(--platform-primary, #3D4FD6)';
+  }
+  readonly kpis = computed(() => {
+    const d = this.data();
+    if (!d) return [];
+    const ar = this.lang() === 'ar';
+    const c = d.companies,
+      f = d.finance;
     return [
-      { label: l.legendMrr, value: 'EGP 1.86M', color: '#16182A' },
-      { label: l.legendNew, value: `EGP ${newSum}K`, color: '#3D4FD6' },
-      { label: l.legendExpansion, value: 'EGP 62K', color: '#7E89E6' },
-      { label: l.legendLost, value: `EGP ${lostSum}K`, color: '#C8862E' },
+      ...(c
+        ? [
+            {
+              label: ar ? 'إجمالي الشركات' : 'Total companies',
+              value: String(c.total),
+              sub: ar ? 'يشمل المؤرشفة' : 'Includes archived',
+            },
+            {
+              label: ar ? 'نشطة' : 'Active',
+              value: String(c.active),
+              sub: ar ? 'الحالة الحالية' : 'Current company status',
+            },
+            {
+              label: ar ? 'تجريبية' : 'Trial',
+              value: String(c.trial),
+              sub: ar ? 'الحالة الحالية' : 'Current company status',
+            },
+            {
+              label: ar ? 'معلقة' : 'Suspended',
+              value: String(c.suspended),
+              sub: ar ? 'الحالة الحالية' : 'Current company status',
+            },
+            {
+              label: ar ? 'حسابات CRM' : 'CRM accounts',
+              value: c.crmUsers,
+              sub: ar
+                ? 'دون المحذوفة والمعطلة والشركات المؤرشفة'
+                : 'Excludes deleted/disabled and archived companies',
+            },
+            {
+              label: ar ? 'شركات جديدة' : 'New companies',
+              value: String(c.added),
+              sub: ar ? 'خلال الفترة المحددة' : 'Selected date range',
+            },
+          ]
+        : []),
+      ...(f
+        ? [
+            {
+              label: 'MRR',
+              value: this.money(f.mrrMinor),
+              sub: ar ? 'العقود النشطة الحالية' : 'Current active contracts, monthly normalized',
+            },
+            {
+              label: 'ARR',
+              value: this.money(f.arrMinor),
+              sub: ar ? 'القيمة السنوية للعقود النشطة' : 'Current active contracts, annualized',
+            },
+          ]
+        : []),
     ];
   });
-
+  readonly bars = computed(() => {
+    const rows = this.data()?.finance?.series ?? [];
+    const values = rows.flatMap((r) => [Number(r.grossMinor), Number(r.netMinor)]);
+    const low = Math.min(0, ...values),
+      high = Math.max(1, ...values);
+    const y = (v: number) => 165 - ((v - low) / (high - low)) * 145;
+    const step = 600 / Math.max(1, rows.length);
+    return rows.map((r, i) => ({
+      x: i * step + step * 0.14,
+      w: step * 0.72,
+      y: y(Number(r.grossMinor)),
+      h: y(0) - y(Number(r.grossMinor)),
+      netY: y(Number(r.netMinor)),
+      zero: y(0),
+      label: this.date(r.date + 'T12:00:00Z'),
+      gross: r.grossMinor,
+      refund: r.refundMinor,
+      net: r.netMinor,
+      c: 'var(--platform-primary, #3D4FD6)',
+    }));
+  });
+  readonly linePoints = computed(() =>
+    this.bars()
+      .map((b) => `${b.x + b.w / 2},${b.netY}`)
+      .join(' '),
+  );
+  readonly dots = computed(() => this.bars().map((b) => ({ cx: b.x + b.w / 2, cy: b.netY })));
+  readonly axisLabels = computed(() => {
+    const bars = this.bars(),
+      interval = Math.max(1, Math.ceil(bars.length / 6));
+    return bars
+      .filter((_, i) => i % interval === 0 || i === bars.length - 1)
+      .map((b, i, a) => ({
+        x: b.x + b.w / 2,
+        t: b.label,
+        a: i === 0 ? 'start' : i === a.length - 1 ? 'end' : 'middle',
+      }));
+  });
+  readonly revenueLegend = computed(() => {
+    const f = this.data()?.finance;
+    if (!f) return [];
+    const ar = this.lang() === 'ar';
+    return [
+      {
+        label: ar ? 'مدفوعات مسجلة' : 'Recorded payments',
+        value: this.money(f.grossMinor),
+        color: 'var(--platform-primary, #3D4FD6)',
+      },
+      {
+        label: ar ? 'مبالغ مستردة مسجلة' : 'Recorded refunds',
+        value: this.money(f.refundMinor),
+        color: '#C8862E',
+      },
+      {
+        label: ar ? 'صافي السجلات' : 'Recorded net',
+        value: this.money(f.netMinor),
+        color: '#16182A',
+      },
+    ];
+  });
   readonly donut = computed(() => {
-    const total = PLAN_COUNTS.reduce((a, b) => a + b, 0);
-    const circumference = 2 * Math.PI * 40;
-    let offsetAcc = 0;
-    const names = this.L().planNames;
-    return PLAN_COUNTS.map((count, i): DonutSlice & { dash: string; off: number } => {
-      const pct = Math.round((count / total) * 100);
-      const dashLen = (count / total) * circumference;
-      const slice = {
-        label: names[i],
-        count,
-        pct,
-        color: PLAN_COLORS[i],
-        dash: `${dashLen} ${circumference - dashLen}`,
-        off: -offsetAcc,
+    const plans = this.data()?.plans ?? [],
+      total = plans.reduce((n, p) => n + p.companies, 0),
+      circumference = 2 * Math.PI * 40;
+    let offset = 0;
+    return plans.map((p, i) => {
+      const fraction = total ? p.companies / total : 0;
+      const result = {
+        key: p.key,
+        label: p.name[this.lang()],
+        count: p.companies,
+        pct: Math.round(fraction * 100),
+        color: COLORS[i % COLORS.length],
+        dash: `${fraction * circumference} ${circumference * (1 - fraction)}`,
+        off: -offset,
       };
-      offsetAcc += dashLen;
-      return slice;
+      offset += fraction * circumference;
+      return result;
     });
   });
-
-  setRange(r: Range): void {
-    this.range.set(r);
+  readonly noPayments = computed(() => {
+    const f = this.data()?.finance;
+    return !f || f.series.every((r) => r.grossMinor === '0' && r.refundMinor === '0');
+  });
+  exportReport() {
+    const d = this.data();
+    if (!d) return;
+    const rows: string[][] = [
+      ['Mujez overview', 'value'],
+      ['as_of_utc', d.asOf],
+      ['from_cairo', d.window.from],
+      ['to_cairo', d.window.to],
+      ['sample_data_included', String(d.sampleDataIncluded)],
+    ];
+    if (d.companies)
+      for (const [k, v] of Object.entries(d.companies)) rows.push(['companies_' + k, String(v)]);
+    if (d.finance) {
+      for (const k of ['mrrMinor', 'arrMinor', 'grossMinor', 'refundMinor', 'netMinor'] as const)
+        rows.push([k, d.finance[k]]);
+      rows.push(
+        [],
+        ['bucket_cairo', 'recorded_payments_minor', 'recorded_refunds_minor', 'recorded_net_minor'],
+      );
+      for (const r of d.finance.series)
+        rows.push([r.date, r.grossMinor, r.refundMinor, r.netMinor]);
+    }
+    const csv =
+      '\uFEFF' +
+      rows.map((row) => row.map((v) => '"' + v.replaceAll('"', '""') + '"').join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'mujez-overview-' + d.window.from + '-' + d.window.to + '.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 }

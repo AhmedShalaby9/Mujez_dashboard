@@ -1,0 +1,249 @@
+<div (click)="closeKebab()">
+  <div class="page-head">
+    <div class="page-head__text">
+      <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+      <h1 class="page-head__title">{{ L().title }}</h1>
+    </div>
+  </div>
+
+  <section class="kpis">
+    <button type="button" class="kpi" [class.kpi--active]="statusFilter() === 'all'" (click)="filterByKpiStatus('all')">
+      <span class="kpi__label">{{ L().kpis.total }}</span>
+      <span class="kpi__value">{{ kpis().total }}</span>
+    </button>
+    <button type="button" class="kpi" [class.kpi--active]="statusFilter() === 'active'" (click)="filterByKpiStatus('active')">
+      <span class="kpi__label">{{ L().kpis.active }}</span>
+      <span class="kpi__value" style="color: #2f7a4f">{{ kpis().active }}</span>
+    </button>
+    <button type="button" class="kpi" [class.kpi--active]="statusFilter() === 'trialing'" (click)="filterByKpiStatus('trialing')">
+      <span class="kpi__label">{{ L().kpis.trialing }}</span>
+      <span class="kpi__value" style="color: #2b37a0">{{ kpis().trialing }}</span>
+    </button>
+    <button type="button" class="kpi" [class.kpi--active]="statusFilter() === 'past_due'" (click)="filterByKpiStatus('past_due')">
+      <span class="kpi__label">{{ L().kpis.pastDue }}</span>
+      <span class="kpi__value" style="color: #9a6b1e">{{ kpis().pastDue }}</span>
+    </button>
+  </section>
+
+  <section class="filters">
+    <input
+      type="text"
+      class="filters__search"
+      [placeholder]="L().searchPh"
+      [value]="search()"
+      (input)="setSearch($any($event.target).value)"
+    />
+
+    <div class="chip-row">
+      <button type="button" class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="setStatusFilter('all')">
+        {{ L().statusAll }}
+      </button>
+      @for (s of statusTypes; track s) {
+        <button type="button" class="chip" [class.chip--active]="statusFilter() === s" (click)="setStatusFilter(s)">
+          {{ statusLabel(s) }}
+        </button>
+      }
+    </div>
+
+    <div class="chip-row">
+      <button type="button" class="chip" [class.chip--active]="planFilter() === 'all'" (click)="setPlanFilter('all')">
+        {{ L().planAll }}
+      </button>
+      @for (p of planTypes; track p) {
+        <button type="button" class="chip" [class.chip--active]="planFilter() === p" (click)="setPlanFilter(p)">
+          {{ planLabel(p) }}
+        </button>
+      }
+    </div>
+
+    <div class="chip-row">
+      <button type="button" class="chip" [class.chip--active]="paymentFilter() === 'all'" (click)="setPaymentFilter('all')">
+        {{ L().paymentAll }}
+      </button>
+      @for (p of paymentTypes; track p) {
+        <button type="button" class="chip" [class.chip--active]="paymentFilter() === p" (click)="setPaymentFilter(p)">
+          {{ paymentLabel(p) }}
+        </button>
+      }
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="table-scroll">
+      <div class="table-min">
+        <div class="t-head">
+          <button type="button" class="t-head__cell t-head__cell--grow" (click)="toggleSort('company')">
+            {{ L().columns.company }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'company'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell" (click)="toggleSort('plan')">
+            {{ L().columns.plan }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'plan'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell" (click)="toggleSort('status')">
+            {{ L().columns.status }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'status'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell" (click)="toggleSort('payment')">
+            {{ L().columns.payment }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'payment'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <span class="t-head__cell">{{ L().columns.cycle }}</span>
+          <button type="button" class="t-head__cell" (click)="toggleSort('renews')">
+            {{ L().columns.renews }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'renews'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell t-head__cell--end" (click)="toggleSort('mrr')">
+            {{ L().columns.mrr }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'mrr'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <span class="t-head__cell t-head__cell--end"></span>
+        </div>
+
+        @for (s of pageRows(); track s.subId) {
+          <div class="t-row" (click)="openView(s)">
+            <div class="t-cell t-cell--grow">
+              <span class="t-logo" [style.background]="logoBg(s)">{{ logoInitials(s) }}</span>
+              <div class="t-cell__text">
+                <span class="t-cell__main">{{ companyName(s) }}</span>
+                <span class="t-cell__sub" dir="ltr">{{ s.subId }}</span>
+              </div>
+            </div>
+            <div class="t-cell">
+              <span class="plan-dot" [style.background]="planDot(s.plan)"></span>
+              {{ planLabel(s.plan) }}
+            </div>
+            <div class="t-cell">
+              <span class="pill" [style.background]="statusColor(s.status).bg" [style.color]="statusColor(s.status).fg">
+                {{ statusLabel(s.status) }}
+              </span>
+            </div>
+            <div class="t-cell">
+              <span class="pill pill--outline">{{ paymentLabel(s.payment) }}</span>
+            </div>
+            <div class="t-cell">{{ cycleLabel(s) }}</div>
+            <div class="t-cell">{{ s.renewsOn }}</div>
+            <div class="t-cell t-cell--end mono">{{ formatMrr(s.mrr) }}</div>
+            <div class="t-cell t-cell--end t-cell--actions" (click)="$event.stopPropagation()">
+              <div class="kebab-wrap">
+                <button type="button" class="row-btn row-btn--icon" (click)="toggleKebab(s.subId)" aria-label="More actions">⋯</button>
+                @if (kebabFor() === s.subId) {
+                  <div class="dropdown" (click)="$event.stopPropagation()">
+                    <button type="button" class="dropdown__item" (click)="openView(s)">{{ L().actions.view }}</button>
+                    @if (s.status !== 'canceled') {
+                      <button type="button" class="dropdown__item" (click)="openChangePlan(s)">{{ L().actions.changePlan }}</button>
+                    }
+                    @if (s.status === 'canceled' || s.status === 'expired' || s.status === 'suspended' || s.status === 'past_due') {
+                      <button type="button" class="dropdown__item" (click)="askConfirm(s, 'renew')">{{ L().actions.renew }}</button>
+                    }
+                    @if (s.status !== 'canceled') {
+                      <button type="button" class="dropdown__item dropdown__item--danger" (click)="askConfirm(s, 'cancel')">{{ L().actions.cancel }}</button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        } @empty {
+          <div class="t-empty">
+            <span class="t-empty__title">{{ L().emptyTitle }}</span>
+            <span class="t-empty__sub">{{ L().emptySub }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="pager">
+      <span>{{ pagerText() }}</span>
+      <button type="button" class="btn btn--ghost" [disabled]="page() <= 1" (click)="prevPage()">{{ L().prev }}</button>
+      <button type="button" class="btn btn--ghost" [disabled]="page() >= totalPages()" (click)="nextPage()">{{ L().next }}</button>
+    </div>
+  </section>
+</div>
+
+@if (viewing(); as s) {
+  <div class="scrim" (click)="closeView()"></div>
+  <aside class="drawer" (click)="$event.stopPropagation()">
+    <div class="drawer__header">
+      <span class="t-logo t-logo--lg" [style.background]="logoBg(s)">{{ logoInitials(s) }}</span>
+      <div class="drawer__headerText">
+        <span class="drawer__name">{{ companyName(s) }}</span>
+        <span class="pill" [style.background]="statusColor(s.status).bg" [style.color]="statusColor(s.status).fg">
+          {{ statusLabel(s.status) }}
+        </span>
+      </div>
+      <button type="button" class="drawer__close" (click)="closeView()" aria-label="Close">×</button>
+    </div>
+
+    <div class="drawer__body">
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.subId }}</span><span class="drawer__v mono" dir="ltr">{{ s.subId }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.company }}</span><span class="drawer__v" dir="ltr">{{ s.companyId }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.plan }}</span><span class="drawer__v">{{ planLabel(s.plan) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.payment }}</span><span class="drawer__v">{{ paymentLabel(s.payment) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.cycle }}</span><span class="drawer__v">{{ cycleLabel(s) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.renews }}</span><span class="drawer__v">{{ s.renewsOn }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.mrr }}</span><span class="drawer__v mono">{{ formatMrr(s.mrr) }}</span></div>
+    </div>
+
+    <div class="drawer__footer">
+      @if (s.status !== 'canceled') {
+        <button type="button" class="btn btn--primary" (click)="openChangePlan(s)">{{ L().actions.changePlan }}</button>
+      }
+      @if (s.status === 'canceled' || s.status === 'expired' || s.status === 'suspended' || s.status === 'past_due') {
+        <button type="button" class="btn btn--ghost" (click)="askConfirm(s, 'renew')">{{ L().actions.renew }}</button>
+      }
+      @if (s.status !== 'canceled') {
+        <button type="button" class="btn btn--ghost" (click)="askConfirm(s, 'cancel')">{{ L().actions.cancel }}</button>
+      }
+      <button type="button" class="btn btn--ghost" (click)="closeView()">{{ L().drawerClose }}</button>
+    </div>
+  </aside>
+}
+
+@if (changingPlan(); as s) {
+  <div class="scrim" (click)="closeChangePlan()"></div>
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__header">
+      <div class="drawer__headerText">
+        <span class="dialog__title">{{ L().changePlanTitle }}</span>
+        <span class="dialog__sub">{{ L().changePlanSub(companyName(s)) }}</span>
+      </div>
+    </div>
+    <div class="dialog__body">
+      <span class="field__label">{{ L().changePlanLabel }}</span>
+      <div class="chip-row">
+        @for (p of planTypes; track p) {
+          <button type="button" class="chip" [class.chip--active]="newPlan() === p" (click)="newPlan.set(p)">
+            {{ planLabel(p) }}
+          </button>
+        }
+      </div>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeChangePlan()">{{ L().confirmCancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="submitChangePlan()">{{ L().changePlanConfirm }}</button>
+    </div>
+  </div>
+}
+
+@if (confirming(); as cf) {
+  <div class="scrim" (click)="cancelConfirm()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ cf.kind === 'cancel' ? L().cancelTitle : L().renewTitle }}</span>
+      <p class="dialog__text">
+        {{ cf.kind === 'cancel' ? L().cancelBody(companyName(cf.sub)) : L().renewBody(companyName(cf.sub)) }}
+      </p>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="cancelConfirm()">{{ L().confirmCancel }}</button>
+      <button
+        type="button"
+        class="btn"
+        [class.btn--danger]="cf.kind === 'cancel'"
+        [class.btn--primary]="cf.kind === 'renew'"
+        (click)="performConfirm()"
+      >
+        {{ L().confirmGo }}
+      </button>
+    </div>
+  </div>
+}
+
+@if (toast(); as msg) {
+  <div class="toast">{{ msg }}</div>
+}

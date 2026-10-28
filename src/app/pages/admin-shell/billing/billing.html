@@ -1,0 +1,279 @@
+<div (click)="closeKebab()">
+  <div class="page-head">
+    <div class="page-head__text">
+      <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+      <h1 class="page-head__title">{{ L().title }}</h1>
+    </div>
+  </div>
+
+  <section class="kpis">
+    <div class="kpi">
+      <span class="kpi__label">{{ L().kpis.billed }}</span>
+      <span class="kpi__value mono">{{ formatMoney(kpis().billed) }}</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi__label">{{ L().kpis.collected }}</span>
+      <span class="kpi__value mono" style="color: #2f7a4f">{{ formatMoney(kpis().collected) }}</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi__label">{{ L().kpis.outstanding }}</span>
+      <span class="kpi__value mono" style="color: #2b37a0">{{ formatMoney(kpis().outstanding) }}</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi__label">{{ L().kpis.overdue }}</span>
+      <span class="kpi__value mono" style="color: #b4442f">{{ formatMoney(kpis().overdue) }}</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi__label">{{ L().kpis.failed }}</span>
+      <span class="kpi__value mono">{{ kpis().failed }}</span>
+    </div>
+  </section>
+
+  <section class="filters">
+    <input
+      type="text"
+      class="filters__search"
+      [placeholder]="L().searchPh"
+      [value]="search()"
+      (input)="setSearch($any($event.target).value)"
+    />
+
+    <div class="chip-row">
+      <button type="button" class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="setStatusFilter('all')">
+        {{ L().statusAll }}
+      </button>
+      @for (s of statusTypes; track s) {
+        <button type="button" class="chip" [class.chip--active]="statusFilter() === s" (click)="setStatusFilter(s)">
+          {{ statusLabel(s) }}
+        </button>
+      }
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="table-scroll">
+      <div class="table-min">
+        <div class="t-head">
+          <button type="button" class="t-head__cell" (click)="toggleSort('number')">
+            {{ L().columns.number }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'number'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell t-head__cell--grow" (click)="toggleSort('company')">
+            {{ L().columns.company }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'company'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell" (click)="toggleSort('issue')">
+            {{ L().columns.issue }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'issue'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell" (click)="toggleSort('due')">
+            {{ L().columns.due }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'due'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell t-head__cell--end" (click)="toggleSort('total')">
+            {{ L().columns.total }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'total'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell" (click)="toggleSort('status')">
+            {{ L().columns.status }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'status'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <span class="t-head__cell t-head__cell--end"></span>
+        </div>
+
+        @for (i of pageRows(); track i.number) {
+          <div class="t-row" (click)="openView(i)">
+            <div class="t-cell mono" dir="ltr">{{ i.number }}</div>
+            <div class="t-cell t-cell--grow">
+              <span class="t-logo" [style.background]="logoBg(i)">{{ logoInitials(i) }}</span>
+              <span class="t-cell__main">{{ companyName(i) }}</span>
+            </div>
+            <div class="t-cell">{{ i.issueDate }}</div>
+            <div class="t-cell">{{ i.dueDate }}</div>
+            <div class="t-cell t-cell--end mono">{{ formatMoney(total(i)) }}</div>
+            <div class="t-cell">
+              <span class="pill" [style.background]="statusColor(i.status).bg" [style.color]="statusColor(i.status).fg">
+                {{ statusLabel(i.status) }}
+              </span>
+            </div>
+            <div class="t-cell t-cell--end t-cell--actions" (click)="$event.stopPropagation()">
+              <div class="kebab-wrap">
+                <button type="button" class="row-btn row-btn--icon" (click)="toggleKebab(i.number)" aria-label="More actions">⋯</button>
+                @if (kebabFor() === i.number) {
+                  <div class="dropdown" (click)="$event.stopPropagation()">
+                    <button type="button" class="dropdown__item" (click)="openView(i)">{{ L().actions.view }}</button>
+                    @if (i.status !== 'paid' && i.status !== 'void') {
+                      <button type="button" class="dropdown__item" (click)="openRecord(i)">{{ L().actions.recordPayment }}</button>
+                    }
+                    @if (i.status === 'paid' || i.status === 'partial') {
+                      <button type="button" class="dropdown__item" (click)="openCredit(i)">{{ L().actions.creditNote }}</button>
+                    }
+                    <button type="button" class="dropdown__item" (click)="sendInvoice(i)">{{ L().actions.send }}</button>
+                    <button type="button" class="dropdown__item" (click)="downloadPdf(i)">{{ L().actions.pdf }}</button>
+                    @if (i.status !== 'void' && i.status !== 'paid') {
+                      <button type="button" class="dropdown__item dropdown__item--danger" (click)="openVoid(i)">{{ L().actions.voidInvoice }}</button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        } @empty {
+          <div class="t-empty">
+            <span class="t-empty__title">{{ L().emptyTitle }}</span>
+            <span class="t-empty__sub">{{ L().emptySub }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="pager">
+      <span>{{ pagerText() }}</span>
+      <button type="button" class="btn btn--ghost" [disabled]="page() <= 1" (click)="prevPage()">{{ L().prev }}</button>
+      <button type="button" class="btn btn--ghost" [disabled]="page() >= totalPages()" (click)="nextPage()">{{ L().next }}</button>
+    </div>
+  </section>
+</div>
+
+@if (viewing(); as i) {
+  <div class="scrim" (click)="closeView()"></div>
+  <aside class="drawer" (click)="$event.stopPropagation()">
+    <div class="drawer__header">
+      <span class="t-logo t-logo--lg" [style.background]="logoBg(i)">{{ logoInitials(i) }}</span>
+      <div class="drawer__headerText">
+        <span class="drawer__name" dir="ltr">{{ i.number }}</span>
+        <span class="pill" [style.background]="statusColor(i.status).bg" [style.color]="statusColor(i.status).fg">
+          {{ statusLabel(i.status) }}
+        </span>
+      </div>
+      <button type="button" class="drawer__close" (click)="closeView()" aria-label="Close">×</button>
+    </div>
+
+    <div class="drawer__body">
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.company }}</span><span class="drawer__v">{{ companyName(i) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.issue }}</span><span class="drawer__v">{{ i.issueDate }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.due }}</span><span class="drawer__v">{{ i.dueDate }}</span></div>
+
+      <div class="drawer__divider"></div>
+
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.subtotal }}</span><span class="drawer__v mono">{{ formatMoney(i.subtotal) }}</span></div>
+      @if (i.taxProfile === 'reverse_charge') {
+        <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.tax }}</span><span class="drawer__v">{{ L().drawerFields.reverseCharge }}</span></div>
+      } @else {
+        <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.tax }}</span><span class="drawer__v mono">{{ formatMoney(tax(i)) }}</span></div>
+      }
+      <div class="drawer__row drawer__row--total"><span class="drawer__k">{{ L().drawerFields.total }}</span><span class="drawer__v mono">{{ formatMoney(total(i)) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.paid }}</span><span class="drawer__v mono">{{ formatMoney(i.paidAmount) }}</span></div>
+    </div>
+
+    <div class="drawer__footer">
+      @if (i.status !== 'paid' && i.status !== 'void') {
+        <button type="button" class="btn btn--primary" (click)="openRecord(i)">{{ L().actions.recordPayment }}</button>
+      }
+      <button type="button" class="btn btn--ghost" (click)="downloadPdf(i)">{{ L().actions.pdf }}</button>
+      <button type="button" class="btn btn--ghost" (click)="closeView()">{{ L().drawerClose }}</button>
+    </div>
+  </aside>
+}
+
+@if (recording(); as i) {
+  <div class="scrim" (click)="closeRecord()"></div>
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__header">
+      <div class="drawer__headerText">
+        <span class="dialog__title">{{ L().recordTitle }}</span>
+        <span class="dialog__sub" dir="ltr">{{ L().recordSub(i.number) }}</span>
+      </div>
+    </div>
+    <div class="dialog__body">
+      <div class="chip-row">
+        <button type="button" class="chip" [class.chip--active]="recordMode() === 'full'" (click)="setRecordMode('full')">{{ L().recordFull }}</button>
+        <button type="button" class="chip" [class.chip--active]="recordMode() === 'partial'" (click)="setRecordMode('partial')">{{ L().recordPartial }}</button>
+      </div>
+      <label class="field">
+        <span class="field__label">{{ L().recordAmount }}</span>
+        <input
+          type="number"
+          class="input"
+          dir="ltr"
+          [disabled]="recordMode() === 'full'"
+          [value]="recordAmount()"
+          (input)="recordAmount.set($any($event.target).value)"
+        />
+      </label>
+      <label class="field">
+        <span class="field__label">{{ L().recordBankRef }}</span>
+        <input
+          type="text"
+          class="input"
+          [placeholder]="L().recordBankRefPh"
+          [value]="recordBankRef()"
+          (input)="recordBankRef.set($any($event.target).value)"
+        />
+      </label>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeRecord()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="submitRecord()">{{ L().confirmGo }}</button>
+    </div>
+  </div>
+}
+
+@if (voiding(); as i) {
+  <div class="scrim" (click)="closeVoidDialog()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().voidTitle }}</span>
+      <p class="dialog__text" dir="ltr">{{ L().voidBody(i.number) }}</p>
+      <span class="dialog__warning">{{ L().voidWarning }}</span>
+      <label class="field">
+        <textarea
+          class="textarea"
+          rows="2"
+          [placeholder]="L().voidReasonPh"
+          [value]="voidReason()"
+          (input)="voidReason.set($any($event.target).value)"
+        ></textarea>
+      </label>
+      @if (voidError()) {
+        <span class="field__error">{{ voidError() }}</span>
+      }
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeVoidDialog()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--danger" (click)="submitVoid()">{{ L().confirmGo }}</button>
+    </div>
+  </div>
+}
+
+@if (crediting(); as i) {
+  <div class="scrim" (click)="closeCredit()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__header">
+      <div class="drawer__headerText">
+        <span class="dialog__title">{{ L().creditTitle }}</span>
+        <span class="dialog__sub" dir="ltr">{{ L().creditSub(i.number) }}</span>
+      </div>
+    </div>
+    <div class="dialog__body">
+      <label class="field">
+        <span class="field__label">{{ L().creditAmount }}</span>
+        <input type="number" class="input" dir="ltr" [value]="creditAmount()" (input)="creditAmount.set($any($event.target).value)" />
+      </label>
+      <label class="field">
+        <textarea
+          class="textarea"
+          rows="2"
+          [placeholder]="L().creditReasonPh"
+          [value]="creditReason()"
+          (input)="creditReason.set($any($event.target).value)"
+        ></textarea>
+      </label>
+      @if (creditError()) {
+        <span class="field__error">{{ creditError() }}</span>
+      }
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeCredit()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="submitCredit()">{{ L().confirmGo }}</button>
+    </div>
+  </div>
+}
+
+@if (toast(); as msg) {
+  <div class="toast">{{ msg }}</div>
+}

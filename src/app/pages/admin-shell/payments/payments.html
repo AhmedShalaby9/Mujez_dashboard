@@ -1,0 +1,240 @@
+<div (click)="closeKebab()">
+  <div class="page-head">
+    <div class="page-head__text">
+      <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+      <h1 class="page-head__title">{{ L().title }}</h1>
+    </div>
+  </div>
+
+  <section class="kpis">
+    <div class="kpi">
+      <span class="kpi__label">{{ L().kpis.collected }}</span>
+      <span class="kpi__value mono" style="color: #2f7a4f">{{ formatMoney(kpis().collected) }}</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi__label">{{ L().kpis.completed }}</span>
+      <span class="kpi__value mono">{{ kpis().completed }}</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi__label">{{ L().kpis.failed }}</span>
+      <span class="kpi__value mono" style="color: #b4442f">{{ kpis().failed }}</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi__label">{{ L().kpis.refunded }}</span>
+      <span class="kpi__value mono" style="color: #9a6b1e">{{ kpis().refunded }}</span>
+    </div>
+  </section>
+
+  <section class="filters">
+    <input
+      type="text"
+      class="filters__search"
+      [placeholder]="L().searchPh"
+      [value]="search()"
+      (input)="setSearch($any($event.target).value)"
+    />
+
+    <div class="chip-row">
+      <button type="button" class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="setStatusFilter('all')">
+        {{ L().statusAll }}
+      </button>
+      @for (s of statusTypes; track s) {
+        <button type="button" class="chip" [class.chip--active]="statusFilter() === s" (click)="setStatusFilter(s)">
+          {{ statusLabel(s) }}
+        </button>
+      }
+    </div>
+
+    <div class="chip-row">
+      <button type="button" class="chip" [class.chip--active]="methodFilter() === 'all'" (click)="setMethodFilter('all')">
+        {{ L().methodAll }}
+      </button>
+      @for (m of methodTypes; track m) {
+        <button type="button" class="chip" [class.chip--active]="methodFilter() === m" (click)="setMethodFilter(m)">
+          {{ methodLabel(m) }}
+        </button>
+      }
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="table-scroll">
+      <div class="table-min">
+        <div class="t-head">
+          <button type="button" class="t-head__cell" (click)="toggleSort('txId')">
+            {{ L().columns.txId }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'txId'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell t-head__cell--grow" (click)="toggleSort('company')">
+            {{ L().columns.company }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'company'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <span class="t-head__cell">{{ L().columns.method }}</span>
+          <button type="button" class="t-head__cell t-head__cell--end" (click)="toggleSort('amount')">
+            {{ L().columns.amount }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'amount'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell" (click)="toggleSort('date')">
+            {{ L().columns.date }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'date'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <button type="button" class="t-head__cell" (click)="toggleSort('status')">
+            {{ L().columns.status }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'status'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
+          </button>
+          <span class="t-head__cell">{{ L().columns.reconciliation }}</span>
+          <span class="t-head__cell t-head__cell--end"></span>
+        </div>
+
+        @for (p of pageRows(); track p.txId) {
+          <div class="t-row" (click)="openView(p)">
+            <div class="t-cell mono" dir="ltr">{{ p.txId }}</div>
+            <div class="t-cell t-cell--grow">
+              <span class="t-logo" [style.background]="logoBg(p)">{{ logoInitials(p) }}</span>
+              <div class="t-cell__text">
+                <span class="t-cell__main">{{ companyName(p) }}</span>
+                <span class="t-cell__sub" dir="ltr">{{ p.invoiceNumber }}</span>
+              </div>
+            </div>
+            <div class="t-cell">{{ methodLabel(p.method) }}</div>
+            <div class="t-cell t-cell--end mono">{{ formatMoney(p.amount) }}</div>
+            <div class="t-cell">{{ p.paidAt }}</div>
+            <div class="t-cell">
+              <span class="pill" [style.background]="statusColor(p.status).bg" [style.color]="statusColor(p.status).fg">
+                {{ statusLabel(p.status) }}
+              </span>
+            </div>
+            <div class="t-cell">
+              <span class="pill" [style.background]="reconColor(p.reconciliation).bg" [style.color]="reconColor(p.reconciliation).fg">
+                {{ reconLabel(p.reconciliation) }}
+              </span>
+            </div>
+            <div class="t-cell t-cell--end t-cell--actions" (click)="$event.stopPropagation()">
+              <div class="kebab-wrap">
+                <button type="button" class="row-btn row-btn--icon" (click)="toggleKebab(p.txId)" aria-label="More actions">⋯</button>
+                @if (kebabFor() === p.txId) {
+                  <div class="dropdown" (click)="$event.stopPropagation()">
+                    <button type="button" class="dropdown__item" (click)="openView(p)">{{ L().actions.view }}</button>
+                    @if (canRefund(p)) {
+                      <button type="button" class="dropdown__item dropdown__item--danger" (click)="openRefund(p)">{{ L().actions.refund }}</button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        } @empty {
+          <div class="t-empty">
+            <span class="t-empty__title">{{ L().emptyTitle }}</span>
+            <span class="t-empty__sub">{{ L().emptySub }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="pager">
+      <span>{{ pagerText() }}</span>
+      <button type="button" class="btn btn--ghost" [disabled]="page() <= 1" (click)="prevPage()">{{ L().prev }}</button>
+      <button type="button" class="btn btn--ghost" [disabled]="page() >= totalPages()" (click)="nextPage()">{{ L().next }}</button>
+    </div>
+  </section>
+</div>
+
+@if (viewing(); as p) {
+  <div class="scrim" (click)="closeView()"></div>
+  <aside class="drawer" (click)="$event.stopPropagation()">
+    <div class="drawer__header">
+      <span class="t-logo t-logo--lg" [style.background]="logoBg(p)">{{ logoInitials(p) }}</span>
+      <div class="drawer__headerText">
+        <span class="drawer__name" dir="ltr">{{ p.txId }}</span>
+        <span class="pill" [style.background]="statusColor(p.status).bg" [style.color]="statusColor(p.status).fg">
+          {{ statusLabel(p.status) }}
+        </span>
+      </div>
+      <button type="button" class="drawer__close" (click)="closeView()" aria-label="Close">×</button>
+    </div>
+
+    <div class="drawer__body">
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.company }}</span><span class="drawer__v">{{ companyName(p) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.invoice }}</span><span class="drawer__v" dir="ltr">{{ p.invoiceNumber }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.method }}</span><span class="drawer__v">{{ methodLabel(p.method) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.amount }}</span><span class="drawer__v mono">{{ formatMoney(p.amount) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.date }}</span><span class="drawer__v">{{ p.paidAt }}</span></div>
+
+      <div class="drawer__divider"></div>
+
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.gatewayRef }}</span><span class="drawer__v mono" dir="ltr">{{ p.gatewayRef }}</span></div>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ L().drawerFields.reconciliation }}</span>
+        <span class="drawer__v">
+          <span class="pill" [style.background]="reconColor(p.reconciliation).bg" [style.color]="reconColor(p.reconciliation).fg">
+            {{ reconLabel(p.reconciliation) }}
+          </span>
+        </span>
+      </div>
+    </div>
+
+    <div class="drawer__footer">
+      @if (canRefund(p)) {
+        <button type="button" class="btn btn--danger-outline" (click)="openRefund(p)">{{ L().actions.refund }}</button>
+      }
+      <button type="button" class="btn btn--ghost" (click)="closeView()">{{ L().drawerClose }}</button>
+    </div>
+  </aside>
+}
+
+@if (refunding(); as p) {
+  <div class="scrim" (click)="closeRefund()"></div>
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__header">
+      <div class="drawer__headerText">
+        <span class="dialog__title">{{ L().refundTitle }}</span>
+        <span class="dialog__sub" dir="ltr">{{ L().refundSub(p.txId) }}</span>
+      </div>
+    </div>
+    <div class="dialog__body">
+      <div class="chip-row">
+        <button type="button" class="chip" [class.chip--active]="refundMode() === 'full'" (click)="setRefundMode('full')">{{ L().refundFull }}</button>
+        <button type="button" class="chip" [class.chip--active]="refundMode() === 'partial'" (click)="setRefundMode('partial')">{{ L().refundPartial }}</button>
+      </div>
+      <label class="field">
+        <span class="field__label">{{ L().refundAmount }}</span>
+        <input
+          type="number"
+          class="input"
+          dir="ltr"
+          [disabled]="refundMode() === 'full'"
+          [value]="refundAmount()"
+          (input)="refundAmount.set($any($event.target).value)"
+        />
+      </label>
+      <label class="field">
+        <textarea
+          class="textarea"
+          rows="2"
+          [placeholder]="L().refundReasonPh"
+          [value]="refundReason()"
+          (input)="refundReason.set($any($event.target).value)"
+        ></textarea>
+      </label>
+      <label class="field">
+        <span class="field__label">{{ L().refundTotp }}</span>
+        <input
+          type="text"
+          class="input"
+          dir="ltr"
+          maxlength="6"
+          [placeholder]="L().refundTotpPh"
+          [value]="refundTotp()"
+          (input)="refundTotp.set($any($event.target).value)"
+        />
+      </label>
+      @if (refundError()) {
+        <span class="field__error">{{ refundError() }}</span>
+      }
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeRefund()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--danger" (click)="submitRefund()">{{ L().confirmGo }}</button>
+    </div>
+  </div>
+}
+
+@if (toast(); as msg) {
+  <div class="toast">{{ msg }}</div>
+}

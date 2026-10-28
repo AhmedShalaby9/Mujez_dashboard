@@ -1,0 +1,114 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+  </div>
+  <div class="page-head__actions">
+    <button type="button" class="btn btn--primary" disabled [title]="L().comingSoon">{{ L().addBtn }}</button>
+  </div>
+</div>
+
+<div class="plan-grid">
+  @for (p of plans; track p.key) {
+    <section class="plan-card" [class.plan-card--archived]="isArchived(p)">
+      @if (isArchived(p)) {
+        <span class="plan-card__archivedBadge">{{ L().archivedBadge }}</span>
+      }
+      <div class="plan-card__head">
+        <span class="plan-card__dot" [style.background]="p.color"></span>
+        <div class="plan-card__headText">
+          <span class="plan-card__name">{{ name(p) }}</span>
+          <span class="plan-card__desc">{{ desc(p) }}</span>
+        </div>
+      </div>
+
+      <div class="plan-card__price">
+        <span class="plan-card__priceValue">{{ price(p) }}</span>
+        <span class="plan-card__pricePer">{{ per(p) }}</span>
+      </div>
+
+      <div class="plan-card__limits">
+        @for (l of p.limits; track l.labelEn) {
+          <span class="plan-card__limitK">{{ limitLabel(l) }}</span>
+          <span class="plan-card__limitV mono">{{ l.value }}</span>
+        }
+      </div>
+
+      <span class="plan-card__feats">{{ feats(p) }}</span>
+
+      <button type="button" class="plan-card__subscribers" (click)="viewSubscribers(p)">
+        {{ L().viewSubscribers(p.companies) }}
+      </button>
+
+      <div class="plan-card__actions">
+        @if (!isArchived(p)) {
+          <button type="button" class="btn btn--primary btn--grow" (click)="openEdit(p)">{{ L().editBtn }}</button>
+          <button type="button" class="btn btn--danger-outline" (click)="askConfirm(p, 'archive')">{{ L().archiveBtn }}</button>
+        } @else {
+          <button type="button" class="btn btn--ghost btn--grow" (click)="askConfirm(p, 'restore')">{{ L().restoreBtn }}</button>
+        }
+      </div>
+    </section>
+  }
+</div>
+
+@if (editing(); as p) {
+  <div class="scrim" (click)="closeEdit()"></div>
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__header">
+      <div class="drawer__headerText">
+        <span class="dialog__title">{{ L().editTitle }}</span>
+        <span class="dialog__sub">{{ L().editSub(name(p)) }}</span>
+      </div>
+    </div>
+    <div class="dialog__body">
+      <button type="button" class="ws-mode" [class.ws-mode--active]="editScope() === 'new'" (click)="editScope.set('new')">
+        <span class="ws-mode__radio" [class.ws-mode__radio--active]="editScope() === 'new'"></span>
+        <span class="ws-mode__text">
+          <span class="ws-mode__label">{{ L().scopeNew }}</span>
+          <span class="ws-mode__sub">{{ L().scopeNewSub }}</span>
+        </span>
+      </button>
+      <button type="button" class="ws-mode" [class.ws-mode--active]="editScope() === 'renewal'" (click)="editScope.set('renewal')">
+        <span class="ws-mode__radio" [class.ws-mode__radio--active]="editScope() === 'renewal'"></span>
+        <span class="ws-mode__text">
+          <span class="ws-mode__label">{{ L().scopeRenewal }}</span>
+          <span class="ws-mode__sub">{{ L().scopeRenewalSub }}</span>
+        </span>
+      </button>
+      <button type="button" class="ws-mode" [class.ws-mode--active]="editScope() === 'migrate'" (click)="editScope.set('migrate')">
+        <span class="ws-mode__radio" [class.ws-mode__radio--active]="editScope() === 'migrate'"></span>
+        <span class="ws-mode__text">
+          <span class="ws-mode__label">{{ L().scopeMigrate }}</span>
+          <span class="ws-mode__sub">{{ L().scopeMigrateSub }}</span>
+        </span>
+      </button>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeEdit()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="submitEdit()">{{ L().continue }}</button>
+    </div>
+  </div>
+}
+
+@if (confirming(); as cf) {
+  <div class="scrim" (click)="cancelConfirm()"></div>
+  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ cf.kind === 'archive' ? L().archiveTitle : L().restoreTitle }}</span>
+      <p class="dialog__text">
+        {{ cf.kind === 'archive' ? L().archiveBody(name(cf.plan)) : L().restoreBody(name(cf.plan)) }}
+      </p>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="cancelConfirm()">{{ L().cancel }}</button>
+      <button type="button" class="btn" [class.btn--danger]="cf.kind === 'archive'" [class.btn--primary]="cf.kind === 'restore'" (click)="performConfirm()">
+        {{ L().confirmGo }}
+      </button>
+    </div>
+  </div>
+}
+
+@if (toast(); as msg) {
+  <div class="toast">{{ msg }}</div>
+}

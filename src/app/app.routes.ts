@@ -1,3 +1,4 @@
+import { adminGuard } from './auth.service';
 import { Routes } from '@angular/router';
 import { Login } from './pages/login/login';
 import { AdminShell } from './pages/admin-shell/admin-shell';
@@ -24,25 +25,31 @@ export const routes: Routes = [
   {
     path: 'admin',
     component: AdminShell,
+    canActivate: [adminGuard],
+    canActivateChild: [adminGuard],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: Dashboard },
-      { path: 'companies', component: Companies },
-      { path: 'onboarding', component: Onboarding },
-      { path: 'subscription-plans', component: SubscriptionPlans },
-      { path: 'subscriptions', component: Subscriptions },
-      { path: 'billing', component: Billing },
-      { path: 'payments', component: Payments },
-      { path: 'feature-management', component: FeatureManagement },
-      { path: 'usage-limits', component: UsageLimits },
-      { path: 'integrations', component: Integrations },
-      { path: 'system-health', component: SystemHealth },
-      { path: 'support-tickets', component: SupportTickets },
-      { path: 'announcements', component: Announcements },
-      { path: 'platform-users', component: PlatformUsers },
-      { path: 'roles-permissions', component: RolesPermissions },
-      { path: 'audit-logs', component: AuditLogs },
-      { path: 'settings', component: Settings },
+      { path: 'companies', data: { permission: 'co.view' }, component: Companies },
+      { path: 'onboarding', data: { permission: 'co.create' }, component: Onboarding },
+      { path: 'subscription-plans', data: { permission: 'plans' }, component: SubscriptionPlans },
+      { path: 'subscriptions', data: { permission: 'sub.manage' }, component: Subscriptions },
+      { path: 'billing', data: { permission: 'billing' }, component: Billing },
+      { path: 'payments', data: { permission: 'billing' }, component: Payments },
+      {
+        path: 'feature-management',
+        data: { permission: 'features' },
+        component: FeatureManagement,
+      },
+      { path: 'usage-limits', data: { permission: 'usage' }, component: UsageLimits },
+      { path: 'integrations', data: { permission: 'integrations' }, component: Integrations },
+      { path: 'system-health', data: { permission: 'health' }, component: SystemHealth },
+      { path: 'support-tickets', data: { permission: 'support' }, component: SupportTickets },
+      { path: 'announcements', data: { permission: 'ann' }, component: Announcements },
+      { path: 'platform-users', data: { permission: 'admins' }, component: PlatformUsers },
+      { path: 'roles-permissions', data: { permission: 'admins' }, component: RolesPermissions },
+      { path: 'audit-logs', data: { permission: 'audit' }, component: AuditLogs },
+      { path: 'settings', data: { permission: 'settings' }, component: Settings },
     ],
   },
 ];

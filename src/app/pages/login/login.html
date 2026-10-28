@@ -76,7 +76,7 @@
               type="email"
               autocomplete="username"
               dir="ltr"
-              placeholder="name@mujez.com"
+              placeholder="name@mujez.io"
               class="input"
               [class.input--error]="emailInvalid()"
               [value]="email()"
@@ -129,7 +129,6 @@
         </form>
       } @else {
         <div class="login-form">
-          @if (formError()) { <div class="login-form__error" role="alert">{{ formError() }}</div> }
           <div class="login-form__header">
             <h2 class="login-form__title">{{ L().fTitle }}</h2>
             <span class="login-form__subtitle">{{ L().forgotSub }}</span>

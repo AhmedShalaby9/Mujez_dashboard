@@ -1,22 +1,13 @@
-import { FormsModule } from '@angular/forms';
-import { SubscriptionsApi } from '../../../subscriptions-api.service';
-import { CompaniesApi } from '../../../companies-api.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
-type Plan = string;
+type Plan = 'starter' | 'pro' | 'business' | 'enterprise';
 type SubStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'expired' | 'suspended';
 type PaymentMethod = 'card' | 'bank' | 'instapay';
 type SortKey = 'company' | 'plan' | 'status' | 'payment' | 'renews' | 'mrr';
 
 interface Subscription {
-  version: number;
-  cancelAtPeriodEnd: boolean;
-  amountMinor: string;
-  planVersionId: string;
-  pendingVersionId: string | null;
-  planRevision: number;
   subId: string;
   companyId: string;
   companyEn: string;
@@ -28,6 +19,32 @@ interface Subscription {
   renewsOn: string;
   mrr: number;
 }
+
+const SEED: Subscription[] = [
+  { subId: 'SUB-2001', companyId: 'MJ-1001', companyEn: 'Al Qahira Developments', companyAr: 'القاهرة للتطوير', plan: 'business', cycle: 'annual', status: 'active', payment: 'bank', renewsOn: 'Feb 3, 2027', mrr: 18400 },
+  { subId: 'SUB-2002', companyId: 'MJ-1002', companyEn: 'Nile View Realty', companyAr: 'نايل فيو العقارية', plan: 'pro', cycle: 'monthly', status: 'trialing', payment: 'card', renewsOn: 'Nov 2, 2026', mrr: 0 },
+  { subId: 'SUB-2003', companyId: 'MJ-1003', companyEn: 'Deira Properties', companyAr: 'ديرة العقارية', plan: 'pro', cycle: 'monthly', status: 'active', payment: 'card', renewsOn: 'Nov 22, 2026', mrr: 7200 },
+  { subId: 'SUB-2004', companyId: 'MJ-1004', companyEn: 'Coastal Homes', companyAr: 'كوستال هومز', plan: 'starter', cycle: 'monthly', status: 'active', payment: 'card', renewsOn: 'Nov 2, 2026', mrr: 2600 },
+  { subId: 'SUB-2005', companyId: 'MJ-1005', companyEn: 'Smart Spaces', companyAr: 'سمارت سبيسز', plan: 'business', cycle: 'annual', status: 'active', payment: 'bank', renewsOn: 'Jan 11, 2027', mrr: 15800 },
+  { subId: 'SUB-2006', companyId: 'MJ-1006', companyEn: 'Zamalek Realty Group', companyAr: 'مجموعة الزمالك العقارية', plan: 'pro', cycle: 'monthly', status: 'past_due', payment: 'card', renewsOn: 'Oct 20, 2026', mrr: 5400 },
+  { subId: 'SUB-2007', companyId: 'MJ-1007', companyEn: 'October Living', companyAr: 'أكتوبر ليفينج', plan: 'enterprise', cycle: 'annual', status: 'active', payment: 'bank', renewsOn: 'Mar 29, 2027', mrr: 54200 },
+  { subId: 'SUB-2008', companyId: 'MJ-1008', companyEn: 'Marina Bay Properties', companyAr: 'مارينا باي العقارية', plan: 'starter', cycle: 'monthly', status: 'trialing', payment: 'card', renewsOn: 'Oct 26, 2026', mrr: 0 },
+  { subId: 'SUB-2009', companyId: 'MJ-1009', companyEn: 'Golden Sands Developers', companyAr: 'الرمال الذهبية للتطوير', plan: 'business', cycle: 'monthly', status: 'active', payment: 'instapay', renewsOn: 'Nov 15, 2026', mrr: 19600 },
+  { subId: 'SUB-2011', companyId: 'MJ-1011', companyEn: 'New Capital Homes', companyAr: 'نيو كابيتال هومز', plan: 'enterprise', cycle: 'annual', status: 'active', payment: 'bank', renewsOn: 'Aug 4, 2027', mrr: 61500 },
+  { subId: 'SUB-2012', companyId: 'MJ-1012', companyEn: 'Heliopolis Estates', companyAr: 'مصر الجديدة العقارية', plan: 'pro', cycle: 'monthly', status: 'active', payment: 'card', renewsOn: 'Dec 1, 2026', mrr: 6800 },
+  { subId: 'SUB-2013', companyId: 'MJ-1013', companyEn: 'Maadi Properties Group', companyAr: 'مجموعة المعادي العقارية', plan: 'starter', cycle: 'monthly', status: 'expired', payment: 'card', renewsOn: 'Sep 9, 2026', mrr: 0 },
+  { subId: 'SUB-2014', companyId: 'MJ-1014', companyEn: 'Nasr City Realty', companyAr: 'مدينة نصر العقارية', plan: 'starter', cycle: 'monthly', status: 'active', payment: 'instapay', renewsOn: 'Nov 17, 2026', mrr: 3100 },
+  { subId: 'SUB-2015', companyId: 'MJ-1015', companyEn: 'Smart Homes Egypt', companyAr: 'سمارت هومز إيجيبت', plan: 'pro', cycle: 'monthly', status: 'active', payment: 'card', renewsOn: 'Nov 28, 2026', mrr: 8900 },
+  { subId: 'SUB-2016', companyId: 'MJ-1016', companyEn: 'Rehab Living Co.', companyAr: 'الرحاب ليفينج', plan: 'pro', cycle: 'monthly', status: 'trialing', payment: 'card', renewsOn: 'Oct 22, 2026', mrr: 0 },
+  { subId: 'SUB-2017', companyId: 'MJ-1017', companyEn: 'Capital Gate Developers', companyAr: 'كابيتال جيت للتطوير', plan: 'business', cycle: 'annual', status: 'active', payment: 'bank', renewsOn: 'Jan 30, 2027', mrr: 23700 },
+  { subId: 'SUB-2018', companyId: 'MJ-1018', companyEn: 'Blue Lagoon Realty', companyAr: 'بلو لاجون العقارية', plan: 'starter', cycle: 'monthly', status: 'active', payment: 'card', renewsOn: 'Nov 3, 2026', mrr: 2100 },
+  { subId: 'SUB-2019', companyId: 'MJ-1019', companyEn: 'Downtown Properties', companyAr: 'داون تاون العقارية', plan: 'starter', cycle: 'monthly', status: 'canceled', payment: 'card', renewsOn: 'Mar 14, 2025', mrr: 0 },
+  { subId: 'SUB-2020', companyId: 'MJ-1020', companyEn: 'Green Valley Homes', companyAr: 'جرين فالي هومز', plan: 'pro', cycle: 'monthly', status: 'active', payment: 'bank', renewsOn: 'Dec 2, 2026', mrr: 6200 },
+  { subId: 'SUB-2021', companyId: 'MJ-1021', companyEn: 'Horizon Estates', companyAr: 'هورايزون العقارية', plan: 'starter', cycle: 'monthly', status: 'suspended', payment: 'card', renewsOn: 'Oct 21, 2026', mrr: 0 },
+  { subId: 'SUB-2022', companyId: 'MJ-1022', companyEn: 'Palm Hills Partners', companyAr: 'بالم هيلز بارتنرز', plan: 'business', cycle: 'monthly', status: 'past_due', payment: 'bank', renewsOn: 'Oct 15, 2026', mrr: 14300 },
+  { subId: 'SUB-2023', companyId: 'MJ-1023', companyEn: 'Metro Realty Group', companyAr: 'مترو العقارية', plan: 'pro', cycle: 'monthly', status: 'active', payment: 'card', renewsOn: 'Nov 19, 2026', mrr: 5900 },
+  { subId: 'SUB-2024', companyId: 'MJ-1024', companyEn: 'Sunrise Properties', companyAr: 'صن رايز العقارية', plan: 'starter', cycle: 'monthly', status: 'trialing', payment: 'card', renewsOn: 'Nov 19, 2026', mrr: 0 },
+];
 
 const PLAN_LABEL: Record<Lang, Record<Plan, string>> = {
   en: { starter: 'Starter', pro: 'Pro', business: 'Business', enterprise: 'Enterprise' },
@@ -42,22 +59,8 @@ const PLAN_DOT: Record<Plan, string> = {
 };
 
 const STATUS_LABEL: Record<Lang, Record<SubStatus, string>> = {
-  en: {
-    trialing: 'Trialing',
-    active: 'Active',
-    past_due: 'Past due',
-    canceled: 'Canceled',
-    expired: 'Expired',
-    suspended: 'Suspended',
-  },
-  ar: {
-    trialing: 'تجريبي',
-    active: 'نشط',
-    past_due: 'متأخر الدفع',
-    canceled: 'ملغى',
-    expired: 'منتهٍ',
-    suspended: 'موقوف',
-  },
+  en: { trialing: 'Trialing', active: 'Active', past_due: 'Past due', canceled: 'Canceled', expired: 'Expired', suspended: 'Suspended' },
+  ar: { trialing: 'تجريبي', active: 'نشط', past_due: 'متأخر الدفع', canceled: 'ملغى', expired: 'منتهٍ', suspended: 'موقوف' },
 };
 
 const STATUS_COLOR: Record<SubStatus, { bg: string; fg: string }> = {
@@ -82,15 +85,7 @@ interface Copy {
   planAll: string;
   paymentAll: string;
   kpis: { total: string; active: string; trialing: string; pastDue: string };
-  columns: {
-    company: string;
-    plan: string;
-    status: string;
-    payment: string;
-    cycle: string;
-    renews: string;
-    mrr: string;
-  };
+  columns: { company: string; plan: string; status: string; payment: string; cycle: string; renews: string; mrr: string };
   cycleLabel: { monthly: string; annual: string };
   actions: { view: string; changePlan: string; renew: string; cancel: string };
   pager: (from: number, to: number, total: number) => string;
@@ -99,16 +94,7 @@ interface Copy {
   emptyTitle: string;
   emptySub: string;
   drawerClose: string;
-  drawerFields: {
-    subId: string;
-    company: string;
-    plan: string;
-    status: string;
-    payment: string;
-    cycle: string;
-    renews: string;
-    mrr: string;
-  };
+  drawerFields: { subId: string; company: string; plan: string; status: string; payment: string; cycle: string; renews: string; mrr: string };
   changePlanTitle: string;
   changePlanSub: (name: string) => string;
   changePlanLabel: string;
@@ -132,52 +118,23 @@ const COPY: Record<Lang, Copy> = {
     statusAll: 'All statuses',
     planAll: 'All plans',
     paymentAll: 'All payment methods',
-    kpis: {
-      total: 'Total subscriptions',
-      active: 'Active',
-      trialing: 'Trialing',
-      pastDue: 'Past due',
-    },
-    columns: {
-      company: 'Company',
-      plan: 'Plan',
-      status: 'Status',
-      payment: 'Payment',
-      cycle: 'Cycle',
-      renews: 'Renews / ends',
-      mrr: 'MRR',
-    },
+    kpis: { total: 'Total subscriptions', active: 'Active', trialing: 'Trialing', pastDue: 'Past due' },
+    columns: { company: 'Company', plan: 'Plan', status: 'Status', payment: 'Payment', cycle: 'Cycle', renews: 'Renews / ends', mrr: 'MRR' },
     cycleLabel: { monthly: 'Monthly', annual: 'Annual' },
-    actions: {
-      view: 'View',
-      changePlan: 'Change plan',
-      renew: 'Renew',
-      cancel: 'Cancel subscription',
-    },
+    actions: { view: 'View', changePlan: 'Change plan', renew: 'Renew', cancel: 'Cancel subscription' },
     pager: (from, to, total) => `Showing ${from}–${to} of ${total}`,
     prev: 'Previous',
     next: 'Next',
     emptyTitle: 'No subscriptions match your filters',
     emptySub: 'Try clearing the search or filters.',
     drawerClose: 'Close',
-    drawerFields: {
-      subId: 'Subscription ref',
-      company: 'Company',
-      plan: 'Plan',
-      status: 'Status',
-      payment: 'Payment method',
-      cycle: 'Billing cycle',
-      renews: 'Renews / ends',
-      mrr: 'MRR',
-    },
+    drawerFields: { subId: 'Subscription ref', company: 'Company', plan: 'Plan', status: 'Status', payment: 'Payment method', cycle: 'Billing cycle', renews: 'Renews / ends', mrr: 'MRR' },
     changePlanTitle: 'Change plan',
-    changePlanSub: (name) =>
-      `${name} · pick the new plan. Changes apply immediately. No charge, refund, or proration is processed.`,
+    changePlanSub: (name) => `${name} · pick the new plan. Upgrades apply immediately with proration; downgrades apply at renewal.`,
     changePlanLabel: 'New plan',
     changePlanConfirm: 'Change plan',
     cancelTitle: 'Cancel subscription',
-    cancelBody: (name) =>
-      `${name}'s subscription will end at the close of the current billing period.`,
+    cancelBody: (name) => `${name}'s subscription will end at the close of the current billing period.`,
     renewTitle: 'Renew subscription',
     renewBody: (name) => `${name}'s subscription will be renewed for another cycle immediately.`,
     confirmCancel: 'Cancel',
@@ -193,21 +150,8 @@ const COPY: Record<Lang, Copy> = {
     statusAll: 'كل الحالات',
     planAll: 'كل الخطط',
     paymentAll: 'كل طرق الدفع',
-    kpis: {
-      total: 'إجمالي الاشتراكات',
-      active: 'نشطة',
-      trialing: 'تجريبية',
-      pastDue: 'متأخرة الدفع',
-    },
-    columns: {
-      company: 'الشركة',
-      plan: 'الخطة',
-      status: 'الحالة',
-      payment: 'الدفع',
-      cycle: 'الدورة',
-      renews: 'التجديد / الانتهاء',
-      mrr: 'الإيراد الشهري',
-    },
+    kpis: { total: 'إجمالي الاشتراكات', active: 'نشطة', trialing: 'تجريبية', pastDue: 'متأخرة الدفع' },
+    columns: { company: 'الشركة', plan: 'الخطة', status: 'الحالة', payment: 'الدفع', cycle: 'الدورة', renews: 'التجديد / الانتهاء', mrr: 'الإيراد الشهري' },
     cycleLabel: { monthly: 'شهري', annual: 'سنوي' },
     actions: { view: 'عرض', changePlan: 'تغيير الخطة', renew: 'تجديد', cancel: 'إلغاء الاشتراك' },
     pager: (from, to, total) => `عرض ${from}–${to} من ${total}`,
@@ -216,19 +160,9 @@ const COPY: Record<Lang, Copy> = {
     emptyTitle: 'لا توجد اشتراكات مطابقة للفلاتر',
     emptySub: 'جرّب مسح البحث أو الفلاتر.',
     drawerClose: 'إغلاق',
-    drawerFields: {
-      subId: 'مرجع الاشتراك',
-      company: 'الشركة',
-      plan: 'الخطة',
-      status: 'الحالة',
-      payment: 'طريقة الدفع',
-      cycle: 'دورة الفوترة',
-      renews: 'التجديد / الانتهاء',
-      mrr: 'الإيراد الشهري',
-    },
+    drawerFields: { subId: 'مرجع الاشتراك', company: 'الشركة', plan: 'الخطة', status: 'الحالة', payment: 'طريقة الدفع', cycle: 'دورة الفوترة', renews: 'التجديد / الانتهاء', mrr: 'الإيراد الشهري' },
     changePlanTitle: 'تغيير الخطة',
-    changePlanSub: (name) =>
-      `${name} · اختر الخطة الجديدة. تُطبّق الشروط فورًا دون تحصيل أو استرداد دفعات.`,
+    changePlanSub: (name) => `${name} · اختر الخطة الجديدة. الترقية تُطبَّق فورًا بالتناسب، والتخفيض يُطبَّق عند التجديد.`,
     changePlanLabel: 'الخطة الجديدة',
     changePlanConfirm: 'تغيير الخطة',
     cancelTitle: 'إلغاء الاشتراك',
@@ -247,7 +181,6 @@ const PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-subscriptions',
-  imports: [FormsModule],
   templateUrl: './subscriptions.html',
   styleUrl: './subscriptions.scss',
 })
@@ -258,20 +191,11 @@ export class Subscriptions {
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
 
-  readonly statusTypes: SubStatus[] = [
-    'trialing',
-    'active',
-    'past_due',
-    'canceled',
-    'expired',
-    'suspended',
-  ];
-  get planTypes(): Plan[] {
-    return this.availablePlans().map((p) => p.key);
-  }
+  readonly statusTypes: SubStatus[] = ['trialing', 'active', 'past_due', 'canceled', 'expired', 'suspended'];
+  readonly planTypes: Plan[] = ['starter', 'pro', 'business', 'enterprise'];
   readonly paymentTypes: PaymentMethod[] = ['card', 'bank', 'instapay'];
 
-  private readonly subs = signal<Subscription[]>([]);
+  private readonly subs = signal<Subscription[]>(SEED);
 
   readonly search = signal('');
   readonly statusFilter = signal<SubStatus | 'all'>('all');
@@ -289,57 +213,9 @@ export class Subscriptions {
   readonly toast = signal<string | null>(null);
   private toastTimer?: ReturnType<typeof setTimeout>;
 
-  private readonly api = inject(SubscriptionsApi);
-  private readonly companiesApi = inject(CompaniesApi);
-  readonly loading = signal(false);
-  readonly saving = signal(false);
-  readonly error = signal('');
-  readonly creating = signal(false);
-  readonly availablePlans = signal<
-    Array<{ key: Plan; nameEn: string; nameAr: string; archived: boolean; planVersionId: string }>
-  >([]);
-  readonly companies = signal<Array<{ id: string; nameEn: string; status: string }>>([]);
-  draft = {
-    companyId: '',
-    plan: 'starter' as Plan,
-    cycle: 'monthly',
-    payment: 'bank',
-    status: 'trialing',
-  };
-  readonly activePlans = computed(() => this.availablePlans().filter((p) => !p.archived));
-  async reload() {
-    this.loading.set(true);
-    this.error.set('');
-    try {
-      this.subs.set(await this.api.subscriptions<Subscription>());
-      this.availablePlans.set(await this.api.plans(true));
-      this.companies.set(await this.companiesApi.list());
-    } catch (error) {
-      this.error.set(error instanceof Error ? error.message : 'Unable to load subscriptions');
-    } finally {
-      this.loading.set(false);
-    }
-  }
-  async createSubscription() {
-    if (this.saving()) return;
-    this.saving.set(true);
-    this.error.set('');
-    try {
-      const plan = this.availablePlans().find((p) => p.key === this.draft.plan && !p.archived);
-      if (!plan) throw new Error('Select an available plan');
-      await this.api.create({ ...this.draft, planVersionId: plan.planVersionId });
-      this.creating.set(false);
-      await this.reload();
-    } catch (error) {
-      this.error.set(error instanceof Error ? error.message : 'Unable to create subscription');
-    } finally {
-      this.saving.set(false);
-    }
-  }
   constructor() {
-    void this.reload();
     const planParam = this.route.snapshot.queryParamMap.get('plan') as Plan | null;
-    if (planParam) {
+    if (planParam && this.planTypes.includes(planParam)) {
       this.planFilter.set(planParam);
     }
   }
@@ -429,20 +305,12 @@ export class Subscriptions {
     return this.L().pager(from, to, total);
   });
 
-  isPlanAvailable(key: Plan) {
-    return this.activePlans().some((p) => p.key === key);
-  }
   planLabel(p: Plan): string {
-    const option = this.availablePlans().find((v) => v.key === p);
-    return option
-      ? this.lang() === 'ar'
-        ? option.nameAr
-        : option.nameEn
-      : (PLAN_LABEL[this.lang()][p] ?? p);
+    return PLAN_LABEL[this.lang()][p];
   }
 
   planDot(p: Plan): string {
-    return PLAN_DOT[p] ?? '#3D4FD6';
+    return PLAN_DOT[p];
   }
 
   statusLabel(s: SubStatus): string {
@@ -467,9 +335,7 @@ export class Subscriptions {
 
   formatMrr(v: number): string {
     if (v === 0) return '—';
-    return this.lang() === 'ar'
-      ? `${v.toLocaleString('en-US')} ج.م`
-      : `EGP ${v.toLocaleString('en-US')}`;
+    return this.lang() === 'ar' ? `${v.toLocaleString('en-US')} ج.م` : `EGP ${v.toLocaleString('en-US')}`;
   }
 
   private readonly logoPalette = ['#3D4FD6', '#7E89E6', '#16182A', '#9A6B1E', '#2F7A4F', '#B4442F'];
@@ -556,27 +422,13 @@ export class Subscriptions {
     this.changingPlan.set(null);
   }
 
-  async submitChangePlan() {
+  submitChangePlan(): void {
     const target = this.changingPlan();
-    if (!target || this.saving()) return;
-    this.saving.set(true);
-    this.error.set('');
-    try {
-      const plan = this.activePlans().find((p) => p.key === this.newPlan());
-      if (!plan) throw new Error('Select an available plan');
-      await this.api.action(target.subId, 'change', {
-        version: target.version,
-        plan: plan.key,
-        planVersionId: plan.planVersionId,
-      });
-      this.changingPlan.set(null);
-      this.viewing.set(null);
-      await this.reload();
-    } catch (error) {
-      this.error.set(error instanceof Error ? error.message : 'Unable to change plan');
-    } finally {
-      this.saving.set(false);
-    }
+    if (!target) return;
+    const plan = this.newPlan();
+    this.subs.update((list) => list.map((s) => (s.subId === target.subId ? { ...s, plan } : s)));
+    this.closeChangePlan();
+    this.showToast(this.L().toastChanged(this.companyName(target), this.planLabel(plan)));
   }
 
   askConfirm(s: Subscription, kind: 'cancel' | 'renew'): void {
@@ -588,21 +440,16 @@ export class Subscriptions {
     this.confirming.set(null);
   }
 
-  async performConfirm() {
+  performConfirm(): void {
     const target = this.confirming();
-    if (!target || this.saving()) return;
-    this.saving.set(true);
-    this.error.set('');
-    try {
-      await this.api.action(target.sub.subId, target.kind, { version: target.sub.version });
-      this.confirming.set(null);
-      this.viewing.set(null);
-      await this.reload();
-    } catch (error) {
-      this.error.set(error instanceof Error ? error.message : 'Unable to update subscription');
-    } finally {
-      this.saving.set(false);
-    }
+    if (!target) return;
+    const nextStatus: SubStatus = target.kind === 'cancel' ? 'canceled' : 'active';
+    this.subs.update((list) =>
+      list.map((s) => (s.subId === target.sub.subId ? { ...s, status: nextStatus } : s)),
+    );
+    const name = this.companyName(target.sub);
+    this.showToast(target.kind === 'cancel' ? this.L().toastCanceled(name) : this.L().toastRenewed(name));
+    this.confirming.set(null);
   }
 
   private showToast(msg: string): void {

@@ -1,12 +1,3 @@
-@if (loading()) {
-  <p role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading onboarding…' }}</p>
-}
-@if (error()) {
-  <p role="alert">
-    {{ error() }}
-    <button class="btn" (click)="reload()">{{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}</button>
-  </p>
-}
 <div class="page-head">
   <div class="page-head__text">
     <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
@@ -30,28 +21,13 @@
 </section>
 
 <div class="chip-row">
-  <button
-    type="button"
-    class="chip"
-    [class.chip--active]="statusFilter() === 'all'"
-    (click)="setStatusFilter('all')"
-  >
+  <button type="button" class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="setStatusFilter('all')">
     {{ L().statusAll }}
   </button>
-  <button
-    type="button"
-    class="chip"
-    [class.chip--active]="statusFilter() === 'trial'"
-    (click)="setStatusFilter('trial')"
-  >
+  <button type="button" class="chip" [class.chip--active]="statusFilter() === 'trial'" (click)="setStatusFilter('trial')">
     {{ L().statusTrial }}
   </button>
-  <button
-    type="button"
-    class="chip"
-    [class.chip--active]="statusFilter() === 'pending'"
-    (click)="setStatusFilter('pending')"
-  >
+  <button type="button" class="chip" [class.chip--active]="statusFilter() === 'pending'" (click)="setStatusFilter('pending')">
     {{ L().statusPending }}
   </button>
 </div>
@@ -64,34 +40,18 @@
         <div class="onboard-card__head">
           <div class="onboard-card__nameRow">
             <span class="onboard-card__name">{{ name(c) }}</span>
-            <span
-              class="pill"
-              [class.pill--trial]="c.status === 'trial'"
-              [class.pill--pending]="c.status === 'pending'"
-            >
+            <span class="pill" [class.pill--trial]="c.status === 'trial'" [class.pill--pending]="c.status === 'pending'">
               {{ statusLabel(c.status) }}
             </span>
             @if (isStuck(c)) {
               <span class="pill pill--stuck">{{ L().stuckBadge(c.stuckDays) }}</span>
             }
           </div>
-          <span class="onboard-card__sub"
-            >{{ L().signedUp }}: {{ c.signedUp }} ·
-            {{ L().stepOf(c.completedSteps, totalSteps) }}</span
-          >
+          <span class="onboard-card__sub">{{ L().signedUp }}: {{ c.signedUp }} · {{ L().stepOf(c.completedSteps, totalSteps) }}</span>
         </div>
         <div class="onboard-card__actions">
-          <button
-            type="button"
-            class="btn btn--ghost"
-            disabled
-            title="Email reminders are not configured"
-          >
-            {{ L().sendReminder }}
-          </button>
-          <button type="button" class="btn btn--primary" (click)="openView(c)">
-            {{ L().view }}
-          </button>
+          <button type="button" class="btn btn--ghost" (click)="sendReminder(c)">{{ L().sendReminder }}</button>
+          <button type="button" class="btn btn--primary" (click)="openView(c)">{{ L().view }}</button>
         </div>
       </div>
 
@@ -104,23 +64,13 @@
                 [class.stepper__dot--done]="stepState(c, i) === 'done'"
                 [class.stepper__dot--current]="stepState(c, i) === 'current'"
               >
-                @if (stepState(c, i) === 'done') {
-                  ✓
-                } @else {
-                  {{ i + 1 }}
-                }
+                @if (stepState(c, i) === 'done') { ✓ } @else { {{ i + 1 }} }
               </span>
               @if (i < totalSteps - 1) {
-                <span
-                  class="stepper__line"
-                  [class.stepper__line--done]="stepState(c, i) === 'done'"
-                ></span>
+                <span class="stepper__line" [class.stepper__line--done]="stepState(c, i) === 'done'"></span>
               }
             </div>
-            <span
-              class="stepper__label"
-              [class.stepper__label--current]="stepState(c, i) === 'current'"
-            >
+            <span class="stepper__label" [class.stepper__label--current]="stepState(c, i) === 'current'">
               {{ stepLabel(step) }}
             </span>
           </div>
@@ -142,24 +92,15 @@
       <span class="t-logo t-logo--lg" [style.background]="logoBg(c)">{{ logoInitials(c) }}</span>
       <div class="drawer__headerText">
         <span class="drawer__name">{{ name(c) }}</span>
-        <span
-          class="pill"
-          [class.pill--trial]="c.status === 'trial'"
-          [class.pill--pending]="c.status === 'pending'"
-        >
+        <span class="pill" [class.pill--trial]="c.status === 'trial'" [class.pill--pending]="c.status === 'pending'">
           {{ statusLabel(c.status) }}
         </span>
       </div>
-      <button type="button" class="drawer__close" (click)="closeView()" aria-label="Close">
-        ×
-      </button>
+      <button type="button" class="drawer__close" (click)="closeView()" aria-label="Close">×</button>
     </div>
 
     <div class="drawer__body">
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().signedUp }}</span
-        ><span class="drawer__v">{{ c.signedUp }}</span>
-      </div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().signedUp }}</span><span class="drawer__v">{{ c.signedUp }}</span></div>
 
       <span class="drawer__stepsTitle">{{ L().drawerSteps }}</span>
       <div class="drawer__steps">
@@ -170,52 +111,17 @@
               [class.stepper__dot--done]="stepState(c, i) === 'done'"
               [class.stepper__dot--current]="stepState(c, i) === 'current'"
             >
-              @if (stepState(c, i) === 'done') {
-                ✓
-              } @else {
-                {{ i + 1 }}
-              }
+              @if (stepState(c, i) === 'done') { ✓ } @else { {{ i + 1 }} }
             </span>
-            <label
-              ><input
-                type="checkbox"
-                [checked]="stepState(c, i) === 'done'"
-                [disabled]="saving() || !auth.user()?.permissions?.includes('co.create')"
-                (change)="toggleStep(c, i)"
-              />{{ stepLabel(step) }}</label
-            >
+            <span [class.stepper__label--current]="stepState(c, i) === 'current'">{{ stepLabel(step) }}</span>
           </div>
         }
       </div>
     </div>
 
     <div class="drawer__footer">
-      @if (auth.user()?.permissions?.includes('co.suspend')) {
-        @if (c.status === 'pending') {
-          <button class="btn" [disabled]="saving()" (click)="changeStatus(c, 'start_trial')">
-            {{ lang() === 'ar' ? 'بدء التجربة' : 'Start trial' }}
-          </button>
-        }
-        <button
-          class="btn btn--primary"
-          [disabled]="saving()"
-          (click)="changeStatus(c, 'activate')"
-        >
-          {{ lang() === 'ar' ? 'تفعيل الشركة' : 'Activate company' }}
-        </button>
-      }
-
-      <button
-        type="button"
-        class="btn btn--ghost"
-        disabled
-        title="Email reminders are not configured"
-      >
-        {{ L().sendReminder }}
-      </button>
-      <button type="button" class="btn btn--ghost" (click)="closeView()">
-        {{ L().drawerClose }}
-      </button>
+      <button type="button" class="btn btn--ghost" (click)="sendReminder(c)">{{ L().sendReminder }}</button>
+      <button type="button" class="btn btn--ghost" (click)="closeView()">{{ L().drawerClose }}</button>
     </div>
   </aside>
 }

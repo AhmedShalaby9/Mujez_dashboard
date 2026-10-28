@@ -1,6 +1,3 @@
-import { FormsModule } from '@angular/forms';
-import { CompaniesApi } from '../../../companies-api.service';
-import { AuthService } from '../../../auth.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
@@ -12,8 +9,6 @@ type WsMode = 'read' | 'manage';
 type ConfirmKind = 'suspend' | 'reactivate' | 'archive';
 
 interface Company {
-  slug: string;
-  version: number;
   id: string;
   nameEn: string;
   nameAr: string;
@@ -47,19 +42,36 @@ const CITY_AR: Record<string, string> = {
   'El Gouna': 'الجونة',
 };
 
+const SEED: Company[] = [
+  { id: 'MJ-1001', nameEn: 'Al Qahira Developments', nameAr: 'القاهرة للتطوير', type: 'developer', city: 'Cairo', adminEmail: 'admin@alqahira.mujez.io', phone: '+20 10 1234 5001', website: 'alqahira.mujez.com', plan: 'business', status: 'active', users: 142, mrr: 18400, createdAt: 'Feb 3, 2025', lastActivity: '12m ago' },
+  { id: 'MJ-1002', nameEn: 'Nile View Realty', nameAr: 'نايل فيو العقارية', type: 'brokerage', city: 'Giza', adminEmail: 'admin@nileview.mujez.io', phone: '+20 10 1234 5002', website: 'nileview.mujez.com', plan: 'pro', status: 'trial', users: 28, mrr: 0, createdAt: 'Sep 18, 2026', lastActivity: '1h ago' },
+  { id: 'MJ-1003', nameEn: 'Deira Properties', nameAr: 'ديرة العقارية', type: 'property_mgmt', city: 'New Cairo', adminEmail: 'admin@deira.mujez.io', phone: '+20 10 1234 5003', website: 'deira.mujez.com', plan: 'pro', status: 'active', users: 61, mrr: 7200, createdAt: 'Nov 22, 2024', lastActivity: '3h ago' },
+  { id: 'MJ-1004', nameEn: 'Coastal Homes', nameAr: 'كوستال هومز', type: 'brokerage', city: 'Hurghada', adminEmail: 'admin@coastalhomes.mujez.io', phone: '+20 10 1234 5004', website: 'coastalhomes.mujez.com', plan: 'starter', status: 'active', users: 14, mrr: 2600, createdAt: 'Oct 2, 2026', lastActivity: 'Yesterday' },
+  { id: 'MJ-1005', nameEn: 'Smart Spaces', nameAr: 'سمارت سبيسز', type: 'hybrid', city: 'Alexandria', adminEmail: 'admin@smartspaces.mujez.io', phone: '+20 10 1234 5005', website: 'smartspaces.mujez.com', plan: 'business', status: 'active', users: 97, mrr: 15800, createdAt: 'Jan 11, 2025', lastActivity: '6h ago' },
+  { id: 'MJ-1006', nameEn: 'Zamalek Realty Group', nameAr: 'مجموعة الزمالك العقارية', type: 'brokerage', city: 'Cairo', adminEmail: 'admin@zamalekrealty.mujez.io', phone: '+20 10 1234 5006', website: 'zamalekrealty.mujez.com', plan: 'pro', status: 'suspended', users: 33, mrr: 5400, createdAt: 'May 7, 2025', lastActivity: '4d ago' },
+  { id: 'MJ-1007', nameEn: 'October Living', nameAr: 'أكتوبر ليفينج', type: 'developer', city: '6th of October', adminEmail: 'admin@octoberliving.mujez.io', phone: '+20 10 1234 5007', website: 'octoberliving.mujez.com', plan: 'enterprise', status: 'active', users: 412, mrr: 54200, createdAt: 'Mar 29, 2024', lastActivity: '38m ago' },
+  { id: 'MJ-1008', nameEn: 'Marina Bay Properties', nameAr: 'مارينا باي العقارية', type: 'brokerage', city: 'North Coast', adminEmail: 'admin@marinabay.mujez.io', phone: '+20 10 1234 5008', website: 'marinabay.mujez.com', plan: 'starter', status: 'trial', users: 9, mrr: 0, createdAt: 'Oct 12, 2026', lastActivity: '2h ago' },
+  { id: 'MJ-1009', nameEn: 'Golden Sands Developers', nameAr: 'الرمال الذهبية للتطوير', type: 'developer', city: 'Sheikh Zayed', adminEmail: 'admin@goldensands.mujez.io', phone: '+20 10 1234 5009', website: 'goldensands.mujez.com', plan: 'business', status: 'active', users: 128, mrr: 19600, createdAt: 'Jun 15, 2025', lastActivity: '1d ago' },
+  { id: 'MJ-1010', nameEn: 'Urban Nest Brokerage', nameAr: 'أوربان نِست', type: 'brokerage', city: 'New Cairo', adminEmail: 'admin@urbannest.mujez.io', phone: '+20 10 1234 5010', website: 'urbannest.mujez.com', plan: 'starter', status: 'pending', users: 1, mrr: 0, createdAt: 'Oct 25, 2026', lastActivity: 'Just now' },
+  { id: 'MJ-1011', nameEn: 'New Capital Homes', nameAr: 'نيو كابيتال هومز', type: 'developer', city: 'New Capital', adminEmail: 'admin@newcapitalhomes.mujez.io', phone: '+20 10 1234 5011', website: 'newcapitalhomes.mujez.com', plan: 'enterprise', status: 'active', users: 356, mrr: 61500, createdAt: 'Aug 4, 2024', lastActivity: '15m ago' },
+  { id: 'MJ-1012', nameEn: 'Heliopolis Estates', nameAr: 'مصر الجديدة العقارية', type: 'property_mgmt', city: 'Heliopolis', adminEmail: 'admin@heliopolisestates.mujez.io', phone: '+20 10 1234 5012', website: 'heliopolisestates.mujez.com', plan: 'pro', status: 'active', users: 54, mrr: 6800, createdAt: 'Dec 1, 2025', lastActivity: '5h ago' },
+  { id: 'MJ-1013', nameEn: 'Maadi Properties Group', nameAr: 'مجموعة المعادي العقارية', type: 'brokerage', city: 'Maadi', adminEmail: 'admin@maadigroup.mujez.io', phone: '+20 10 1234 5013', website: 'maadigroup.mujez.com', plan: 'starter', status: 'expired', users: 7, mrr: 0, createdAt: 'Jul 9, 2025', lastActivity: '21d ago' },
+  { id: 'MJ-1014', nameEn: 'Nasr City Realty', nameAr: 'مدينة نصر العقارية', type: 'brokerage', city: 'Nasr City', adminEmail: 'admin@nasrcityrealty.mujez.io', phone: '+20 10 1234 5014', website: 'nasrcityrealty.mujez.com', plan: 'starter', status: 'active', users: 19, mrr: 3100, createdAt: 'Apr 17, 2026', lastActivity: '9h ago' },
+  { id: 'MJ-1015', nameEn: 'Smart Homes Egypt', nameAr: 'سمارت هومز إيجيبت', type: 'hybrid', city: 'Giza', adminEmail: 'admin@smarthomes-eg.mujez.io', phone: '+20 10 1234 5015', website: 'smarthomes-eg.mujez.com', plan: 'pro', status: 'active', users: 71, mrr: 8900, createdAt: 'Feb 28, 2025', lastActivity: '2d ago' },
+  { id: 'MJ-1016', nameEn: 'Rehab Living Co.', nameAr: 'الرحاب ليفينج', type: 'property_mgmt', city: 'Al Rehab', adminEmail: 'admin@rehabliving.mujez.io', phone: '+20 10 1234 5016', website: 'rehabliving.mujez.com', plan: 'pro', status: 'trial', users: 22, mrr: 0, createdAt: 'Oct 8, 2026', lastActivity: '7h ago' },
+  { id: 'MJ-1017', nameEn: 'Capital Gate Developers', nameAr: 'كابيتال جيت للتطوير', type: 'developer', city: 'New Capital', adminEmail: 'admin@capitalgate.mujez.io', phone: '+20 10 1234 5017', website: 'capitalgate.mujez.com', plan: 'business', status: 'active', users: 166, mrr: 23700, createdAt: 'Jan 30, 2025', lastActivity: '48m ago' },
+  { id: 'MJ-1018', nameEn: 'Blue Lagoon Realty', nameAr: 'بلو لاجون العقارية', type: 'brokerage', city: 'El Gouna', adminEmail: 'admin@bluelagoon.mujez.io', phone: '+20 10 1234 5018', website: 'bluelagoon.mujez.com', plan: 'starter', status: 'active', users: 11, mrr: 2100, createdAt: 'Jun 3, 2026', lastActivity: '3d ago' },
+  { id: 'MJ-1019', nameEn: 'Downtown Properties', nameAr: 'داون تاون العقارية', type: 'brokerage', city: 'Cairo', adminEmail: 'admin@downtownprop.mujez.io', phone: '+20 10 1234 5019', website: 'downtownprop.mujez.com', plan: 'starter', status: 'archived', users: 4, mrr: 0, createdAt: 'Mar 14, 2024', lastActivity: '112d ago' },
+  { id: 'MJ-1020', nameEn: 'Green Valley Homes', nameAr: 'جرين فالي هومز', type: 'developer', city: '6th of October', adminEmail: 'admin@greenvalley.mujez.io', phone: '+20 10 1234 5020', website: 'greenvalley.mujez.com', plan: 'pro', status: 'active', users: 48, mrr: 6200, createdAt: 'Sep 2, 2025', lastActivity: '1d ago' },
+  { id: 'MJ-1021', nameEn: 'Horizon Estates', nameAr: 'هورايزون العقارية', type: 'brokerage', city: 'Alexandria', adminEmail: 'admin@horizonestates.mujez.io', phone: '+20 10 1234 5021', website: 'horizonestates.mujez.com', plan: 'starter', status: 'active', users: 16, mrr: 2400, createdAt: 'Jul 21, 2026', lastActivity: '14h ago' },
+  { id: 'MJ-1022', nameEn: 'Palm Hills Partners', nameAr: 'بالم هيلز بارتنرز', type: 'developer', city: 'New Cairo', adminEmail: 'admin@palmhillspartners.mujez.io', phone: '+20 10 1234 5022', website: 'palmhillspartners.mujez.com', plan: 'business', status: 'suspended', users: 89, mrr: 14300, createdAt: 'Oct 30, 2024', lastActivity: '9d ago' },
+  { id: 'MJ-1023', nameEn: 'Metro Realty Group', nameAr: 'مترو العقارية', type: 'brokerage', city: 'Giza', adminEmail: 'admin@metrorealty.mujez.io', phone: '+20 10 1234 5023', website: 'metrorealty.mujez.com', plan: 'pro', status: 'active', users: 39, mrr: 5900, createdAt: 'May 19, 2025', lastActivity: '22h ago' },
+  { id: 'MJ-1024', nameEn: 'Sunrise Properties', nameAr: 'صن رايز العقارية', type: 'brokerage', city: 'Hurghada', adminEmail: 'admin@sunriseprop.mujez.io', phone: '+20 10 1234 5024', website: 'sunriseprop.mujez.com', plan: 'starter', status: 'trial', users: 6, mrr: 0, createdAt: 'Oct 20, 2026', lastActivity: '30m ago' },
+];
+
 const TYPE_LABEL: Record<Lang, Record<CompanyType, string>> = {
-  en: {
-    brokerage: 'Brokerage',
-    developer: 'Developer',
-    property_mgmt: 'Property Mgmt',
-    hybrid: 'Hybrid',
-  },
-  ar: {
-    brokerage: 'وساطة عقارية',
-    developer: 'مطوّر عقاري',
-    property_mgmt: 'إدارة عقارات',
-    hybrid: 'مختلط',
-  },
+  en: { brokerage: 'Brokerage', developer: 'Developer', property_mgmt: 'Property Mgmt', hybrid: 'Hybrid' },
+  ar: { brokerage: 'وساطة عقارية', developer: 'مطوّر عقاري', property_mgmt: 'إدارة عقارات', hybrid: 'مختلط' },
 };
 
 const PLAN_LABEL: Record<Lang, Record<Plan, string>> = {
@@ -75,22 +87,8 @@ const PLAN_DOT: Record<Plan, string> = {
 };
 
 const STATUS_LABEL: Record<Lang, Record<CompanyStatus, string>> = {
-  en: {
-    pending: 'Pending',
-    trial: 'Trial',
-    active: 'Active',
-    suspended: 'Suspended',
-    expired: 'Expired',
-    archived: 'Archived',
-  },
-  ar: {
-    pending: 'قيد الانتظار',
-    trial: 'تجريبية',
-    active: 'نشطة',
-    suspended: 'موقوفة',
-    expired: 'منتهية',
-    archived: 'مؤرشفة',
-  },
+  en: { pending: 'Pending', trial: 'Trial', active: 'Active', suspended: 'Suspended', expired: 'Expired', archived: 'Archived' },
+  ar: { pending: 'قيد الانتظار', trial: 'تجريبية', active: 'نشطة', suspended: 'موقوفة', expired: 'منتهية', archived: 'مؤرشفة' },
 };
 
 const STATUS_COLOR: Record<CompanyStatus, { bg: string; fg: string }> = {
@@ -112,17 +110,7 @@ interface Copy {
   typeAll: string;
   planAll: string;
   kpis: { total: string; active: string; trial: string; suspended: string };
-  columns: {
-    company: string;
-    status: string;
-    plan: string;
-    type: string;
-    city: string;
-    users: string;
-    mrr: string;
-    activity: string;
-    actions: string;
-  };
+  columns: { company: string; status: string; plan: string; type: string; city: string; users: string; mrr: string; activity: string; actions: string };
   actions: { view: string; enter: string; suspend: string; reactivate: string; archive: string };
   pager: (from: number, to: number, total: number) => string;
   prev: string;
@@ -130,20 +118,7 @@ interface Copy {
   emptyTitle: string;
   emptySub: string;
   drawerClose: string;
-  drawerFields: {
-    id: string;
-    type: string;
-    status: string;
-    plan: string;
-    city: string;
-    adminEmail: string;
-    phone: string;
-    website: string;
-    users: string;
-    mrr: string;
-    created: string;
-    lastActivity: string;
-  };
+  drawerFields: { id: string; type: string; status: string; plan: string; city: string; adminEmail: string; phone: string; website: string; users: string; mrr: string; created: string; lastActivity: string };
   wsTitle: string;
   wsSub: string;
   wsModeRead: string;
@@ -185,24 +160,8 @@ const COPY: Record<Lang, Copy> = {
     typeAll: 'All types',
     planAll: 'All plans',
     kpis: { total: 'Total companies', active: 'Active', trial: 'Trial', suspended: 'Suspended' },
-    columns: {
-      company: 'Company',
-      status: 'Status',
-      plan: 'Plan',
-      type: 'Type',
-      city: 'City',
-      users: 'Users',
-      mrr: 'MRR',
-      activity: 'Last activity',
-      actions: '',
-    },
-    actions: {
-      view: 'View',
-      enter: 'Enter',
-      suspend: 'Suspend',
-      reactivate: 'Reactivate',
-      archive: 'Archive',
-    },
+    columns: { company: 'Company', status: 'Status', plan: 'Plan', type: 'Type', city: 'City', users: 'Users', mrr: 'MRR', activity: 'Last activity', actions: '' },
+    actions: { view: 'View', enter: 'Enter', suspend: 'Suspend', reactivate: 'Reactivate', archive: 'Archive' },
     pager: (from, to, total) => `Showing ${from}–${to} of ${total}`,
     prev: 'Previous',
     next: 'Next',
@@ -228,8 +187,7 @@ const COPY: Record<Lang, Copy> = {
     wsModeRead: 'Read-only',
     wsModeReadSub: 'Browse the workspace without making changes. No reason required.',
     wsModeManage: 'Management',
-    wsModeManageSub:
-      'Make changes on the customer’s behalf. Requires a reason and is time-limited.',
+    wsModeManageSub: 'Make changes on the customer’s behalf. Requires a reason and is time-limited.',
     wsReasonLabel: 'Reason',
     wsReasonPh: 'Why do you need management access? (min. 10 characters)',
     wsDurationLabel: 'Duration',
@@ -240,12 +198,11 @@ const COPY: Record<Lang, Copy> = {
     wsAckErr: 'Please acknowledge before continuing.',
     wsToast: 'Static design preview — entering a workspace isn’t wired to a tenant app.',
     confirmSuspendTitle: 'Suspend company',
-    confirmSuspendBody: (name) =>
-      `${name} will lose access immediately. Billing is managed separately.`,
+    confirmSuspendBody: (name) => `${name} will lose access immediately. Their subscription is not affected.`,
     confirmReactivateTitle: 'Reactivate company',
     confirmReactivateBody: (name) => `${name} will regain access immediately.`,
     confirmArchiveTitle: 'Archive company',
-    confirmArchiveBody: (name) => `${name} will be archived and become read-only.`,
+    confirmArchiveBody: (name) => `${name} becomes read-only. This can be reversed within 90 days.`,
     confirmCancel: 'Cancel',
     confirmGo: 'Confirm',
     toastSuspended: (name) => `${name} was suspended.`,
@@ -264,24 +221,8 @@ const COPY: Record<Lang, Copy> = {
     typeAll: 'كل الأنواع',
     planAll: 'كل الخطط',
     kpis: { total: 'إجمالي الشركات', active: 'نشطة', trial: 'تجريبية', suspended: 'موقوفة' },
-    columns: {
-      company: 'الشركة',
-      status: 'الحالة',
-      plan: 'الخطة',
-      type: 'النوع',
-      city: 'المدينة',
-      users: 'المستخدمون',
-      mrr: 'الإيراد الشهري',
-      activity: 'آخر نشاط',
-      actions: '',
-    },
-    actions: {
-      view: 'عرض',
-      enter: 'دخول',
-      suspend: 'إيقاف',
-      reactivate: 'إعادة تفعيل',
-      archive: 'أرشفة',
-    },
+    columns: { company: 'الشركة', status: 'الحالة', plan: 'الخطة', type: 'النوع', city: 'المدينة', users: 'المستخدمون', mrr: 'الإيراد الشهري', activity: 'آخر نشاط', actions: '' },
+    actions: { view: 'عرض', enter: 'دخول', suspend: 'إيقاف', reactivate: 'إعادة تفعيل', archive: 'أرشفة' },
     pager: (from, to, total) => `عرض ${from}–${to} من ${total}`,
     prev: 'السابق',
     next: 'التالي',
@@ -322,7 +263,7 @@ const COPY: Record<Lang, Copy> = {
     confirmReactivateTitle: 'إعادة تفعيل الشركة',
     confirmReactivateBody: (name) => `ستستعيد ${name} الوصول فورًا.`,
     confirmArchiveTitle: 'أرشفة الشركة',
-    confirmArchiveBody: (name) => `ستصبح ${name} للقراءة فقط. `,
+    confirmArchiveBody: (name) => `ستصبح ${name} للقراءة فقط. يمكن التراجع خلال 90 يومًا.`,
     confirmCancel: 'إلغاء',
     confirmGo: 'تأكيد',
     toastSuspended: (name) => `تم إيقاف ${name}.`,
@@ -337,108 +278,21 @@ const PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-companies',
-  imports: [FormsModule],
   templateUrl: './companies.html',
   styleUrl: './companies.scss',
 })
 export class Companies {
-  private readonly api = inject(CompaniesApi);
-  readonly auth = inject(AuthService);
-  readonly loading = signal(false);
-  readonly error = signal('');
-  readonly saving = signal(false);
-  readonly editing = signal<Company | null>(null);
-  readonly formOpen = signal(false);
-  draft = {
-    nameEn: '',
-    nameAr: '',
-    slug: '',
-    type: 'brokerage',
-    city: '',
-    adminEmail: '',
-    phone: '',
-    website: '',
-    plan: 'starter',
-  };
-  constructor() {
-    void this.reload();
-  }
-  async reload() {
-    this.loading.set(true);
-    this.error.set('');
-    try {
-      this.companies.set(await this.api.list<Company>());
-    } catch (error) {
-      this.error.set(error instanceof Error ? error.message : 'Unable to load companies');
-    } finally {
-      this.loading.set(false);
-    }
-  }
-  openForm(company?: Company) {
-    this.editing.set(company ?? null);
-    this.draft = company
-      ? {
-          nameEn: company.nameEn,
-          nameAr: company.nameAr,
-          slug: company.slug,
-          type: company.type,
-          city: company.city,
-          adminEmail: company.adminEmail,
-          phone: company.phone,
-          website: company.website,
-          plan: company.plan,
-        }
-      : {
-          nameEn: '',
-          nameAr: '',
-          slug: '',
-          type: 'brokerage',
-          city: '',
-          adminEmail: '',
-          phone: '',
-          website: '',
-          plan: 'starter',
-        };
-    this.error.set('');
-    this.formOpen.set(true);
-  }
-  async saveCompany() {
-    if (this.saving()) return;
-    this.saving.set(true);
-    this.error.set('');
-    try {
-      const current = this.editing();
-      if (current)
-        await this.api.change(current.id, 'update', { ...this.draft, version: current.version });
-      else await this.api.create(this.draft);
-      this.formOpen.set(false);
-      this.viewing.set(null);
-      await this.reload();
-    } catch (error) {
-      this.error.set(error instanceof Error ? error.message : 'Unable to save company');
-    } finally {
-      this.saving.set(false);
-    }
-  }
-  readonly reason = signal('');
   private readonly ui = inject(AdminUiState);
 
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
 
-  readonly statusTypes: CompanyStatus[] = [
-    'pending',
-    'trial',
-    'active',
-    'suspended',
-    'expired',
-    'archived',
-  ];
+  readonly statusTypes: CompanyStatus[] = ['pending', 'trial', 'active', 'suspended', 'expired', 'archived'];
   readonly companyTypes: CompanyType[] = ['brokerage', 'developer', 'property_mgmt', 'hybrid'];
   readonly planTypes: Plan[] = ['starter', 'pro', 'business', 'enterprise'];
   readonly wsDurations: Array<30 | 60 | 120> = [30, 60, 120];
 
-  private readonly companies = signal<Company[]>([]);
+  private readonly companies = signal<Company[]>(SEED);
 
   readonly search = signal('');
   readonly statusFilter = signal<CompanyStatus | 'all'>('all');
@@ -559,11 +413,11 @@ export class Companies {
   }
 
   planLabel(p: Plan): string {
-    return PLAN_LABEL[this.lang()][p] ?? p;
+    return PLAN_LABEL[this.lang()][p];
   }
 
   planDot(p: Plan): string {
-    return PLAN_DOT[p] ?? '#3D4FD6';
+    return PLAN_DOT[p];
   }
 
   statusLabel(s: CompanyStatus): string {
@@ -595,14 +449,12 @@ export class Companies {
   }
 
   cityLabel(city: string): string {
-    return this.lang() === 'ar' ? (CITY_AR[city] ?? city) : city;
+    return this.lang() === 'ar' ? CITY_AR[city] ?? city : city;
   }
 
   formatMrr(v: number): string {
     if (v === 0) return '—';
-    return this.lang() === 'ar'
-      ? `${v.toLocaleString('en-US')} ج.م`
-      : `EGP ${v.toLocaleString('en-US')}`;
+    return this.lang() === 'ar' ? `${v.toLocaleString('en-US')} ج.م` : `EGP ${v.toLocaleString('en-US')}`;
   }
 
   setSearch(v: string): void {
@@ -664,7 +516,6 @@ export class Companies {
   }
 
   rowActions(c: Company): ConfirmKind[] {
-    if (!this.auth.user()?.permissions.includes('co.suspend')) return [];
     if (c.status === 'archived') return [];
     if (c.status === 'suspended') return ['reactivate', 'archive'];
     return ['suspend', 'archive'];
@@ -708,63 +559,31 @@ export class Companies {
     this.confirming.set(null);
   }
 
-  async performConfirm(): Promise<void> {
+  performConfirm(): void {
     const target = this.confirming();
-    if (!target || this.saving()) return;
-    this.saving.set(true);
-    this.error.set('');
-    try {
-      await this.api.change(target.company.id, 'status', {
-        action: target.kind,
-        version: target.company.version,
-        reason: this.reason(),
-      });
-      this.confirming.set(null);
-      this.reason.set('');
-      this.viewing.set(null);
-      await this.reload();
-    } catch (error) {
-      this.error.set(error instanceof Error ? error.message : 'Unable to change status');
-    } finally {
-      this.saving.set(false);
-    }
+    if (!target) return;
+    const nextStatus: CompanyStatus =
+      target.kind === 'suspend' ? 'suspended' : target.kind === 'reactivate' ? 'active' : 'archived';
+    this.companies.update((list) =>
+      list.map((c) => (c.id === target.company.id ? { ...c, status: nextStatus } : c)),
+    );
+    const name = this.companyName(target.company);
+    const msg =
+      target.kind === 'suspend'
+        ? this.L().toastSuspended(name)
+        : target.kind === 'reactivate'
+          ? this.L().toastReactivated(name)
+          : this.L().toastArchived(name);
+    this.confirming.set(null);
+    this.showToast(msg);
   }
 
   exportCsv(): void {
     const rows = this.sorted();
-    const header = [
-      'ID',
-      'Name',
-      'Type',
-      'City',
-      'Status',
-      'Plan',
-      'Users',
-      'MRR (EGP)',
-      'Admin email',
-      'Created',
-      'Last activity',
-    ];
+    const header = ['ID', 'Name', 'Type', 'City', 'Status', 'Plan', 'Users', 'MRR (EGP)', 'Admin email', 'Created', 'Last activity'];
     const lines = rows.map((c) =>
-      [
-        c.id,
-        c.nameEn,
-        c.type,
-        c.city,
-        c.status,
-        c.plan,
-        c.users,
-        c.mrr,
-        c.adminEmail,
-        c.createdAt,
-        c.lastActivity,
-      ]
-        .map(
-          (v) =>
-            `"${String(v)
-              .replace(/^[=+@-]/, "'$&")
-              .replace(/"/g, '""')}"`,
-        )
+      [c.id, c.nameEn, c.type, c.city, c.status, c.plan, c.users, c.mrr, c.adminEmail, c.createdAt, c.lastActivity]
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
         .join(','),
     );
     const csv = [header.join(','), ...lines].join('\n');

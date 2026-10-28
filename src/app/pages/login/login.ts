@@ -1,6 +1,4 @@
-import { Router } from '@angular/router';
-import { AuthService } from '../../auth.service';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 
 type Lang = 'en' | 'ar';
 type View = 'signin' | 'forgot';
@@ -109,8 +107,6 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   styleUrl: './login.scss',
 })
 export class Login {
-  private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
   readonly lang = signal<Lang>('en');
   readonly dir = computed(() => (this.lang() === 'ar' ? 'rtl' : 'ltr'));
   readonly L = computed(() => COPY[this.lang()]);
@@ -132,9 +128,7 @@ export class Login {
   readonly forgotSent = signal(false);
   readonly forgotLoading = signal(false);
 
-  readonly emailInvalid = computed(
-    () => this.emailTouched() && !EMAIL_RE.test(this.email().trim()),
-  );
+  readonly emailInvalid = computed(() => this.emailTouched() && !EMAIL_RE.test(this.email().trim()));
   readonly passwordInvalid = computed(() => this.passwordTouched() && this.password().length === 0);
   readonly forgotEmailInvalid = computed(
     () => this.forgotTouched() && !EMAIL_RE.test(this.forgotEmail().trim()),
@@ -173,8 +167,7 @@ export class Login {
     this.view.set('signin');
   }
 
-  async submit(): Promise<void> {
-    if (this.loading()) return;
+  submit(): void {
     this.emailTouched.set(true);
     this.passwordTouched.set(true);
     if (this.emailInvalid() || this.passwordInvalid()) {
@@ -184,19 +177,10 @@ export class Login {
 
     this.loading.set(true);
     this.formError.set('');
-    try {
-      await this.auth.login(this.email().trim(), this.password(), this.remember());
-      this.password.set('');
-      await this.router.navigateByUrl('/admin/dashboard');
-    } catch (error) {
-      this.formError.set(
-        this.lang() === 'ar'
-          ? 'تعذر تسجيل الدخول. تحقق من البيانات وحاول مجددًا.'
-          : 'Unable to sign in. Check your credentials and try again.',
-      );
-    } finally {
+    setTimeout(() => {
       this.loading.set(false);
-    }
+      this.formError.set('This is a static design preview — sign-in is not connected to a backend.');
+    }, 900);
   }
 
   sendReset(): void {
@@ -205,10 +189,10 @@ export class Login {
       return;
     }
 
-    this.formError.set(
-      this.lang() === 'ar'
-        ? 'تواصل مع مسؤول المنصة لإعادة تعيين كلمة المرور.'
-        : 'Contact your platform administrator to reset your password.',
-    );
+    this.forgotLoading.set(true);
+    setTimeout(() => {
+      this.forgotLoading.set(false);
+      this.forgotSent.set(true);
+    }, 900);
   }
 }

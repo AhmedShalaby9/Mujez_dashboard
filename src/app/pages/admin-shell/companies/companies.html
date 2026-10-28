@@ -1,12 +1,3 @@
-@if (loading()) {
-  <p role="status">{{ lang() === 'ar' ? 'جارٍ تحميل الشركات…' : 'Loading companies…' }}</p>
-}
-@if (error()) {
-  <p role="alert" style="color: #9a3422">
-    {{ error() }}
-    <button class="btn" (click)="reload()">{{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}</button>
-  </p>
-}
 <div (click)="closeKebab()">
   <div class="page-head">
     <div class="page-head__text">
@@ -14,54 +5,25 @@
       <h1 class="page-head__title">{{ L().title }}</h1>
     </div>
     <div class="page-head__actions">
-      <button type="button" class="btn btn--ghost" (click)="exportCsv()">
-        {{ L().exportBtn }}
-      </button>
-      <button
-        type="button"
-        class="btn btn--primary"
-        [disabled]="!auth.user()?.permissions?.includes('co.create')"
-        (click)="openForm()"
-      >
-        {{ L().addBtn }}
-      </button>
+      <button type="button" class="btn btn--ghost" (click)="exportCsv()">{{ L().exportBtn }}</button>
+      <button type="button" class="btn btn--primary" disabled [title]="L().comingSoon">{{ L().addBtn }}</button>
     </div>
   </div>
 
   <section class="kpis">
-    <button
-      type="button"
-      class="kpi"
-      [class.kpi--active]="statusFilter() === 'all'"
-      (click)="filterByKpiStatus('all')"
-    >
+    <button type="button" class="kpi" [class.kpi--active]="statusFilter() === 'all'" (click)="filterByKpiStatus('all')">
       <span class="kpi__label">{{ L().kpis.total }}</span>
       <span class="kpi__value">{{ kpis().total }}</span>
     </button>
-    <button
-      type="button"
-      class="kpi"
-      [class.kpi--active]="statusFilter() === 'active'"
-      (click)="filterByKpiStatus('active')"
-    >
+    <button type="button" class="kpi" [class.kpi--active]="statusFilter() === 'active'" (click)="filterByKpiStatus('active')">
       <span class="kpi__label">{{ L().kpis.active }}</span>
       <span class="kpi__value" style="color: #2f7a4f">{{ kpis().active }}</span>
     </button>
-    <button
-      type="button"
-      class="kpi"
-      [class.kpi--active]="statusFilter() === 'trial'"
-      (click)="filterByKpiStatus('trial')"
-    >
+    <button type="button" class="kpi" [class.kpi--active]="statusFilter() === 'trial'" (click)="filterByKpiStatus('trial')">
       <span class="kpi__label">{{ L().kpis.trial }}</span>
       <span class="kpi__value" style="color: #2b37a0">{{ kpis().trial }}</span>
     </button>
-    <button
-      type="button"
-      class="kpi"
-      [class.kpi--active]="statusFilter() === 'suspended'"
-      (click)="filterByKpiStatus('suspended')"
-    >
+    <button type="button" class="kpi" [class.kpi--active]="statusFilter() === 'suspended'" (click)="filterByKpiStatus('suspended')">
       <span class="kpi__label">{{ L().kpis.suspended }}</span>
       <span class="kpi__value" style="color: #b4442f">{{ kpis().suspended }}</span>
     </button>
@@ -77,63 +39,33 @@
     />
 
     <div class="chip-row">
-      <button
-        type="button"
-        class="chip"
-        [class.chip--active]="statusFilter() === 'all'"
-        (click)="setStatusFilter('all')"
-      >
+      <button type="button" class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="setStatusFilter('all')">
         {{ L().statusAll }}
       </button>
       @for (s of statusTypes; track s) {
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="statusFilter() === s"
-          (click)="setStatusFilter(s)"
-        >
+        <button type="button" class="chip" [class.chip--active]="statusFilter() === s" (click)="setStatusFilter(s)">
           {{ statusLabel(s) }}
         </button>
       }
     </div>
 
     <div class="chip-row">
-      <button
-        type="button"
-        class="chip"
-        [class.chip--active]="typeFilter() === 'all'"
-        (click)="setTypeFilter('all')"
-      >
+      <button type="button" class="chip" [class.chip--active]="typeFilter() === 'all'" (click)="setTypeFilter('all')">
         {{ L().typeAll }}
       </button>
       @for (t of companyTypes; track t) {
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="typeFilter() === t"
-          (click)="setTypeFilter(t)"
-        >
+        <button type="button" class="chip" [class.chip--active]="typeFilter() === t" (click)="setTypeFilter(t)">
           {{ typeLabel(t) }}
         </button>
       }
     </div>
 
     <div class="chip-row">
-      <button
-        type="button"
-        class="chip"
-        [class.chip--active]="planFilter() === 'all'"
-        (click)="setPlanFilter('all')"
-      >
+      <button type="button" class="chip" [class.chip--active]="planFilter() === 'all'" (click)="setPlanFilter('all')">
         {{ L().planAll }}
       </button>
       @for (p of planTypes; track p) {
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="planFilter() === p"
-          (click)="setPlanFilter(p)"
-        >
+        <button type="button" class="chip" [class.chip--active]="planFilter() === p" (click)="setPlanFilter(p)">
           {{ planLabel(p) }}
         </button>
       }
@@ -144,61 +76,29 @@
     <div class="table-scroll">
       <div class="table-min">
         <div class="t-head">
-          <button
-            type="button"
-            class="t-head__cell t-head__cell--grow"
-            (click)="toggleSort('name')"
-          >
-            {{ L().columns.company }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'name'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
+          <button type="button" class="t-head__cell t-head__cell--grow" (click)="toggleSort('name')">
+            {{ L().columns.company }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'name'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
           </button>
           <button type="button" class="t-head__cell" (click)="toggleSort('status')">
-            {{ L().columns.status }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'status'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
+            {{ L().columns.status }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'status'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
           </button>
           <button type="button" class="t-head__cell" (click)="toggleSort('plan')">
-            {{ L().columns.plan }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'plan'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
+            {{ L().columns.plan }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'plan'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
           </button>
           <button type="button" class="t-head__cell" (click)="toggleSort('type')">
-            {{ L().columns.type }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'type'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
+            {{ L().columns.type }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'type'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
           </button>
           <button type="button" class="t-head__cell" (click)="toggleSort('city')">
-            {{ L().columns.city }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'city'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
+            {{ L().columns.city }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'city'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
           </button>
-          <button
-            type="button"
-            class="t-head__cell t-head__cell--end"
-            (click)="toggleSort('users')"
-          >
-            {{ L().columns.users }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'users'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
+          <button type="button" class="t-head__cell t-head__cell--end" (click)="toggleSort('users')">
+            {{ L().columns.users }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'users'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
           </button>
           <button type="button" class="t-head__cell t-head__cell--end" (click)="toggleSort('mrr')">
-            {{ L().columns.mrr }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'mrr'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
+            {{ L().columns.mrr }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'mrr'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
           </button>
           <button type="button" class="t-head__cell" (click)="toggleSort('activity')">
-            {{ L().columns.activity }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'activity'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
+            {{ L().columns.activity }} <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'activity'">{{ sortDir() === 'asc' ? '↑' : '↓' }}</span>
           </button>
           <span class="t-head__cell t-head__cell--end"></span>
         </div>
@@ -213,11 +113,7 @@
               </div>
             </div>
             <div class="t-cell">
-              <span
-                class="pill"
-                [style.background]="statusColor(c.status).bg"
-                [style.color]="statusColor(c.status).fg"
-              >
+              <span class="pill" [style.background]="statusColor(c.status).bg" [style.color]="statusColor(c.status).fg">
                 {{ statusLabel(c.status) }}
               </span>
             </div>
@@ -232,29 +128,13 @@
             <div class="t-cell">{{ c.lastActivity }}</div>
             <div class="t-cell t-cell--end t-cell--actions" (click)="$event.stopPropagation()">
               @if (c.status !== 'archived') {
-                <button
-                  type="button"
-                  class="row-btn"
-                  disabled
-                  title="Workspace access is not available yet"
-                >
-                  {{ L().actions.enter }}
-                </button>
+                <button type="button" class="row-btn" (click)="openWsDialog(c)">{{ L().actions.enter }}</button>
               }
               <div class="kebab-wrap">
-                <button
-                  type="button"
-                  class="row-btn row-btn--icon"
-                  (click)="toggleKebab(c.id)"
-                  aria-label="More actions"
-                >
-                  ⋯
-                </button>
+                <button type="button" class="row-btn row-btn--icon" (click)="toggleKebab(c.id)" aria-label="More actions">⋯</button>
                 @if (kebabFor() === c.id) {
                   <div class="dropdown" (click)="$event.stopPropagation()">
-                    <button type="button" class="dropdown__item" (click)="openView(c)">
-                      {{ L().actions.view }}
-                    </button>
+                    <button type="button" class="dropdown__item" (click)="openView(c)">{{ L().actions.view }}</button>
                     @for (kind of rowActions(c); track kind) {
                       <button
                         type="button"
@@ -281,17 +161,8 @@
 
     <div class="pager">
       <span>{{ pagerText() }}</span>
-      <button type="button" class="btn btn--ghost" [disabled]="page() <= 1" (click)="prevPage()">
-        {{ L().prev }}
-      </button>
-      <button
-        type="button"
-        class="btn btn--ghost"
-        [disabled]="page() >= totalPages()"
-        (click)="nextPage()"
-      >
-        {{ L().next }}
-      </button>
+      <button type="button" class="btn btn--ghost" [disabled]="page() <= 1" (click)="prevPage()">{{ L().prev }}</button>
+      <button type="button" class="btn btn--ghost" [disabled]="page() >= totalPages()" (click)="nextPage()">{{ L().next }}</button>
     </div>
   </section>
 </div>
@@ -303,91 +174,35 @@
       <span class="t-logo t-logo--lg" [style.background]="logoBg(c)">{{ logoInitials(c) }}</span>
       <div class="drawer__headerText">
         <span class="drawer__name">{{ companyName(c) }}</span>
-        <span
-          class="pill"
-          [style.background]="statusColor(c.status).bg"
-          [style.color]="statusColor(c.status).fg"
-        >
+        <span class="pill" [style.background]="statusColor(c.status).bg" [style.color]="statusColor(c.status).fg">
           {{ statusLabel(c.status) }}
         </span>
       </div>
-      <button type="button" class="drawer__close" (click)="closeView()" aria-label="Close">
-        ×
-      </button>
+      <button type="button" class="drawer__close" (click)="closeView()" aria-label="Close">×</button>
     </div>
 
     <div class="drawer__body">
-      @if (auth.user()?.permissions?.includes('co.create') && c.status !== 'archived') {
-        <button class="btn btn--primary" (click)="openForm(c)">
-          {{ lang() === 'ar' ? 'تعديل الشركة' : 'Edit company' }}
-        </button>
-      }
-
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.id }}</span
-        ><span class="drawer__v mono" dir="ltr">{{ c.id }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.type }}</span
-        ><span class="drawer__v">{{ typeLabel(c.type) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.plan }}</span
-        ><span class="drawer__v">{{ planLabel(c.plan) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.city }}</span
-        ><span class="drawer__v">{{ cityLabel(c.city) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.adminEmail }}</span
-        ><span class="drawer__v" dir="ltr">{{ c.adminEmail }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.phone }}</span
-        ><span class="drawer__v" dir="ltr">{{ c.phone }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.website }}</span
-        ><span class="drawer__v" dir="ltr">{{ c.website }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.users }}</span
-        ><span class="drawer__v mono">{{ c.users }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.mrr }}</span
-        ><span class="drawer__v mono">{{ formatMrr(c.mrr) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.created }}</span
-        ><span class="drawer__v">{{ c.createdAt }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.lastActivity }}</span
-        ><span class="drawer__v">{{ c.lastActivity }}</span>
-      </div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.id }}</span><span class="drawer__v mono" dir="ltr">{{ c.id }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.type }}</span><span class="drawer__v">{{ typeLabel(c.type) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.plan }}</span><span class="drawer__v">{{ planLabel(c.plan) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.city }}</span><span class="drawer__v">{{ cityLabel(c.city) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.adminEmail }}</span><span class="drawer__v" dir="ltr">{{ c.adminEmail }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.phone }}</span><span class="drawer__v" dir="ltr">{{ c.phone }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.website }}</span><span class="drawer__v" dir="ltr">{{ c.website }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.users }}</span><span class="drawer__v mono">{{ c.users }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.mrr }}</span><span class="drawer__v mono">{{ formatMrr(c.mrr) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.created }}</span><span class="drawer__v">{{ c.createdAt }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().drawerFields.lastActivity }}</span><span class="drawer__v">{{ c.lastActivity }}</span></div>
     </div>
 
     <div class="drawer__footer">
       @if (c.status !== 'archived') {
-        <button
-          type="button"
-          class="btn btn--primary"
-          disabled
-          title="Workspace access is not available yet"
-        >
-          {{ L().actions.enter }}
-        </button>
+        <button type="button" class="btn btn--primary" (click)="openWsDialog(c)">{{ L().actions.enter }}</button>
         @for (kind of rowActions(c); track kind) {
-          <button type="button" class="btn btn--ghost" (click)="askConfirm(c, kind)">
-            {{ L().actions[kind] }}
-          </button>
+          <button type="button" class="btn btn--ghost" (click)="askConfirm(c, kind)">{{ L().actions[kind] }}</button>
         }
       }
-      <button type="button" class="btn btn--ghost" (click)="closeView()">
-        {{ L().drawerClose }}
-      </button>
+      <button type="button" class="btn btn--ghost" (click)="closeView()">{{ L().drawerClose }}</button>
     </div>
   </aside>
 }
@@ -404,24 +219,14 @@
     </div>
 
     <div class="dialog__body">
-      <button
-        type="button"
-        class="ws-mode"
-        [class.ws-mode--active]="wsMode() === 'read'"
-        (click)="wsMode.set('read')"
-      >
+      <button type="button" class="ws-mode" [class.ws-mode--active]="wsMode() === 'read'" (click)="wsMode.set('read')">
         <span class="ws-mode__radio" [class.ws-mode__radio--active]="wsMode() === 'read'"></span>
         <span class="ws-mode__text">
           <span class="ws-mode__label">{{ L().wsModeRead }}</span>
           <span class="ws-mode__sub">{{ L().wsModeReadSub }}</span>
         </span>
       </button>
-      <button
-        type="button"
-        class="ws-mode"
-        [class.ws-mode--active]="wsMode() === 'manage'"
-        (click)="wsMode.set('manage')"
-      >
+      <button type="button" class="ws-mode" [class.ws-mode--active]="wsMode() === 'manage'" (click)="wsMode.set('manage')">
         <span class="ws-mode__radio" [class.ws-mode__radio--active]="wsMode() === 'manage'"></span>
         <span class="ws-mode__text">
           <span class="ws-mode__label">{{ L().wsModeManage }}</span>
@@ -444,23 +249,12 @@
           <span class="field__label">{{ L().wsDurationLabel }}</span>
           <div class="chip-row">
             @for (d of wsDurations; track d) {
-              <button
-                type="button"
-                class="chip"
-                [class.chip--active]="wsDuration() === d"
-                (click)="wsDuration.set(d)"
-              >
-                {{ d }}m
-              </button>
+              <button type="button" class="chip" [class.chip--active]="wsDuration() === d" (click)="wsDuration.set(d)">{{ d }}m</button>
             }
           </div>
         </div>
         <button type="button" class="ack-row" (click)="wsAck.set(!wsAck())">
-          <span class="ack-box" [class.ack-box--on]="wsAck()">
-            @if (wsAck()) {
-              ✓
-            }
-          </span>
+          <span class="ack-box" [class.ack-box--on]="wsAck()">@if (wsAck()) { ✓ }</span>
           <span class="ack-text">{{ L().wsAck }}</span>
         </button>
       }
@@ -471,12 +265,8 @@
     </div>
 
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeWsDialog()">
-        {{ L().wsCancel }}
-      </button>
-      <button type="button" class="btn btn--primary" (click)="submitWsDialog()">
-        {{ L().wsEnter }}
-      </button>
+      <button type="button" class="btn btn--ghost" (click)="closeWsDialog()">{{ L().wsCancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="submitWsDialog()">{{ L().wsEnter }}</button>
     </div>
   </div>
 }
@@ -505,183 +295,12 @@
       </p>
     </div>
     <div class="dialog__footer">
-      <label
-        >{{ lang() === 'ar' ? 'السبب (10 أحرف على الأقل)' : 'Reason (at least 10 characters)'
-        }}<input
-          class="input"
-          [value]="reason()"
-          (input)="reason.set($any($event.target).value)"
-          maxlength="500"
-      /></label>
-      <button type="button" class="btn btn--ghost" (click)="cancelConfirm()">
-        {{ L().confirmCancel }}
-      </button>
-      <button
-        type="button"
-        class="btn btn--danger"
-        [disabled]="saving() || reason().trim().length < 10"
-        (click)="performConfirm()"
-      >
-        {{ L().confirmGo }}
-      </button>
+      <button type="button" class="btn btn--ghost" (click)="cancelConfirm()">{{ L().confirmCancel }}</button>
+      <button type="button" class="btn btn--danger" (click)="performConfirm()">{{ L().confirmGo }}</button>
     </div>
   </div>
 }
 
 @if (toast(); as msg) {
   <div class="toast">{{ msg }}</div>
-}
-
-@if (formOpen()) {
-  <div class="scrim" (click)="formOpen.set(false)"></div>
-  <aside class="drawer" style="overflow: auto">
-    <div class="drawer__header">
-      <h2>{{ lang() === 'ar' ? 'بيانات الشركة' : 'Company details' }}</h2>
-      <button class="btn" (click)="formOpen.set(false)">×</button>
-    </div>
-    <form
-      (submit)="$event.preventDefault(); saveCompany()"
-      style="padding: 24px; display: grid; gap: 16px"
-    >
-      <label
-        >{{ lang() === 'ar' ? 'الاسم بالإنجليزية' : 'English name'
-        }}<input
-          style="
-            display: block;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-          "
-          type="text"
-          name="nameEn"
-          [(ngModel)]="draft.nameEn"
-          required
-          maxlength="160"
-      /></label>
-      <label
-        >{{ lang() === 'ar' ? 'الاسم بالعربية' : 'Arabic name'
-        }}<input
-          style="
-            display: block;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-          "
-          type="text"
-          name="nameAr"
-          [(ngModel)]="draft.nameAr"
-          required
-          maxlength="160"
-      /></label>
-      <label
-        >{{ lang() === 'ar' ? 'معرّف مساحة العمل' : 'Workspace identifier'
-        }}<input
-          style="
-            display: block;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-          "
-          type="text"
-          name="slug"
-          [(ngModel)]="draft.slug"
-          required
-          maxlength="160"
-      /></label>
-      <label
-        >{{ lang() === 'ar' ? 'المدينة' : 'City'
-        }}<input
-          style="
-            display: block;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-          "
-          type="text"
-          name="city"
-          [(ngModel)]="draft.city"
-          required
-          maxlength="160"
-      /></label>
-      <label
-        >{{ lang() === 'ar' ? 'بريد مسؤول الشركة' : 'Admin contact email'
-        }}<input
-          style="
-            display: block;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-          "
-          type="email"
-          name="adminEmail"
-          [(ngModel)]="draft.adminEmail"
-          required
-          maxlength="254"
-      /></label>
-      <label
-        >{{ lang() === 'ar' ? 'الهاتف' : 'Phone'
-        }}<input
-          style="
-            display: block;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-          "
-          type="text"
-          name="phone"
-          [(ngModel)]="draft.phone"
-          maxlength="160"
-      /></label>
-      <label
-        >{{ lang() === 'ar' ? 'الموقع' : 'Website'
-        }}<input
-          style="
-            display: block;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-          "
-          type="text"
-          name="website"
-          [(ngModel)]="draft.website"
-          maxlength="160"
-      /></label>
-      <label
-        >{{ lang() === 'ar' ? 'نوع الشركة' : 'Company type'
-        }}<select name="type" [(ngModel)]="draft.type">
-          @for (type of companyTypes; track type) {
-            <option [value]="type">{{ typeLabel(type) }}</option>
-          }
-        </select></label
-      >
-      <label
-        >{{ lang() === 'ar' ? 'الخطة المطلوبة' : 'Requested plan'
-        }}<select name="plan" [(ngModel)]="draft.plan">
-          @for (plan of planTypes; track plan) {
-            <option [value]="plan">{{ planLabel(plan) }}</option>
-          }
-        </select></label
-      >
-      <p>
-        {{
-          lang() === 'ar'
-            ? 'تسجيل جهة اتصال المسؤول لا يرسل دعوة تلقائية.'
-            : 'Recording the admin contact does not send an invitation.'
-        }}
-      </p>
-      @if (error()) {
-        <p role="alert">{{ error() }}</p>
-      }
-      <button class="btn btn--primary" type="submit" [disabled]="saving()">
-        {{ lang() === 'ar' ? 'حفظ' : 'Save company' }}
-      </button>
-    </form>
-  </aside>
 }

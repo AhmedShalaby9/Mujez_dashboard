@@ -173,3 +173,46 @@ button {
   color: #8a8983;
   text-align: center;
 }
+
+.btn {
+  padding: 8px 12px;
+  border: 1px solid #deddd6;
+  border-radius: 7px;
+  background: #fff;
+  cursor: pointer;
+}
+.sales-scrim {
+  position: fixed;
+  inset: 0;
+  background: #0007;
+  z-index: 100;
+}
+.sales-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  z-index: 101;
+  width: min(480px, 90vw);
+  max-height: 90vh;
+  overflow: auto;
+  box-sizing: border-box;
+}
+.sales-dialog label {
+  display: block;
+  margin: 12px 0;
+}
+.sales-dialog input,
+.sales-dialog select,
+.sales-dialog textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin: 6px 0;
+}

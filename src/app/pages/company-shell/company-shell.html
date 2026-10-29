@@ -164,12 +164,14 @@
     </header>
 
     <div class="page">
-      <p
-        role="note"
-        style="padding: 12px; border: 1px solid #e3d8ab; border-radius: 8px; background: #fff9e7"
-      >
-        {{ preview() }}
-      </p>
+      @if (isPreview()) {
+        <p
+          role="note"
+          style="padding: 12px; border: 1px solid #e3d8ab; border-radius: 8px; background: #fff9e7"
+        >
+          {{ preview() }}
+        </p>
+      }
       @if (error()) {
         <p role="alert">{{ error() }}</p>
       }

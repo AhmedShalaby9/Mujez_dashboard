@@ -1,439 +1,341 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { CompanyUiState, type Lang } from '../company-ui-state';
-
-type Stage = 'new' | 'qualified' | 'viewing' | 'offer' | 'contract' | 'won' | 'lost';
-
-interface Lead {
-  id: string;
-  name: string;
-  nameAr: string;
-  phone: string;
-  segment: 'res' | 'com';
-  want: string;
-  wantAr: string;
-  budget: string;
-  source: string;
-  sourceAr: string;
-  owner: string;
-  ownerAr: string;
-  stage: Stage;
-  score: number;
-  lastTouch: string;
-}
-
-interface TimelineEntry {
-  kind: string;
-  kindAr: string;
-  at: string;
-}
-
-const LEADS: Lead[] = [
-  {
-    id: 'L-2041',
-    name: 'Ahmed Samir',
-    nameAr: 'أحمد سمير',
-    phone: '+20 100 123 4567',
-    segment: 'res',
-    want: '3BR apartment, New Cairo',
-    wantAr: 'شقة 3 غرف، القاهرة الجديدة',
-    budget: 'EGP 10M',
-    source: 'Property Finder',
-    sourceAr: 'بروبرتي فايندر',
-    owner: 'Youssef Mansour',
-    ownerAr: 'يوسف منصور',
-    stage: 'viewing',
-    score: 92,
-    lastTouch: '2h ago',
-  },
-  {
-    id: 'L-2038',
-    name: 'Nour Adel',
-    nameAr: 'نور عادل',
-    phone: '+20 101 234 5678',
-    segment: 'com',
-    want: 'Retail unit, Sheikh Zayed',
-    wantAr: 'وحدة تجارية، الشيخ زايد',
-    budget: 'EGP 6.2M',
-    source: 'Facebook',
-    sourceAr: 'فيسبوك',
-    owner: 'Dina El Sayed',
-    ownerAr: 'دينا السيد',
-    stage: 'offer',
-    score: 88,
-    lastTouch: '40m ago',
-  },
-  {
-    id: 'L-2035',
-    name: 'Mostafa Saeed',
-    nameAr: 'مصطفى سعيد',
-    phone: '+20 111 345 6789',
-    segment: 'res',
-    want: 'Villa, Hillside Bay',
-    wantAr: 'فيلا، هيلسايد باي',
-    budget: 'EGP 18M',
-    source: 'Referral',
-    sourceAr: 'توصية',
-    owner: 'Khaled Nabil',
-    ownerAr: 'خالد نبيل',
-    stage: 'qualified',
-    score: 85,
-    lastTouch: '1d ago',
-  },
-  {
-    id: 'L-2029',
-    name: 'Laila Ibrahim',
-    nameAr: 'ليلى إبراهيم',
-    phone: '+20 122 456 7890',
-    segment: 'com',
-    want: 'Office, Marina Heights',
-    wantAr: 'مكتب، مارينا هايتس',
-    budget: 'EGP 4.5M',
-    source: 'Website',
-    sourceAr: 'الموقع',
-    owner: 'Youssef Mansour',
-    ownerAr: 'يوسف منصور',
-    stage: 'contract',
-    score: 79,
-    lastTouch: '3d ago',
-  },
-  {
-    id: 'L-2019',
-    name: 'Yara Hossam',
-    nameAr: 'يارا هشام',
-    phone: '+20 109 876 5432',
-    segment: 'res',
-    want: 'Chalet, North Coast',
-    wantAr: 'شاليه، الساحل الشمالي',
-    budget: 'EGP 5.4M',
-    source: 'Instagram',
-    sourceAr: 'انستجرام',
-    owner: 'Rana Farouk',
-    ownerAr: 'رنا فاروق',
-    stage: 'new',
-    score: 61,
-    lastTouch: '5h ago',
-  },
-  {
-    id: 'L-2011',
-    name: 'Tarek Hamdy',
-    nameAr: 'طارق حمدي',
-    phone: '+20 155 765 4321',
-    segment: 'com',
-    want: 'Warehouse, 10th of Ramadan',
-    wantAr: 'مستودع، العاشر من رمضان',
-    budget: 'EGP 7.1M',
-    source: 'Past client',
-    sourceAr: 'عميل سابق',
-    owner: 'Dina El Sayed',
-    ownerAr: 'دينا السيد',
-    stage: 'offer',
-    score: 73,
-    lastTouch: '2d ago',
-  },
-  {
-    id: 'L-2003',
-    name: 'Salma Hegazy',
-    nameAr: 'سلمى حجازي',
-    phone: '+20 112 654 3210',
-    segment: 'res',
-    want: 'Apartment, Marina Heights',
-    wantAr: 'شقة، مارينا هايتس',
-    budget: 'EGP 8.6M',
-    source: 'Google',
-    sourceAr: 'جوجل',
-    owner: 'Youssef Mansour',
-    ownerAr: 'يوسف منصور',
-    stage: 'qualified',
-    score: 68,
-    lastTouch: '6h ago',
-  },
-  {
-    id: 'L-1996',
-    name: 'Hany Fathy',
-    nameAr: 'هاني فتحي',
-    phone: '+20 127 543 2109',
-    segment: 'res',
-    want: 'Apartment, under EGP 6M',
-    wantAr: 'شقة، أقل من 6 مليون',
-    budget: 'EGP 6M',
-    source: 'Walk-in',
-    sourceAr: 'زيارة مباشرة',
-    owner: 'Rana Farouk',
-    ownerAr: 'رنا فاروق',
-    stage: 'lost',
-    score: 32,
-    lastTouch: '9d ago',
-  },
-  {
-    id: 'MJ-0418',
-    name: 'Rana Mahmoud',
-    nameAr: 'رنا محمود',
-    phone: '+20 100 987 6543',
-    segment: 'res',
-    want: 'Villa, Hillside Bay',
-    wantAr: 'فيلا، هيلسايد باي',
-    budget: 'EGP 31.5M',
-    source: 'Referral',
-    sourceAr: 'توصية',
-    owner: 'Dina El Sayed',
-    ownerAr: 'دينا السيد',
-    stage: 'won',
-    score: 97,
-    lastTouch: '1d ago',
-  },
-];
-
-const TIMELINE: TimelineEntry[] = [
-  { kind: 'Viewing scheduled for HB-P2-B1-3A', kindAr: 'تحديد معاينة لـ HB-P2-B1-3A', at: 'Today, 10:30' },
-  { kind: 'WhatsApp sent: payment plan options', kindAr: 'رسالة واتساب: خيارات خطة السداد', at: 'Yesterday, 17:05' },
-  { kind: 'Status changed: Qualified → Viewing', kindAr: 'تغيير الحالة: مؤهّل ← معاينة', at: 'Yesterday, 09:20' },
-  { kind: 'Lead assigned to owner', kindAr: 'إسناد العميل للمسؤول', at: '3 days ago' },
-  { kind: 'Lead created from Property Finder', kindAr: 'إنشاء العميل من بروبرتي فايندر', at: '4 days ago' },
-];
-
-interface Copy {
-  eyebrow: string;
-  title: string;
-  sub: string;
-  newBtn: string;
-  searchPh: string;
-  stageAll: string;
-  stageNames: Record<Stage, string>;
-  thContact: string;
-  thWant: string;
-  thSource: string;
-  thOwner: string;
-  thScore: string;
-  thStage: string;
-  emptyTitle: string;
-  drawerActivity: string;
-  drawerClose: string;
-  dupTitle: string;
-  dupBody: string;
-  dupPhone: string;
-  dupMerge: string;
-  dupLink: string;
-  dupCreate: string;
-  dupReasonLabel: string;
-  dupReasonPh: string;
-  cancel: string;
-  newTitle: string;
-  nameLabel: string;
-  phoneLabel: string;
-  wantLabel: string;
-  budgetLabel: string;
-  create: string;
-  toastCreated: string;
-  toastCreatedAnyway: string;
-}
-
-const COPY: Record<Lang, Copy> = {
-  en: {
-    eyebrow: 'Sales',
-    title: 'Leads',
-    sub: 'Every lead, its owner, source and stage.',
-    newBtn: '+ New lead',
-    searchPh: 'Search name, phone, want…',
-    stageAll: 'All stages',
-    stageNames: {
-      new: 'New',
-      qualified: 'Qualified',
-      viewing: 'Viewing',
-      offer: 'Offer',
-      contract: 'Contract',
-      won: 'Won',
-      lost: 'Lost',
-    },
-    thContact: 'Contact',
-    thWant: 'Want',
-    thSource: 'Source',
-    thOwner: 'Owner',
-    thScore: 'Score',
-    thStage: 'Stage',
-    emptyTitle: 'No leads match these filters.',
-    drawerActivity: 'Activity timeline',
-    drawerClose: 'Close',
-    dupTitle: 'Possible duplicate',
-    dupBody: 'A lead with this phone number already exists: Ahmed Samir (L-2041).',
-    dupPhone: 'Phone',
-    dupMerge: 'Merge into existing',
-    dupLink: 'Link as related',
-    dupCreate: 'Create anyway',
-    dupReasonLabel: 'Reason (required to create anyway)',
-    dupReasonPh: 'e.g. different buyer, same shared office number',
-    cancel: 'Cancel',
-    newTitle: 'New lead',
-    nameLabel: 'Full name',
-    phoneLabel: 'Phone',
-    wantLabel: 'What they want',
-    budgetLabel: 'Budget',
-    create: 'Check & create',
-    toastCreated: 'Lead created.',
-    toastCreatedAnyway: 'Lead created (duplicate override logged).',
-  },
-  ar: {
-    eyebrow: 'المبيعات',
-    title: 'العملاء المحتملون',
-    sub: 'كل العملاء ومسؤوليهم ومصادرهم ومراحلهم.',
-    newBtn: '+ عميل جديد',
-    searchPh: 'ابحث بالاسم أو الهاتف أو الطلب…',
-    stageAll: 'كل المراحل',
-    stageNames: {
-      new: 'جديد',
-      qualified: 'مؤهّل',
-      viewing: 'معاينة',
-      offer: 'عرض',
-      contract: 'عقد',
-      won: 'مغلق',
-      lost: 'فاقد',
-    },
-    thContact: 'العميل',
-    thWant: 'الطلب',
-    thSource: 'المصدر',
-    thOwner: 'المسؤول',
-    thScore: 'التقييم',
-    thStage: 'المرحلة',
-    emptyTitle: 'لا يوجد عملاء مطابقون.',
-    drawerActivity: 'سجل النشاط',
-    drawerClose: 'إغلاق',
-    dupTitle: 'احتمال تكرار',
-    dupBody: 'يوجد عميل بنفس رقم الهاتف: أحمد سمير (L-2041).',
-    dupPhone: 'الهاتف',
-    dupMerge: 'دمج مع الموجود',
-    dupLink: 'ربط كسجل ذي صلة',
-    dupCreate: 'إنشاء مع ذلك',
-    dupReasonLabel: 'السبب (مطلوب للإنشاء مع ذلك)',
-    dupReasonPh: 'مثال: مشتري مختلف، نفس رقم المكتب المشترك',
-    cancel: 'إلغاء',
-    newTitle: 'عميل جديد',
-    nameLabel: 'الاسم الكامل',
-    phoneLabel: 'الهاتف',
-    wantLabel: 'ماذا يريد',
-    budgetLabel: 'الميزانية',
-    create: 'فحص وإنشاء',
-    toastCreated: 'تم إنشاء العميل.',
-    toastCreatedAnyway: 'تم إنشاء العميل (تم تسجيل تجاوز التكرار).',
-  },
-};
-
+import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { CompanyUiState } from '../company-ui-state';
+import { AuthService, ApiError } from '../../../auth.service';
+import {
+  SalesApi,
+  SALES_STAGES,
+  STAGE_NAMES,
+  SOURCE_NAMES,
+  salesMoney,
+  minorAmount,
+  majorAmount,
+  type SalesLead,
+  type SalesActivity,
+  type SalesStage,
+} from '../../../sales-api.service';
 @Component({
   selector: 'app-leads',
+  imports: [FormsModule],
   templateUrl: './leads.html',
   styleUrl: './leads.scss',
 })
 export class Leads {
   private readonly ui = inject(CompanyUiState);
-  readonly lang = computed<Lang>(() => this.ui.lang());
-  readonly L = computed(() => COPY[this.lang()]);
+  readonly auth = inject(AuthService);
+  readonly api = inject(SalesApi);
+  private readonly destroy = inject(DestroyRef);
+  readonly lang = this.ui.lang;
   readonly ar = computed(() => this.lang() === 'ar');
-
-  readonly leads = signal<Lead[]>(LEADS);
+  t(en: string, ar: string) {
+    return this.ar() ? ar : en;
+  }
+  readonly leads = signal<SalesLead[]>([]);
+  readonly total = signal(0);
+  readonly page = signal(1);
   readonly search = signal('');
-  readonly stageFilter = signal<Stage | 'all'>('all');
-  readonly stages: Stage[] = ['new', 'qualified', 'viewing', 'offer', 'contract', 'won', 'lost'];
-
-  readonly filtered = computed(() => {
-    const q = this.search().trim().toLowerCase();
-    return this.leads().filter((l) => {
-      if (this.stageFilter() !== 'all' && l.stage !== this.stageFilter()) return false;
-      if (!q) return true;
-      return (
-        l.name.toLowerCase().includes(q) ||
-        l.phone.toLowerCase().includes(q) ||
-        l.want.toLowerCase().includes(q)
-      );
-    });
-  });
-
-  name(l: Lead): string {
-    return this.ar() ? l.nameAr : l.name;
-  }
-  want(l: Lead): string {
-    return this.ar() ? l.wantAr : l.want;
-  }
-  source(l: Lead): string {
-    return this.ar() ? l.sourceAr : l.source;
-  }
-  owner(l: Lead): string {
-    return this.ar() ? l.ownerAr : l.owner;
-  }
-
-  readonly selected = signal<Lead | null>(null);
-  readonly timeline = TIMELINE;
-  open(l: Lead): void {
-    this.selected.set(l);
-  }
-  closeDrawer(): void {
-    this.selected.set(null);
-  }
-  timelineText(t: TimelineEntry): string {
-    return this.ar() ? t.kindAr : t.kind;
-  }
-
+  readonly stageFilter = signal('all');
+  readonly archived = signal(false);
+  readonly loading = signal(false);
+  readonly error = signal('');
+  readonly saving = signal(false);
+  readonly stages = SALES_STAGES;
+  readonly stageNames = computed(() => STAGE_NAMES[this.lang()]);
+  readonly sources = Object.keys(SOURCE_NAMES);
+  readonly money = salesMoney;
+  readonly canManage = computed(
+    () => this.auth.user()?.permissions.includes('leads.manage') ?? false,
+  );
+  readonly owners = signal<Array<{ id: string; name: string }>>([]);
+  readonly selected = signal<SalesLead | null>(null);
+  readonly timeline = signal<SalesActivity[]>([]);
+  readonly activityTotal = signal(0);
+  readonly activityPage = signal(1);
+  readonly detailLoading = signal(false);
+  readonly detailError = signal('');
   readonly newOpen = signal(false);
-  readonly newName = signal('');
-  readonly newPhone = signal('');
-  readonly newWant = signal('');
-  readonly newBudget = signal('');
+  readonly editing = signal<SalesLead | null>(null);
+  readonly formError = signal('');
   readonly dupOpen = signal(false);
+  readonly duplicates = signal<any[]>([]);
+  readonly duplicateId = signal('');
   readonly dupReason = signal('');
-  readonly toast = signal<string | null>(null);
-
-  openNew(): void {
-    this.newOpen.set(true);
-    this.newName.set('');
-    this.newPhone.set('');
-    this.newWant.set('');
-    this.newBudget.set('');
+  readonly note = signal('');
+  readonly reason = signal('');
+  readonly actionStage = signal('');
+  readonly toast = signal('');
+  draft = {
+    name: '',
+    nameAr: '',
+    phone: '',
+    segment: 'res',
+    want: '',
+    wantAr: '',
+    budget: '',
+    source: 'manual',
+    ownerId: '',
+    score: '',
+  };
+  private serial = 0;
+  private detailSerial = 0;
+  private timer?: ReturnType<typeof setTimeout>;
+  private formRequest = crypto.randomUUID();
+  private noteRequest = crypto.randomUUID();
+  constructor() {
+    void this.reload();
+    void this.loadOwners();
+    this.destroy.onDestroy(() => {
+      this.serial++;
+      this.detailSerial++;
+      clearTimeout(this.timer);
+    });
   }
-  closeNew(): void {
-    this.newOpen.set(false);
-  }
-
-  submitNew(): void {
-    const isDuplicate = this.newPhone().replace(/\s/g, '') === '+201001234567';
-    if (isDuplicate) {
-      this.newOpen.set(false);
-      this.dupOpen.set(true);
-      this.dupReason.set('');
-      return;
+  async loadOwners() {
+    try {
+      const r = await this.api.get('leads/options');
+      this.owners.set(r.owners);
+    } catch (e) {
+      this.error.set((e as Error).message);
     }
-    this.finishCreate(false);
   }
-
-  resolveDuplicate(mode: 'merge' | 'link' | 'create'): void {
-    if (mode === 'create' && this.dupReason().trim().length < 5) return;
+  async reload(page = 1) {
+    const serial = ++this.serial;
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      const q: Record<string, string> = {
+        page: String(page),
+        limit: '50',
+        archived: this.archived() ? 'all' : 'active',
+      };
+      if (this.search().trim()) q['q'] = this.search().trim();
+      if (this.stageFilter() !== 'all') q['stage'] = this.stageFilter();
+      const r = await this.api.get('leads', q);
+      if (serial === this.serial) {
+        this.leads.set(r.items);
+        this.total.set(r.total);
+        this.page.set(page);
+      }
+    } catch (e) {
+      if (serial === this.serial) this.error.set((e as Error).message);
+    } finally {
+      if (serial === this.serial) this.loading.set(false);
+    }
+  }
+  searchChanged(value: string) {
+    this.search.set(value);
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => void this.reload(), 250);
+  }
+  name(l: SalesLead) {
+    return l.name[this.lang()];
+  }
+  want(l: SalesLead) {
+    return l.want[this.lang()];
+  }
+  source(key: string) {
+    return SOURCE_NAMES[key]?.[this.ar() ? 1 : 0] ?? key;
+  }
+  date(s: string) {
+    return new Intl.DateTimeFormat(this.ar() ? 'ar-EG-u-nu-latn' : 'en-GB', {
+      timeZone: 'Africa/Cairo',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(s));
+  }
+  async open(id: string) {
+    const serial = ++this.detailSerial;
+    this.selected.set(null);
+    this.detailLoading.set(true);
+    this.detailError.set('');
+    this.note.set('');
+    this.reason.set('');
+    this.actionStage.set('');
+    this.noteRequest = crypto.randomUUID();
+    try {
+      const [lead, activity] = await Promise.all([
+        this.api.get('leads/' + id),
+        this.api.get('leads/' + id + '/activities'),
+      ]);
+      if (serial === this.detailSerial) {
+        this.selected.set(lead);
+        this.timeline.set(activity.items);
+        this.activityTotal.set(activity.total);
+        this.activityPage.set(1);
+      }
+    } catch (e) {
+      if (serial === this.detailSerial) this.detailError.set((e as Error).message);
+    } finally {
+      if (serial === this.detailSerial) this.detailLoading.set(false);
+    }
+  }
+  closeDrawer() {
+    this.detailSerial++;
+    this.selected.set(null);
+    this.detailLoading.set(false);
+    this.detailError.set('');
+  }
+  async moreActivity() {
+    const l = this.selected();
+    if (!l || this.detailLoading()) return;
+    const serial = this.detailSerial;
+    this.detailLoading.set(true);
+    try {
+      const page = this.activityPage() + 1;
+      const r = await this.api.get('leads/' + l.id + '/activities', { page: String(page) });
+      if (serial === this.detailSerial) {
+        this.timeline.update((a) => [...a, ...r.items]);
+        this.activityTotal.set(r.total);
+        this.activityPage.set(page);
+      }
+    } catch (e) {
+      this.detailError.set((e as Error).message);
+    } finally {
+      if (serial === this.detailSerial) this.detailLoading.set(false);
+    }
+  }
+  activityText(a: SalesActivity) {
+    const labels: Record<string, [string, string]> = {
+      'lead.created': ['Lead created', 'تم إنشاء العميل'],
+      'lead.seeded': ['Initial sample lead', 'عميل تجريبي أولي'],
+      'lead.updated': ['Lead details updated', 'تم تعديل البيانات'],
+      'lead.stage_changed': ['Stage changed', 'تم تغيير المرحلة'],
+      'lead.note_added': ['Note', 'ملاحظة'],
+      'lead.archived': ['Lead archived', 'تمت الأرشفة'],
+      'lead.restored': ['Lead restored', 'تمت الاستعادة'],
+      'lead.related': ['Related lead added', 'تم ربط عميل'],
+      'deal.created': ['Pipeline opportunity created', 'تم إنشاء فرصة'],
+      'deal.updated': ['Pipeline opportunity updated', 'تم تعديل الفرصة'],
+    };
+    const d = a.details;
+    return (
+      (labels[a.kind]?.[this.ar() ? 1 : 0] ?? a.kind) +
+      (d['from']
+        ? ' · ' +
+          this.stageNames()[d['from'] as SalesStage] +
+          ' → ' +
+          this.stageNames()[d['to'] as SalesStage]
+        : '') +
+      (d['note'] ? ' · ' + d['note'] : '') +
+      (d['reason'] ? ' · ' + d['reason'] : '')
+    );
+  }
+  openNew(l?: SalesLead) {
+    this.editing.set(l ?? null);
+    this.draft = l
+      ? {
+          name: l.name.en,
+          nameAr: l.name.ar,
+          phone: l.phone,
+          segment: l.segment,
+          want: l.want.en,
+          wantAr: l.want.ar,
+          budget: majorAmount(l.budgetMinor),
+          source: l.source,
+          ownerId: l.owner?.id ?? '',
+          score: l.score === null ? '' : String(l.score),
+        }
+      : {
+          name: '',
+          nameAr: '',
+          phone: '',
+          segment: 'res',
+          want: '',
+          wantAr: '',
+          budget: '',
+          source: 'manual',
+          ownerId: this.auth.user()?.id ?? '',
+          score: '',
+        };
+    this.formRequest = crypto.randomUUID();
+    this.formError.set('');
     this.dupOpen.set(false);
-    this.finishCreate(mode === 'create');
+    this.newOpen.set(true);
   }
-
-  cancelDuplicate(): void {
+  closeNew() {
+    if (this.saving()) return;
+    this.newOpen.set(false);
     this.dupOpen.set(false);
   }
-
-  private finishCreate(wasOverride: boolean): void {
-    const id = 'L-' + Math.floor(2050 + Math.random() * 40);
-    this.leads.update((list) => [
-      {
-        id,
-        name: this.newName() || 'New lead',
-        nameAr: this.newName() || 'عميل جديد',
-        phone: this.newPhone(),
-        segment: 'res',
-        want: this.newWant() || '—',
-        wantAr: this.newWant() || '—',
-        budget: this.newBudget() || '—',
-        source: 'Manual',
-        sourceAr: 'إدخال يدوي',
-        owner: 'Mona Sami',
-        ownerAr: 'منى سامي',
-        stage: 'new',
-        score: 50,
-        lastTouch: 'now',
-      },
-      ...list,
-    ]);
-    this.toast.set(wasOverride ? this.L().toastCreatedAnyway : this.L().toastCreated);
-    setTimeout(() => this.toast.set(null), 3200);
+  async submit(mode?: 'create' | 'link') {
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.formError.set('');
+    try {
+      const current = this.editing();
+      const r = await this.api.write(current ? 'leads/' + current.id + '/update' : 'leads', {
+        requestId: this.formRequest,
+        name: this.draft.name.trim(),
+        ...(this.draft.nameAr.trim() ? { nameAr: this.draft.nameAr.trim() } : {}),
+        phone: this.draft.phone,
+        segment: this.draft.segment,
+        want: this.draft.want.trim(),
+        wantAr: this.draft.wantAr.trim() || this.draft.want.trim(),
+        budgetMinor: minorAmount(this.draft.budget, true),
+        source: this.draft.source,
+        ownerId: this.draft.ownerId || null,
+        score:
+          this.draft.score === '' || this.draft.score === null ? null : Number(this.draft.score),
+        ...(current ? { version: current.version } : {}),
+        ...(mode
+          ? {
+              duplicateMode: mode,
+              duplicateOf: this.duplicateId(),
+              reason: this.dupReason().trim(),
+            }
+          : {}),
+      });
+      this.newOpen.set(false);
+      this.dupOpen.set(false);
+      await this.reload();
+      await this.open(r.id);
+      this.toast.set(this.t('Lead saved', 'تم حفظ العميل'));
+    } catch (e) {
+      if (e instanceof ApiError && e.details['code'] === 'duplicate_lead') {
+        this.duplicates.set(e.details['duplicates'] ?? []);
+        this.duplicateId.set(this.duplicates()[0]?.id ?? '');
+        this.dupReason.set('');
+        this.dupOpen.set(true);
+      } else this.formError.set((e as Error).message);
+    } finally {
+      this.saving.set(false);
+    }
+  }
+  async useExisting() {
+    const id = this.duplicateId();
+    if (!id) return;
+    this.newOpen.set(false);
+    this.dupOpen.set(false);
+    await this.open(id);
+  }
+  async mutate(kind: 'stage' | 'archive' | 'notes', action?: string) {
+    const l = this.selected();
+    if (!l || this.saving()) return;
+    this.saving.set(true);
+    this.detailError.set('');
+    try {
+      await this.api.write('leads/' + l.id + '/' + kind, {
+        requestId: kind === 'notes' ? this.noteRequest : crypto.randomUUID(),
+        version: l.version,
+        ...(kind === 'notes'
+          ? { note: this.note().trim() }
+          : kind === 'stage'
+            ? {
+                stage: this.actionStage(),
+                ...(this.reason().trim() ? { reason: this.reason().trim() } : {}),
+              }
+            : { action, reason: this.reason().trim() }),
+      });
+      await this.reload(this.page());
+      await this.open(l.id);
+    } catch (e) {
+      this.detailError.set((e as Error).message);
+    } finally {
+      this.saving.set(false);
+    }
+  }
+  next(stage: SalesStage) {
+    const i = this.stages.indexOf(stage);
+    return i < 5 ? this.stages[i + 1] : null;
   }
 }

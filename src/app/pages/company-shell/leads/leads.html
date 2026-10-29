@@ -1,158 +1,398 @@
+@if (error()) {
+  <p role="alert">
+    {{ error() }} · {{ t('Previous data may be stale', 'قد تكون البيانات السابقة قديمة') }}
+  </p>
+}
+@if (loading()) {
+  <p role="status">{{ t('Loading leads…', 'جار تحميل العملاء…') }}</p>
+}
 <div class="page-head">
   <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
+    <span class="page-head__eyebrow">{{ t('Sales', 'المبيعات') }}</span>
+    <h1 class="page-head__title">{{ t('Leads', 'العملاء المحتملون') }}</h1>
+    <span class="page-head__sub">{{
+      t(
+        'Company leads, ownership, source and recorded activity.',
+        'عملاء الشركة ومسؤولوهم ومصادرهم وسجل النشاط.'
+      )
+    }}</span>
   </div>
   <div class="page-head__actions">
-    <button type="button" class="btn btn--primary" (click)="openNew()">{{ L().newBtn }}</button>
+    <button class="btn btn--ghost" [disabled]="loading()" (click)="reload()">
+      {{ t('Refresh', 'تحديث') }}
+    </button>
+    @if (canManage()) {
+      <button class="btn btn--primary" (click)="openNew()">
+        {{ t('+ New lead', '+ عميل جديد') }}
+      </button>
+    }
   </div>
 </div>
-
+<p>
+  {{
+    t(
+      'Scores are entered manually. Sample records are labeled; no automated scoring or external messaging is implied.',
+      'التقييمات يدوية. السجلات التجريبية موضحة، ولا يوجد تقييم آلي أو إرسال خارجي.'
+    )
+  }}
+</p>
 <input
-  type="text"
   class="search"
-  [placeholder]="L().searchPh"
+  [attr.aria-label]="t('Search leads', 'البحث عن عميل')"
+  [placeholder]="t('Search name, phone, want…', 'ابحث بالاسم أو الهاتف أو الطلب…')"
   [value]="search()"
-  (input)="search.set($any($event.target).value)"
+  (input)="searchChanged($any($event.target).value)"
 />
-
 <div class="chip-row">
-  <button type="button" class="chip" [class.chip--active]="stageFilter() === 'all'" (click)="stageFilter.set('all')">
-    {{ L().stageAll }}
+  <button
+    class="chip"
+    [class.chip--active]="stageFilter() === 'all'"
+    (click)="stageFilter.set('all'); reload()"
+  >
+    {{ t('All stages', 'كل المراحل') }}
   </button>
   @for (s of stages; track s) {
-    <button type="button" class="chip" [class.chip--active]="stageFilter() === s" (click)="stageFilter.set(s)">
-      {{ L().stageNames[s] }}
+    <button
+      class="chip"
+      [class.chip--active]="stageFilter() === s"
+      (click)="stageFilter.set(s); reload()"
+    >
+      {{ stageNames()[s] }}
     </button>
   }
+  <label
+    ><input
+      type="checkbox"
+      [checked]="archived()"
+      (change)="archived.set($any($event.target).checked); reload()"
+    />{{ t('Include archived', 'يشمل المؤرشف') }}</label
+  >
 </div>
-
 <div class="card">
   <div class="table-scroll">
     <div class="l-table">
       <div class="l-head">
-        <span>{{ L().thContact }}</span>
-        <span>{{ L().thWant }}</span>
-        <span>{{ L().thSource }}</span>
-        <span>{{ L().thOwner }}</span>
-        <span>{{ L().thScore }}</span>
-        <span>{{ L().thStage }}</span>
+        <span>{{ t('Contact', 'العميل') }}</span
+        ><span>{{ t('Want / budget', 'الطلب / الميزانية') }}</span
+        ><span>{{ t('Source', 'المصدر') }}</span
+        ><span>{{ t('Owner', 'المسؤول') }}</span
+        ><span>{{ t('Manual score', 'تقييم يدوي') }}</span
+        ><span>{{ t('Stage', 'المرحلة') }}</span>
       </div>
-      @for (l of filtered(); track l.id) {
-        <button type="button" class="l-row" (click)="open(l)">
-          <span class="l-cell__main">
-            <span class="l-cell__name">{{ name(l) }}</span>
-            <span class="l-cell__sub mono">{{ l.phone }}</span>
-          </span>
-          <span class="l-cell__sub">{{ want(l) }} · {{ l.budget }}</span>
-          <span class="l-cell__sub">{{ source(l) }}</span>
-          <span class="l-cell__sub">{{ owner(l) }}</span>
-          <span class="mono">{{ l.score }}</span>
-          <span class="pill" [class]="'pill--' + l.stage">{{ L().stageNames[l.stage] }}</span>
+      @for (l of leads(); track l.id) {
+        <button class="l-row" (click)="open(l.id)">
+          <span class="l-cell__main"
+            ><span class="l-cell__name"
+              >{{ name(l) }}
+              @if (l.sample) {
+                <small>{{ t('Sample', 'تجريبي') }}</small>
+              }</span
+            ><span class="l-cell__sub mono">{{ l.phone }}</span></span
+          ><span class="l-cell__sub">{{ want(l) }} · {{ money(l.budgetMinor) }}</span
+          ><span class="l-cell__sub">{{ source(l.source) }}</span
+          ><span class="l-cell__sub">{{ l.owner?.name || t('Unassigned', 'دون مسؤول') }}</span
+          ><span class="mono">{{ l.score ?? '—' }}</span
+          ><span class="pill" [class]="'pill--' + l.stage">{{
+            l.archivedAt ? t('Archived', 'مؤرشف') : stageNames()[l.stage]
+          }}</span>
         </button>
       }
-      @if (!filtered().length) {
-        <div class="t-empty">{{ L().emptyTitle }}</div>
+      @if (!loading() && !leads().length) {
+        <p class="t-empty">{{ t('No leads match these filters.', 'لا يوجد عملاء مطابقون.') }}</p>
       }
     </div>
   </div>
 </div>
-
+<div class="chip-row">
+  <span>{{ leads().length }} / {{ total() }} · {{ t('Page', 'صفحة') }} {{ page() }}</span
+  ><button
+    class="btn btn--ghost"
+    [disabled]="loading() || page() === 1"
+    (click)="reload(page() - 1)"
+  >
+    {{ t('Previous', 'السابق') }}</button
+  ><button
+    class="btn btn--ghost"
+    [disabled]="loading() || page() * 50 >= total()"
+    (click)="reload(page() + 1)"
+  >
+    {{ t('Next', 'التالي') }}
+  </button>
+</div>
+@if (detailLoading() && !selected()) {
+  <p role="status">{{ t('Loading lead…', 'جار تحميل العميل…') }}</p>
+}
+@if (detailError() && !selected()) {
+  <p role="alert">{{ detailError() }}</p>
+}
 @if (selected(); as l) {
   <div class="scrim" (click)="closeDrawer()"></div>
-  <div class="drawer" (click)="$event.stopPropagation()">
+  <div class="drawer">
     <div class="drawer__header">
       <div class="drawer__headerText">
-        <span class="drawer__name">{{ name(l) }}</span>
-        <span class="drawer__sub mono">{{ l.phone }} · {{ l.id }}</span>
+        <span class="drawer__name">{{ name(l) }}</span
+        ><span class="drawer__sub mono">{{ l.phone }} · {{ l.reference }}</span>
       </div>
-      <button type="button" class="drawer__close" (click)="closeDrawer()">✕</button>
+      <button class="drawer__close" (click)="closeDrawer()">✕</button>
     </div>
     <div class="drawer__body">
+      @if (detailError()) {
+        <p role="alert">{{ detailError() }}</p>
+      }
       <div class="meta-row">
-        <span class="pill" [class]="'pill--' + l.stage">{{ L().stageNames[l.stage] }}</span>
-        <span class="pill">{{ l.budget }}</span>
+        <span class="pill">{{ stageNames()[l.stage] }}</span
+        ><span class="pill">{{ money(l.budgetMinor) }}</span>
+        @if (l.sample) {
+          <span class="pill">{{ t('Sample record', 'سجل تجريبي') }}</span>
+        }
       </div>
-      <div class="drawer__row"><span class="drawer__k">{{ L().thWant }}</span><span>{{ want(l) }}</span></div>
-      <div class="drawer__row"><span class="drawer__k">{{ L().thSource }}</span><span>{{ source(l) }}</span></div>
-      <div class="drawer__row"><span class="drawer__k">{{ L().thOwner }}</span><span>{{ owner(l) }}</span></div>
-      <div class="drawer__row"><span class="drawer__k">{{ L().thScore }}</span><span class="mono">{{ l.score }}</span></div>
-
-      <div class="section-title">{{ L().drawerActivity }}</div>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ t('Want', 'الطلب') }}</span
+        >{{ want(l) }}
+      </div>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ t('Source', 'المصدر') }}</span
+        >{{ source(l.source) }}
+      </div>
+      <div class="drawer__row">
+        <span class="drawer__k">{{ t('Owner', 'المسؤول') }}</span
+        >{{ l.owner?.name || t('Unassigned', 'دون مسؤول') }}
+      </div>
+      @if (l.opportunity) {
+        <div class="drawer__row">
+          {{ t('Pipeline deal', 'فرصة') }}: {{ l.opportunity.reference }} ·
+          {{ money(l.opportunity.valueMinor) }}
+        </div>
+      }
+      @if (canManage() && !l.archivedAt) {
+        <button class="btn btn--ghost" [disabled]="saving()" (click)="openNew(l)">
+          {{ t('Edit lead', 'تعديل العميل') }}</button
+        ><label class="field"
+          >{{ t('Stage action', 'تغيير المرحلة')
+          }}<select class="textbox" [(ngModel)]="actionStage">
+            <option value="">—</option>
+            @if (next(l.stage); as n) {
+              <option [value]="n">{{ stageNames()[n] }}</option>
+            }
+            @if (l.stage !== 'won' && l.stage !== 'lost') {
+              <option value="lost">{{ t('Mark lost', 'تسجيل خسارة') }}</option>
+            } @else {
+              <option value="reopen">{{ t('Reopen as new', 'إعادة فتح كجديد') }}</option>
+            }
+          </select></label
+        ><button
+          class="btn btn--ghost"
+          [disabled]="
+            saving() ||
+            !actionStage() ||
+            (['lost', 'reopen'].includes(actionStage()) && reason().trim().length < 10)
+          "
+          (click)="mutate('stage')"
+        >
+          {{ t('Apply stage', 'تطبيق المرحلة') }}</button
+        ><label class="field"
+          >{{ t('Note', 'ملاحظة')
+          }}<textarea class="textarea" [(ngModel)]="note" maxlength="2000"></textarea></label
+        ><button
+          class="btn btn--ghost"
+          [disabled]="saving() || !note().trim()"
+          (click)="mutate('notes')"
+        >
+          {{ t('Add note', 'إضافة ملاحظة') }}
+        </button>
+      }
+      @if (canManage()) {
+        <label class="field"
+          >{{
+            t(
+              'Reason (10+ characters for loss, reopening or archive)',
+              'السبب (10 أحرف على الأقل للخسارة أو إعادة الفتح أو الأرشفة)'
+            )
+          }}<textarea class="textarea" [(ngModel)]="reason" maxlength="500"></textarea></label
+        ><button
+          class="btn btn--ghost"
+          [disabled]="saving() || reason().trim().length < 10"
+          (click)="mutate('archive', l.archivedAt ? 'restore' : 'archive')"
+        >
+          {{
+            l.archivedAt ? t('Restore lead', 'استعادة العميل') : t('Archive lead', 'أرشفة العميل')
+          }}
+        </button>
+      }
+      @if (l.related?.length) {
+        <div class="section-title">{{ t('Related leads', 'عملاء مرتبطون') }}</div>
+        @for (r of l.related; track r.id) {
+          <button class="btn btn--ghost" (click)="open(r.id)">
+            {{ r.name[lang()] }} · {{ r.reference }}
+          </button>
+        }
+      }
+      <div class="section-title">{{ t('Recorded activity', 'سجل النشاط') }}</div>
       <div class="thread">
-        @for (t of timeline; track t.at) {
+        @for (a of timeline(); track a.id) {
           <div class="activity-row">
             <span class="activity-row__dot"></span>
             <div class="activity-row__text">
-              <span class="activity-row__title">{{ timelineText(t) }}</span>
-              <span class="activity-row__time">{{ t.at }}</span>
+              <span class="activity-row__title">{{ activityText(a) }}</span
+              ><span class="activity-row__time"
+                >{{ a.actor || t('System seed', 'بيانات النظام الأولية') }} · {{ date(a.at) }}</span
+              >
             </div>
           </div>
         }
+        @if (!timeline().length) {
+          <p>{{ t('No recorded activity', 'لا توجد أنشطة مسجلة') }}</p>
+        }
       </div>
+      @if (timeline().length < activityTotal()) {
+        <button class="btn btn--ghost" [disabled]="detailLoading()" (click)="moreActivity()">
+          {{ t('Load more activity', 'تحميل المزيد') }}
+        </button>
+      }
     </div>
     <div class="drawer__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeDrawer()">{{ L().drawerClose }}</button>
+      <button class="btn btn--ghost" (click)="closeDrawer()">{{ t('Close', 'إغلاق') }}</button>
     </div>
   </div>
 }
-
 @if (newOpen()) {
   <div class="scrim" (click)="closeNew()"></div>
-  <div class="dialog" (click)="$event.stopPropagation()">
+  <div class="dialog" style="max-height: 90vh; overflow: auto">
     <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ L().newTitle }}</span>
-      <div class="field">
-        <span class="field__label">{{ L().nameLabel }}</span>
-        <input class="textbox" [value]="newName()" (input)="newName.set($any($event.target).value)" />
-      </div>
-      <div class="field">
-        <span class="field__label">{{ L().phoneLabel }}</span>
-        <input class="textbox" [value]="newPhone()" (input)="newPhone.set($any($event.target).value)" placeholder="+20 100 123 4567" />
-      </div>
-      <div class="field">
-        <span class="field__label">{{ L().wantLabel }}</span>
-        <input class="textbox" [value]="newWant()" (input)="newWant.set($any($event.target).value)" />
-      </div>
-      <div class="field">
-        <span class="field__label">{{ L().budgetLabel }}</span>
-        <input class="textbox" [value]="newBudget()" (input)="newBudget.set($any($event.target).value)" placeholder="EGP" />
-      </div>
+      <span class="dialog__title">{{
+        editing() ? t('Edit lead', 'تعديل العميل') : t('New lead', 'عميل جديد')
+      }}</span>
+      @if (formError()) {
+        <p role="alert">{{ formError() }}</p>
+      }
+      <form id="lead-form" (ngSubmit)="submit()">
+        <label class="field"
+          >{{ t('Full name', 'الاسم الكامل')
+          }}<input
+            class="textbox"
+            [(ngModel)]="draft.name"
+            name="name"
+            minlength="2"
+            maxlength="160"
+            required /></label
+        ><label class="field"
+          >{{ t('Arabic name (optional)', 'الاسم بالعربية (اختياري)')
+          }}<input
+            class="textbox"
+            [(ngModel)]="draft.nameAr"
+            name="nameAr"
+            maxlength="160" /></label
+        ><label class="field"
+          >{{ t('Phone', 'الهاتف')
+          }}<input
+            class="textbox"
+            [(ngModel)]="draft.phone"
+            name="phone"
+            placeholder="+20…"
+            maxlength="40"
+            required /></label
+        ><label class="field"
+          >{{ t('Segment', 'الفئة')
+          }}<select class="textbox" [(ngModel)]="draft.segment" name="segment">
+            <option value="res">{{ t('Residential', 'سكني') }}</option>
+            <option value="com">{{ t('Commercial', 'تجاري') }}</option>
+          </select></label
+        ><label class="field"
+          >{{ t('What they want', 'الطلب')
+          }}<input class="textbox" [(ngModel)]="draft.want" name="want" maxlength="1000" /></label
+        ><label class="field"
+          >{{ t('Arabic requirement (optional)', 'الطلب بالعربية (اختياري)')
+          }}<input
+            class="textbox"
+            [(ngModel)]="draft.wantAr"
+            name="wantAr"
+            maxlength="1000" /></label
+        ><label class="field"
+          >{{ t('Budget (EGP, optional)', 'الميزانية بالجنيه (اختياري)')
+          }}<input
+            class="textbox"
+            [(ngModel)]="draft.budget"
+            name="budget"
+            inputmode="decimal" /></label
+        ><label class="field"
+          >{{ t('Source', 'المصدر')
+          }}<select class="textbox" [(ngModel)]="draft.source" name="source">
+            @for (s of sources; track s) {
+              <option [value]="s">{{ source(s) }}</option>
+            }
+          </select></label
+        ><label class="field"
+          >{{ t('Owner', 'المسؤول')
+          }}<select class="textbox" [(ngModel)]="draft.ownerId" name="owner">
+            <option value="">{{ t('Unassigned', 'دون مسؤول') }}</option>
+            @for (o of owners(); track o.id) {
+              <option [value]="o.id">{{ o.name }}</option>
+            }
+          </select></label
+        ><label class="field"
+          >{{ t('Manual score (optional)', 'التقييم اليدوي (اختياري)')
+          }}<input
+            class="textbox"
+            type="number"
+            [(ngModel)]="draft.score"
+            name="score"
+            min="0"
+            max="100"
+        /></label>
+      </form>
     </div>
     <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeNew()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" (click)="submitNew()">{{ L().create }}</button>
-    </div>
-  </div>
-}
-
-@if (dupOpen()) {
-  <div class="scrim" (click)="cancelDuplicate()"></div>
-  <div class="dialog" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ L().dupTitle }}</span>
-      <p class="dialog__text">{{ L().dupBody }}</p>
-      <div class="field">
-        <span class="field__label">{{ L().dupReasonLabel }}</span>
-        <textarea class="textarea" rows="2" [placeholder]="L().dupReasonPh" [value]="dupReason()" (input)="dupReason.set($any($event.target).value)"></textarea>
-      </div>
-    </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="resolveDuplicate('merge')">{{ L().dupMerge }}</button>
-      <button type="button" class="btn btn--ghost" (click)="resolveDuplicate('link')">{{ L().dupLink }}</button>
-      <button
-        type="button"
-        class="btn btn--primary"
-        [disabled]="dupReason().trim().length < 5"
-        (click)="resolveDuplicate('create')"
-      >
-        {{ L().dupCreate }}
+      <button class="btn btn--ghost" [disabled]="saving()" (click)="closeNew()">
+        {{ t('Cancel', 'إلغاء') }}</button
+      ><button class="btn btn--primary" type="submit" form="lead-form" [disabled]="saving()">
+        {{ t('Save lead', 'حفظ العميل') }}
       </button>
     </div>
   </div>
 }
-
-@if (toast()) {
-  <div class="toast">{{ toast() }}</div>
+@if (dupOpen()) {
+  <div class="scrim"></div>
+  <div class="dialog">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ t('Possible duplicate', 'احتمال تكرار') }}</span>
+      <p>
+        {{
+          t(
+            'An active lead already uses this phone. Open it, or explicitly create a separate record.',
+            'يوجد عميل نشط بهذا الهاتف. افتحه أو أنشئ سجلًا مستقلًا مع ذكر السبب.'
+          )
+        }}
+      </p>
+      @if (formError()) {
+        <p role="alert">{{ formError() }}</p>
+      }
+      <select class="textbox" [(ngModel)]="duplicateId">
+        @for (d of duplicates(); track d.id) {
+          <option [value]="d.id">{{ d.name[lang()] }} · {{ d.reference }}</option>
+        }</select
+      ><label class="field"
+        >{{ t('Reason (10+ characters)', 'السبب (10 أحرف على الأقل)')
+        }}<textarea class="textarea" [(ngModel)]="dupReason" maxlength="500"></textarea>
+      </label>
+    </div>
+    <div class="dialog__footer">
+      <button class="btn btn--ghost" [disabled]="saving()" (click)="dupOpen.set(false)">
+        {{ t('Back', 'رجوع') }}</button
+      ><button class="btn btn--ghost" [disabled]="saving()" (click)="useExisting()">
+        {{ t('Open existing', 'فتح الموجود') }}</button
+      ><button
+        class="btn btn--ghost"
+        [disabled]="saving() || dupReason().trim().length < 10"
+        (click)="submit('link')"
+      >
+        {{ t('Create and link', 'إنشاء وربط') }}</button
+      ><button
+        class="btn btn--primary"
+        [disabled]="saving() || dupReason().trim().length < 10"
+        (click)="submit('create')"
+      >
+        {{ t('Create separately', 'إنشاء مستقل') }}
+      </button>
+    </div>
+  </div>
 }

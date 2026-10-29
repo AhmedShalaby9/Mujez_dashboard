@@ -12,6 +12,18 @@ export interface User {
   companyId?: string;
   company?: { id: string; slug: string; name: { en: string; ar: string }; status: string };
 }
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly details: Record<string, any>,
+  ) {
+    super(
+      Array.isArray(details['message'])
+        ? details['message'].join(', ')
+        : details['message'] || 'Request failed (' + status + ')',
+    );
+  }
+}
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly config = inject(RUNTIME_CONFIG);
@@ -25,11 +37,7 @@ export class AuthService {
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      throw new Error(
-        Array.isArray(body.message)
-          ? body.message.join(', ')
-          : body.message || 'Request failed (' + response.status + ')',
-      );
+      throw new ApiError(response.status, body);
     }
     return response.json();
   }
@@ -68,7 +76,7 @@ export const adminGuard: CanActivateFn = async (route) => {
     : router.createUrlTree(['/admin/dashboard']);
 };
 
-export const companyGuard: CanActivateFn = async () => {
+export const companyGuard: CanActivateFn = async (route) => {
   const auth = inject(AuthService),
     router = inject(Router);
   if (!(await auth.restore())) return router.createUrlTree(['/']);
@@ -76,6 +84,8 @@ export const companyGuard: CanActivateFn = async () => {
   return auth.user()?.pool === 'company_admin' &&
     auth.user()?.role === 'company_owner' &&
     auth.user()?.permissions.includes('workspace.view')
-    ? true
+    ? !route.data['permission'] || auth.user()?.permissions.includes(route.data['permission'])
+      ? true
+      : router.createUrlTree(['/company/dashboard'])
     : router.createUrlTree(['/']);
 };

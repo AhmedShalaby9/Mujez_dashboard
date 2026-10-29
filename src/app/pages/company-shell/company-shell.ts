@@ -1,6 +1,6 @@
 import { AuthService } from '../../auth.service';
-import { Router } from '@angular/router';
-import { Component, computed, signal } from '@angular/core';
+import { Router, NavigationEnd } from '@angular/router';
+import { Component, computed, signal, DestroyRef } from '@angular/core';
 import { inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { CompanyUiState, type Lang } from './company-ui-state';
@@ -121,10 +121,21 @@ export class CompanyShell {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   readonly companyName = computed(() => this.auth.user()?.company?.name[this.ui.lang()] ?? '');
+  private readonly destroy = inject(DestroyRef);
+  readonly currentPath = signal(this.router.url);
+  readonly isPreview = computed(
+    () => !/^\/company\/(leads|pipeline)(?:[/?]|$)/.test(this.currentPath()),
+  );
+  constructor() {
+    const subscription = this.router.events.subscribe((e) => {
+      if (e instanceof NavigationEnd) this.currentPath.set(e.urlAfterRedirects);
+    });
+    this.destroy.onDestroy(() => subscription.unsubscribe());
+  }
   readonly preview = computed(() =>
     this.ui.lang() === 'ar'
-      ? 'شاشات CRM معاينة للتصميم حاليًا. الأرقام والعمليات تجريبية ولا تُحفظ. تسجيل الدخول وبيانات الحساب والشركة متصلة بالنظام.'
-      : 'CRM screens are currently design previews. Their figures and actions are sample data and changes are not saved. Login, account and company identity are connected.',
+      ? 'باقي شاشات CRM معاينة للتصميم حاليًا. الأرقام والعمليات تجريبية ولا تُحفظ. تسجيل الدخول وبيانات الحساب والشركة متصلة بالنظام.'
+      : 'Other CRM screens are currently design previews. Their figures and actions are sample data and changes are not saved. Login, account and company identity are connected.',
   );
   readonly error = signal('');
   get me() {

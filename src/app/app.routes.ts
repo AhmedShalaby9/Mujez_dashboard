@@ -136,11 +136,13 @@ export const routes: Routes = [
       },
       {
         path: 'pipeline',
+        data: { permission: 'pipeline.read' },
         loadComponent: () =>
           import('./pages/company-shell/pipeline/pipeline').then((m) => m.Pipeline),
       },
       {
         path: 'leads',
+        data: { permission: 'leads.read' },
         loadComponent: () => import('./pages/company-shell/leads/leads').then((m) => m.Leads),
       },
       {

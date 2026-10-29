@@ -38,17 +38,17 @@ interface Copy {
 const COPY: Record<Lang, Copy> = {
   en: {
     brand: 'Mujez',
-    platformPortal: 'Platform Portal',
-    kicker: 'Admin Access',
-    headline: 'Manage every side of the Mujez platform from one console.',
-    sub: 'Operations, companies, subscriptions, and support — all in one secure workspace built for the Mujez team.',
+    platformPortal: 'Mujez Portal',
+    kicker: 'Your workspace',
+    headline: 'Your company and platform workspaces, in one place.',
+    sub: 'Sign in to access the workspace assigned to your account.',
     points: [
-      'Real-time visibility across every company workspace',
+      'A dedicated workspace for your company',
       'Role-based access with full audit history',
-      'One console for billing, support, and platform health',
+      'Access based on your account and company',
     ],
     title: 'Sign in',
-    titleSub: 'Welcome back. Enter your admin credentials to continue.',
+    titleSub: 'Welcome back. Enter your account credentials to continue.',
     email: 'Email',
     password: 'Password',
     forgot: 'Forgot password?',
@@ -57,7 +57,7 @@ const COPY: Record<Lang, Copy> = {
     signingIn: 'Signing in…',
     show: 'Show',
     hide: 'Hide',
-    notice: 'This console is restricted to authorized Mujez staff. Access attempts are logged.',
+    notice: 'Access is restricted to invited company owners and authorized Mujez administrators.',
     fTitle: 'Reset your password',
     forgotSub: "Enter the email linked to your admin account and we'll send a reset link.",
     fBtn: 'Send reset link',
@@ -70,17 +70,17 @@ const COPY: Record<Lang, Copy> = {
   },
   ar: {
     brand: 'مجاز',
-    platformPortal: 'بوابة المنصة',
-    kicker: 'دخول المشرفين',
-    headline: 'إدارة جميع جوانب منصة مجاز من مكان واحد.',
-    sub: 'العمليات، الشركات، الاشتراكات والدعم — كل ذلك في مساحة عمل آمنة مخصصة لفريق مجاز.',
+    platformPortal: 'بوابة مجاز',
+    kicker: 'مساحة عملك',
+    headline: 'مساحة عمل شركتك ومنصة مجاز في مكان واحد.',
+    sub: 'سجّل الدخول للوصول إلى مساحة العمل المخصصة لحسابك.',
     points: [
-      'رؤية فورية لكل مساحات عمل الشركات',
+      'مساحة عمل مستقلة لشركتك',
       'صلاحيات وصول حسب الدور مع سجل تدقيق كامل',
-      'لوحة واحدة للفواتير والدعم وصحة المنصة',
+      'وصول حسب حسابك وشركتك',
     ],
     title: 'تسجيل الدخول',
-    titleSub: 'مرحبًا بعودتك. أدخل بيانات حساب المشرف للمتابعة.',
+    titleSub: 'مرحبًا بعودتك. أدخل بيانات حسابك للمتابعة.',
     email: 'البريد الإلكتروني',
     password: 'كلمة المرور',
     forgot: 'نسيت كلمة المرور؟',
@@ -89,7 +89,7 @@ const COPY: Record<Lang, Copy> = {
     signingIn: 'جارٍ تسجيل الدخول…',
     show: 'عرض',
     hide: 'إخفاء',
-    notice: 'هذه اللوحة مخصصة لموظفي مجاز المعتمدين فقط. يتم تسجيل كل محاولات الدخول.',
+    notice: 'الوصول مخصص لملاك الشركات المدعوين ومشرفي مجاز المعتمدين.',
     fTitle: 'إعادة تعيين كلمة المرور',
     forgotSub: 'أدخل البريد الإلكتروني المرتبط بحساب المشرف وسنرسل لك رابط إعادة التعيين.',
     fBtn: 'إرسال رابط إعادة التعيين',
@@ -197,12 +197,16 @@ export class Login {
     try {
       await this.auth.login(this.email().trim(), this.password(), this.remember());
       this.password.set('');
-      await this.router.navigateByUrl('/admin/dashboard');
+      await this.router.navigateByUrl(this.auth.homePath());
     } catch (error) {
       this.formError.set(
-        this.lang() === 'ar'
-          ? 'تعذر تسجيل الدخول. تحقق من البيانات وحاول مجددًا.'
-          : 'Unable to sign in. Check your credentials and try again.',
+        (error as Error).message === 'Company access unavailable'
+          ? this.lang() === 'ar'
+            ? 'مساحة عمل الشركة غير متاحة. تواصل مع دعم مجاز.'
+            : 'Your company workspace is unavailable. Contact Mujez support.'
+          : this.lang() === 'ar'
+            ? 'تعذر تسجيل الدخول. تحقق من البيانات وحاول مجددًا.'
+            : 'Unable to sign in. Check your credentials and try again.',
       );
     } finally {
       this.loading.set(false);

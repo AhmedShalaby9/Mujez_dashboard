@@ -65,7 +65,7 @@
 
       <button type="button" class="topbar__switcher" (click)="$event.stopPropagation()">
         <span class="topbar__switcherMark">M</span>
-        <span class="topbar__switcherLabel">{{ L().switcherLabel }}</span>
+        <span class="topbar__switcherLabel">{{ companyName() }}</span>
         <span class="topbar__switcherCaret">▾</span>
       </button>
 
@@ -73,6 +73,8 @@
         <input
           type="text"
           class="topbar__searchInput"
+          disabled
+          title="Search is not available yet"
           [placeholder]="L().searchPh"
           [value]="search()"
           (input)="search.set($any($event.target).value)"
@@ -145,11 +147,12 @@
 
           @if (profileOpen()) {
             <div class="dropdown dropdown--profile" (click)="$event.stopPropagation()">
-              <button type="button" class="dropdown__item">{{ L().profileMenu.profile }}</button>
-              <button type="button" class="dropdown__item">{{ L().profileMenu.settings }}</button>
+              <span class="dropdown__item">{{ auth.user()?.email }}</span>
+
               <a
                 class="dropdown__item dropdown__item--danger"
-                (click)="$event.stopPropagation()"
+                (click)="$event.stopPropagation(); signOut()"
+                (keydown.enter)="signOut()"
                 role="button"
                 tabindex="0"
                 >{{ L().profileMenu.signOut }}</a
@@ -161,6 +164,15 @@
     </header>
 
     <div class="page">
+      <p
+        role="note"
+        style="padding: 12px; border: 1px solid #e3d8ab; border-radius: 8px; background: #fff9e7"
+      >
+        {{ preview() }}
+      </p>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
       <router-outlet />
     </div>
   </div>

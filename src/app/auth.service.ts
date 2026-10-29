@@ -9,6 +9,8 @@ export interface User {
   roleName?: { en: string; ar: string };
   permissions: string[];
   pool: string;
+  companyId?: string;
+  company?: { id: string; slug: string; name: { en: string; ar: string }; status: string };
 }
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -33,8 +35,9 @@ export class AuthService {
   }
   async restore() {
     try {
-      const user = await this.request('/admin/api/v1/auth/session');
-      if (user.pool !== 'platform') throw new Error('403');
+      const user = await this.request('/api/v1/auth/session');
+      if (!['platform', 'company_admin', 'company_user'].includes(user.pool))
+        throw new Error('403');
       this.user.set(user);
       return true;
     } catch {
@@ -43,11 +46,14 @@ export class AuthService {
     }
   }
   async login(email: string, password: string, remember: boolean) {
-    await this.request('/admin/api/v1/auth/login', { email, password, remember });
+    await this.request('/api/v1/auth/login', { email, password, remember });
     if (!(await this.restore())) throw new Error('401');
   }
+  homePath() {
+    return this.user()?.pool === 'platform' ? '/admin/dashboard' : '/company/dashboard';
+  }
   async logout() {
-    await this.request('/admin/api/v1/auth/logout', {});
+    await this.request('/api/v1/auth/logout', {});
     this.user.set(null);
   }
 }
@@ -55,8 +61,21 @@ export const adminGuard: CanActivateFn = async (route) => {
   const auth = inject(AuthService),
     router = inject(Router);
   if (!(await auth.restore())) return router.createUrlTree(['/']);
+  if (auth.user()?.pool !== 'platform') return router.createUrlTree(['/company/dashboard']);
   const permission = route.data['permission'];
   return !permission || auth.user()?.permissions.includes(permission)
     ? true
     : router.createUrlTree(['/admin/dashboard']);
+};
+
+export const companyGuard: CanActivateFn = async () => {
+  const auth = inject(AuthService),
+    router = inject(Router);
+  if (!(await auth.restore())) return router.createUrlTree(['/']);
+  if (auth.user()?.pool === 'platform') return router.createUrlTree(['/admin/dashboard']);
+  return auth.user()?.pool === 'company_admin' &&
+    auth.user()?.role === 'company_owner' &&
+    auth.user()?.permissions.includes('workspace.view')
+    ? true
+    : router.createUrlTree(['/']);
 };

@@ -1,3 +1,5 @@
+import { AuthService } from '../../auth.service';
+import { Router } from '@angular/router';
 import { Component, computed, signal } from '@angular/core';
 import { inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -28,7 +30,6 @@ interface Notification {
 interface Copy {
   brand: string;
   platformTag: string;
-  switcherLabel: string;
   searchPh: string;
   otherLang: string;
   profileMenu: { profile: string; settings: string; signOut: string };
@@ -40,13 +41,13 @@ interface Copy {
 const EN_NAV: NavEntry[] = [
   { kind: 'head', label: 'Sales' },
   { kind: 'item', label: 'Dashboard', path: 'dashboard' },
-  { kind: 'item', label: 'Pipeline', path: 'pipeline', count: '41' },
-  { kind: 'item', label: 'Leads', path: 'leads', count: '58' },
-  { kind: 'item', label: 'Tasks', path: 'tasks', count: '12' },
+  { kind: 'item', label: 'Pipeline', path: 'pipeline' },
+  { kind: 'item', label: 'Leads', path: 'leads' },
+  { kind: 'item', label: 'Tasks', path: 'tasks' },
   { kind: 'head', label: 'Inventory' },
   { kind: 'item', label: 'Projects', path: 'projects' },
-  { kind: 'item', label: 'Units', path: 'units', count: '246' },
-  { kind: 'item', label: 'Reservations', path: 'reservations', count: '9' },
+  { kind: 'item', label: 'Units', path: 'units' },
+  { kind: 'item', label: 'Reservations', path: 'reservations' },
   { kind: 'head', label: 'Finance' },
   { kind: 'item', label: 'Contracts', path: 'contracts' },
   { kind: 'item', label: 'Commissions', path: 'commissions' },
@@ -62,13 +63,13 @@ const EN_NAV: NavEntry[] = [
 const AR_NAV: NavEntry[] = [
   { kind: 'head', label: 'المبيعات' },
   { kind: 'item', label: 'لوحة التحكم', path: 'dashboard' },
-  { kind: 'item', label: 'مراحل الصفقات', path: 'pipeline', count: '41' },
-  { kind: 'item', label: 'العملاء المحتملون', path: 'leads', count: '58' },
-  { kind: 'item', label: 'المهام', path: 'tasks', count: '12' },
+  { kind: 'item', label: 'مراحل الصفقات', path: 'pipeline' },
+  { kind: 'item', label: 'العملاء المحتملون', path: 'leads' },
+  { kind: 'item', label: 'المهام', path: 'tasks' },
   { kind: 'head', label: 'المخزون' },
   { kind: 'item', label: 'المشروعات', path: 'projects' },
-  { kind: 'item', label: 'الوحدات', path: 'units', count: '246' },
-  { kind: 'item', label: 'الحجوزات', path: 'reservations', count: '9' },
+  { kind: 'item', label: 'الوحدات', path: 'units' },
+  { kind: 'item', label: 'الحجوزات', path: 'reservations' },
   { kind: 'head', label: 'الفوترة' },
   { kind: 'item', label: 'العقود', path: 'contracts' },
   { kind: 'item', label: 'العمولات', path: 'commissions' },
@@ -81,75 +82,25 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'سجل التدقيق', path: 'audit-log' },
 ];
 
-const EN_NOTIFS: Notification[] = [
-  {
-    id: 'n1',
-    path: '/company/reservations',
-    title: 'Hold on HB-P2-B1-3A expires in 40 minutes',
-    time: '40m left',
-    attention: true,
-  },
-  {
-    id: 'n2',
-    path: '/company/leads',
-    title: 'Lead "Nour Adel" unassigned for 12 minutes — SLA in 3 minutes',
-    time: '3m to SLA',
-    attention: true,
-  },
-  {
-    id: 'n3',
-    path: '/company/commissions',
-    title: 'Commission on deal MJ-0418 is payable',
-    time: '1h ago',
-    attention: false,
-  },
-];
-
-const AR_NOTIFS: Notification[] = [
-  {
-    id: 'n1',
-    path: '/company/reservations',
-    title: 'ينتهي حجز HB-P2-B1-3A بعد 40 دقيقة',
-    time: 'باقي 40 د',
-    attention: true,
-  },
-  {
-    id: 'n2',
-    path: '/company/leads',
-    title: 'العميل "نور عادل" بدون إسناد منذ 12 دقيقة — المهلة بعد 3 دقائق',
-    time: 'المهلة بعد 3 د',
-    attention: true,
-  },
-  {
-    id: 'n3',
-    path: '/company/commissions',
-    title: 'عمولة الصفقة MJ-0418 جاهزة للصرف',
-    time: 'منذ ساعة',
-    attention: false,
-  },
-];
-
 const COPY: Record<Lang, Copy> = {
   en: {
     brand: 'Mujez',
     platformTag: 'Company CRM',
-    switcherLabel: 'Horizon Realty',
     searchPh: 'Search leads, deals, units, contracts…',
     otherLang: 'العربية',
     profileMenu: { profile: 'Profile', settings: 'Settings', signOut: 'Sign out' },
     notifTitle: 'Current alerts',
-    notifEmpty: 'No current alerts',
+    notifEmpty: 'CRM notifications are not connected yet',
     nav: EN_NAV,
   },
   ar: {
     brand: 'مجاز',
     platformTag: 'نظام الشركة',
-    switcherLabel: 'هورايزن للعقارات',
     searchPh: 'ابحث عن عملاء أو صفقات أو وحدات أو عقود…',
     otherLang: 'English',
     profileMenu: { profile: 'الملف الشخصي', settings: 'الإعدادات', signOut: 'تسجيل الخروج' },
     notifTitle: 'التنبيهات الحالية',
-    notifEmpty: 'لا توجد تنبيهات حالية',
+    notifEmpty: 'تنبيهات CRM غير متصلة بعد',
     nav: AR_NAV,
   },
 };
@@ -165,9 +116,38 @@ export class CompanyShell {
 
   readonly dir = this.ui.dir;
   readonly L = computed(() => COPY[this.ui.lang()]);
-  readonly notifications = computed(() => (this.ui.lang() === 'ar' ? AR_NOTIFS : EN_NOTIFS));
+  readonly notifications = computed<Notification[]>(() => []);
 
-  readonly me = { name: 'Mona Sami', role: 'Managing Broker', initials: 'MS' };
+  readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  readonly companyName = computed(() => this.auth.user()?.company?.name[this.ui.lang()] ?? '');
+  readonly preview = computed(() =>
+    this.ui.lang() === 'ar'
+      ? 'شاشات CRM معاينة للتصميم حاليًا. الأرقام والعمليات تجريبية ولا تُحفظ. تسجيل الدخول وبيانات الحساب والشركة متصلة بالنظام.'
+      : 'CRM screens are currently design previews. Their figures and actions are sample data and changes are not saved. Login, account and company identity are connected.',
+  );
+  readonly error = signal('');
+  get me() {
+    const u = this.auth.user();
+    return {
+      name: u?.name ?? '',
+      role: this.ui.lang() === 'ar' ? 'مالك الشركة' : 'Company Owner',
+      initials: (u?.name ?? '')
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((s) => s[0].toUpperCase())
+        .join(''),
+    };
+  }
+  async signOut() {
+    try {
+      await this.auth.logout();
+      await this.router.navigateByUrl('/');
+    } catch (e) {
+      this.error.set((e as Error).message);
+    }
+  }
 
   readonly mobileNavOpen = signal(false);
   readonly notifOpen = signal(false);

@@ -6,7 +6,7 @@ import { AuthService } from './auth.service';
   selector: 'app-activate',
   imports: [FormsModule, RouterLink],
   template: `<main>
-    <h1>Activate your Mujez administrator account</h1>
+    <h1>Activate your {{ company ? 'company owner' : 'Mujez administrator' }} account</h1>
     <p>
       Set a password of at least 12 characters. This link expires after 24 hours and works once.
     </p>
@@ -77,21 +77,30 @@ export class Activate {
   readonly error = signal('');
   readonly done = signal(false);
   readonly saving = signal(false);
+  readonly company = location.pathname === '/activate/company';
   readonly token = new URLSearchParams(location.hash.slice(1)).get('token') ?? '';
   constructor() {
-    history.replaceState(null, '', '/activate');
+    history.replaceState(null, '', this.company ? '/activate/company' : '/activate');
   }
   async activate() {
     if (this.password() !== this.confirm()) {
       this.error.set('Passwords do not match');
       return;
     }
+    if (this.password().length < 12 || this.password().length > 256) {
+      this.error.set('Use a password of 12 to 256 characters');
+      return;
+    }
+    if (this.saving()) return;
     this.saving.set(true);
     try {
-      await this.api.request('/admin/api/v1/auth/activate', {
-        token: this.token,
-        password: this.password(),
-      });
+      await this.api.request(
+        this.company ? '/api/v1/auth/activate' : '/admin/api/v1/auth/activate',
+        {
+          token: this.token,
+          password: this.password(),
+        },
+      );
       this.password.set('');
       this.confirm.set('');
       this.done.set(true);

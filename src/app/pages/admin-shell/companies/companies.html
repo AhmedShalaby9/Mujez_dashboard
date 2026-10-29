@@ -317,6 +317,63 @@
     </div>
 
     <div class="drawer__body">
+      <section
+        style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 16px"
+      >
+        <h3>{{ lang() === 'ar' ? 'حساب مالك الشركة' : 'Company owner account' }}</h3>
+        @if (ownerLoading()) {
+          <p>{{ lang() === 'ar' ? 'جار التحميل…' : 'Loading owner…' }}</p>
+        }
+        @if (ownerError()) {
+          <p role="alert">{{ ownerError() }}</p>
+        }
+        @if (ownerInfo(); as owner) {
+          <p>{{ owner.name }} · {{ owner.email }}</p>
+          <p>
+            {{
+              owner.status === 'active'
+                ? lang() === 'ar'
+                  ? 'تم تفعيل الحساب'
+                  : 'Account activated'
+                : owner.status === 'invited'
+                  ? lang() === 'ar'
+                    ? 'بانتظار التفعيل'
+                    : 'Awaiting activation'
+                  : lang() === 'ar'
+                    ? 'الحساب معطل'
+                    : 'Account disabled'
+            }}
+          </p>
+          @if (owner.invitation_expires_at) {
+            <p>
+              {{ lang() === 'ar' ? 'تنتهي الدعوة:' : 'Invitation expires:' }}
+              {{ owner.invitation_expires_at }}
+            </p>
+          }
+        } @else if (!ownerLoading() && !ownerError()) {
+          <p>{{ lang() === 'ar' ? 'لم تتم دعوة المالك بعد' : 'Owner has not been invited' }}</p>
+        }
+        @if (
+          auth.user()?.permissions?.includes('co.create') &&
+          ['pending', 'trial', 'active'].includes(c.status) &&
+          !ownerLoading() &&
+          !ownerError() &&
+          (!ownerInfo() || ownerInfo()?.status === 'invited')
+        ) {
+          <button class="btn btn--primary" (click)="openOwner(c)">
+            {{
+              ownerInfo()
+                ? lang() === 'ar'
+                  ? 'إدارة دعوة المالك'
+                  : 'Manage owner invitation'
+                : lang() === 'ar'
+                  ? 'دعوة المالك'
+                  : 'Invite owner'
+            }}
+          </button>
+        }
+      </section>
+
       @if (auth.user()?.permissions?.includes('co.create') && c.status !== 'archived') {
         <button class="btn btn--primary" (click)="openForm(c)">
           {{ lang() === 'ar' ? 'تعديل الشركة' : 'Edit company' }}
@@ -683,5 +740,124 @@
         {{ lang() === 'ar' ? 'حفظ' : 'Save company' }}
       </button>
     </form>
+  </aside>
+}
+
+@if (ownerDialog(); as c) {
+  <div class="scrim" (click)="!ownerSaving() && closeOwner()"></div>
+  <aside class="drawer" style="overflow: auto" aria-label="Company owner invitation">
+    <div class="drawer__header">
+      <h2>{{ lang() === 'ar' ? 'دعوة مالك الشركة' : 'Invite company owner' }}</h2>
+      <button class="btn" [disabled]="ownerSaving()" (click)="closeOwner()">×</button>
+    </div>
+    <div style="padding: 24px; display: grid; gap: 16px">
+      <p>{{ companyName(c) }}</p>
+      <p>
+        {{ lang() === 'ar' ? 'البريد المستهدف:' : 'Invitation recipient:' }}
+        {{ ownerInfo()?.email || c.adminEmail }}
+      </p>
+      <p>
+        {{
+          lang() === 'ar'
+            ? 'أنشئ رابط تفعيل لمرة واحدة، صالح لمدة 24 ساعة. أرسله إلى المالك بنفسك؛ إرسال البريد غير مفعّل.'
+            : 'Create a one-use activation link valid for 24 hours. Share it with the owner yourself; email delivery is not configured.'
+        }}
+      </p>
+      @if (ownerError()) {
+        <p role="alert">{{ ownerError() }}</p>
+      }
+      @if (ownerLoading()) {
+        <p>{{ lang() === 'ar' ? 'جار التحميل…' : 'Loading…' }}</p>
+      }
+      @if (ownerLink()) {
+        <p role="status">
+          {{
+            lang() === 'ar'
+              ? 'تم إنشاء رابط التفعيل. انسخه قبل إغلاق النافذة.'
+              : 'Activation link created. Copy it before closing this window.'
+          }}
+        </p>
+        <label
+          >{{ lang() === 'ar' ? 'رابط التفعيل' : 'Activation link'
+          }}<input
+            style="width: 100%; padding: 12px"
+            readonly
+            [value]="ownerLink()"
+            dir="ltr"
+            (click)="$any($event.target).select()"
+        /></label>
+        <p>{{ lang() === 'ar' ? 'ينتهي:' : 'Expires:' }} {{ ownerExpires() }}</p>
+      }
+      @if (!ownerLoading() && (!ownerInfo() || ownerInfo()?.status === 'invited')) {
+        <form (ngSubmit)="inviteOwner()" style="display: grid; gap: 16px">
+          <label
+            >{{ lang() === 'ar' ? 'اسم المالك' : 'Owner name'
+            }}<input
+              style="display: block; width: 100%; padding: 10px"
+              name="ownerName"
+              [(ngModel)]="ownerName"
+              required
+              minlength="2"
+              maxlength="120"
+              [readOnly]="!!ownerInfo()"
+          /></label>
+          <label
+            >{{ lang() === 'ar' ? 'سبب الدعوة' : 'Reason'
+            }}<textarea
+              style="display: block; width: 100%; padding: 10px"
+              name="ownerReason"
+              [(ngModel)]="ownerReason"
+              required
+              minlength="10"
+              maxlength="500"
+            ></textarea>
+          </label>
+          <label
+            >{{ lang() === 'ar' ? 'كلمة مرور حسابك للتأكيد' : 'Your password to confirm'
+            }}<input
+              style="display: block; width: 100%; padding: 10px"
+              type="password"
+              name="ownerPassword"
+              [(ngModel)]="ownerPassword"
+              autocomplete="current-password"
+              required
+              maxlength="256"
+          /></label>
+          <button
+            class="btn btn--primary"
+            [disabled]="
+              ownerSaving() ||
+              !ownerPassword() ||
+              ownerReason().trim().length < 10 ||
+              ownerName().trim().length < 2
+            "
+          >
+            {{
+              ownerSaving()
+                ? lang() === 'ar'
+                  ? 'جار الحفظ…'
+                  : 'Saving…'
+                : ownerInfo()
+                  ? lang() === 'ar'
+                    ? 'إصدار رابط جديد وإبطال السابق'
+                    : 'Reissue link and invalidate previous'
+                  : lang() === 'ar'
+                    ? 'إنشاء دعوة المالك'
+                    : 'Create owner invitation'
+            }}
+          </button>
+          @if (ownerInfo()) {
+            <button
+              type="button"
+              class="btn btn--ghost"
+              [disabled]="ownerSaving() || !ownerPassword() || ownerReason().trim().length < 10"
+              (click)="inviteOwner(true)"
+            >
+              {{ lang() === 'ar' ? 'إلغاء رابط الدعوة الحالي' : 'Revoke current invitation link' }}
+            </button>
+          }
+        </form>
+      }
+    </div>
   </aside>
 }

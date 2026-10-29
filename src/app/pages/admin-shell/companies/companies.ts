@@ -417,16 +417,104 @@ export class Companies {
     this.error.set('');
     try {
       const current = this.editing();
+      let created: Company | undefined;
       if (current)
         await this.api.change(current.id, 'update', { ...this.draft, version: current.version });
-      else await this.api.create(this.draft);
+      else created = await this.api.create(this.draft);
       this.formOpen.set(false);
       this.viewing.set(null);
       await this.reload();
+      if (created) await this.openOwner(created);
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to save company');
     } finally {
       this.saving.set(false);
+    }
+  }
+  readonly ownerInfo = signal<{
+    name: string;
+    email: string;
+    status: string;
+    invitation_expires_at: string | null;
+  } | null>(null);
+  readonly ownerLoading = signal(false);
+  readonly ownerError = signal('');
+  readonly ownerDialog = signal<Company | null>(null);
+  readonly ownerName = signal('');
+  readonly ownerPassword = signal('');
+  readonly ownerReason = signal('');
+  readonly ownerLink = signal('');
+  readonly ownerExpires = signal('');
+  readonly ownerSaving = signal(false);
+  private ownerRequest = 0;
+  async loadOwner(c: Company) {
+    const serial = ++this.ownerRequest;
+    this.ownerLoading.set(true);
+    this.ownerError.set('');
+    this.ownerInfo.set(null);
+    try {
+      const r = await this.auth.request(
+        '/admin/api/v1/companies/' + encodeURIComponent(c.id) + '/owner',
+      );
+      if (serial === this.ownerRequest) this.ownerInfo.set(r.owner);
+    } catch (e) {
+      if (serial === this.ownerRequest) this.ownerError.set((e as Error).message);
+    } finally {
+      if (serial === this.ownerRequest) this.ownerLoading.set(false);
+    }
+  }
+  async openOwner(c: Company) {
+    this.ownerDialog.set(c);
+    this.ownerName.set('');
+    this.ownerPassword.set('');
+    this.ownerReason.set('');
+    this.ownerLink.set('');
+    this.ownerExpires.set('');
+    await this.loadOwner(c);
+    this.ownerName.set(this.ownerInfo()?.name ?? '');
+  }
+  closeOwner() {
+    this.ownerRequest++;
+    this.ownerDialog.set(null);
+    this.ownerPassword.set('');
+    this.ownerLink.set('');
+    this.ownerError.set('');
+  }
+  async inviteOwner(revoke = false) {
+    const c = this.ownerDialog();
+    if (!c || this.ownerSaving()) return;
+    this.ownerSaving.set(true);
+    this.ownerError.set('');
+    this.ownerLink.set('');
+    try {
+      const r = await this.auth.request(
+        '/admin/api/v1/companies/' +
+          encodeURIComponent(c.id) +
+          '/owner/' +
+          (revoke ? 'revoke' : 'invite'),
+        {
+          version: c.version,
+          password: this.ownerPassword(),
+          reason: this.ownerReason(),
+          ...(!revoke ? { name: this.ownerName().trim() } : {}),
+        },
+      );
+      if (r.token) {
+        this.ownerLink.set(location.origin + '/activate/company#token=' + r.token);
+        this.ownerExpires.set(r.expiresAt);
+      }
+      await this.reload();
+      const fresh = this.companies().find((x) => x.id === c.id);
+      if (fresh) {
+        this.ownerDialog.set(fresh);
+        if (this.viewing()?.id === c.id) this.viewing.set(fresh);
+        await this.loadOwner(fresh);
+      }
+    } catch (e) {
+      this.ownerError.set((e as Error).message);
+    } finally {
+      this.ownerPassword.set('');
+      this.ownerSaving.set(false);
     }
   }
   readonly reason = signal('');
@@ -657,10 +745,12 @@ export class Companies {
 
   openView(c: Company): void {
     this.viewing.set(c);
+    void this.loadOwner(c);
     this.kebabFor.set(null);
   }
 
   closeView(): void {
+    this.ownerRequest++;
     this.viewing.set(null);
   }
 

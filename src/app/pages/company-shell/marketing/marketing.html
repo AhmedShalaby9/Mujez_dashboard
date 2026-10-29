@@ -1,0 +1,60 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.spend }}</span>
+    <span class="kpi__value">{{ money(totals().spend) }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.leads }}</span>
+    <span class="kpi__value">{{ totals().leads }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.cpl }}</span>
+    <span class="kpi__value">EGP {{ totals().cpl }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.deals }}</span>
+    <span class="kpi__value">{{ totals().deals }}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.revenue }}</span>
+    <span class="kpi__value kpi__value--ok">{{ money(totals().revenue) }}</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <div class="m-table">
+      <div class="m-head">
+        <span>{{ L().thCampaign }}</span>
+        <span>{{ L().thSource }}</span>
+        <span>{{ L().thSpend }}</span>
+        <span>{{ L().thLeads }}</span>
+        <span>{{ L().thCpl }}</span>
+        <span>{{ L().thDeals }}</span>
+        <span>{{ L().thRevenue }}</span>
+      </div>
+      @for (c of campaigns; track c.name) {
+        <div class="m-row">
+          <span class="m-cell__main">
+            <span class="m-cell__name">{{ name(c) }}</span>
+            <span class="m-cell__sub">{{ project(c) }} · {{ L().statusNames[c.status] }}</span>
+          </span>
+          <span class="m-cell__sub">{{ source(c) }}</span>
+          <span class="mono">{{ money(c.spend) }}</span>
+          <span class="mono">{{ c.leads }}</span>
+          <span class="mono">EGP {{ cpl(c) }}</span>
+          <span class="mono">{{ c.deals }}</span>
+          <span class="mono m-cell__revenue">{{ money(c.revenue) }}</span>
+        </div>
+      }
+    </div>
+  </div>
+</div>

@@ -1,0 +1,93 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+</div>
+
+<div class="chip-row">
+  <button type="button" class="chip" [class.chip--active]="segment() === 'all'" (click)="setSegment('all')">
+    {{ L().segAll }}
+  </button>
+  <button type="button" class="chip" [class.chip--active]="segment() === 'res'" (click)="setSegment('res')">
+    {{ L().segRes }}
+  </button>
+  <button type="button" class="chip" [class.chip--active]="segment() === 'com'" (click)="setSegment('com')">
+    {{ L().segCom }}
+  </button>
+</div>
+
+<div class="kpis">
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.pipeline }}</span>
+    <span class="kpi__value">EGP 186.4M</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.commission }}</span>
+    <span class="kpi__value kpi__value--ok">EGP 1.9M / 2.4M</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.showings }}</span>
+    <span class="kpi__value">23</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi__label">{{ L().kpis.newLeads }}</span>
+    <span class="kpi__value">58</span>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card__head">
+      <span class="card__title">{{ L().todayTitle }}</span>
+    </div>
+    <div class="event-list">
+      @for (e of todayEvents; track e.id) {
+        <div class="event-row">
+          <span class="event-row__time">{{ e.time }}</span>
+          <span class="pill" [class]="'pill--' + e.type">{{ L().typeNames[e.type] }}</span>
+          <div class="event-row__text">
+            <span class="event-row__title">{{ eventTitle(e) }}</span>
+            <span class="event-row__meta">{{ owner(e) }}</span>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__head">
+      <span class="card__title">{{ L().hotTitle }}</span>
+    </div>
+    <div class="lead-list">
+      @for (l of hotLeads(); track l.id) {
+        <div class="lead-row">
+          <div class="lead-row__score">{{ l.score }}</div>
+          <div class="lead-row__text">
+            <span class="lead-row__name">{{ name(l) }}</span>
+            <span class="lead-row__meta">{{ want(l) }} · {{ l.budget }}</span>
+          </div>
+          <span class="lead-row__owner mono">{{ owner(l) }}</span>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card__head">
+    <span class="card__title">{{ L().closingsTitle }}</span>
+  </div>
+  <div class="closing-list">
+    @for (c of closings(); track c.id) {
+      <div class="closing-row">
+        <span class="mono closing-row__id">{{ c.id }}</span>
+        <span class="closing-row__deal">{{ deal(c) }}</span>
+        <span class="closing-row__value mono">{{ c.value }}</span>
+        <span class="closing-row__owner">{{ owner(c) }}</span>
+        <span class="closing-row__date">{{ c.date }}</span>
+      </div>
+    }
+  </div>
+</div>

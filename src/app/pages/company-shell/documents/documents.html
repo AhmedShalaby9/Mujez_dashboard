@@ -1,0 +1,81 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+  <div class="page-head__actions">
+    <button type="button" class="btn btn--primary" (click)="openUpload()">{{ L().uploadBtn }}</button>
+  </div>
+</div>
+
+<div class="chip-row">
+  <button type="button" class="chip" [class.chip--active]="kindFilter() === 'all'" (click)="kindFilter.set('all')">
+    {{ L().kindAll }}
+  </button>
+  @for (k of kinds; track k) {
+    <button type="button" class="chip" [class.chip--active]="kindFilter() === k" (click)="kindFilter.set(k)">
+      {{ L().kindNames[k] }}
+    </button>
+  }
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <div class="d-table">
+      <div class="d-head">
+        <span>{{ L().thFile }}</span>
+        <span>{{ L().thSubject }}</span>
+        <span>{{ L().thUploaded }}</span>
+        <span>{{ L().thExpires }}</span>
+      </div>
+      @for (d of filtered(); track d.id) {
+        <div class="d-row">
+          <span class="d-cell__main">
+            <span class="d-cell__file">{{ d.file }}</span>
+            <span class="d-cell__sub">{{ L().kindNames[d.kind] }}</span>
+          </span>
+          <span class="d-cell__sub">{{ subject(d) }}</span>
+          <span class="d-cell__sub">{{ uploadedBy(d) }} · {{ d.at }}</span>
+          @if (d.expires) {
+            <span class="pill" [class.pill--warn]="d.expiringSoon">{{ d.expires }}</span>
+          } @else {
+            <span class="d-cell__sub">{{ L().noExpiry }}</span>
+          }
+        </div>
+      }
+      @if (!filtered().length) {
+        <div class="t-empty">{{ L().emptyTitle }}</div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (uploadOpen()) {
+  <div class="scrim" (click)="closeUpload()"></div>
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().uploadTitle }}</span>
+      <div class="field">
+        <span class="field__label">{{ L().kindLabel }}</span>
+        <select class="textbox" [value]="newKind()" (change)="newKind.set($any($event.target).value)">
+          @for (k of kinds; track k) {
+            <option [value]="k">{{ L().kindNames[k] }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <span class="field__label">{{ L().subjectLabel }}</span>
+        <input class="textbox" [value]="newSubject()" (input)="newSubject.set($any($event.target).value)" />
+      </div>
+      <div class="field">
+        <span class="field__label">{{ L().fileLabel }}</span>
+        <input class="textbox" [value]="newFile()" (input)="newFile.set($any($event.target).value)" placeholder="document.pdf" />
+      </div>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeUpload()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" [disabled]="!newFile().trim()" (click)="submitUpload()">{{ L().upload }}</button>
+    </div>
+  </div>
+}

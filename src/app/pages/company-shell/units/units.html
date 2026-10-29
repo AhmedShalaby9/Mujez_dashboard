@@ -1,0 +1,64 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+</div>
+
+<input
+  type="text"
+  class="search"
+  [placeholder]="L().searchPh"
+  [value]="search()"
+  (input)="search.set($any($event.target).value)"
+/>
+
+<div class="chip-row">
+  <button type="button" class="chip" [class.chip--active]="typeFilter() === 'all'" (click)="typeFilter.set('all')">
+    {{ L().typeAll }}
+  </button>
+  @for (t of types; track t) {
+    <button type="button" class="chip" [class.chip--active]="typeFilter() === t" (click)="typeFilter.set(t)">
+      {{ L().typeNames[t] }}
+    </button>
+  }
+</div>
+
+<div class="chip-row chip-row--second">
+  <button type="button" class="chip chip--sm" [class.chip--active]="statusFilter() === 'all'" (click)="statusFilter.set('all')">
+    {{ L().statusAll }}
+  </button>
+  @for (s of statuses; track s) {
+    <button type="button" class="chip chip--sm" [class.chip--active]="statusFilter() === s" (click)="statusFilter.set(s)">
+      {{ L().statusNames[s] }}
+    </button>
+  }
+</div>
+
+<div class="unit-grid">
+  @for (u of filtered(); track u.code) {
+    <div class="unit-card">
+      <div class="unit-card__head">
+        <span class="mono unit-card__code">{{ u.code }}</span>
+        <span class="pill" [class]="'pill--' + u.status">{{ L().statusNames[u.status] }}</span>
+      </div>
+      <span class="unit-card__project">{{ project(u) }}</span>
+      <div class="unit-card__specs">
+        <span>{{ L().typeNames[u.type] }}</span>
+        @if (u.bedrooms) {
+          <span>· {{ u.bedrooms }} {{ L().bedrooms }}</span>
+        }
+        <span>· {{ u.area }} {{ L().area }}</span>
+        <span>· {{ view(u) }}</span>
+      </div>
+      <div class="unit-card__foot">
+        <span class="unit-card__price mono">{{ u.price }}</span>
+        <span class="tag">{{ L().listingNames[u.listing] }}</span>
+      </div>
+    </div>
+  }
+  @if (!filtered().length) {
+    <div class="t-empty">{{ L().emptyTitle }}</div>
+  }
+</div>

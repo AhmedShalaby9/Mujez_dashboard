@@ -1,0 +1,118 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+</div>
+
+<div class="chip-row">
+  <button type="button" class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="statusFilter.set('all')">
+    {{ L().statusAll }}
+  </button>
+  @for (s of statuses; track s) {
+    <button type="button" class="chip" [class.chip--active]="statusFilter() === s" (click)="statusFilter.set(s)">
+      {{ L().statusNames[s] }}
+    </button>
+  }
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <div class="r-table">
+      <div class="r-head">
+        <span>{{ L().thUnit }}</span>
+        <span>{{ L().thContact }}</span>
+        <span>{{ L().thAgent }}</span>
+        <span>{{ L().thExpiry }}</span>
+        <span>{{ L().thStatus }}</span>
+        <span>{{ L().thActions }}</span>
+      </div>
+      @for (r of filtered(); track r.id) {
+        <div class="r-row">
+          <span class="mono">{{ r.unit }}</span>
+          <span>{{ contact(r) }}</span>
+          <span class="r-cell__sub">{{ agent(r) }}</span>
+          <span class="mono r-cell__sub">{{ r.expiresIn }}</span>
+          <span class="pill" [class]="'pill--' + r.status">{{ L().statusNames[r.status] }}</span>
+          <span class="r-actions">
+            @if (r.status === 'hold') {
+              <button type="button" class="row-btn" (click)="openConfirm(r)">{{ L().confirmBtn }}</button>
+              <button type="button" class="row-btn" (click)="openExtend(r)">{{ L().extendBtn }}</button>
+              <button type="button" class="row-btn row-btn--danger" (click)="openCancel(r)">{{ L().cancelBtn }}</button>
+            } @else if (r.status === 'reserved') {
+              <button type="button" class="row-btn" (click)="openExtend(r)">{{ L().extendBtn }}</button>
+              <button type="button" class="row-btn row-btn--danger" (click)="openCancel(r)">{{ L().cancelBtn }}</button>
+            }
+          </span>
+        </div>
+      }
+      @if (!filtered().length) {
+        <div class="t-empty">{{ L().emptyTitle }}</div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (confirmTarget(); as r) {
+  <div class="scrim" (click)="closeAll()"></div>
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().confirmTitle }}</span>
+      <p class="dialog__text">{{ r.unit }} · {{ contact(r) }}</p>
+      <div class="field">
+        <span class="field__label">{{ L().depositLabel }}</span>
+        <input class="textbox" type="number" [value]="depositInput()" (input)="depositInput.set($any($event.target).value)" />
+      </div>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeAll()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" [disabled]="!depositInput().trim()" (click)="applyConfirm()">{{ L().apply }}</button>
+    </div>
+  </div>
+}
+
+@if (extendTarget(); as r) {
+  <div class="scrim" (click)="closeAll()"></div>
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().extendTitle }}</span>
+      <p class="dialog__text">{{ r.unit }} · {{ contact(r) }}</p>
+      <div class="dur-row">
+        @for (d of L().durations; track d) {
+          <button type="button" class="chip" [class.chip--active]="extendDuration() === d" (click)="extendDuration.set(d)">{{ d }}</button>
+        }
+      </div>
+      <div class="field">
+        <span class="field__label">{{ L().reasonLabel }}</span>
+        <textarea class="textarea" rows="2" [placeholder]="L().reasonPh" [value]="extendReason()" (input)="extendReason.set($any($event.target).value)"></textarea>
+      </div>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeAll()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" [disabled]="extendReason().trim().length < 5" (click)="applyExtend()">{{ L().apply }}</button>
+    </div>
+  </div>
+}
+
+@if (cancelTarget(); as r) {
+  <div class="scrim" (click)="closeAll()"></div>
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().cancelTitle }}</span>
+      <p class="dialog__text">{{ r.unit }} · {{ contact(r) }}</p>
+      <div class="field">
+        <span class="field__label">{{ L().reasonLabel }}</span>
+        <textarea class="textarea" rows="2" [placeholder]="L().cancelReasonPh" [value]="cancelReason()" (input)="cancelReason.set($any($event.target).value)"></textarea>
+      </div>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeAll()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" [disabled]="cancelReason().trim().length < 5" (click)="applyCancel()">{{ L().apply }}</button>
+    </div>
+  </div>
+}
+
+@if (toast()) {
+  <div class="toast">{{ toast() }}</div>
+}

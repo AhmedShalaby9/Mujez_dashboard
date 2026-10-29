@@ -1,0 +1,75 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+</div>
+
+<div class="chip-row">
+  <button type="button" class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="statusFilter.set('all')">
+    {{ L().statusAll }}
+  </button>
+  @for (s of statuses; track s) {
+    <button type="button" class="chip" [class.chip--active]="statusFilter() === s" (click)="statusFilter.set(s)">
+      {{ L().statusNames[s] }}
+    </button>
+  }
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <div class="k-table">
+      <div class="k-head">
+        <span>{{ L().thDeal }}</span>
+        <span>{{ L().thGross }}</span>
+        <span>{{ L().thStatus }}</span>
+        <span>{{ L().thAction }}</span>
+      </div>
+      @for (c of filtered(); track c.deal) {
+        <div class="k-row">
+          <button type="button" class="k-cell__main" (click)="open(c)">
+            <span class="mono">{{ c.deal }}</span>
+            <span class="k-cell__sub">{{ c.unit }} · {{ contact(c) }}</span>
+          </button>
+          <span class="mono">{{ money(c.gross) }} ({{ c.rate }}%)</span>
+          <span class="pill" [class]="'pill--' + c.status">{{ L().statusNames[c.status] }}</span>
+          <span>
+            @if (L().nextAction[c.status] !== '—') {
+              <button type="button" class="row-btn" (click)="advance(c)">{{ L().nextAction[c.status] }}</button>
+            }
+          </span>
+        </div>
+      }
+      @if (!filtered().length) {
+        <div class="t-empty">{{ L().emptyTitle }}</div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (selected(); as c) {
+  <div class="scrim" (click)="close()"></div>
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title mono">{{ c.deal }}</span>
+      <p class="dialog__text">{{ c.unit }} · {{ contact(c) }} · {{ money(c.gross) }} ({{ c.rate }}%)</p>
+      <span class="section-title">{{ L().linesTitle }}</span>
+      <div class="line-list">
+        @for (l of c.lines; track l.who) {
+          <div class="line-row">
+            <span class="line-row__who">{{ lineWho(l) }}</span>
+            <span class="line-row__pct mono">{{ l.pct }}%</span>
+            <span class="line-row__amount mono">{{ money(l.amount) }}</span>
+          </div>
+        }
+      </div>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="close()">{{ L().close }}</button>
+      @if (L().nextAction[c.status] !== '—') {
+        <button type="button" class="btn btn--primary" (click)="advance(c)">{{ L().nextAction[c.status] }}</button>
+      }
+    </div>
+  </div>
+}

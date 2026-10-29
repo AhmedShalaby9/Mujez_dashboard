@@ -1,0 +1,81 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+</div>
+
+<input
+  type="text"
+  class="search"
+  [placeholder]="L().searchPh"
+  [value]="search()"
+  (input)="search.set($any($event.target).value)"
+/>
+
+<div class="chip-row">
+  @for (u of users(); track u) {
+    <button type="button" class="chip" [class.chip--active]="userFilter() === u" (click)="userFilter.set(u)">
+      {{ u === 'all' ? L().userAll : u }}
+    </button>
+  }
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <div class="au-table">
+      <div class="au-head">
+        <span>{{ L().thAction }}</span>
+        <span>{{ L().thResource }}</span>
+        <span>{{ L().thActor }}</span>
+        <span>{{ L().thAt }}</span>
+      </div>
+      @for (e of filtered(); track e.id) {
+        <button type="button" class="au-row" (click)="open(e)">
+          <span class="au-cell__main">
+            <span>{{ action(e) }}</span>
+            <span class="au-cell__sub mono">{{ e.id }}</span>
+          </span>
+          <span class="au-cell__sub">{{ e.resource }}</span>
+          <span class="au-cell__sub">{{ actor(e) }}</span>
+          <span class="au-cell__sub">{{ e.at }}</span>
+        </button>
+      }
+      @if (!filtered().length) {
+        <div class="t-empty">{{ L().emptyTitle }}</div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (selected(); as e) {
+  <div class="scrim" (click)="close()"></div>
+  <div class="drawer" (click)="$event.stopPropagation()">
+    <div class="drawer__header">
+      <div class="drawer__headerText">
+        <span class="drawer__name">{{ action(e) }}</span>
+        <span class="drawer__sub mono">{{ e.id }} · {{ e.at }}</span>
+      </div>
+      <button type="button" class="drawer__close" (click)="close()">✕</button>
+    </div>
+    <div class="drawer__body">
+      <div class="drawer__row"><span class="drawer__k">Resource</span><span>{{ e.resource }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">User</span><span>{{ actor(e) }}</span></div>
+
+      <div class="diff-grid">
+        <div class="diff-box diff-box--before">
+          <span class="diff-box__title">{{ L().drawerBefore }}</span>
+          <span class="mono diff-box__value">{{ e.before }}</span>
+        </div>
+        <div class="diff-box diff-box--after">
+          <span class="diff-box__title">{{ L().drawerAfter }}</span>
+          <span class="mono diff-box__value">{{ e.after }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="drawer__footer">
+      <button type="button" class="btn btn--ghost" (click)="close()">{{ L().close }}</button>
+    </div>
+  </div>
+}

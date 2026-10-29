@@ -1,0 +1,63 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+</div>
+
+<input
+  type="text"
+  class="search"
+  [placeholder]="L().addPh"
+  [value]="quickAdd()"
+  (input)="quickAdd.set($any($event.target).value)"
+  (keydown.enter)="addQuick()"
+/>
+
+<div class="chip-row">
+  <button type="button" class="chip" [class.chip--active]="groupFilter() === 'all'" (click)="groupFilter.set('all')">
+    {{ L().groupAll }}
+  </button>
+  @for (g of groups; track g) {
+    <button type="button" class="chip" [class.chip--active]="groupFilter() === g" (click)="groupFilter.set(g)">
+      {{ L().groupNames[g] }}
+    </button>
+  }
+</div>
+
+<div class="chip-row chip-row--second">
+  @for (o of owners(); track o) {
+    <button type="button" class="chip chip--sm" [class.chip--active]="ownerFilter() === o" (click)="ownerFilter.set(o)">
+      {{ o === 'all' ? L().ownerAll : o }}
+    </button>
+  }
+</div>
+
+@for (g of grouped(); track g.group) {
+  <div class="card">
+    <div class="card__head">
+      <span class="card__title">{{ L().groupNames[g.group] }}</span>
+      <span class="card__count">{{ g.items.length }}</span>
+    </div>
+    <div class="task-list">
+      @for (t of g.items; track t.id) {
+        <div class="task-row">
+          <button type="button" class="task-row__check" [class.task-row__check--on]="t.done" (click)="toggleDone(t)">
+            @if (t.done) { ✓ }
+          </button>
+          <span class="task-row__title">{{ title(t) }}</span>
+          <span class="pill" [class]="'pill--' + t.priority">{{ L().priorityNames[t.priority] }}</span>
+          <span class="task-row__owner">{{ owner(t) }}</span>
+          <span class="task-row__due mono">{{ t.dueLabel }}</span>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+@if (!grouped().length) {
+  <div class="card">
+    <div class="t-empty">{{ L().emptyTitle }}</div>
+  </div>
+}

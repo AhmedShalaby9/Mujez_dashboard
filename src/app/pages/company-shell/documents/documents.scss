@@ -1,0 +1,280 @@
+:host {
+  display: contents;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+select,
+input {
+  font-family: inherit;
+}
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 16px;
+}
+
+.page-head__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.page-head__eyebrow {
+  font-size: 12px;
+  color: #6b6a65;
+}
+
+.page-head__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.page-head__sub {
+  font-size: 12px;
+  color: #6b6a65;
+}
+
+.page-head__actions {
+  margin-inline-start: auto;
+}
+
+.btn {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 0;
+}
+
+.btn--ghost {
+  border: 1px solid #dddbd4;
+  background: #fff;
+  color: #17181a;
+
+  &:hover {
+    background: #f7f6f2;
+  }
+}
+
+.btn--primary {
+  background: var(--platform-primary, #3d4fd6);
+  color: #fff;
+
+  &:hover {
+    background: #2f3fb8;
+  }
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 14px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid #dddbd4;
+  background: #fff;
+  color: #45443f;
+
+  &:hover {
+    background: #f7f6f2;
+  }
+}
+
+.chip--active {
+  border-color: var(--platform-primary, #3d4fd6);
+  background: #e6e8fb;
+  color: #2b37a0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #e4e2dc;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.d-table {
+  min-width: 800px;
+}
+
+.d-head,
+.d-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1.3fr 1.3fr 110px;
+  gap: 10px;
+  align-items: center;
+}
+
+.d-head {
+  padding: 8px 14px;
+  border-bottom: 1px solid #eeede8;
+  font-size: 11px;
+  color: #8a8983;
+}
+
+.d-row {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f2f1ed;
+  font-size: 13px;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.d-cell__main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.d-cell__file {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.d-cell__sub {
+  font-size: 12px;
+  color: #6b6a65;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pill {
+  width: fit-content;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  background: #eeede8;
+  color: #45443f;
+}
+
+.pill--warn {
+  background: #f8e1dc;
+  color: #9a3422;
+}
+
+.t-empty {
+  padding: 32px 14px;
+  text-align: center;
+  color: #8a8983;
+  font-size: 13px;
+}
+
+// ---- dialog ----
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(22, 24, 42, 0.4);
+}
+
+.dialog {
+  position: fixed;
+  z-index: 92;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(400px, calc(100vw - 24px));
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 24px 60px rgba(22, 24, 42, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 18px;
+}
+
+.dialog__body--pad {
+  padding-top: 18px;
+}
+
+.dialog__title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid #eeede8;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.field__label {
+  font-size: 12px;
+  color: #6b6a65;
+}
+
+.textbox {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #dddbd4;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  background: #fff;
+
+  &:focus {
+    border-color: var(--platform-primary, #3d4fd6);
+    box-shadow: 0 0 0 3px #e6e8fb;
+  }
+}
+
+@media (max-width: 760px) {
+  .d-table {
+    min-width: 680px;
+  }
+}

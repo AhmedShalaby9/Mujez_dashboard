@@ -1,0 +1,202 @@
+:host {
+  display: contents;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 16px;
+}
+
+.page-head__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.page-head__eyebrow {
+  font-size: 12px;
+  color: #6b6a65;
+}
+
+.page-head__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.page-head__sub {
+  font-size: 12px;
+  color: #6b6a65;
+}
+
+.search {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #dddbd4;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+
+  &:focus {
+    border-color: var(--platform-primary, #3d4fd6);
+    box-shadow: 0 0 0 3px #e6e8fb;
+  }
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip-row--second {
+  margin-top: -4px;
+}
+
+.chip {
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 14px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid #dddbd4;
+  background: #fff;
+  color: #45443f;
+  font-family: inherit;
+
+  &:hover {
+    background: #f7f6f2;
+  }
+}
+
+.chip--sm {
+  height: 26px;
+  font-size: 11px;
+}
+
+.chip--active {
+  border-color: var(--platform-primary, #3d4fd6);
+  background: #e6e8fb;
+  color: #2b37a0;
+}
+
+.mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+// ---- unit grid ----
+
+.unit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.unit-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid #e4e2dc;
+  border-radius: 8px;
+}
+
+.unit-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.unit-card__code {
+  font-size: 12px;
+  color: #6b6a65;
+}
+
+.unit-card__project {
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unit-card__specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  font-size: 11.5px;
+  color: #6b6a65;
+}
+
+.unit-card__foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.unit-card__price {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tag {
+  font-size: 10.5px;
+  color: #8a8983;
+}
+
+.pill {
+  width: fit-content;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.pill--available {
+  background: #dde0fa;
+  color: #2b37a0;
+}
+
+.pill--hold {
+  background: #fdf3dc;
+  color: #8a5a14;
+}
+
+.pill--reserved {
+  background: #fde0cf;
+  color: #9a5222;
+}
+
+.pill--under_contract {
+  background: #c7e3d3;
+  color: #1f5e3f;
+}
+
+.pill--sold {
+  background: #eeede8;
+  color: #45443f;
+}
+
+.t-empty {
+  grid-column: 1 / -1;
+  padding: 32px 14px;
+  text-align: center;
+  color: #8a8983;
+  font-size: 13px;
+}

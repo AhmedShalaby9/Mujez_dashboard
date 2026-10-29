@@ -1,0 +1,72 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <div class="rt-table">
+      <div class="rt-head">
+        <span>{{ L().thPriority }}</span>
+        <span>{{ L().thMatch }}</span>
+        <span>{{ L().thStrategy }}</span>
+        <span>{{ L().thTarget }}</span>
+        <span>{{ L().thSla }}</span>
+        <span>{{ L().thActive }}</span>
+        <span></span>
+      </div>
+      @for (r of rules(); track r.id; let i = $index) {
+        <div class="rt-row">
+          <span class="mono">{{ i + 1 }}</span>
+          <span>{{ match(r) }}</span>
+          <span class="rt-cell__sub">{{ L().strategyNames[r.strategy] }}</span>
+          <span class="rt-cell__sub">{{ target(r) }}</span>
+          <span class="mono">{{ r.slaMinutes }} {{ L().minutes }}</span>
+          <button type="button" class="toggle toggle--sm" [class.toggle--on]="r.active" (click)="toggleActive(r)">
+            <span class="toggle__knob"></span>
+          </button>
+          <span class="rt-reorder">
+            <button type="button" class="reorder-btn" [disabled]="i === 0" (click)="moveUp(i)">▲</button>
+            <button type="button" class="reorder-btn" [disabled]="i === rules().length - 1" (click)="moveDown(i)">▼</button>
+          </span>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<div class="card sim-card">
+  <div class="card__head">
+    <span class="card__title">{{ L().simTitle }}</span>
+  </div>
+  <div class="sim-body">
+    <div class="field">
+      <span class="field__label">{{ L().simSource }}</span>
+      <select class="textbox" [value]="simSource()" (change)="simSource.set($any($event.target).value)">
+        <option value="Referral">Referral</option>
+        <option value="Facebook">Facebook</option>
+        <option value="Website">Website</option>
+      </select>
+    </div>
+    <div class="field">
+      <span class="field__label">{{ L().simSegment }}</span>
+      <select class="textbox" [value]="simSegment()" (change)="simSegment.set($any($event.target).value)">
+        <option value="res">Residential</option>
+        <option value="com">Commercial</option>
+      </select>
+    </div>
+    <div class="field">
+      <span class="field__label">{{ L().simBudget }}</span>
+      <input class="textbox" type="number" [value]="simBudget()" (input)="simBudget.set($any($event.target).value)" />
+    </div>
+    <button type="button" class="btn btn--primary" (click)="simulate()">{{ L().simBtn }}</button>
+  </div>
+  @if (simResult()) {
+    <div class="sim-result">
+      {{ L().simResultPrefix }} <strong>{{ resultAgent() }}</strong> — {{ L().simRulePrefix }} "{{ resultRule() }}"
+    </div>
+  }
+</div>

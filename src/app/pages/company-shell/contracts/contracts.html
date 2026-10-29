@@ -1,0 +1,104 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+</div>
+
+<div class="chip-row">
+  <button type="button" class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="statusFilter.set('all')">
+    {{ L().statusAll }}
+  </button>
+  @for (s of statuses; track s) {
+    <button type="button" class="chip" [class.chip--active]="statusFilter() === s" (click)="statusFilter.set(s)">
+      {{ L().statusNames[s] }}
+    </button>
+  }
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <div class="c-table">
+      <div class="c-head">
+        <span>{{ L().thContract }}</span>
+        <span>{{ L().thUnit }}</span>
+        <span>{{ L().thValue }}</span>
+        <span>{{ L().thDate }}</span>
+        <span>{{ L().thStatus }}</span>
+        <span>{{ L().thAction }}</span>
+      </div>
+      @for (c of filtered(); track c.ref) {
+        <button type="button" class="c-row" (click)="open(c)">
+          <span class="c-cell__main">
+            <span class="mono">{{ c.ref }}</span>
+            <span class="c-cell__sub">{{ L().typeNames[c.type] }} · {{ contact(c) }}</span>
+          </span>
+          <span class="mono">{{ c.unit }}</span>
+          <span class="mono">{{ c.value }}</span>
+          <span class="c-cell__sub">{{ c.keyDate }}</span>
+          <span class="pill" [class]="'pill--' + c.status">{{ L().statusNames[c.status] }}</span>
+          <span class="c-action">{{ L().primaryAction[c.status] }}</span>
+        </button>
+      }
+      @if (!filtered().length) {
+        <div class="t-empty">{{ L().emptyTitle }}</div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (selected(); as c) {
+  <div class="scrim" (click)="close()"></div>
+  <div class="drawer" (click)="$event.stopPropagation()">
+    <div class="drawer__header">
+      <div class="drawer__headerText">
+        <span class="drawer__name mono">{{ c.ref }}</span>
+        <span class="drawer__sub">{{ L().typeNames[c.type] }} · {{ c.unit }}</span>
+      </div>
+      <button type="button" class="drawer__close" (click)="close()">✕</button>
+    </div>
+    <div class="drawer__body">
+      <div class="meta-row">
+        <span class="pill" [class]="'pill--' + c.status">{{ L().statusNames[c.status] }}</span>
+        <span class="pill">{{ c.value }}</span>
+      </div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().thDate }}</span><span>{{ c.keyDate }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">Owner</span><span>{{ owner(c) }}</span></div>
+
+      <div class="section-title">{{ L().signersTitle }}</div>
+      <div class="signer-list">
+        @for (s of c.signers; track s.name) {
+          <div class="signer-row">
+            <span class="signer-row__role">{{ signerRole(s) }}</span>
+            <span class="signer-row__name">{{ signerName(s) }}</span>
+            <span class="pill" [class]="s.signed ? 'pill--signed' : 'pill--pending'">{{ s.signed ? '✓' : '…' }}</span>
+          </div>
+        }
+      </div>
+
+      @if (c.docs.length) {
+        <div class="section-title">{{ L().docsTitle }}</div>
+        <div class="doc-list">
+          @for (d of c.docs; track d.label) {
+            <button type="button" class="doc-row" (click)="toggleDoc(d)">
+              <span class="doc-row__box" [class.doc-row__box--on]="d.satisfied">
+                @if (d.satisfied) { ✓ }
+              </span>
+              <span class="doc-row__label">{{ docLabel(d) }}</span>
+              @if (d.required) {
+                <span class="tag">required</span>
+              }
+            </button>
+          }
+        </div>
+      }
+    </div>
+    <div class="drawer__footer">
+      <button type="button" class="btn btn--ghost" (click)="close()">{{ L().drawerClose }}</button>
+      @if (L().primaryAction[c.status] !== '—') {
+        <button type="button" class="btn btn--primary">{{ L().primaryAction[c.status] }}</button>
+      }
+    </div>
+  </div>
+}

@@ -1,0 +1,158 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+  <div class="page-head__actions">
+    <button type="button" class="btn btn--primary" (click)="openNew()">{{ L().newBtn }}</button>
+  </div>
+</div>
+
+<input
+  type="text"
+  class="search"
+  [placeholder]="L().searchPh"
+  [value]="search()"
+  (input)="search.set($any($event.target).value)"
+/>
+
+<div class="chip-row">
+  <button type="button" class="chip" [class.chip--active]="stageFilter() === 'all'" (click)="stageFilter.set('all')">
+    {{ L().stageAll }}
+  </button>
+  @for (s of stages; track s) {
+    <button type="button" class="chip" [class.chip--active]="stageFilter() === s" (click)="stageFilter.set(s)">
+      {{ L().stageNames[s] }}
+    </button>
+  }
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+    <div class="l-table">
+      <div class="l-head">
+        <span>{{ L().thContact }}</span>
+        <span>{{ L().thWant }}</span>
+        <span>{{ L().thSource }}</span>
+        <span>{{ L().thOwner }}</span>
+        <span>{{ L().thScore }}</span>
+        <span>{{ L().thStage }}</span>
+      </div>
+      @for (l of filtered(); track l.id) {
+        <button type="button" class="l-row" (click)="open(l)">
+          <span class="l-cell__main">
+            <span class="l-cell__name">{{ name(l) }}</span>
+            <span class="l-cell__sub mono">{{ l.phone }}</span>
+          </span>
+          <span class="l-cell__sub">{{ want(l) }} · {{ l.budget }}</span>
+          <span class="l-cell__sub">{{ source(l) }}</span>
+          <span class="l-cell__sub">{{ owner(l) }}</span>
+          <span class="mono">{{ l.score }}</span>
+          <span class="pill" [class]="'pill--' + l.stage">{{ L().stageNames[l.stage] }}</span>
+        </button>
+      }
+      @if (!filtered().length) {
+        <div class="t-empty">{{ L().emptyTitle }}</div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (selected(); as l) {
+  <div class="scrim" (click)="closeDrawer()"></div>
+  <div class="drawer" (click)="$event.stopPropagation()">
+    <div class="drawer__header">
+      <div class="drawer__headerText">
+        <span class="drawer__name">{{ name(l) }}</span>
+        <span class="drawer__sub mono">{{ l.phone }} · {{ l.id }}</span>
+      </div>
+      <button type="button" class="drawer__close" (click)="closeDrawer()">✕</button>
+    </div>
+    <div class="drawer__body">
+      <div class="meta-row">
+        <span class="pill" [class]="'pill--' + l.stage">{{ L().stageNames[l.stage] }}</span>
+        <span class="pill">{{ l.budget }}</span>
+      </div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().thWant }}</span><span>{{ want(l) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().thSource }}</span><span>{{ source(l) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().thOwner }}</span><span>{{ owner(l) }}</span></div>
+      <div class="drawer__row"><span class="drawer__k">{{ L().thScore }}</span><span class="mono">{{ l.score }}</span></div>
+
+      <div class="section-title">{{ L().drawerActivity }}</div>
+      <div class="thread">
+        @for (t of timeline; track t.at) {
+          <div class="activity-row">
+            <span class="activity-row__dot"></span>
+            <div class="activity-row__text">
+              <span class="activity-row__title">{{ timelineText(t) }}</span>
+              <span class="activity-row__time">{{ t.at }}</span>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+    <div class="drawer__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeDrawer()">{{ L().drawerClose }}</button>
+    </div>
+  </div>
+}
+
+@if (newOpen()) {
+  <div class="scrim" (click)="closeNew()"></div>
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().newTitle }}</span>
+      <div class="field">
+        <span class="field__label">{{ L().nameLabel }}</span>
+        <input class="textbox" [value]="newName()" (input)="newName.set($any($event.target).value)" />
+      </div>
+      <div class="field">
+        <span class="field__label">{{ L().phoneLabel }}</span>
+        <input class="textbox" [value]="newPhone()" (input)="newPhone.set($any($event.target).value)" placeholder="+20 100 123 4567" />
+      </div>
+      <div class="field">
+        <span class="field__label">{{ L().wantLabel }}</span>
+        <input class="textbox" [value]="newWant()" (input)="newWant.set($any($event.target).value)" />
+      </div>
+      <div class="field">
+        <span class="field__label">{{ L().budgetLabel }}</span>
+        <input class="textbox" [value]="newBudget()" (input)="newBudget.set($any($event.target).value)" placeholder="EGP" />
+      </div>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeNew()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--primary" (click)="submitNew()">{{ L().create }}</button>
+    </div>
+  </div>
+}
+
+@if (dupOpen()) {
+  <div class="scrim" (click)="cancelDuplicate()"></div>
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ L().dupTitle }}</span>
+      <p class="dialog__text">{{ L().dupBody }}</p>
+      <div class="field">
+        <span class="field__label">{{ L().dupReasonLabel }}</span>
+        <textarea class="textarea" rows="2" [placeholder]="L().dupReasonPh" [value]="dupReason()" (input)="dupReason.set($any($event.target).value)"></textarea>
+      </div>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="resolveDuplicate('merge')">{{ L().dupMerge }}</button>
+      <button type="button" class="btn btn--ghost" (click)="resolveDuplicate('link')">{{ L().dupLink }}</button>
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="dupReason().trim().length < 5"
+        (click)="resolveDuplicate('create')"
+      >
+        {{ L().dupCreate }}
+      </button>
+    </div>
+  </div>
+}
+
+@if (toast()) {
+  <div class="toast">{{ toast() }}</div>
+}

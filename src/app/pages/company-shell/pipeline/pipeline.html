@@ -1,0 +1,44 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+</div>
+
+<div class="board-scroll">
+  <div class="board">
+    @for (col of columns(); track col.stage) {
+      <div class="column">
+        <div class="column__head">
+          <span class="column__title">{{ L().stageNames[col.stage] }}</span>
+          <span class="column__count">{{ col.items.length }} {{ L().dealsLabel }}</span>
+        </div>
+        <div class="column__total mono">{{ L().totalLabel }}: {{ money(col.total) }}</div>
+        <div class="column__cards">
+          @for (d of col.items; track d.id) {
+            <div class="deal-card">
+              <span class="deal-card__id mono">{{ d.id }}</span>
+              <span class="deal-card__title">{{ title(d) }}</span>
+              <span class="deal-card__contact">{{ contact(d) }}</span>
+              <div class="deal-card__meta">
+                <span class="deal-card__value mono">{{ money(d.value) }}</span>
+                @if (d.type === 'lease') {
+                  <span class="pill pill--lease">Lease</span>
+                }
+              </div>
+              <span class="deal-card__owner">{{ owner(d) }}</span>
+              @if (nextStage(d.stage)) {
+                <button type="button" class="deal-card__btn" (click)="move(d)">
+                  {{ L().moveBtn }}
+                </button>
+              } @else {
+                <span class="deal-card__final">{{ L().lastStageHint }}</span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>

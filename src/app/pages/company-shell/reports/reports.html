@@ -1,0 +1,95 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+  <div class="page-head__actions">
+    <button type="button" class="btn btn--ghost" (click)="exportCsv()">{{ L().exportBtn }}</button>
+  </div>
+</div>
+
+<div class="chip-row">
+  @for (p of periods; track p) {
+    <button type="button" class="chip" [class.chip--active]="period() === p" (click)="period.set(p)">
+      {{ L().periodNames[p] }}
+    </button>
+  }
+</div>
+
+<div class="grid-2">
+  <div class="card chart-card">
+    <span class="card__title">{{ L().volumeTitle }}</span>
+    <div class="bars">
+      @for (v of volume; track v.label) {
+        <div class="bar-col">
+          <div class="bar-col__bar" [style.height.%]="(v.value / maxVolume) * 100"></div>
+          <span class="bar-col__label">{{ v.label }}</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="card chart-card">
+    <span class="card__title">{{ L().funnelTitle }}</span>
+    <div class="funnel">
+      @for (f of funnel; track f.key) {
+        <div class="funnel-row">
+          <span class="funnel-row__label">{{ funnelName(f) }}</span>
+          <div class="funnel-row__track">
+            <div class="funnel-row__fill" [style.width.%]="(f.count / maxFunnel) * 100"></div>
+          </div>
+          <span class="funnel-row__count mono">{{ f.count }}</span>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card__head">
+      <span class="card__title">{{ L().sourcesTitle }}</span>
+    </div>
+    <div class="s-table">
+      <div class="s-head">
+        <span>{{ L().thSource }}</span>
+        <span>{{ L().thLeads }}</span>
+        <span>{{ L().thConversion }}</span>
+      </div>
+      @for (s of sources; track s.source) {
+        <div class="s-row">
+          <span>{{ sourceName(s) }}</span>
+          <span class="mono">{{ s.leads }}</span>
+          <span class="mono">{{ s.conversion }}%</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__head">
+      <span class="card__title">{{ L().agentsTitle }}</span>
+    </div>
+    <div class="a-table">
+      <div class="a-head">
+        <span>{{ L().thAgent }}</span>
+        <span>{{ L().thLeads }}</span>
+        <span>{{ L().thDeals }}</span>
+        <span>{{ L().thRevenue }}</span>
+      </div>
+      @for (a of agents; track a.agent) {
+        <div class="a-row">
+          <span>{{ agentName(a) }}</span>
+          <span class="mono">{{ a.leads }}</span>
+          <span class="mono">{{ a.deals }}</span>
+          <span class="mono">{{ money(a.revenue) }}</span>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (toast()) {
+  <div class="toast">{{ toast() }}</div>
+}

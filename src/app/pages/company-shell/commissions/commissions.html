@@ -4,72 +4,331 @@
     <h1 class="page-head__title">{{ L().title }}</h1>
     <span class="page-head__sub">{{ L().sub }}</span>
   </div>
+  @if (canManage() && canContracts()) {
+    <button class="btn btn--primary" (click)="calculate()">
+      {{ t('Calculate commission', 'حساب عمولة') }}
+    </button>
+  }
 </div>
-
+<p>
+  {{
+    t(
+      'Payable and paid states record manually reviewed evidence and external payments. No transfer is initiated.',
+      'حالات الاستحقاق والصرف تسجل مستندات تمت مراجعتها ومدفوعات خارجية. لا يتم تنفيذ تحويل.'
+    )
+  }}
+</p>
+<p>{{ t('Company totals across all records', 'إجماليات الشركة لكل السجلات') }}</p>
+<div class="commission-totals">
+  @for (s of statuses; track s) {
+    <span>{{ L().statusNames[s] }}: {{ money(summary()[s] ?? '0') }}</span>
+  }
+</div>
 <div class="chip-row">
-  <button type="button" class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="statusFilter.set('all')">
+  <button class="chip" [disabled]="loading()" (click)="reload()">{{ t('Refresh', 'تحديث') }}</button
+  ><input
+    [(ngModel)]="search"
+    [placeholder]="t('Search commissions', 'بحث العمولات')"
+    (keyup.enter)="filter()"
+  /><button class="chip" (click)="filter()">{{ t('Search', 'بحث') }}</button>
+</div>
+<div class="chip-row">
+  <button class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="filter('all')">
     {{ L().statusAll }}
   </button>
   @for (s of statuses; track s) {
-    <button type="button" class="chip" [class.chip--active]="statusFilter() === s" (click)="statusFilter.set(s)">
+    <button class="chip" [class.chip--active]="statusFilter() === s" (click)="filter(s)">
       {{ L().statusNames[s] }}
     </button>
   }
 </div>
-
+@if (error()) {
+  <p role="alert">{{ error() }}</p>
+}
+@if (loading()) {
+  <p>{{ t('Loading…', 'جارٍ التحميل…') }}</p>
+}
 <div class="card">
   <div class="table-scroll">
     <div class="k-table">
       <div class="k-head">
-        <span>{{ L().thDeal }}</span>
-        <span>{{ L().thGross }}</span>
-        <span>{{ L().thStatus }}</span>
-        <span>{{ L().thAction }}</span>
+        <span>{{ L().thDeal }}</span
+        ><span>{{ L().thGross }}</span
+        ><span>{{ L().thStatus }}</span
+        ><span>{{ L().thAction }}</span>
       </div>
-      @for (c of filtered(); track c.deal) {
+      @for (c of commissions(); track c.id) {
         <div class="k-row">
-          <button type="button" class="k-cell__main" (click)="open(c)">
-            <span class="mono">{{ c.deal }}</span>
-            <span class="k-cell__sub">{{ c.unit }} · {{ contact(c) }}</span>
-          </button>
-          <span class="mono">{{ money(c.gross) }} ({{ c.rate }}%)</span>
-          <span class="pill" [class]="'pill--' + c.status">{{ L().statusNames[c.status] }}</span>
-          <span>
-            @if (L().nextAction[c.status] !== '—') {
-              <button type="button" class="row-btn" (click)="advance(c)">{{ L().nextAction[c.status] }}</button>
+          <button class="k-cell__main" (click)="open(c.id)">
+            <span class="mono">{{ c.deal }}</span
+            ><span class="k-cell__sub"
+              >{{ c.unit ?? '—' }} · {{ contact(c) }}
+              @if (c.sample) {
+                · {{ t('Sample', 'تجريبي') }}
+              }
+              @if (c.forecast) {
+                · {{ t('Forecast', 'تقدير') }}
+              }
+              @if (c.needsRecalculation) {
+                · {{ t('Recalculation required', 'يلزم إعادة الحساب') }}
+              }
+            </span></button
+          ><span class="mono">{{ money(c.grossMinor) }} ({{ c.rateBps / 100 }}%)</span
+          ><span class="pill" [class]="'pill--' + c.status">{{ L().statusNames[c.status] }}</span
+          ><span>
+            @if (canManage() && ['calculated', 'approved', 'payable'].includes(c.status)) {
+              <button
+                class="row-btn"
+                [disabled]="c.status === 'calculated' && (c.forecast || c.needsRecalculation)"
+                (click)="advance(c)"
+              >
+                {{ L().nextAction[c.status] }}
+              </button>
             }
           </span>
         </div>
       }
-      @if (!filtered().length) {
+      @if (!loading() && !commissions().length) {
         <div class="t-empty">{{ L().emptyTitle }}</div>
       }
     </div>
   </div>
 </div>
-
+<div class="chip-row">
+  {{ commissions().length }} / {{ total()
+  }}<button class="chip" [disabled]="page() === 1 || loading()" (click)="paginate(-1)">
+    {{ t('Previous', 'السابق') }}</button
+  ><button class="chip" [disabled]="page() * 30 >= total() || loading()" (click)="paginate(1)">
+    {{ t('Next', 'التالي') }}
+  </button>
+</div>
 @if (selected(); as c) {
   <div class="scrim" (click)="close()"></div>
-  <div class="dialog" (click)="$event.stopPropagation()">
+  <section class="dialog" role="dialog" aria-modal="true" [attr.aria-label]="c.deal">
     <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title mono">{{ c.deal }}</span>
-      <p class="dialog__text">{{ c.unit }} · {{ contact(c) }} · {{ money(c.gross) }} ({{ c.rate }}%)</p>
-      <span class="section-title">{{ L().linesTitle }}</span>
+      <h2>{{ c.deal }}</h2>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
+      <p>
+        {{ contact(c) }} · {{ money(c.grossMinor) }} ({{ c.rateBps / 100 }}%) ·
+        {{ L().statusNames[c.status] }}
+      </p>
+      <a routerLink="/company/contracts" [queryParams]="{ contractId: c.contractId }">{{
+        t('View contract', 'عرض العقد')
+      }}</a>
+      @if (c.forecast) {
+        <p>{{ t('Forecast only: the contract is not signed.', 'تقدير فقط: العقد غير موقع.') }}</p>
+      }
+      @if (c.needsRecalculation) {
+        <p>
+          {{
+            t(
+              'Contract value changed. Recalculate before approval.',
+              'تغيرت قيمة العقد. أعد الحساب قبل الاعتماد.'
+            )
+          }}
+        </p>
+      }
       <div class="line-list">
-        @for (l of c.lines; track l.who) {
+        @for (l of c.lines; track $index) {
           <div class="line-row">
-            <span class="line-row__who">{{ lineWho(l) }}</span>
-            <span class="line-row__pct mono">{{ l.pct }}%</span>
-            <span class="line-row__amount mono">{{ money(l.amount) }}</span>
+            <span>{{ l.who[lang()] }}</span
+            ><span>{{ l.shareBps / 100 }}%</span><span>{{ money(l.amountMinor) }}</span>
           </div>
         }
       </div>
-    </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="close()">{{ L().close }}</button>
-      @if (L().nextAction[c.status] !== '—') {
-        <button type="button" class="btn btn--primary" (click)="advance(c)">{{ L().nextAction[c.status] }}</button>
+      @if (c.paymentReference) {
+        <p>
+          {{ t('Recorded external payment', 'دفعة خارجية مسجلة') }}: {{ c.paymentReference }} ·
+          {{ date(c.paidDate) }}
+        </p>
+      }
+      @if (c.reason) {
+        <p>{{ c.reason }}</p>
+      }
+      @if (c.paidDocumentId && canDocs()) {
+        <a [href]="api.download(c.paidDocumentId)" target="_blank" rel="noopener">{{
+          t('Download payment receipt', 'تنزيل إيصال الصرف')
+        }}</a>
       }
     </div>
-  </div>
+    <footer class="dialog__footer">
+      <button class="btn btn--ghost" (click)="close()">{{ L().close }}</button>
+      @if (canManage()) {
+        @if (
+          ['calculated', 'canceled'].includes(c.status) &&
+          c.contractStatus !== 'void' &&
+          canContracts()
+        ) {
+          <button class="btn btn--ghost" (click)="calculate(c)">
+            {{ t('Recalculate', 'إعادة الحساب') }}
+          </button>
+        }
+        @if (['calculated', 'approved', 'payable'].includes(c.status)) {
+          <button class="btn btn--ghost" (click)="advance(c, 'cancel')">
+            {{ t('Cancel commission', 'إلغاء العمولة') }}</button
+          ><button
+            class="btn btn--primary"
+            [disabled]="c.status === 'calculated' && (c.forecast || c.needsRecalculation)"
+            (click)="advance(c)"
+          >
+            {{ L().nextAction[c.status] }}
+          </button>
+        }
+      }
+    </footer>
+  </section>
+}
+@if (formOpen()) {
+  <div class="commission-scrim"></div>
+  <section
+    class="commission-form"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="t('Commission calculation', 'حساب العمولة')"
+  >
+    <h2>{{ t('Commission calculation', 'حساب العمولة') }}</h2>
+    @if (error()) {
+      <p role="alert">{{ error() }}</p>
+    }
+    <label>{{ t('Search contracts', 'بحث العقود') }}<input [(ngModel)]="contractQuery" /></label
+    ><button class="btn btn--ghost" (click)="loadContracts(true)">{{ t('Search', 'بحث') }}</button
+    ><label
+      >{{ t('Contract', 'العقد')
+      }}<select
+        [(ngModel)]="contractId"
+        [disabled]="!!editing()"
+        (ngModelChange)="chooseContract()"
+      >
+        <option value="">—</option>
+        @for (c of contractOptions(); track c.id) {
+          <option [value]="c.id">{{ c.reference }} · {{ c.contact[lang()] }}</option>
+        }
+      </select></label
+    >
+    @if (contractPage * 50 < contractTotal()) {
+      <button class="btn btn--ghost" (click)="loadContracts(false)">
+        {{ t('More contracts', 'عقود إضافية') }}
+      </button>
+    }
+    @if (selectedContract(); as c) {
+      <p>{{ money(c.valueMinor) }} · {{ c.status }}</p>
+    }
+    <label
+      >{{ t('Rate (%)', 'النسبة (%)')
+      }}<input inputmode="decimal" [(ngModel)]="rate" (ngModelChange)="changed()"
+    /></label>
+    <h3>{{ L().linesTitle }} · 100%</h3>
+    @for (s of splits; track $index; let i = $index) {
+      <div class="split-input">
+        <label
+          >{{ t('Payee', 'المستفيد')
+          }}<select [(ngModel)]="s.payeeId" (ngModelChange)="changed()">
+            <option value="">{{ t('Company share', 'حصة الشركة') }}</option>
+            @for (p of payees(); track p.id) {
+              <option [value]="p.id">{{ p.name }}</option>
+            }
+          </select></label
+        ><label
+          >{{ t('Share (%)', 'الحصة (%)')
+          }}<input inputmode="decimal" [(ngModel)]="s.pct" (ngModelChange)="changed()" /></label
+        ><button
+          class="btn btn--ghost"
+          [disabled]="splits.length === 1"
+          (click)="splits.splice(i, 1); changed()"
+        >
+          {{ t('Remove', 'حذف') }}
+        </button>
+      </div>
+    }
+    <button
+      class="btn btn--ghost"
+      [disabled]="splits.length >= 20"
+      (click)="splits.push({ payeeId: '', pct: '0' }); changed()"
+    >
+      {{ t('Add split', 'إضافة حصة') }}
+    </button>
+    <footer>
+      <button class="btn btn--ghost" [disabled]="busy()" (click)="formOpen.set(false)">
+        {{ t('Cancel', 'إلغاء') }}</button
+      ><button class="btn btn--primary" [disabled]="busy() || !selectedContract()" (click)="save()">
+        {{ t('Calculate and save', 'حساب وحفظ') }}
+      </button>
+    </footer>
+  </section>
+}
+@if (actionTarget(); as c) {
+  <div class="commission-scrim"></div>
+  <section
+    class="commission-form"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="t('Commission action', 'إجراء العمولة')"
+  >
+    <h2>
+      {{ action === 'cancel' ? t('Cancel commission', 'إلغاء العمولة') : L().nextAction[c.status] }}
+    </h2>
+    @if (error()) {
+      <p role="alert">{{ error() }}</p>
+    }
+    <p>{{ c.deal }} · {{ money(c.grossMinor) }}</p>
+    <label
+      >{{ t('Reason / audit note (10+ characters)', 'السبب / ملاحظة التدقيق (١٠ أحرف على الأقل)')
+      }}<textarea [(ngModel)]="reason" (ngModelChange)="changed()" maxlength="500"></textarea>
+    </label>
+    @if (['mark_payable', 'record_paid'].includes(action)) {
+      <p>
+        {{
+          t(
+            'This records evidence of external funds; Mujez does not initiate a payment.',
+            'يسجل هذا مستندات أموال خارجية؛ لا ينفذ موجز دفعة.'
+          )
+        }}
+      </p>
+      <label>{{ t('Search receipts', 'بحث الإيصالات') }}<input [(ngModel)]="receiptQuery" /></label
+      ><button class="btn btn--ghost" (click)="loadReceipts(true)">{{ t('Search', 'بحث') }}</button
+      ><label
+        >{{ t('Receipt evidence', 'مستند الإيصال')
+        }}<select [(ngModel)]="receiptId" (ngModelChange)="changed()">
+          <option value="">—</option>
+          @for (d of receipts(); track d.id) {
+            <option [value]="d.id">{{ d.file }} · {{ d.title }}</option>
+          }
+        </select></label
+      >
+      @if (receiptPage * 50 < receiptTotal()) {
+        <button class="btn btn--ghost" (click)="loadReceipts(false)">
+          {{ t('More receipts', 'إيصالات إضافية') }}
+        </button>
+      }
+      @if (canUpload()) {
+        <a
+          routerLink="/company/documents"
+          [queryParams]="{ contractId: c.contractId, new: '1', kind: 'receipt' }"
+          >{{ t('Upload receipt', 'رفع إيصال') }}</a
+        >
+      }
+    }
+    @if (action === 'record_paid') {
+      <label
+        >{{ t('Actual external payment date', 'تاريخ الدفعة الخارجية الفعلي')
+        }}<input type="date" [(ngModel)]="paidDate" (ngModelChange)="changed()" /></label
+      ><label
+        >{{ t('External payment reference', 'مرجع الدفعة الخارجية')
+        }}<input [(ngModel)]="reference" maxlength="200" (ngModelChange)="changed()"
+      /></label>
+    }
+    <footer>
+      <button class="btn btn--ghost" [disabled]="busy()" (click)="actionTarget.set(null)">
+        {{ t('Dismiss', 'إغلاق') }}</button
+      ><button
+        class="btn btn--primary"
+        [disabled]="busy() || reason.trim().length < 10"
+        (click)="apply()"
+      >
+        {{ t('Record', 'تسجيل') }}
+      </button>
+    </footer>
+  </section>
 }

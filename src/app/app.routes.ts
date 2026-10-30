@@ -175,6 +175,7 @@ export const routes: Routes = [
       },
       {
         path: 'commissions',
+        data: { permission: 'commissions.read' },
         loadComponent: () =>
           import('./pages/company-shell/commissions/commissions').then((m) => m.Commissions),
       },

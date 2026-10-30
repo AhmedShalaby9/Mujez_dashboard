@@ -317,3 +317,70 @@ button {
     min-width: 600px;
   }
 }
+.commission-totals {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 0;
+}
+.commission-scrim {
+  position: fixed;
+  inset: 0;
+  background: #0009;
+  z-index: 120;
+}
+.commission-form {
+  position: fixed;
+  top: 4vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(94vw, 650px);
+  max-height: 92vh;
+  overflow: auto;
+  background: var(--surface, #fff);
+  color: var(--text, #222);
+  border-radius: 16px;
+  padding: 24px;
+  z-index: 121;
+}
+.commission-form label {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+.commission-form footer,
+.dialog__footer {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.split-input {
+  display: grid;
+  grid-template-columns: 2fr 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid #9997;
+  border-radius: 8px;
+  padding: 9px;
+}
+.chip-row {
+  flex-wrap: wrap;
+}
+p[role='alert'] {
+  color: #b3261e;
+}
+.dialog {
+  max-height: 90vh;
+  overflow: auto;
+}
+a {
+  color: inherit;
+}

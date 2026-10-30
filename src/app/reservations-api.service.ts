@@ -3,6 +3,8 @@ import { InventoryApi } from './inventory-api.service';
 export interface CompanyReservation {
   id: string;
   reference: string;
+  contractId?: string | null;
+  contractReference?: string | null;
   unitId: string;
   unit: string;
   leadId: string;

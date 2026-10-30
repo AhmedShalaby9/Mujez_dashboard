@@ -169,6 +169,7 @@ export const routes: Routes = [
       },
       {
         path: 'contracts',
+        data: { permission: 'contracts.read' },
         loadComponent: () =>
           import('./pages/company-shell/contracts/contracts').then((m) => m.Contracts),
       },
@@ -179,6 +180,7 @@ export const routes: Routes = [
       },
       {
         path: 'documents',
+        data: { permission: 'documents.read' },
         loadComponent: () =>
           import('./pages/company-shell/documents/documents').then((m) => m.Documents),
       },

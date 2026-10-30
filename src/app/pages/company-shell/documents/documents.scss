@@ -278,3 +278,40 @@ input {
     min-width: 680px;
   }
 }
+
+.dialog {
+  max-height: 90vh;
+  overflow: auto;
+}
+.dialog label {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+input,
+select {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid #9997;
+  border-radius: 8px;
+  padding: 10px;
+}
+.chip-row {
+  flex-wrap: wrap;
+}
+p[role='alert'] {
+  color: #b3261e;
+}
+.d-row small {
+  display: block;
+  font-size: 11px;
+}
+.row-btn {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}

@@ -92,6 +92,11 @@
           >
           <span class="pill" [class]="'pill--' + r.status">{{ L().statusNames[r.status] }}</span>
           <span class="r-actions">
+            @if (r.contractId) {
+              <a routerLink="/company/contracts" [queryParams]="{ contractId: r.contractId }">{{
+                r.contractReference
+              }}</a>
+            }
             @if (r.depositMinor !== null) {
               <small>{{ t('Recorded deposit', 'عربون مسجل') }}: {{ money(r.depositMinor) }}</small>
             }

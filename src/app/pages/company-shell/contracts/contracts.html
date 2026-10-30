@@ -2,103 +2,507 @@
   <div class="page-head__text">
     <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
     <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
+    <span class="page-head__sub">{{
+      t(
+        'Company agreements linked to real reservations, leads and evidence.',
+        'اتفاقيات الشركة المرتبطة بالحجوزات والعملاء والمستندات الفعلية.'
+      )
+    }}</span>
   </div>
+  @if (canManage() && canLeads()) {
+    <button class="btn btn--primary" (click)="newContract()">
+      {{ t('New contract', 'عقد جديد') }}
+    </button>
+  }
 </div>
-
+<p>
+  {{
+    t(
+      'Sharing and signatures are manual records of actions completed outside Mujez. No email or electronic signature is sent.',
+      'المشاركة والتوقيعات سجلات يدوية لإجراءات تمت خارج موجز. لا يتم إرسال بريد أو توقيع إلكتروني.'
+    )
+  }}
+</p>
 <div class="chip-row">
-  <button type="button" class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="statusFilter.set('all')">
+  <button class="chip" [disabled]="loading()" (click)="reload()">{{ t('Refresh', 'تحديث') }}</button
+  ><input
+    [(ngModel)]="search"
+    [placeholder]="t('Search contracts', 'بحث العقود')"
+    (keyup.enter)="filter()"
+  /><button class="chip" (click)="filter()">{{ t('Search', 'بحث') }}</button
+  ><select [(ngModel)]="typeFilter" (change)="filter()">
+    <option value="">{{ t('All types', 'كل الأنواع') }}</option>
+    @for (type of types; track type) {
+      <option [value]="type">{{ L().typeNames[type] }}</option>
+    }
+  </select>
+</div>
+<div class="chip-row">
+  <button class="chip" [class.chip--active]="statusFilter() === 'all'" (click)="filter('all')">
     {{ L().statusAll }}
   </button>
   @for (s of statuses; track s) {
-    <button type="button" class="chip" [class.chip--active]="statusFilter() === s" (click)="statusFilter.set(s)">
+    <button class="chip" [class.chip--active]="statusFilter() === s" (click)="filter(s)">
       {{ L().statusNames[s] }}
     </button>
   }
 </div>
-
+@if (error()) {
+  <p role="alert">{{ error() }}</p>
+}
+@if (loading()) {
+  <p>{{ t('Loading…', 'جارٍ التحميل…') }}</p>
+}
 <div class="card">
   <div class="table-scroll">
     <div class="c-table">
       <div class="c-head">
-        <span>{{ L().thContract }}</span>
-        <span>{{ L().thUnit }}</span>
-        <span>{{ L().thValue }}</span>
-        <span>{{ L().thDate }}</span>
-        <span>{{ L().thStatus }}</span>
-        <span>{{ L().thAction }}</span>
+        <span>{{ L().thContract }}</span
+        ><span>{{ t('Type','النوع') }}</span
+        ><span>{{ L().thUnit }}</span
+        ><span>{{ t('Contact','العميل') }}</span
+        ><span>{{ L().thValue }}</span
+        ><span>{{ L().thDate }}</span
+        ><span>{{ L().thStatus }}</span
+        ><span></span>
       </div>
-      @for (c of filtered(); track c.ref) {
-        <button type="button" class="c-row" (click)="open(c)">
-          <span class="c-cell__main">
-            <span class="mono">{{ c.ref }}</span>
-            <span class="c-cell__sub">{{ L().typeNames[c.type] }} · {{ contact(c) }}</span>
-          </span>
-          <span class="mono">{{ c.unit }}</span>
-          <span class="mono">{{ c.value }}</span>
-          <span class="c-cell__sub">{{ c.keyDate }}</span>
-          <span class="pill" [class]="'pill--' + c.status">{{ L().statusNames[c.status] }}</span>
-          <span class="c-action">{{ L().primaryAction[c.status] }}</span>
+      @for (c of contracts(); track c.id) {
+        <button class="c-row" (click)="open(c.id)">
+          <span class="mono"
+            >{{ c.reference }}
+            @if (c.sample) {
+              <small>{{ t('Sample', 'تجريبي') }}</small>
+            }</span
+          ><span>{{ L().typeNames[c.type] }}</span
+          ><span>{{ c.unit ?? '—' }}</span
+          ><span>{{ contact(c) }}</span
+          ><span class="mono">{{ money(c.valueMinor) }}</span
+          ><span>{{ date(c.keyDate) }}</span
+          ><span class="pill" [class]="'pill--' + c.status">{{ L().statusNames[c.status] }}</span
+          ><span>{{ t('View', 'عرض') }}</span>
         </button>
       }
-      @if (!filtered().length) {
+      @if (!loading() && !contracts().length) {
         <div class="t-empty">{{ L().emptyTitle }}</div>
       }
     </div>
   </div>
 </div>
-
+<div class="chip-row">
+  {{ contracts().length }} / {{ total() }} · {{ t('Page', 'صفحة') }} {{ page()
+  }}<button class="chip" [disabled]="page() === 1 || loading()" (click)="paginate(-1)">
+    {{ t('Previous', 'السابق') }}</button
+  ><button class="chip" [disabled]="page() * 30 >= total() || loading()" (click)="paginate(1)">
+    {{ t('Next', 'التالي') }}
+  </button>
+</div>
 @if (selected(); as c) {
   <div class="scrim" (click)="close()"></div>
-  <div class="drawer" (click)="$event.stopPropagation()">
+  <section class="drawer" role="dialog" aria-modal="true" [attr.aria-label]="c.reference">
     <div class="drawer__header">
       <div class="drawer__headerText">
-        <span class="drawer__name mono">{{ c.ref }}</span>
-        <span class="drawer__sub">{{ L().typeNames[c.type] }} · {{ c.unit }}</span>
+        <span class="drawer__name">{{ c.reference }}</span
+        ><span>{{ c.title[lang()] }}</span>
       </div>
-      <button type="button" class="drawer__close" (click)="close()">✕</button>
+      <button class="drawer__close" (click)="close()">✕</button>
     </div>
     <div class="drawer__body">
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
       <div class="meta-row">
-        <span class="pill" [class]="'pill--' + c.status">{{ L().statusNames[c.status] }}</span>
-        <span class="pill">{{ c.value }}</span>
+        <span class="pill" [class]="'pill--' + c.status">{{ L().statusNames[c.status] }}</span
+        ><span>{{ money(c.valueMinor) }}</span>
       </div>
-      <div class="drawer__row"><span class="drawer__k">{{ L().thDate }}</span><span>{{ c.keyDate }}</span></div>
-      <div class="drawer__row"><span class="drawer__k">Owner</span><span>{{ owner(c) }}</span></div>
-
+      <p>{{ L().typeNames[c.type] }} · {{ date(c.keyDate) }} · {{ owner(c) }}</p>
+      <a [routerLink]="['/company/leads']" [queryParams]="{ leadId: c.leadId }">{{ contact(c) }}</a>
+      @if (c.unitId) {
+        <a [routerLink]="['/company/units']" [queryParams]="{ unitId: c.unitId }">{{ c.unit }}</a>
+      }
+      @if (c.sharedReference) {
+        <p>{{ t('Manual sharing reference', 'مرجع المشاركة اليدوية') }}: {{ c.sharedReference }}</p>
+      }
+      @if (c.signedDate) {
+        <p>
+          {{ t('Recorded external signature date', 'تاريخ التوقيع الخارجي المسجل') }}:
+          {{ date(c.signedDate) }}
+        </p>
+      }
+      @if (c.voidReason) {
+        <p>{{ c.voidReason }}</p>
+      }
       <div class="section-title">{{ L().signersTitle }}</div>
       <div class="signer-list">
-        @for (s of c.signers; track s.name) {
+        @for (s of c.signers; track $index) {
           <div class="signer-row">
-            <span class="signer-row__role">{{ signerRole(s) }}</span>
-            <span class="signer-row__name">{{ signerName(s) }}</span>
-            <span class="pill" [class]="s.signed ? 'pill--signed' : 'pill--pending'">{{ s.signed ? '✓' : '…' }}</span>
+            <span>{{ s.role[lang()] }}</span
+            ><span>{{ s.name[lang()] }}</span
+            ><span>{{
+              c.signedDate ? t('Recorded signed', 'توقيع مسجل') : t('Planned party', 'طرف مخطط')
+            }}</span>
           </div>
         }
       </div>
-
-      @if (c.docs.length) {
-        <div class="section-title">{{ L().docsTitle }}</div>
-        <div class="doc-list">
-          @for (d of c.docs; track d.label) {
-            <button type="button" class="doc-row" (click)="toggleDoc(d)">
-              <span class="doc-row__box" [class.doc-row__box--on]="d.satisfied">
-                @if (d.satisfied) { ✓ }
-              </span>
-              <span class="doc-row__label">{{ docLabel(d) }}</span>
-              @if (d.required) {
-                <span class="tag">required</span>
-              }
+      <div class="section-title">{{ L().docsTitle }}</div>
+      @for (d of c.requirements ?? []; track d.id) {
+        <div class="doc-row">
+          <span>{{ d.satisfied ? '✓' : '○' }}</span
+          ><span
+            >{{ d.label }} · {{ d.file ?? t('No file', 'بدون ملف') }}
+            @if (d.required) {
+              · {{ t('Required', 'مطلوب') }}
+            }
+          </span>
+          @if (canManage() && canDocuments() && ['draft', 'sent'].includes(c.storedStatus)) {
+            <button class="btn btn--ghost" (click)="attach(d)">
+              {{ t('Attach file', 'إرفاق ملف') }}
             </button>
+          }
+          @if (canUpload()) {
+            <a
+              routerLink="/company/documents"
+              [queryParams]="{ contractId: c.id, new: '1', kind: d.kind }"
+              >{{ t('Upload', 'رفع') }}</a
+            >
           }
         </div>
       }
-    </div>
-    <div class="drawer__footer">
-      <button type="button" class="btn btn--ghost" (click)="close()">{{ L().drawerClose }}</button>
-      @if (L().primaryAction[c.status] !== '—') {
-        <button type="button" class="btn btn--primary">{{ L().primaryAction[c.status] }}</button>
+      @if (canDocuments()) {
+        <a routerLink="/company/documents" [queryParams]="{ contractId: c.id }">{{
+          t('View contract files', 'عرض ملفات العقد')
+        }}</a>
       }
     </div>
-  </div>
+    <footer class="drawer__footer">
+      <button class="btn btn--ghost" (click)="close()">{{ L().drawerClose }}</button>
+      @if (canManage()) {
+        @if (c.storedStatus === 'draft') {
+          <button class="btn btn--ghost" (click)="edit(c)">
+            {{ t('Edit draft', 'تعديل المسودة') }}</button
+          ><button class="btn btn--ghost" (click)="openAction('record_shared')">
+            {{ t('Record shared', 'تسجيل المشاركة') }}
+          </button>
+        }
+        @if (['draft', 'sent'].includes(c.storedStatus) && canDocuments()) {
+          <button class="btn btn--primary" (click)="openAction('record_signed')">
+            {{ t('Record external signature', 'تسجيل توقيع خارجي') }}
+          </button>
+        }
+        @if (c.storedStatus !== 'void') {
+          <button class="btn btn--ghost" (click)="openAction('void')">
+            {{ t('Record void', 'تسجيل الإلغاء') }}
+          </button>
+        }
+      }
+    </footer>
+  </section>
+}
+@if (formOpen()) {
+  <div class="finance-scrim"></div>
+  <section
+    class="finance-form"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="t('Contract form', 'نموذج العقد')"
+  >
+    <h2>{{ editing() ? t('Edit draft', 'تعديل المسودة') : t('New contract', 'عقد جديد') }}</h2>
+    @if (error()) {
+      <p role="alert">{{ error() }}</p>
+    }
+    <form (ngSubmit)="save()">
+      @if (!editing()) {
+        <label
+          >{{ t('Type', 'النوع')
+          }}<select [(ngModel)]="form.type" name="type" (ngModelChange)="changed()">
+            @for (type of types; track type) {
+              <option [value]="type">{{ L().typeNames[type] }}</option>
+            }
+          </select></label
+        >
+        @if (['sale', 'lease'].includes(form.type)) {
+          <p>
+            {{
+              t(
+                'A sale or lease converts a live confirmed reservation and locks its unit under contract.',
+                'البيع أو الإيجار يحوّل حجزاً مؤكداً سارياً ويضع الوحدة تحت العقد.'
+              )
+            }}
+          </p>
+          <label
+            >{{ t('Search confirmed reservations', 'بحث الحجوزات المؤكدة')
+            }}<input [(ngModel)]="queries['reservations']" name="reservationSearch" /></label
+          ><button type="button" class="btn btn--ghost" (click)="loadOptions('reservations', true)">
+            {{ t('Search', 'بحث') }}</button
+          ><label
+            >{{ t('Confirmed reservation', 'الحجز المؤكد')
+            }}<select
+              [(ngModel)]="form.reservationId"
+              name="reservation"
+              (ngModelChange)="chooseReservation()"
+            >
+              <option value="">—</option>
+              @for (r of options()['reservations']; track r.id) {
+                <option [value]="r.id">
+                  {{ r.reference }} · {{ r.unit }} · {{ r.contact[lang()] }}
+                </option>
+              }
+            </select></label
+          >
+          @if (optionPage['reservations'] * 50 < (optionTotal()['reservations'] ?? 0)) {
+            <button
+              type="button"
+              class="btn btn--ghost"
+              (click)="loadOptions('reservations', false)"
+            >
+              {{ t('More reservations', 'حجوزات إضافية') }}
+            </button>
+          }
+        } @else {
+          <label
+            >{{ t('Search leads', 'بحث العملاء')
+            }}<input [(ngModel)]="queries['leads']" name="leadSearch" /></label
+          ><button type="button" class="btn btn--ghost" (click)="loadOptions('leads', true)">
+            {{ t('Search', 'بحث') }}</button
+          ><label
+            >{{ t('Lead', 'العميل')
+            }}<select [(ngModel)]="form.leadId" name="lead" (ngModelChange)="chooseLead()">
+              <option value="">—</option>
+              @for (l of options()['leads']; track l.id) {
+                <option [value]="l.id">{{ l.reference }} · {{ l.name[lang()] }}</option>
+              }
+            </select></label
+          >
+          @if (optionPage['leads'] * 50 < (optionTotal()['leads'] ?? 0)) {
+            <button type="button" class="btn btn--ghost" (click)="loadOptions('leads', false)">
+              {{ t('More leads', 'عملاء إضافيون') }}
+            </button>
+          }
+          @if (canUnits()) {
+            <label
+              >{{ t('Search units', 'بحث الوحدات')
+              }}<input [(ngModel)]="queries['units']" name="unitSearch" /></label
+            ><button type="button" class="btn btn--ghost" (click)="loadOptions('units', true)">
+              {{ t('Search', 'بحث') }}</button
+            ><label
+              >{{
+                t(
+                  'Unit (optional; no inventory conversion)',
+                  'الوحدة (اختيارية؛ بدون تحويل المخزون)'
+                )
+              }}<select [(ngModel)]="form.unitId" name="unit" (ngModelChange)="changed()">
+                <option value="">—</option>
+                @for (u of options()['units']; track u.id) {
+                  <option [value]="u.id">{{ u.code }}</option>
+                }
+              </select></label
+            >
+            @if (optionPage['units'] * 50 < (optionTotal()['units'] ?? 0)) {
+              <button type="button" class="btn btn--ghost" (click)="loadOptions('units', false)">
+                {{ t('More units', 'وحدات إضافية') }}
+              </button>
+            }
+          }
+        }
+      }
+      <label
+        >{{ t('Title', 'العنوان')
+        }}<input
+          [(ngModel)]="form.title"
+          name="title"
+          required
+          maxlength="200"
+          (ngModelChange)="changed()" /></label
+      ><label
+        >{{ t('Arabic title', 'العنوان بالعربية')
+        }}<input
+          [(ngModel)]="form.titleAr"
+          name="titleAr"
+          maxlength="200"
+          (ngModelChange)="changed()" /></label
+      ><label
+        >{{ t('Agreed value (EGP)', 'القيمة المتفق عليها (جنيه)')
+        }}<input
+          [(ngModel)]="form.value"
+          name="value"
+          required
+          inputmode="decimal"
+          (ngModelChange)="changed()" /></label
+      ><label
+        >{{ t('Key / renewal date', 'التاريخ الرئيسي / التجديد')
+        }}<input
+          type="date"
+          [(ngModel)]="form.keyDate"
+          name="date"
+          required
+          (ngModelChange)="changed()"
+      /></label>
+      <h3>{{ t('Planned contract parties', 'أطراف العقد المخططون') }}</h3>
+      @for (s of form.signers; track $index; let i = $index) {
+        <div class="signer-fields">
+          <label
+            >{{ t('Party name', 'اسم الطرف')
+            }}<input
+              [(ngModel)]="s.name"
+              [name]="'name' + i"
+              required
+              (ngModelChange)="changed()" /></label
+          ><label
+            >{{ t('Arabic name', 'الاسم بالعربية')
+            }}<input
+              [(ngModel)]="s.nameAr"
+              [name]="'nameAr' + i"
+              (ngModelChange)="changed()" /></label
+          ><label
+            >{{ t('Role', 'الصفة')
+            }}<input
+              [(ngModel)]="s.role"
+              [name]="'role' + i"
+              required
+              (ngModelChange)="changed()" /></label
+          ><label
+            >{{ t('Arabic role', 'الصفة بالعربية')
+            }}<input
+              [(ngModel)]="s.roleAr"
+              [name]="'roleAr' + i"
+              (ngModelChange)="changed()" /></label
+          ><button
+            type="button"
+            class="btn btn--ghost"
+            [disabled]="form.signers.length === 1"
+            (click)="removeSigner(i)"
+          >
+            {{ t('Remove party', 'حذف الطرف') }}
+          </button>
+        </div>
+      }
+      <button
+        type="button"
+        class="btn btn--ghost"
+        [disabled]="form.signers.length >= 20"
+        (click)="addSigner()"
+      >
+        {{ t('Add party', 'إضافة طرف') }}
+      </button>
+      @if (!editing()) {
+        <p>
+          {{
+            t(
+              'A signed contract file is required before recording a signature. Optional additional evidence requirements:',
+              'ملف العقد الموقع مطلوب قبل تسجيل التوقيع. متطلبات مستندات إضافية اختيارية:'
+            )
+          }}
+        </p>
+        <label
+          ><input
+            type="checkbox"
+            [(ngModel)]="form.requireId"
+            name="requireId"
+            (ngModelChange)="changed()"
+          />{{ t('Client identity evidence', 'مستند هوية العميل') }}</label
+        ><label
+          ><input
+            type="checkbox"
+            [(ngModel)]="form.requireReceipt"
+            name="requireReceipt"
+            (ngModelChange)="changed()"
+          />{{ t('Payment evidence', 'إثبات السداد') }}</label
+        >
+      }
+      <footer>
+        <button
+          type="button"
+          class="btn btn--ghost"
+          [disabled]="busy()"
+          (click)="formOpen.set(false)"
+        >
+          {{ t('Cancel', 'إلغاء') }}</button
+        ><button type="submit" class="btn btn--primary" [disabled]="busy()">
+          {{ busy() ? t('Saving…', 'جارٍ الحفظ…') : t('Save draft', 'حفظ المسودة') }}
+        </button>
+      </footer>
+    </form>
+  </section>
+}
+@if (actionOpen(); as action) {
+  <div class="finance-scrim"></div>
+  <section
+    class="finance-form"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="t('Contract action', 'إجراء العقد')"
+  >
+    <h2>
+      {{
+        action === 'attach'
+          ? t('Attach evidence', 'إرفاق مستند')
+          : action === 'record_signed'
+            ? t('Record external signature', 'تسجيل توقيع خارجي')
+            : action === 'record_shared'
+              ? t('Record manual sharing', 'تسجيل مشاركة يدوية')
+              : t('Record void', 'تسجيل الإلغاء')
+      }}
+    </h2>
+    @if (error()) {
+      <p role="alert">{{ error() }}</p>
+    }
+    @if (action === 'record_shared') {
+      <label
+        >{{ t('External sharing reference', 'مرجع المشاركة الخارجي')
+        }}<input [(ngModel)]="sharedReference" (ngModelChange)="changed()" maxlength="200"
+      /></label>
+    }
+    @if (action === 'record_signed') {
+      <p>
+        {{
+          t(
+            'This records an agreement already signed outside Mujez. It does not sign or send a contract.',
+            'يسجل هذا اتفاقاً تم توقيعه خارج موجز. لا يوقّع أو يرسل العقد.'
+          )
+        }}
+      </p>
+      <label
+        >{{ t('Actual external signature date', 'تاريخ التوقيع الخارجي الفعلي')
+        }}<input type="date" [(ngModel)]="signedDate" (ngModelChange)="changed()"
+      /></label>
+    }
+    @if (action === 'record_signed' || action === 'attach') {
+      <label
+        >{{ t('Search evidence files', 'بحث ملفات الإثبات')
+        }}<input [(ngModel)]="queries['documents']" /></label
+      ><button class="btn btn--ghost" (click)="loadOptions('documents', true)">
+        {{ t('Search', 'بحث') }}</button
+      ><label
+        >{{ t('Current evidence file', 'ملف الإثبات الساري')
+        }}<select [(ngModel)]="docId" (ngModelChange)="changed()">
+          <option value="">—</option>
+          @for (d of options()['documents']; track d.id) {
+            <option [value]="d.id">{{ d.file }} · {{ d.title }}</option>
+          }
+        </select></label
+      >
+      @if (optionPage['documents'] * 50 < (optionTotal()['documents'] ?? 0)) {
+        <button class="btn btn--ghost" (click)="loadOptions('documents', false)">
+          {{ t('More files', 'ملفات إضافية') }}
+        </button>
+      }
+    }
+    @if (action !== 'attach') {
+      <label
+        >{{
+          t('Reason / record note (10+ characters)', 'السبب / ملاحظة التسجيل (١٠ أحرف على الأقل)')
+        }}<textarea [(ngModel)]="reason" (ngModelChange)="changed()" maxlength="500"></textarea>
+      </label>
+    }
+    <footer>
+      <button class="btn btn--ghost" [disabled]="busy()" (click)="actionOpen.set('')">
+        {{ t('Cancel', 'إلغاء') }}</button
+      ><button
+        class="btn btn--primary"
+        [disabled]="busy() || (action === 'attach' ? !docId : reason.trim().length < 10)"
+        (click)="applyAction()"
+      >
+        {{ t('Record', 'تسجيل') }}
+      </button>
+    </footer>
+  </section>
 }

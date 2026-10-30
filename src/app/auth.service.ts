@@ -29,11 +29,14 @@ export class AuthService {
   private readonly config = inject(RUNTIME_CONFIG);
   readonly user = signal<User | null>(null);
   async request(path: string, body?: unknown) {
+    const multipart = typeof FormData !== 'undefined' && body instanceof FormData;
     const response = await fetch(this.config.apiUrl + path, {
       method: body === undefined ? 'GET' : 'POST',
       credentials: 'include',
-      headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      headers: body === undefined || multipart ? {} : { 'Content-Type': 'application/json' },
+      ...(body === undefined
+        ? {}
+        : { body: multipart ? (body as FormData) : JSON.stringify(body) }),
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));

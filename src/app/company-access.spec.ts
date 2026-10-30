@@ -103,7 +103,7 @@ describe('Company owner workspace identity', () => {
   });
 });
 describe('Admin company owner invitation', () => {
-  it('opens invitation after company creation, verifies the admin and shows the activation link only from the POST response', async () => {
+  it('queues the automatic welcome on creation and preserves explicit legacy invitations', async () => {
     const company: any = {
       id: 'MJ-REAL',
       version: 0,
@@ -144,7 +144,9 @@ describe('Admin company owner invitation', () => {
     await f.whenStable();
     const c = f.componentInstance;
     await c.saveCompany();
-    expect(c.ownerDialog()?.id).toBe('MJ-REAL');
+    expect(c.ownerDialog()).toBe(null);
+    expect(c.success()).toContain('queued');
+    await c.openOwner(company);
     expect(calls.some((x) => x.path.endsWith('/invite'))).toBe(false);
     c.ownerName.set('Actual Owner');
     c.ownerPassword.set('admin verification');
@@ -160,7 +162,9 @@ describe('Admin company owner invitation', () => {
     });
     expect(c.ownerLink()).toContain('/activate/company#token=');
     expect(c.ownerPassword()).toBe('');
-    expect(f.nativeElement.textContent).toContain('email delivery is not configured');
+    expect(f.nativeElement.textContent).toContain(
+      'New companies receive their login details automatically',
+    );
     expect(f.nativeElement.querySelector('input[readonly]')?.value).toContain('#token=');
     c.closeOwner();
     expect(c.ownerLink()).toBe('');

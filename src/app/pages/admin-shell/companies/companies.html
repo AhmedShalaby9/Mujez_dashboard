@@ -1,3 +1,8 @@
+@if (success()) {
+  <p role="status" style="padding: 12px; background: #e9f6ef; color: #235f3e; border-radius: 8px">
+    {{ success() }}
+  </p>
+}
 @if (loading()) {
   <p role="status">{{ lang() === 'ar' ? 'جارٍ تحميل الشركات…' : 'Loading companies…' }}</p>
 }
@@ -344,6 +349,77 @@
                     : 'Account disabled'
             }}
           </p>
+          @if (owner.must_change_password) {
+            <p>
+              {{
+                lang() === 'ar'
+                  ? 'بانتظار تغيير كلمة المرور عند أول دخول'
+                  : 'First-login password change pending'
+              }}
+            </p>
+          }
+          @if (ownerDelivery(); as delivery) {
+            <p>
+              {{ lang() === 'ar' ? 'بريد الترحيب:' : 'Welcome email:' }}
+              {{ deliveryLabel(delivery.status) }}
+              @if (delivery.attempts) {
+                · {{ delivery.attempts }} {{ lang() === 'ar' ? 'محاولة' : 'attempt(s)' }}
+              }
+            </p>
+            @if (delivery.accepted_at) {
+              <small>{{ delivery.accepted_at }}</small>
+            }
+            <button class="btn" (click)="loadOwner(c)">
+              {{ lang() === 'ar' ? 'تحديث حالة البريد' : 'Refresh email status' }}
+            </button>
+          }
+          @if (
+            owner.must_change_password &&
+            auth.user()?.permissions?.includes('co.create') &&
+            ['pending', 'trial', 'active'].includes(c.status)
+          ) {
+            <details style="margin-top: 12px">
+              <summary>
+                {{ lang() === 'ar' ? 'إعادة إرسال بيانات الدخول' : 'Resend login details' }}
+              </summary>
+              <p>
+                {{
+                  lang() === 'ar'
+                    ? 'يتم إنشاء كلمة مرور مؤقتة جديدة وإلغاء القديمة. لا يمكن إعادة تعيين حساب أكمل أول دخول بهذه الطريقة.'
+                    : 'Generates a new temporary password and invalidates the previous one. Available only before the owner completes their first password change.'
+                }}
+              </p>
+              <form (ngSubmit)="resendWelcome()" style="display: grid; gap: 12px">
+                <label
+                  >{{ lang() === 'ar' ? 'سبب الإعادة' : 'Reason'
+                  }}<input
+                    class="search"
+                    name="resendReason"
+                    [ngModel]="resendReason()"
+                    (ngModelChange)="resendReason.set($event)"
+                    minlength="10"
+                    required /></label
+                ><label
+                  >{{ lang() === 'ar' ? 'كلمة مرور المشرف الحالية' : 'Your administrator password'
+                  }}<input
+                    class="search"
+                    type="password"
+                    name="resendPassword"
+                    [ngModel]="resendPassword()"
+                    (ngModelChange)="resendPassword.set($event)"
+                    autocomplete="current-password"
+                    required /></label
+                ><button
+                  class="btn btn--primary"
+                  [disabled]="
+                    ownerSaving() || !resendPassword() || resendReason().trim().length < 10
+                  "
+                >
+                  {{ lang() === 'ar' ? 'إعادة الإرسال' : 'Queue new welcome email' }}
+                </button>
+              </form>
+            </details>
+          }
           @if (owner.invitation_expires_at) {
             <p>
               {{ lang() === 'ar' ? 'تنتهي الدعوة:' : 'Invitation expires:' }}
@@ -759,8 +835,8 @@
       <p>
         {{
           lang() === 'ar'
-            ? 'أنشئ رابط تفعيل لمرة واحدة، صالح لمدة 24 ساعة. أرسله إلى المالك بنفسك؛ إرسال البريد غير مفعّل.'
-            : 'Create a one-use activation link valid for 24 hours. Share it with the owner yourself; email delivery is not configured.'
+            ? 'رابط تفعيل يدوي للحسابات القديمة صالح لمدة ٢٤ ساعة. الشركات الجديدة تتلقى بيانات الدخول تلقائيًا بالبريد.'
+            : 'Legacy manual activation link, valid for 24 hours. New companies receive their login details automatically by email.'
         }}
       </p>
       @if (ownerError()) {

@@ -9,6 +9,7 @@ export interface User {
   roleName?: { en: string; ar: string };
   permissions: string[];
   pool: string;
+  mustChangePassword?: boolean;
   companyId?: string;
   company?: { id: string; slug: string; name: { en: string; ar: string }; status: string };
 }
@@ -61,7 +62,11 @@ export class AuthService {
     if (!(await this.restore())) throw new Error('401');
   }
   homePath() {
-    return this.user()?.pool === 'platform' ? '/admin/dashboard' : '/company/dashboard';
+    return this.user()?.mustChangePassword
+      ? '/change-password'
+      : this.user()?.pool === 'platform'
+        ? '/admin/dashboard'
+        : '/company/dashboard';
   }
   async logout() {
     await this.request('/api/v1/auth/logout', {});
@@ -72,6 +77,7 @@ export const adminGuard: CanActivateFn = async (route) => {
   const auth = inject(AuthService),
     router = inject(Router);
   if (!(await auth.restore())) return router.createUrlTree(['/']);
+  if (auth.user()?.mustChangePassword) return router.createUrlTree(['/change-password']);
   if (auth.user()?.pool !== 'platform') return router.createUrlTree(['/company/dashboard']);
   const permission = route.data['permission'];
   return !permission || auth.user()?.permissions.includes(permission)
@@ -83,6 +89,7 @@ export const companyGuard: CanActivateFn = async (route) => {
   const auth = inject(AuthService),
     router = inject(Router);
   if (!(await auth.restore())) return router.createUrlTree(['/']);
+  if (auth.user()?.mustChangePassword) return router.createUrlTree(['/change-password']);
   if (auth.user()?.pool === 'platform') return router.createUrlTree(['/admin/dashboard']);
   return auth.user()?.pool === 'company_admin' &&
     auth.user()?.role === 'company_owner' &&
@@ -91,4 +98,15 @@ export const companyGuard: CanActivateFn = async (route) => {
       ? true
       : router.createUrlTree(['/company/dashboard'])
     : router.createUrlTree(['/']);
+};
+
+export const passwordChangeGuard: CanActivateFn = async () => {
+  const auth = inject(AuthService),
+    router = inject(Router);
+  if (!(await auth.restore())) return router.createUrlTree(['/']);
+  return auth.user()?.pool === 'company_admin' &&
+    auth.user()?.role === 'company_owner' &&
+    auth.user()?.mustChangePassword
+    ? true
+    : router.parseUrl(auth.homePath());
 };

@@ -1,7 +1,12 @@
-import { adminGuard, companyGuard } from './auth.service';
+import { adminGuard, companyGuard, passwordChangeGuard } from './auth.service';
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
+  {
+    path: 'change-password',
+    canActivate: [passwordChangeGuard],
+    loadComponent: () => import('./change-password').then((m) => m.ChangePassword),
+  },
   { path: 'activate/company', loadComponent: () => import('./activate').then((m) => m.Activate) },
   { path: 'activate', loadComponent: () => import('./activate').then((m) => m.Activate) },
   { path: '', loadComponent: () => import('./pages/login/login').then((m) => m.Login) },

@@ -415,6 +415,7 @@ export class Companies {
     if (this.saving()) return;
     this.saving.set(true);
     this.error.set('');
+    this.success.set('');
     try {
       const current = this.editing();
       let created: Company | undefined;
@@ -424,18 +425,28 @@ export class Companies {
       this.formOpen.set(false);
       this.viewing.set(null);
       await this.reload();
-      if (created) await this.openOwner(created);
+      if (created)
+        this.success.set(
+          this.lang() === 'ar'
+            ? 'تم إنشاء الشركة وحساب المالك. تمت جدولة إرسال بيانات الدخول بالبريد.'
+            : 'Company and owner account created. Login details are queued for email delivery.',
+        );
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to save company');
     } finally {
       this.saving.set(false);
     }
   }
+  readonly success = signal('');
+  readonly ownerDelivery = signal<any>(null);
+  readonly resendPassword = signal('');
+  readonly resendReason = signal('');
   readonly ownerInfo = signal<{
     name: string;
     email: string;
     status: string;
     invitation_expires_at: string | null;
+    must_change_password?: boolean;
   } | null>(null);
   readonly ownerLoading = signal(false);
   readonly ownerError = signal('');
@@ -452,11 +463,15 @@ export class Companies {
     this.ownerLoading.set(true);
     this.ownerError.set('');
     this.ownerInfo.set(null);
+    this.ownerDelivery.set(null);
     try {
       const r = await this.auth.request(
         '/admin/api/v1/companies/' + encodeURIComponent(c.id) + '/owner',
       );
-      if (serial === this.ownerRequest) this.ownerInfo.set(r.owner);
+      if (serial === this.ownerRequest) {
+        this.ownerInfo.set(r.owner);
+        this.ownerDelivery.set(r.delivery);
+      }
     } catch (e) {
       if (serial === this.ownerRequest) this.ownerError.set((e as Error).message);
     } finally {
@@ -479,6 +494,43 @@ export class Companies {
     this.ownerPassword.set('');
     this.ownerLink.set('');
     this.ownerError.set('');
+  }
+  deliveryLabel(key: string) {
+    const labels: Record<string, [string, string]> = {
+      queued: ['Queued', 'في الانتظار'],
+      processing: ['Sending', 'جار الإرسال'],
+      retry: ['Retry scheduled', 'تمت جدولة إعادة المحاولة'],
+      accepted: ['Accepted by mail server', 'قبله خادم البريد'],
+      failed: ['Sending failed', 'فشل الإرسال'],
+      cancelled: ['Cancelled', 'ملغى'],
+      manual: ['Manual invitation', 'دعوة يدوية'],
+    };
+    return labels[key]?.[this.lang() === 'ar' ? 1 : 0] ?? key;
+  }
+  async resendWelcome() {
+    const c = this.viewing();
+    if (!c || this.ownerSaving()) return;
+    this.ownerSaving.set(true);
+    this.ownerError.set('');
+    try {
+      await this.auth.request(
+        '/admin/api/v1/companies/' + encodeURIComponent(c.id) + '/owner/welcome/resend',
+        { version: c.version, password: this.resendPassword(), reason: this.resendReason() },
+      );
+      const fresh = await this.api.detail(c.id);
+      this.viewing.set(fresh);
+      await this.loadOwner(fresh);
+      this.success.set(
+        this.lang() === 'ar'
+          ? 'تمت جدولة بريد ترحيبي جديد بكلمة مرور مؤقتة جديدة.'
+          : 'A new welcome email with a new temporary password is queued.',
+      );
+    } catch (e) {
+      this.ownerError.set((e as Error).message);
+    } finally {
+      this.resendPassword.set('');
+      this.ownerSaving.set(false);
+    }
   }
   async inviteOwner(revoke = false) {
     const c = this.ownerDialog();

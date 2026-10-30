@@ -25,6 +25,9 @@ export class CompaniesApi {
       page++;
     }
   }
+  detail(id: string) {
+    return this.auth.request('/admin/api/v1/companies/' + encodeURIComponent(id));
+  }
   create(body: unknown) {
     return this.auth.request('/admin/api/v1/companies', body);
   }

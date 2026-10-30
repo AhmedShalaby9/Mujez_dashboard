@@ -99,6 +99,11 @@ export class Projects implements OnDestroy {
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
   readonly ar = computed(() => this.lang() === 'ar');
+  readonly canReserve = computed(
+    () =>
+      this.auth.user()?.permissions.includes('reservations.manage') &&
+      this.auth.user()?.permissions.includes('reservations.read'),
+  );
   readonly canManage = computed(
     () => this.auth.user()?.permissions.includes('projects.manage') ?? false,
   );

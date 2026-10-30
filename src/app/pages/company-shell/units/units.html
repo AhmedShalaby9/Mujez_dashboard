@@ -154,6 +154,17 @@
     @if (u.projectId) {
       <a routerLink="/company/projects">{{ t('Projects', 'المشروعات') }}</a>
     }
+    @if (canReserve() && u.status === 'available' && !u.archivedAt) {
+      <a
+        class="chip"
+        routerLink="/company/reservations"
+        [queryParams]="{ unitId: u.id, new: '1' }"
+        >{{ t('Hold for client', 'تعليق لعميل') }}</a
+      >
+    }
+    <a routerLink="/company/reservations" [queryParams]="{ unitId: u.id }">{{
+      t('Reservation history', 'سجل الحجوزات')
+    }}</a>
     <footer>
       @if (canManage() && u.status === 'available') {
         @if (!u.archivedAt) {

@@ -213,6 +213,13 @@
                             L().statusNames[u.status]
                           }}</span>
                           <div class="unit-pop__actions">
+                            @if (canReserve() && u.status === 'available') {
+                              <a
+                                routerLink="/company/reservations"
+                                [queryParams]="{ unitId: u.id, new: '1' }"
+                                >{{ t('Hold for client', 'تعليق لعميل') }}</a
+                              >
+                            }
                             <a [routerLink]="['/company/units']" [queryParams]="{ unitId: u.id }">{{
                               t('View unit', 'عرض الوحدة')
                             }}</a>

@@ -348,3 +348,35 @@ button {
     min-width: 760px;
   }
 }
+.res-error {
+  color: #b3261e;
+}
+.r-row small {
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
+}
+.dialog__body label {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+input,
+select {
+  font: inherit;
+  padding: 10px;
+  border: 1px solid #9997;
+  border-radius: 8px;
+  color: inherit;
+  background: transparent;
+}
+.dialog {
+  max-height: 90vh;
+  overflow: auto;
+}
+.chip-row {
+  flex-wrap: wrap;
+}
+a {
+  color: inherit;
+}

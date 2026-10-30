@@ -163,6 +163,7 @@ export const routes: Routes = [
       },
       {
         path: 'reservations',
+        data: { permission: 'reservations.read' },
         loadComponent: () =>
           import('./pages/company-shell/reservations/reservations').then((m) => m.Reservations),
       },

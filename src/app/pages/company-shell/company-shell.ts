@@ -124,7 +124,10 @@ export class CompanyShell {
   private readonly destroy = inject(DestroyRef);
   readonly currentPath = signal(this.router.url);
   readonly isPreview = computed(
-    () => !/^\/company\/(leads|pipeline|tasks|projects|units)(?:[/?]|$)/.test(this.currentPath()),
+    () =>
+      !/^\/company\/(leads|pipeline|tasks|projects|units|reservations)(?:[/?]|$)/.test(
+        this.currentPath(),
+      ),
   );
   constructor() {
     const subscription = this.router.events.subscribe((e) => {

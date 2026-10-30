@@ -147,6 +147,7 @@ export const routes: Routes = [
       },
       {
         path: 'tasks',
+        data: { permission: 'tasks.read' },
         loadComponent: () => import('./pages/company-shell/tasks/tasks').then((m) => m.Tasks),
       },
       {

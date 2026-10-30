@@ -1,63 +1,359 @@
+@if (error()) {
+  <p role="alert">
+    {{ error() }} ·
+    {{ t('Data may be unavailable or stale', 'قد تكون البيانات غير متاحة أو قديمة') }}
+  </p>
+}
+@if (loading()) {
+  <p role="status">{{ t('Loading tasks…', 'جار تحميل المهام…') }}</p>
+}
 <div class="page-head">
   <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
+    <span class="page-head__eyebrow">{{ t('Sales', 'المبيعات') }}</span>
+    <h1 class="page-head__title">{{ t('Tasks', 'المهام') }}</h1>
+    <span class="page-head__sub">{{
+      t(
+        'Company follow-ups linked to real leads and assignees.',
+        'متابعات الشركة مرتبطة بالعملاء والمسؤولين الفعليين.'
+      )
+    }}</span>
   </div>
+  <button class="chip" [disabled]="loading()" (click)="reload()">
+    {{ t('Refresh', 'تحديث') }}
+  </button>
+  @if (canManage()) {
+    <button class="chip chip--active" (click)="openForm()">
+      {{ t('+ New task', '+ مهمة جديدة') }}
+    </button>
+  }
 </div>
-
+<p>
+  {{
+    t(
+      'Due dates and groups use Africa/Cairo. Completing a task records your action; it does not send a message or a reminder.',
+      'المواعيد والمجموعات بتوقيت القاهرة. إنجاز المهمة يسجل إجراءك ولا يرسل رسالة أو تذكيرًا.'
+    )
+  }}
+</p>
+@if (leadFilter()) {
+  <p>
+    {{ t('Lead filter', 'فلتر العميل') }}: {{ contextLead()?.name?.[lang()] || leadFilter() }}
+    <button class="chip" (click)="clearLead()">{{ t('Show all leads', 'عرض كل العملاء') }}</button>
+  </p>
+}
+@if (canManage()) {
+  <div class="chip-row">
+    <input
+      class="search"
+      [attr.aria-label]="t('Quick add task', 'إضافة مهمة سريعة')"
+      [placeholder]="
+        t(
+          'Quick add: title, due today, assigned to you…',
+          'إضافة سريعة: العنوان، موعد اليوم، مسندة لك…'
+        )
+      "
+      [value]="quickAdd()"
+      (input)="quickChanged($any($event.target).value)"
+      (keydown.enter)="addQuick()"
+      maxlength="200"
+    /><button
+      class="chip"
+      [disabled]="saving() || quickAdd().trim().length < 2"
+      (click)="addQuick()"
+    >
+      {{ t('Add', 'إضافة') }}
+    </button>
+  </div>
+}
 <input
-  type="text"
   class="search"
-  [placeholder]="L().addPh"
-  [value]="quickAdd()"
-  (input)="quickAdd.set($any($event.target).value)"
-  (keydown.enter)="addQuick()"
+  [attr.aria-label]="t('Search tasks', 'البحث في المهام')"
+  [placeholder]="t('Search task or linked lead…', 'ابحث في المهمة أو العميل المرتبط…')"
+  [value]="search()"
+  (input)="searchChanged($any($event.target).value)"
+  maxlength="100"
 />
-
 <div class="chip-row">
-  <button type="button" class="chip" [class.chip--active]="groupFilter() === 'all'" (click)="groupFilter.set('all')">
-    {{ L().groupAll }}
+  <button
+    class="chip"
+    [class.chip--active]="groupFilter() === 'all'"
+    (click)="groupFilter.set('all'); reload()"
+  >
+    {{ t('All dates', 'كل المواعيد') }} {{ summary()['all'] ?? '—' }}
   </button>
   @for (g of groups; track g) {
-    <button type="button" class="chip" [class.chip--active]="groupFilter() === g" (click)="groupFilter.set(g)">
-      {{ L().groupNames[g] }}
+    <button
+      class="chip"
+      [class.chip--active]="groupFilter() === g"
+      (click)="groupFilter.set(g); reload()"
+    >
+      {{ groupName(g) }} {{ summary()[g] ?? '—' }}
     </button>
   }
 </div>
-
-<div class="chip-row chip-row--second">
-  @for (o of owners(); track o) {
-    <button type="button" class="chip chip--sm" [class.chip--active]="ownerFilter() === o" (click)="ownerFilter.set(o)">
-      {{ o === 'all' ? L().ownerAll : o }}
-    </button>
-  }
+<div class="chip-row">
+  <label
+    >{{ t('Status', 'الحالة') }}
+    <select [(ngModel)]="statusFilter" (ngModelChange)="reload()">
+      <option value="open">{{ t('Open', 'مفتوحة') }}</option>
+      <option value="done">{{ t('Completed', 'مكتملة') }}</option>
+      <option value="cancelled">{{ t('Cancelled', 'ملغاة') }}</option>
+      <option value="all">{{ t('All statuses', 'كل الحالات') }}</option>
+    </select></label
+  ><label
+    >{{ t('Assignee', 'المسؤول') }}
+    <select [(ngModel)]="ownerFilter" (ngModelChange)="reload()">
+      <option value="">{{ t('All assignees', 'كل المسؤولين') }}</option>
+      <option value="unassigned">{{ t('Unassigned', 'دون مسؤول') }}</option>
+      @for (o of assignees(); track o.id) {
+        <option [value]="o.id">{{ o.name }}</option>
+      }
+    </select></label
+  >
 </div>
-
 @for (g of grouped(); track g.group) {
-  <div class="card">
+  <section class="card">
     <div class="card__head">
-      <span class="card__title">{{ L().groupNames[g.group] }}</span>
-      <span class="card__count">{{ g.items.length }}</span>
+      <span class="card__title">{{ groupName(g.group) }}</span
+      ><span class="card__count">{{ g.items.length }} {{ t('loaded', 'محملة') }}</span>
     </div>
     <div class="task-list">
-      @for (t of g.items; track t.id) {
+      @for (task of g.items; track task.id) {
         <div class="task-row">
-          <button type="button" class="task-row__check" [class.task-row__check--on]="t.done" (click)="toggleDone(t)">
-            @if (t.done) { ✓ }
+          <button
+            class="task-row__check"
+            [class.task-row__check--on]="task.status === 'done'"
+            [disabled]="!canManage() || saving() || task.status === 'cancelled'"
+            [attr.aria-label]="
+              (task.status === 'done'
+                ? t('Reopen task: ', 'إعادة فتح: ')
+                : t('Complete task: ', 'إكمال: ')) + task.title[lang()]
+            "
+            (click)="action(task, task.status === 'done' ? 'reopen' : 'complete')"
+          >
+            @if (task.status === 'done') {
+              ✓
+            }
           </button>
-          <span class="task-row__title">{{ title(t) }}</span>
-          <span class="pill" [class]="'pill--' + t.priority">{{ L().priorityNames[t.priority] }}</span>
-          <span class="task-row__owner">{{ owner(t) }}</span>
-          <span class="task-row__due mono">{{ t.dueLabel }}</span>
+          <div class="task-row__main">
+            <button class="task-row__title" (click)="open(task.id)">{{ task.title[lang()] }}</button
+            ><small>
+              @if (task.sample) {
+                <span>{{ t('Sample', 'تجريبي') }}</span> ·
+              }
+              {{ status(task.status) }}
+              @if (task.lead) {
+                ·
+                @if (canReadLeads()) {
+                  <a [routerLink]="['/company/leads']" [queryParams]="{ leadId: task.lead.id }">{{
+                    task.lead.name[lang()]
+                  }}</a>
+                } @else {
+                  <span>{{ task.lead.name[lang()] }}</span>
+                }
+                @if (task.lead.archivedAt) {
+                  · {{ t('Lead archived', 'العميل مؤرشف') }}
+                }
+              }
+            </small>
+          </div>
+          <span class="pill" [class]="'pill--' + task.priority">{{ priority(task.priority) }}</span
+          ><span class="task-row__owner">{{
+            task.assignee?.name || t('Unassigned', 'دون مسؤول')
+          }}</span
+          ><span class="task-row__due mono" [class.overdue]="task.overdue">{{
+            date(task.dueDate)
+          }}</span>
         </div>
       }
     </div>
+  </section>
+}
+@if (!loading() && !error() && !tasks().length) {
+  <div class="card">
+    <p class="t-empty">{{ t('No tasks match these filters.', 'لا توجد مهام مطابقة.') }}</p>
   </div>
 }
-
-@if (!grouped().length) {
-  <div class="card">
-    <div class="t-empty">{{ L().emptyTitle }}</div>
-  </div>
+@if (asOf()) {
+  <p>{{ t('As of', 'وقت التقرير') }} {{ asOf() }} · {{ today() }} (Africa/Cairo)</p>
+}
+<div class="chip-row">
+  <span>{{ tasks().length }} / {{ total() }} · {{ t('Page', 'صفحة') }} {{ page() }}</span
+  ><button class="chip" [disabled]="loading() || page() === 1" (click)="reload(page() - 1)">
+    {{ t('Previous', 'السابق') }}</button
+  ><button
+    class="chip"
+    [disabled]="loading() || page() * 50 >= total()"
+    (click)="reload(page() + 1)"
+  >
+    {{ t('Next', 'التالي') }}
+  </button>
+</div>
+@if (detailLoading() && !selected()) {
+  <p role="status">{{ t('Loading task…', 'جار تحميل المهمة…') }}</p>
+}
+@if (detailError() && !selected()) {
+  <p role="alert">{{ detailError() }}</p>
+}
+@if (selected(); as task) {
+  <div class="task-scrim"></div>
+  <section class="task-dialog" role="dialog" aria-label="Task details">
+    <h2>{{ task.title[lang()] }}</h2>
+    <p>{{ task.reference }} · {{ status(task.status) }} · {{ priority(task.priority) }}</p>
+    @if (detailError()) {
+      <p role="alert">{{ detailError() }}</p>
+    }
+    <p>{{ task.description }}</p>
+    <p>
+      {{ t('Due', 'الموعد') }}: {{ date(task.dueDate) }} ·
+      {{ task.assignee?.name || t('Unassigned', 'دون مسؤول') }}
+    </p>
+    @if (task.lead) {
+      <p>
+        {{ t('Linked lead', 'العميل المرتبط') }}:
+        @if (canReadLeads()) {
+          <a [routerLink]="['/company/leads']" [queryParams]="{ leadId: task.lead.id }">{{
+            task.lead.name[lang()]
+          }}</a>
+        } @else {
+          <span>{{ task.lead.name[lang()] }}</span>
+        }
+        @if (task.lead.archivedAt) {
+          · {{ t('Archived', 'مؤرشف') }}
+        }
+      </p>
+    }
+    <p>
+      {{ t('Created', 'تم الإنشاء') }}: {{ date(task.createdAt) }} ·
+      {{ task.createdBy?.name || t('System seed', 'بيانات النظام') }}
+    </p>
+    @if (task.completedAt) {
+      <p>
+        {{ t('Completed', 'تم الإنجاز') }}: {{ date(task.completedAt) }} ·
+        {{ task.completedBy?.name }}
+      </p>
+    }
+    @if (canManage()) {
+      @if (task.status === 'open') {
+        <button class="chip" [disabled]="saving()" (click)="openForm(task)">
+          {{ t('Edit task', 'تعديل المهمة') }}</button
+        ><button class="chip chip--active" [disabled]="saving()" (click)="action(task, 'complete')">
+          {{ t('Complete task', 'إكمال المهمة') }}</button
+        ><label
+          >{{ t('Cancellation reason (10+ characters)', 'سبب الإلغاء (10 أحرف على الأقل)')
+          }}<textarea [(ngModel)]="cancelReason" maxlength="500"></textarea></label
+        ><button
+          class="chip"
+          [disabled]="saving() || cancelReason().trim().length < 10"
+          (click)="action(task, 'cancel')"
+        >
+          {{ t('Cancel task', 'إلغاء المهمة') }}
+        </button>
+      } @else {
+        <button class="chip" [disabled]="saving()" (click)="action(task, 'reopen')">
+          {{ t('Reopen task', 'إعادة فتح المهمة') }}
+        </button>
+      }
+    }
+    <h3>{{ t('Recorded history', 'السجل الفعلي') }}</h3>
+    @for (h of history(); track h.id) {
+      <p>
+        {{ activityName(h.action) }} · {{ h.actor || t('System seed', 'بيانات النظام') }} ·
+        {{ date(h.at) }}
+        @if (h.after?.reason) {
+          · {{ h.after.reason }}
+        }
+      </p>
+    }
+    @if (history().length < historyTotal()) {
+      <button class="chip" [disabled]="detailLoading()" (click)="moreHistory()">
+        {{ t('More history', 'المزيد من السجل') }}
+      </button>
+    }
+    <p>
+      <button class="chip" (click)="close()">{{ t('Close', 'إغلاق') }}</button>
+    </p>
+  </section>
+}
+@if (dialog()) {
+  <div class="task-scrim"></div>
+  <section class="task-dialog" role="dialog" aria-label="Task form">
+    <h2>{{ editing() ? t('Edit task', 'تعديل المهمة') : t('New task', 'مهمة جديدة') }}</h2>
+    @if (formError()) {
+      <p role="alert">{{ formError() }}</p>
+    }
+    @if (canReadLeads()) {
+      <label
+        >{{ t('Search available leads', 'البحث في العملاء المتاحين')
+        }}<input [(ngModel)]="leadSearch" maxlength="100" /></label
+      ><button class="chip" [disabled]="leadsLoading()" (click)="loadLeads()">
+        {{ t('Find leads', 'بحث عن العملاء') }}
+      </button>
+      @if (leadPage() * 100 < leadTotal()) {
+        <button class="chip" [disabled]="leadsLoading()" (click)="loadLeads(leadPage() + 1)">
+          {{ t('More leads', 'المزيد من العملاء') }}
+        </button>
+      }
+    }
+    <form (ngSubmit)="save()">
+      <label
+        >{{ t('Task title', 'عنوان المهمة')
+        }}<input
+          [(ngModel)]="draft.title"
+          name="title"
+          required
+          minlength="2"
+          maxlength="200" /></label
+      ><label
+        >{{ t('Arabic title (optional)', 'العنوان بالعربية (اختياري)')
+        }}<input [(ngModel)]="draft.titleAr" name="titleAr" maxlength="200" /></label
+      ><label
+        >{{ t('Description', 'الوصف')
+        }}<textarea
+          [(ngModel)]="draft.description"
+          name="description"
+          maxlength="2000"
+        ></textarea></label
+      ><label
+        >{{ t('Due date (Africa/Cairo)', 'تاريخ الاستحقاق (القاهرة)')
+        }}<input type="date" [(ngModel)]="draft.dueDate" name="dueDate" required /></label
+      ><label
+        >{{ t('Priority', 'الأولوية')
+        }}<select [(ngModel)]="draft.priority" name="priority">
+          <option value="high">{{ priority('high') }}</option>
+          <option value="med">{{ priority('med') }}</option>
+          <option value="low">{{ priority('low') }}</option>
+        </select></label
+      ><label
+        >{{ t('Assignee', 'المسؤول')
+        }}<select [(ngModel)]="draft.assigneeId" name="assignee">
+          <option value="">{{ t('Unassigned', 'دون مسؤول') }}</option>
+          @for (o of assignees(); track o.id) {
+            <option [value]="o.id">{{ o.name }}</option>
+          }
+        </select></label
+      ><label
+        >{{ t('Linked lead (optional)', 'العميل المرتبط (اختياري)')
+        }}<select [(ngModel)]="draft.leadId" name="lead" [disabled]="!canReadLeads()">
+          <option value="">{{ t('General company task', 'مهمة عامة للشركة') }}</option>
+          @for (l of leadOptions(); track l.id) {
+            <option [value]="l.id">{{ l.name[lang()] }} · {{ l.reference }}</option>
+          }
+        </select></label
+      >
+      <p>
+        {{
+          t(
+            'Existing tasks remain visible if a lead is archived. New links require an active lead.',
+            'تبقى المهام ظاهرة إذا تم أرشفة العميل. الربط الجديد يتطلب عميلًا غير مؤرشف.'
+          )
+        }}
+      </p>
+      <button type="button" class="chip" [disabled]="saving()" (click)="dialog.set(false)">
+        {{ t('Close form', 'إغلاق النموذج') }}</button
+      ><button class="chip chip--active" type="submit" [disabled]="saving() || leadsLoading()">
+        {{ t('Save task', 'حفظ المهمة') }}
+      </button>
+    </form>
+  </section>
 }

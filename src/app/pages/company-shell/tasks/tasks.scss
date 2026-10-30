@@ -216,3 +216,76 @@ button {
   color: #8a8983;
   font-size: 13px;
 }
+
+.task-row {
+  grid-template-columns: 24px minmax(180px, 1.6fr) 80px minmax(100px, 1fr) 110px;
+}
+.task-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.task-row__title {
+  border: 0;
+  background: none;
+  text-align: start;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.task-row__main small {
+  font-size: 11px;
+  color: #6b6a65;
+}
+.overdue {
+  color: #9a3422;
+}
+.task-scrim {
+  position: fixed;
+  inset: 0;
+  background: #0007;
+  z-index: 100;
+}
+.task-dialog {
+  position: fixed;
+  inset: 5vh auto auto 50%;
+  transform: translateX(-50%);
+  z-index: 101;
+  background: #fff;
+  border-radius: 12px;
+  width: min(540px, 94vw);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 24px;
+}
+.task-dialog label {
+  display: block;
+  margin: 12px 0;
+}
+.task-dialog input,
+.task-dialog select,
+.task-dialog textarea {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+.task-dialog .chip {
+  margin: 4px 3px;
+}
+select {
+  font: inherit;
+}
+@media (max-width: 760px) {
+  .task-row {
+    grid-template-columns: 24px 1fr 80px;
+  }
+  .task-row__owner,
+  .task-row__due {
+    grid-column: 2/-1;
+    text-align: start;
+  }
+}

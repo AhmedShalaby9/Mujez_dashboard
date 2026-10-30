@@ -227,6 +227,34 @@
           </button>
         }
       }
+      @if (canReadTasks()) {
+        <div class="section-title">
+          {{ t('Linked tasks', 'المهام المرتبطة') }} ({{ linkedTaskTotal() }})
+        </div>
+        @if (taskLoading()) {
+          <p role="status">{{ t('Loading tasks…', 'جار تحميل المهام…') }}</p>
+        }
+        @if (taskError()) {
+          <p role="alert">{{ taskError() }}</p>
+        }
+        @for (task of linkedTasks(); track task.id) {
+          <p>
+            {{ task.title[lang()] }} · {{ taskStatus(task.status) }} ·
+            {{ taskDate(task.dueDate) }} · {{ task.assignee?.name || t('Unassigned', 'دون مسؤول') }}
+          </p>
+        }
+        @if (!taskLoading() && !taskError() && !linkedTasks().length) {
+          <p>{{ t('No linked tasks', 'لا توجد مهام مرتبطة') }}</p>
+        }
+        <button class="btn btn--ghost" (click)="goTasks()">
+          {{ t('View linked tasks', 'عرض المهام المرتبطة') }}
+        </button>
+        @if (canManageTasks() && !l.archivedAt) {
+          <button class="btn btn--ghost" (click)="goTasks(true)">
+            {{ t('Add task for lead', 'إضافة مهمة للعميل') }}
+          </button>
+        }
+      }
       <div class="section-title">{{ t('Recorded activity', 'سجل النشاط') }}</div>
       <div class="thread">
         @for (a of timeline(); track a.id) {

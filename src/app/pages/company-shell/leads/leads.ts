@@ -1,3 +1,5 @@
+import { Router, ActivatedRoute } from '@angular/router';
+import type { CompanyTask } from '../../../tasks-api.service';
 import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CompanyUiState } from '../company-ui-state';
@@ -25,6 +27,18 @@ export class Leads {
   readonly auth = inject(AuthService);
   readonly api = inject(SalesApi);
   private readonly destroy = inject(DestroyRef);
+  private readonly router = inject(Router, { optional: true });
+  private readonly route = inject(ActivatedRoute, { optional: true });
+  readonly canReadTasks = computed(
+    () => this.auth.user()?.permissions.includes('tasks.read') ?? false,
+  );
+  readonly canManageTasks = computed(
+    () => this.auth.user()?.permissions.includes('tasks.manage') ?? false,
+  );
+  readonly linkedTasks = signal<CompanyTask[]>([]);
+  readonly linkedTaskTotal = signal(0);
+  readonly taskError = signal('');
+  readonly taskLoading = signal(false);
   readonly lang = this.ui.lang;
   readonly ar = computed(() => this.lang() === 'ar');
   t(en: string, ar: string) {
@@ -84,6 +98,8 @@ export class Leads {
   constructor() {
     void this.reload();
     void this.loadOwners();
+    const linked = this.route?.snapshot.queryParamMap.get('leadId');
+    if (linked && /^[0-9a-f-]{36}$/i.test(linked)) void this.open(linked);
     this.destroy.onDestroy(() => {
       this.serial++;
       this.detailSerial++;
@@ -152,6 +168,8 @@ export class Leads {
     this.reason.set('');
     this.actionStage.set('');
     this.noteRequest = crypto.randomUUID();
+    this.linkedTasks.set([]);
+    this.taskError.set('');
     try {
       const [lead, activity] = await Promise.all([
         this.api.get('leads/' + id),
@@ -162,12 +180,52 @@ export class Leads {
         this.timeline.set(activity.items);
         this.activityTotal.set(activity.total);
         this.activityPage.set(1);
+        if (this.canReadTasks()) void this.loadTasks(id, serial);
       }
     } catch (e) {
       if (serial === this.detailSerial) this.detailError.set((e as Error).message);
     } finally {
       if (serial === this.detailSerial) this.detailLoading.set(false);
     }
+  }
+  async loadTasks(id: string, serial = this.detailSerial) {
+    this.taskLoading.set(true);
+    this.taskError.set('');
+    try {
+      const r = await this.api.get('tasks', { leadId: id, status: 'all', limit: '10' });
+      if (serial === this.detailSerial) {
+        this.linkedTasks.set(r.items);
+        this.linkedTaskTotal.set(r.total);
+      }
+    } catch (e) {
+      if (serial === this.detailSerial) this.taskError.set((e as Error).message);
+    } finally {
+      if (serial === this.detailSerial) this.taskLoading.set(false);
+    }
+  }
+  goTasks(create = false) {
+    const id = this.selected()?.id;
+    if (id)
+      void this.router?.navigate(['/company/tasks'], {
+        queryParams: { leadId: id, ...(create ? { new: '1' } : {}) },
+      });
+  }
+  taskStatus(s: string) {
+    return (
+      (
+        {
+          open: this.t('Open', 'مفتوحة'),
+          done: this.t('Completed', 'مكتملة'),
+          cancelled: this.t('Cancelled', 'ملغاة'),
+        } as Record<string, string>
+      )[s] ?? s
+    );
+  }
+  taskDate(s: string) {
+    return new Intl.DateTimeFormat(this.ar() ? 'ar-EG-u-nu-latn' : 'en-GB', {
+      timeZone: 'Africa/Cairo',
+      dateStyle: 'medium',
+    }).format(new Date(s + 'T12:00:00Z'));
   }
   closeDrawer() {
     this.detailSerial++;
@@ -196,6 +254,14 @@ export class Leads {
   }
   activityText(a: SalesActivity) {
     const labels: Record<string, [string, string]> = {
+      'task.created': ['Task created', 'تم إنشاء مهمة'],
+      'task.updated': ['Task updated', 'تم تعديل مهمة'],
+      'task.completed': ['Task completed', 'تم إنجاز مهمة'],
+      'task.reopened': ['Task reopened', 'تمت إعادة فتح مهمة'],
+      'task.cancelled': ['Task cancelled', 'تم إلغاء مهمة'],
+      'task.linked': ['Task linked', 'تم ربط مهمة'],
+      'task.unlinked': ['Task unlinked', 'تم فك ربط مهمة'],
+      'task.seeded': ['Initial sample task', 'مهمة تجريبية أولية'],
       'lead.created': ['Lead created', 'تم إنشاء العميل'],
       'lead.seeded': ['Initial sample lead', 'عميل تجريبي أولي'],
       'lead.updated': ['Lead details updated', 'تم تعديل البيانات'],
@@ -217,6 +283,9 @@ export class Leads {
           this.stageNames()[d['to'] as SalesStage]
         : '') +
       (d['note'] ? ' · ' + d['note'] : '') +
+      (d['taskTitle']
+        ? ' · ' + d['taskTitle'][this.lang()] + ' · ' + this.taskStatus(d['status'])
+        : '') +
       (d['reason'] ? ' · ' + d['reason'] : '')
     );
   }

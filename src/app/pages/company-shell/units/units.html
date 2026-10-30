@@ -6,44 +6,101 @@
   </div>
 </div>
 
+<div class="chip-row">
+  <button class="chip" [disabled]="loading()" (click)="reload()">
+    {{ t('Refresh', 'تحديث') }}
+  </button>
+  @if (canManage()) {
+    <button class="chip" (click)="edit()">{{ t('New unit', 'وحدة جديدة') }}</button>
+  }
+  <label
+    ><input type="checkbox" [(ngModel)]="archived" (change)="filter()" />{{
+      t('Include archived', 'تضمين المؤرشفة')
+    }}</label
+  ><label
+    >{{ t('Listing', 'نوع الإدراج')
+    }}<select [(ngModel)]="listing" (change)="filter()">
+      <option value="all">{{ t('All listings', 'كل الإدراجات') }}</option>
+      <option value="primary">{{ L().listingNames.primary }}</option>
+      <option value="resale">{{ L().listingNames.resale }}</option>
+      <option value="rental">{{ L().listingNames.rental }}</option>
+    </select></label
+  >
+</div>
+@if (error()) {
+  <p role="alert">{{ error() }}</p>
+}
+@if (loading()) {
+  <p>{{ t('Loading…', 'جارٍ التحميل…') }}</p>
+}
 <input
   type="text"
   class="search"
   [placeholder]="L().searchPh"
   [value]="search()"
   (input)="search.set($any($event.target).value)"
+  (keyup.enter)="filter()"
 />
 
+<button class="chip" (click)="filter()">{{ t('Search', 'بحث') }}</button>
 <div class="chip-row">
-  <button type="button" class="chip" [class.chip--active]="typeFilter() === 'all'" (click)="typeFilter.set('all')">
+  <button
+    type="button"
+    class="chip"
+    [class.chip--active]="typeFilter() === 'all'"
+    (click)="setType('all')"
+  >
     {{ L().typeAll }}
   </button>
   @for (t of types; track t) {
-    <button type="button" class="chip" [class.chip--active]="typeFilter() === t" (click)="typeFilter.set(t)">
+    <button
+      type="button"
+      class="chip"
+      [class.chip--active]="typeFilter() === t"
+      (click)="setType(t)"
+    >
       {{ L().typeNames[t] }}
     </button>
   }
 </div>
 
 <div class="chip-row chip-row--second">
-  <button type="button" class="chip chip--sm" [class.chip--active]="statusFilter() === 'all'" (click)="statusFilter.set('all')">
+  <button
+    type="button"
+    class="chip chip--sm"
+    [class.chip--active]="statusFilter() === 'all'"
+    (click)="setStatus('all')"
+  >
     {{ L().statusAll }}
   </button>
   @for (s of statuses; track s) {
-    <button type="button" class="chip chip--sm" [class.chip--active]="statusFilter() === s" (click)="statusFilter.set(s)">
+    <button
+      type="button"
+      class="chip chip--sm"
+      [class.chip--active]="statusFilter() === s"
+      (click)="setStatus(s)"
+    >
       {{ L().statusNames[s] }}
     </button>
   }
 </div>
 
 <div class="unit-grid">
-  @for (u of filtered(); track u.code) {
+  @for (u of units(); track u.code) {
     <div class="unit-card">
       <div class="unit-card__head">
-        <span class="mono unit-card__code">{{ u.code }}</span>
+        <button class="chip mono" (click)="open(u.id)">{{ u.code }}</button>
         <span class="pill" [class]="'pill--' + u.status">{{ L().statusNames[u.status] }}</span>
       </div>
-      <span class="unit-card__project">{{ project(u) }}</span>
+      <span class="unit-card__project"
+        >{{ project(u) }}
+        @if (u.sample) {
+          <small>{{ t('Sample', 'تجريبي') }}</small>
+        }
+        @if (u.archivedAt) {
+          <small>{{ t('Archived', 'مؤرشفة') }}</small>
+        }
+      </span>
       <div class="unit-card__specs">
         <span>{{ L().typeNames[u.type] }}</span>
         @if (u.bedrooms) {
@@ -53,12 +110,68 @@
         <span>· {{ view(u) }}</span>
       </div>
       <div class="unit-card__foot">
-        <span class="unit-card__price mono">{{ u.price }}</span>
+        <span class="unit-card__price mono"
+          >{{ money(u.priceMinor) }}{{ u.listing === 'rental' ? t('/mo', '/شهر') : '' }}</span
+        >
         <span class="tag">{{ L().listingNames[u.listing] }}</span>
       </div>
     </div>
   }
-  @if (!filtered().length) {
+  @if (!loading() && !units().length) {
     <div class="t-empty">{{ L().emptyTitle }}</div>
   }
 </div>
+
+<div class="chip-row">
+  {{ units().length }} / {{ total() }} · {{ t('Page', 'صفحة') }} {{ page()
+  }}<button class="chip" [disabled]="page() === 1 || loading()" (click)="paginate(-1)">
+    {{ t('Previous', 'السابق') }}</button
+  ><button class="chip" [disabled]="page() * 30 >= total() || loading()" (click)="paginate(1)">
+    {{ t('Next', 'التالي') }}
+  </button>
+</div>
+@if (selected(); as u) {
+  <div class="unit-scrim" (click)="selected.set(null)"></div>
+  <section class="unit-detail" role="dialog" aria-modal="true" [attr.aria-label]="u.code">
+    <h2>{{ u.code }}</h2>
+    <p>{{ project(u) }} · {{ u.building ? u.building[lang()] : '' }} · {{ u.floor ?? '—' }}</p>
+    <p>{{ L().typeNames[u.type] }} · {{ u.area }} {{ L().area }} · {{ view(u) }}</p>
+    <p>{{ money(u.priceMinor) }} {{ u.listing === 'rental' ? t('per month', 'شهرياً') : '' }}</p>
+    <p>
+      {{ L().statusNames[u.status] }}
+      @if (u.archivedAt) {
+        · {{ t('Archived', 'مؤرشفة') }}
+      }
+    </p>
+    <p>
+      {{
+        t(
+          'Reservation and contract states are controlled by their linked workflows.',
+          'تتم إدارة حالات الحجز والعقود من خلال إجراءاتها المرتبطة.'
+        )
+      }}
+    </p>
+    @if (u.projectId) {
+      <a routerLink="/company/projects">{{ t('Projects', 'المشروعات') }}</a>
+    }
+    <footer>
+      @if (canManage() && u.status === 'available') {
+        @if (!u.archivedAt) {
+          <button class="chip" (click)="edit(u)">{{ t('Edit unit', 'تعديل الوحدة') }}</button>
+        }
+        <button class="chip" [disabled]="busy()" (click)="archive(u)">
+          {{ u.archivedAt ? t('Restore', 'استعادة') : t('Archive', 'أرشفة') }}
+        </button>
+      }
+      <button class="chip" (click)="selected.set(null)">{{ t('Close', 'إغلاق') }}</button>
+    </footer>
+  </section>
+}
+@if (editor(); as e) {
+  <app-inventory-editor
+    kind="unit"
+    [record]="e.record"
+    (closed)="editor.set(null)"
+    (saved)="saved()"
+  />
+}

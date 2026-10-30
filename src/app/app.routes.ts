@@ -152,11 +152,13 @@ export const routes: Routes = [
       },
       {
         path: 'projects',
+        data: { permission: 'projects.read' },
         loadComponent: () =>
           import('./pages/company-shell/projects/projects').then((m) => m.Projects),
       },
       {
         path: 'units',
+        data: { permission: 'units.read' },
         loadComponent: () => import('./pages/company-shell/units/units').then((m) => m.Units),
       },
       {

@@ -1,37 +1,13 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, OnDestroy } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CompanyUiState, type Lang } from '../company-ui-state';
-
-type UnitType = 'apt' | 'villa' | 'office' | 'retail';
-type UnitStatus = 'available' | 'hold' | 'reserved' | 'under_contract' | 'sold';
-type ListingType = 'primary' | 'resale' | 'rental';
-
-interface Unit {
-  code: string;
-  project: string;
-  projectAr: string;
-  type: UnitType;
-  bedrooms: number | null;
-  area: number;
-  view: string;
-  viewAr: string;
-  price: string;
-  status: UnitStatus;
-  listing: ListingType;
-}
-
-const SEED: Unit[] = [
-  { code: 'RS-4410', project: 'Resale — Hillside Bay', projectAr: 'إعادة بيع — هيلسايد باي', type: 'apt', bedrooms: 3, area: 180, view: 'Garden', viewAr: 'حديقة', price: 'EGP 9.4M', status: 'available', listing: 'resale' },
-  { code: 'RS-4388', project: 'Resale — Marina Heights', projectAr: 'إعادة بيع — مارينا هايتس', type: 'office', bedrooms: null, area: 95, view: 'Street', viewAr: 'شارع', price: 'EGP 2.8M', status: 'available', listing: 'resale' },
-  { code: 'RN-3301', project: 'Rental — Hillside Bay', projectAr: 'إيجار — هيلسايد باي', type: 'villa', bedrooms: 5, area: 420, view: 'Lagoon', viewAr: 'بحيرة', price: 'EGP 85,000/mo', status: 'hold', listing: 'rental' },
-  { code: 'RN-3295', project: 'Rental — Downtown', projectAr: 'إيجار — وسط البلد', type: 'retail', bedrooms: null, area: 60, view: 'Main road', viewAr: 'طريق رئيسي', price: 'EGP 32,000/mo', status: 'available', listing: 'rental' },
-  { code: 'PR-HB-2201', project: 'Hillside Bay — Phase 1', projectAr: 'هيلسايد باي — المرحلة 1', type: 'apt', bedrooms: 2, area: 140, view: 'Pool', viewAr: 'حمام سباحة', price: 'EGP 8.4M', status: 'reserved', listing: 'primary' },
-  { code: 'PR-MH-1105', project: 'Marina Heights — Phase 3', projectAr: 'مارينا هايتس — المرحلة 3', type: 'office', bedrooms: null, area: 150, view: 'Marina', viewAr: 'المارينا', price: 'EGP 4.5M', status: 'under_contract', listing: 'primary' },
-  { code: 'RS-4372', project: 'Resale — Zamalek', projectAr: 'إعادة بيع — الزمالك', type: 'apt', bedrooms: 4, area: 260, view: 'Nile', viewAr: 'النيل', price: 'EGP 22M', status: 'sold', listing: 'resale' },
-  { code: 'RN-3280', project: 'Rental — New Cairo', projectAr: 'إيجار — القاهرة الجديدة', type: 'retail', bedrooms: null, area: 85, view: 'Mall frontage', viewAr: 'واجهة مول', price: 'EGP 48,000/mo', status: 'available', listing: 'rental' },
-  { code: 'PR-HB-2254', project: 'Hillside Bay — Phase 2', projectAr: 'هيلسايد باي — المرحلة 2', type: 'villa', bedrooms: 5, area: 480, view: 'Golf course', viewAr: 'ملعب جولف', price: 'EGP 31.5M', status: 'sold', listing: 'primary' },
-  { code: 'RS-4360', project: 'Resale — 6th of October', projectAr: 'إعادة بيع — السادس من أكتوبر', type: 'villa', bedrooms: 4, area: 320, view: 'Garden', viewAr: 'حديقة', price: 'EGP 14.2M', status: 'available', listing: 'resale' },
-];
-
+import { AuthService } from '../../../auth.service';
+import { InventoryApi, type InventoryUnit } from '../../../inventory-api.service';
+import { InventoryEditor } from '../../../inventory-editor';
+type UnitType = InventoryUnit['type'];
+type UnitStatus = InventoryUnit['status'];
+type ListingType = InventoryUnit['listing'];
 interface Copy {
   eyebrow: string;
   title: string;
@@ -92,36 +68,135 @@ const COPY: Record<Lang, Copy> = {
 
 @Component({
   selector: 'app-units',
+  imports: [FormsModule, RouterLink, InventoryEditor],
   templateUrl: './units.html',
   styleUrl: './units.scss',
 })
-export class Units {
-  private readonly ui = inject(CompanyUiState);
+export class Units implements OnDestroy {
+  readonly ui = inject(CompanyUiState);
+  readonly api = inject(InventoryApi);
+  readonly auth = inject(AuthService);
+  readonly route = inject(ActivatedRoute);
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
   readonly ar = computed(() => this.lang() === 'ar');
-
-  readonly units = SEED;
-  readonly search = signal('');
-  readonly typeFilter = signal<UnitType | 'all'>('all');
-  readonly statusFilter = signal<UnitStatus | 'all'>('all');
+  readonly canManage = computed(
+    () => this.auth.user()?.permissions.includes('units.manage') ?? false,
+  );
   readonly types: UnitType[] = ['apt', 'villa', 'office', 'retail'];
   readonly statuses: UnitStatus[] = ['available', 'hold', 'reserved', 'under_contract', 'sold'];
-
-  readonly filtered = computed(() => {
-    const q = this.search().trim().toLowerCase();
-    return this.units.filter((u) => {
-      if (this.typeFilter() !== 'all' && u.type !== this.typeFilter()) return false;
-      if (this.statusFilter() !== 'all' && u.status !== this.statusFilter()) return false;
-      if (!q) return true;
-      return u.code.toLowerCase().includes(q) || u.project.toLowerCase().includes(q);
-    });
+  units = signal<InventoryUnit[]>([]);
+  search = signal('');
+  typeFilter = signal<UnitType | 'all'>('all');
+  statusFilter = signal<UnitStatus | 'all'>('all');
+  listing = 'all';
+  archived = false;
+  total = signal(0);
+  page = signal(1);
+  loading = signal(false);
+  busy = signal(false);
+  error = signal('');
+  editor = signal<any>(null);
+  selected = signal<InventoryUnit | null>(null);
+  private serial = 0;
+  private detailSerial = 0;
+  private routeSub = this.route.queryParamMap.subscribe((params) => {
+    const id = params.get('unitId');
+    if (id) void this.open(id);
   });
-
-  project(u: Unit): string {
-    return this.ar() ? u.projectAr : u.project;
+  constructor() {
+    void this.reload();
   }
-  view(u: Unit): string {
-    return this.ar() ? u.viewAr : u.view;
+  ngOnDestroy() {
+    this.serial++;
+    this.detailSerial++;
+    this.routeSub.unsubscribe();
+  }
+  t(en: string, ar: string) {
+    return this.ar() ? ar : en;
+  }
+  project(u: InventoryUnit) {
+    return u.project[this.lang()];
+  }
+  view(u: InventoryUnit) {
+    return u.view[this.lang()];
+  }
+  money(v: string) {
+    return this.api.money(v);
+  }
+  async reload() {
+    const n = ++this.serial;
+    this.error.set('');
+    this.loading.set(true);
+    const q: Record<string, string> = {
+      q: this.search(),
+      page: String(this.page()),
+      limit: '30',
+      archived: this.archived ? 'all' : 'active',
+    };
+    if (this.typeFilter() !== 'all') q['type'] = this.typeFilter();
+    if (this.statusFilter() !== 'all') q['status'] = this.statusFilter();
+    if (this.listing !== 'all') q['listing'] = this.listing;
+    try {
+      const r = await this.api.get<{ items: InventoryUnit[]; total: number }>('units', q);
+      if (n !== this.serial) return;
+      this.units.set(r.items);
+      this.total.set(r.total);
+    } catch (e: any) {
+      if (n === this.serial) this.error.set(e.message);
+    } finally {
+      if (n === this.serial) this.loading.set(false);
+    }
+  }
+  filter() {
+    this.page.set(1);
+    void this.reload();
+  }
+  setType(t: UnitType | 'all') {
+    this.typeFilter.set(t);
+    this.filter();
+  }
+  setStatus(s: UnitStatus | 'all') {
+    this.statusFilter.set(s);
+    this.filter();
+  }
+  paginate(d: number) {
+    this.page.update((p) => p + d);
+    void this.reload();
+  }
+  async open(id: string) {
+    const n = ++this.detailSerial;
+    try {
+      const u = await this.api.get<InventoryUnit>('units/' + id);
+      if (n === this.detailSerial) this.selected.set(u);
+    } catch (e: any) {
+      if (n === this.detailSerial) this.error.set(e.message);
+    }
+  }
+  edit(u: InventoryUnit | null = null) {
+    this.editor.set({ record: u });
+  }
+  async saved() {
+    this.editor.set(null);
+    await this.reload();
+    if (this.selected()) await this.open(this.selected()!.id);
+  }
+  async archive(u: InventoryUnit) {
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      await this.api.write('units/' + u.id + '/archive', {
+        requestId: crypto.randomUUID(),
+        version: u.version,
+        action: u.archivedAt ? 'restore' : 'archive',
+      });
+      await this.reload();
+      await this.open(u.id);
+    } catch (e: any) {
+      this.error.set(e.message);
+    } finally {
+      this.busy.set(false);
+    }
   }
 }

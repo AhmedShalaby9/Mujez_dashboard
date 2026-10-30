@@ -6,14 +6,50 @@
   </div>
 </div>
 
+<div class="chip-row">
+  <input
+    class="search"
+    [placeholder]="t('Search projects', 'بحث المشروعات')"
+    [(ngModel)]="search"
+    (keyup.enter)="filter()"
+  /><button class="btn btn--ghost" (click)="filter()">{{ t('Search', 'بحث') }}</button
+  ><label
+    ><input type="checkbox" [(ngModel)]="archived" (change)="filter()" />{{
+      t('Include archived', 'تضمين المؤرشفة')
+    }}</label
+  ><button class="btn btn--ghost" [disabled]="loading()" (click)="reload()">
+    {{ t('Refresh', 'تحديث') }}
+  </button>
+  @if (canManage()) {
+    <button class="btn btn--ghost" (click)="edit('project')">
+      {{ t('New project', 'مشروع جديد') }}
+    </button>
+  }
+</div>
+@if (error()) {
+  <p role="alert">{{ error() }}</p>
+}
+@if (loading()) {
+  <p>{{ t('Loading…', 'جارٍ التحميل…') }}</p>
+}
 <div class="proj-grid">
   @for (p of projects(); track p.id) {
     <div class="proj-card">
       <div class="proj-card__head">
-        <span class="pill" [class]="'pill--' + p.segment">{{ p.segment === 'res' ? 'Residential' : 'Commercial' }}</span>
-        <span class="proj-card__from mono">{{ L().fromLabel }} {{ p.fromPrice }}</span>
+        <span class="pill" [class]="'pill--' + p.segment">{{
+          p.segment === 'res' ? t('Residential', 'سكني') : t('Commercial', 'تجاري')
+        }}</span>
+        <span class="proj-card__from mono">{{ L().fromLabel }} {{ money(p.fromPriceMinor) }}</span>
       </div>
-      <span class="proj-card__name">{{ name(p) }}</span>
+      <span class="proj-card__name"
+        >{{ name(p) }}
+        @if (p.sample) {
+          <small>{{ t('Sample', 'تجريبي') }}</small>
+        }
+        @if (p.archivedAt) {
+          <small>{{ t('Archived', 'مؤرشف') }}</small>
+        }
+      </span>
       <span class="proj-card__meta">{{ developer(p) }} · {{ location(p) }}</span>
       <div class="proj-card__counts">
         <div class="count">
@@ -33,11 +69,31 @@
           <span class="count__value mono">{{ p.sold }}</span>
         </div>
       </div>
-      <button type="button" class="btn btn--ghost" (click)="view(p)">{{ L().viewStacking }}</button>
+      <span>{{ t('Under contract', 'تحت العقد') }}: {{ p.underContract }}</span
+      ><button type="button" class="btn btn--ghost" (click)="view(p)">
+        {{ L().viewStacking }}
+      </button>
     </div>
   }
 </div>
 
+<div class="chip-row">
+  {{ projects().length }} / {{ total() }} · {{ t('Page', 'صفحة') }} {{ page() }}
+  <button class="btn btn--ghost" [disabled]="page() === 1 || loading()" (click)="paginate(-1)">
+    {{ t('Previous', 'السابق') }}</button
+  ><button
+    class="btn btn--ghost"
+    [disabled]="page() * 24 >= total() || loading()"
+    (click)="paginate(1)"
+  >
+    {{ t('Next', 'التالي') }}
+  </button>
+</div>
+@if (!loading() && !projects().length) {
+  <p>
+    {{ t('No projects yet. Create a project to begin.', 'لا توجد مشروعات. أضف مشروعاً للبدء.') }}
+  </p>
+}
 @if (openProject(); as p) {
   <div class="scrim" (click)="closeDialog()"></div>
   <div class="dialog" (click)="$event.stopPropagation()">
@@ -49,10 +105,35 @@
       <button type="button" class="dialog__close" (click)="closeDialog()">✕</button>
     </div>
     <div class="dialog__body">
+      @if (canManage()) {
+        <div class="chip-row">
+          <button class="btn btn--ghost" (click)="edit('project', p)">
+            {{ t('Edit project', 'تعديل المشروع') }}</button
+          ><button class="btn btn--ghost" [disabled]="busy()" (click)="archive(p)">
+            {{
+              p.archivedAt
+                ? t('Restore project', 'استعادة المشروع')
+                : t('Archive project', 'أرشفة المشروع')
+            }}
+          </button>
+          @if (!p.archivedAt) {
+            <button class="btn btn--ghost" (click)="edit('phase', null, p.id)">
+              {{ t('Add phase', 'إضافة مرحلة') }}
+            </button>
+          }
+        </div>
+      }
       <div class="phase-tabs">
         @for (ph of p.phases; track ph.code) {
           <div class="phase-group">
             <span class="phase-group__label">{{ name(ph) }} · {{ ph.deliveryYear }}</span>
+            @if (canManage() && !p.archivedAt) {
+              <button class="row-btn" (click)="edit('phase', ph, p.id)">
+                {{ t('Edit phase', 'تعديل المرحلة') }}</button
+              ><button class="row-btn" (click)="edit('building', null, ph.id)">
+                {{ t('Add building', 'إضافة مبنى') }}
+              </button>
+            }
             <div class="building-chips">
               @for (b of ph.buildings; track b.code) {
                 <button
@@ -63,6 +144,11 @@
                 >
                   {{ name(b) }}
                 </button>
+                @if (canManage() && !p.archivedAt) {
+                  <button class="row-btn" (click)="edit('building', b, ph.id)">
+                    {{ t('Edit', 'تعديل') }}
+                  </button>
+                }
               }
             </div>
           </div>
@@ -72,6 +158,36 @@
       @if (openBuilding(); as b) {
         <div class="stacking">
           <span class="stacking__title">{{ L().stackingTitle }} — {{ name(b) }}</span>
+          @if (canManageUnits() && !p.archivedAt) {
+            <button
+              class="btn btn--ghost"
+              (click)="
+                edit('unit', null, '', {
+                  projectId: p.id,
+                  buildingId: b.id,
+                  listing: 'primary',
+                  floor: 0,
+                  name: p.location.en,
+                  nameAr: p.location.ar,
+                })
+              "
+            >
+              {{ t('Add unit', 'إضافة وحدة') }}
+            </button>
+          }
+          @if (!canUnits()) {
+            <p>
+              {{
+                t(
+                  'Unit read permission is required to view the stacking plan.',
+                  'تحتاج صلاحية قراءة الوحدات لعرض المخطط.'
+                )
+              }}
+            </p>
+          }
+          @if (stackLoading()) {
+            <p>{{ t('Loading units…', 'جارٍ تحميل الوحدات…') }}</p>
+          }
           <div class="stacking__scroll">
             @for (f of floorsOf(b); track f) {
               <div class="stack-row">
@@ -92,13 +208,14 @@
                       @if (selectedUnit()?.code === u.code) {
                         <div class="unit-pop" (click)="$event.stopPropagation()">
                           <span class="unit-pop__title mono">{{ u.code }}</span>
-                          <span class="unit-pop__price">{{ u.price }}</span>
-                          <span class="pill" [class]="'pill--unit-' + u.status">{{ L().statusNames[u.status] }}</span>
+                          <span class="unit-pop__price">{{ money(u.priceMinor) }}</span>
+                          <span class="pill" [class]="'pill--unit-' + u.status">{{
+                            L().statusNames[u.status]
+                          }}</span>
                           <div class="unit-pop__actions">
-                            <button type="button" class="row-btn" (click)="applyAction('reserved')">{{ L().unitActions.reserve }}</button>
-                            <button type="button" class="row-btn" (click)="applyAction('hold')">{{ L().unitActions.hold }}</button>
-                            <button type="button" class="row-btn" (click)="applyAction('available')">{{ L().unitActions.release }}</button>
-                            <button type="button" class="row-btn">{{ L().unitActions.share }}</button>
+                            <a [routerLink]="['/company/units']" [queryParams]="{ unitId: u.id }">{{
+                              t('View unit', 'عرض الوحدة')
+                            }}</a>
                           </div>
                         </div>
                       }
@@ -108,10 +225,30 @@
               </div>
             }
           </div>
+          @if (!stackLoading() && !stack().length && canUnits()) {
+            <p>{{ t('No units in this building.', 'لا توجد وحدات في هذا المبنى.') }}</p>
+          }
+          <div class="chip-row">
+            {{ stack().length }} / {{ stackTotal()
+            }}<button
+              class="row-btn"
+              [disabled]="stackPage() === 1 || stackLoading()"
+              (click)="stackPaginate(-1)"
+            >
+              {{ t('Previous', 'السابق') }}</button
+            ><button
+              class="row-btn"
+              [disabled]="stackPage() * 100 >= stackTotal() || stackLoading()"
+              (click)="stackPaginate(1)"
+            >
+              {{ t('Next', 'التالي') }}
+            </button>
+          </div>
           <div class="legend">
             @for (s of legendStatuses; track s) {
               <span class="legend__item">
-                <span class="legend__dot" [class]="'legend__dot--' + s"></span>{{ L().statusNames[s] }}
+                <span class="legend__dot" [class]="'legend__dot--' + s"></span
+                >{{ L().statusNames[s] }}
               </span>
             }
           </div>
@@ -124,6 +261,13 @@
   </div>
 }
 
-@if (toast()) {
-  <div class="toast">{{ toast() }}</div>
+@if (editor(); as e) {
+  <app-inventory-editor
+    [kind]="e.kind"
+    [record]="e.record"
+    [parent]="e.parent"
+    [initial]="e.initial"
+    (closed)="editor.set(null)"
+    (saved)="saved()"
+  />
 }

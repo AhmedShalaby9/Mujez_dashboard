@@ -304,7 +304,7 @@ export class Subscriptions {
     plan: 'starter' as Plan,
     cycle: 'monthly',
     payment: 'bank',
-    status: 'trialing',
+    status: 'active',
   };
   readonly activePlans = computed(() => this.availablePlans().filter((p) => !p.archived));
   async reload() {

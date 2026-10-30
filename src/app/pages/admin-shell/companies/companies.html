@@ -806,12 +806,8 @@
         @if (!editing()) {
           {{
             lang() === 'ar'
-              ? 'سيتم إنشاء اشتراك تجريبي بالخطة المختارة لمدة ' +
-                trialDays() +
-                ' يومًا، وإرسال رابط الدخول وكلمة المرور المؤقتة إلى بريد الشركة تلقائيًا.'
-              : 'Creates a ' +
-                trialDays() +
-                '-day trial on the selected plan and emails the login link and temporary password to the company email. No payment is collected.'
+              ? 'سيتم تفعيل الشركة والاشتراك بالخطة المختارة لمدة شهر، وإرسال رابط الدخول وكلمة المرور المؤقتة إلى بريد الشركة. لا توجد فترة تجربة مجانية.'
+              : 'Activates the company and selected plan for one monthly subscription period, then emails the login link and temporary password. No free trial or payment collection.'
           }}
         } @else {
           {{

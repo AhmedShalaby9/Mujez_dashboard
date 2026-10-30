@@ -377,14 +377,12 @@ export class Companies {
       this.loading.set(false);
     }
   }
-  readonly trialDays = signal(14);
   async openForm(company?: Company) {
     let defaultPlan = 'starter';
     if (!company) {
       try {
         const defaults = await this.authDefaults();
         defaultPlan = defaults.defaultPlan;
-        this.trialDays.set(defaults.trialDays ?? 14);
       } catch {}
     }
     this.editing.set(company ?? null);
@@ -431,8 +429,8 @@ export class Companies {
       if (created)
         this.success.set(
           this.lang() === 'ar'
-            ? 'تم إنشاء الشركة وحساب المالك والاشتراك التجريبي بالخطة المختارة. تمت جدولة إرسال بيانات الدخول بالبريد.'
-            : 'Company, owner account and trial subscription created on the selected plan. Login details are queued for email delivery.',
+            ? 'تم إنشاء الشركة وحساب المالك والاشتراك الفعّال بالخطة المختارة. تمت جدولة إرسال بيانات الدخول بالبريد.'
+            : 'Company, owner account and active subscription created on the selected plan. Login details are queued for email delivery.',
         );
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to save company');

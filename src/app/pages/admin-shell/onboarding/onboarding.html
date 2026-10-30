@@ -191,11 +191,6 @@
 
     <div class="drawer__footer">
       @if (auth.user()?.permissions?.includes('co.suspend')) {
-        @if (c.status === 'pending') {
-          <button class="btn" [disabled]="saving()" (click)="changeStatus(c, 'start_trial')">
-            {{ lang() === 'ar' ? 'بدء التجربة' : 'Start trial' }}
-          </button>
-        }
         <button
           class="btn btn--primary"
           [disabled]="saving()"

@@ -484,7 +484,6 @@
       <label
         >{{ lang() === 'ar' ? 'الحالة' : 'Status'
         }}<select name="status" [(ngModel)]="draft.status">
-          <option value="trialing">{{ statusLabel('trialing') }} (14 days)</option>
           <option value="active">{{ statusLabel('active') }}</option>
         </select></label
       >

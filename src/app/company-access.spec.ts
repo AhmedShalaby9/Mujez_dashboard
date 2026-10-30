@@ -145,7 +145,7 @@ describe('Admin company owner invitation', () => {
     const c = f.componentInstance;
     await c.saveCompany();
     expect(c.ownerDialog()).toBe(null);
-    expect(c.success()).toContain('trial subscription created on the selected plan');
+    expect(c.success()).toContain('active subscription created on the selected plan');
     expect(c.success()).toContain('queued');
     await c.openOwner(company);
     expect(calls.some((x) => x.path.endsWith('/invite'))).toBe(false);

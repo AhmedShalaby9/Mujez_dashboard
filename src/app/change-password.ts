@@ -7,7 +7,7 @@ import { AuthService } from './auth.service';
   imports: [FormsModule],
   template: `<main>
     <section>
-      <p>Mujez · مجاز</p>
+      <p>Mujez · موچز</p>
       <h1>Choose your password<br /><small>اختر كلمة المرور الجديدة</small></h1>
       <p>
         Your account uses a temporary password. Change it before entering your company workspace.<br />يجب

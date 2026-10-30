@@ -69,10 +69,10 @@ const COPY: Record<Lang, Copy> = {
     passErr: 'Password is required.',
   },
   ar: {
-    brand: 'مجاز',
-    platformPortal: 'بوابة مجاز',
+    brand: 'موچز',
+    platformPortal: 'بوابة موچز',
     kicker: 'مساحة عملك',
-    headline: 'مساحة عمل شركتك ومنصة مجاز في مكان واحد.',
+    headline: 'مساحة عمل شركتك ومنصة موچز في مكان واحد.',
     sub: 'سجّل الدخول للوصول إلى مساحة العمل المخصصة لحسابك.',
     points: [
       'مساحة عمل مستقلة لشركتك',
@@ -89,7 +89,7 @@ const COPY: Record<Lang, Copy> = {
     signingIn: 'جارٍ تسجيل الدخول…',
     show: 'عرض',
     hide: 'إخفاء',
-    notice: 'الوصول مخصص لملاك الشركات المدعوين ومشرفي مجاز المعتمدين.',
+    notice: 'الوصول مخصص لملاك الشركات المدعوين ومشرفي موچز المعتمدين.',
     fTitle: 'إعادة تعيين كلمة المرور',
     forgotSub: 'أدخل البريد الإلكتروني المرتبط بحساب المشرف وسنرسل لك رابط إعادة التعيين.',
     fBtn: 'إرسال رابط إعادة التعيين',
@@ -202,7 +202,7 @@ export class Login {
       this.formError.set(
         (error as Error).message === 'Company access unavailable'
           ? this.lang() === 'ar'
-            ? 'مساحة عمل الشركة غير متاحة. تواصل مع دعم مجاز.'
+            ? 'مساحة عمل الشركة غير متاحة. تواصل مع دعم موچز.'
             : 'Your company workspace is unavailable. Contact Mujez support.'
           : this.lang() === 'ar'
             ? 'تعذر تسجيل الدخول. تحقق من البيانات وحاول مجددًا.'

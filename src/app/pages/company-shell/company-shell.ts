@@ -94,7 +94,7 @@ const COPY: Record<Lang, Copy> = {
     nav: EN_NAV,
   },
   ar: {
-    brand: 'مجاز',
+    brand: 'موچز',
     platformTag: 'نظام الشركة',
     searchPh: 'ابحث عن عملاء أو صفقات أو وحدات أو عقود…',
     otherLang: 'English',

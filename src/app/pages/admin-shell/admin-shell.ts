@@ -102,7 +102,7 @@ const COPY: Record<Lang, Copy> = {
     nav: EN_NAV,
   },
   ar: {
-    brand: 'مجاز',
+    brand: 'موچز',
     platformTag: 'إدارة المنصة',
     platformAdmin: 'إدارة المنصة',
     searchPh: 'ابحث عن شركات أو فواتير أو تذاكر…',

@@ -193,6 +193,7 @@ export const routes: Routes = [
       },
       {
         path: 'reports',
+        data: { permission: 'reports.read' },
         loadComponent: () => import('./pages/company-shell/reports/reports').then((m) => m.Reports),
       },
       {
@@ -203,6 +204,7 @@ export const routes: Routes = [
       },
       {
         path: 'audit-log',
+        data: { permission: 'audit.read' },
         loadComponent: () =>
           import('./pages/company-shell/audit-log/audit-log').then((m) => m.AuditLog),
       },

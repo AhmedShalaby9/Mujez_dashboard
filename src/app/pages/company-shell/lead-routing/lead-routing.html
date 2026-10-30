@@ -27,6 +27,16 @@
     />{{ t('Include archived', 'تضمين المؤرشفة') }}</label
   >
 </div>
+@if (loaded() && !advancedAvailable()) {
+  <p>
+    {{
+      t(
+        'Advanced strategies and first-contact SLA reassignment require the configured advanced-routing entitlement. Basic rules can use round robin or a specific user with SLA set to zero.',
+        'تحتاج الإستراتيجيات المتقدمة وإعادة الإسناد بالمهلة إلى صلاحية التوزيع المتقدم المفعلة. يمكن للقواعد الأساسية استخدام التوزيع الدوري أو مستخدم محدد مع مهلة صفر.'
+      )
+    }}
+  </p>
+}
 @if (worker(); as w) {
   <p [class.worker-stale]="!w.healthy">
     {{ t('SLA worker', 'عامل مهلة التواصل') }}:

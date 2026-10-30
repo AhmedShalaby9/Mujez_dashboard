@@ -5,91 +5,124 @@
     <span class="page-head__sub">{{ L().sub }}</span>
   </div>
   <div class="page-head__actions">
-    <button type="button" class="btn btn--ghost" (click)="exportCsv()">{{ L().exportBtn }}</button>
+    <button
+      type="button"
+      class="btn btn--ghost"
+      [disabled]="!canExport() || exporting() || busy()"
+      (click)="exportCsv()"
+    >
+      {{ L().exportBtn }}
+    </button>
   </div>
 </div>
 
 <div class="chip-row">
   @for (p of periods; track p) {
-    <button type="button" class="chip" [class.chip--active]="period() === p" (click)="period.set(p)">
+    <button type="button" class="chip" [class.chip--active]="period() === p" (click)="load(p)">
       {{ L().periodNames[p] }}
     </button>
   }
 </div>
 
-<div class="grid-2">
-  <div class="card chart-card">
-    <span class="card__title">{{ L().volumeTitle }}</span>
-    <div class="bars">
-      @for (v of volume; track v.label) {
-        <div class="bar-col">
-          <div class="bar-col__bar" [style.height.%]="(v.value / maxVolume) * 100"></div>
-          <span class="bar-col__label">{{ v.label }}</span>
-        </div>
-      }
-    </div>
-  </div>
-
-  <div class="card chart-card">
-    <span class="card__title">{{ L().funnelTitle }}</span>
-    <div class="funnel">
-      @for (f of funnel; track f.key) {
-        <div class="funnel-row">
-          <span class="funnel-row__label">{{ funnelName(f) }}</span>
-          <div class="funnel-row__track">
-            <div class="funnel-row__fill" [style.width.%]="(f.count / maxFunnel) * 100"></div>
+@if (error()) {
+  <p role="alert">{{ error() }}</p>
+}
+@if (busy()) {
+  <p role="status">{{ ar() ? 'جار التحميل…' : 'Loading…' }}</p>
+}
+@if (data(); as d) {
+  <p class="page-head__sub">
+    {{ d.from }} – {{ d.to }} · {{ d.timeZone }} · {{ ar() ? 'آخر تحديث' : 'As of' }} {{ d.asOf }}
+  </p>
+  <p>
+    {{ ar() ? 'العملاء' : 'Leads' }}: {{ d.summary.leads }} ·
+    {{ ar() ? 'المبيعات الموقعة' : 'Signed sales' }}: {{ d.summary.signedSales }} ·
+    {{ api.money(d.summary.signedSaleValueMinor) }}
+  </p>
+  @if (d.summary.recordedPaidCommissionMinor !== null) {
+    <p>
+      {{ ar() ? 'عمولات مسجلة كمدفوعة يدويًا' : 'Manually recorded paid commissions' }}:
+      {{ api.money(d.summary.recordedPaidCommissionMinor) }}
+    </p>
+  }
+  <p class="page-head__sub">
+    {{
+      ar()
+        ? 'نسبة التحويل هي العملاء في مرحلة تم الفوز بهم حاليًا ÷ عملاء الفترة. قيم العقود ليست تحصيلات نقدية.'
+        : 'Conversion is the current won count ÷ cohort leads. Contract values are not cash collections.'
+    }}
+  </p>
+  <div class="grid-2">
+    <div class="card chart-card">
+      <span class="card__title">{{ L().volumeTitle }}</span>
+      <div class="bars">
+        @for (v of d.volume; track v.month) {
+          <div class="bar-col">
+            <span class="mono">{{ api.money(v.valueMinor) }}</span>
+            <div class="bar-col__bar" [style.height.%]="percent(v.valueMinor)"></div>
+            <span class="bar-col__label">{{ v.month }}</span>
           </div>
-          <span class="funnel-row__count mono">{{ f.count }}</span>
-        </div>
-      }
-    </div>
-  </div>
-</div>
-
-<div class="grid-2">
-  <div class="card">
-    <div class="card__head">
-      <span class="card__title">{{ L().sourcesTitle }}</span>
-    </div>
-    <div class="s-table">
-      <div class="s-head">
-        <span>{{ L().thSource }}</span>
-        <span>{{ L().thLeads }}</span>
-        <span>{{ L().thConversion }}</span>
+        }
       </div>
-      @for (s of sources; track s.source) {
-        <div class="s-row">
-          <span>{{ sourceName(s) }}</span>
-          <span class="mono">{{ s.leads }}</span>
-          <span class="mono">{{ s.conversion }}%</span>
-        </div>
-      }
     </div>
-  </div>
 
-  <div class="card">
-    <div class="card__head">
-      <span class="card__title">{{ L().agentsTitle }}</span>
-    </div>
-    <div class="a-table">
-      <div class="a-head">
-        <span>{{ L().thAgent }}</span>
-        <span>{{ L().thLeads }}</span>
-        <span>{{ L().thDeals }}</span>
-        <span>{{ L().thRevenue }}</span>
+    <div class="card chart-card">
+      <span class="card__title">{{ L().funnelTitle }}</span>
+      <div class="funnel">
+        @for (f of d.funnel; track f.key) {
+          <div class="funnel-row">
+            <span class="funnel-row__label">{{ stageName(f.key) }}</span>
+            <div class="funnel-row__track">
+              <div class="funnel-row__fill" [style.width.%]="(f.count / maxFunnel()) * 100"></div>
+            </div>
+            <span class="funnel-row__count mono">{{ f.count }}</span>
+          </div>
+        }
       </div>
-      @for (a of agents; track a.agent) {
-        <div class="a-row">
-          <span>{{ agentName(a) }}</span>
-          <span class="mono">{{ a.leads }}</span>
-          <span class="mono">{{ a.deals }}</span>
-          <span class="mono">{{ money(a.revenue) }}</span>
-        </div>
-      }
     </div>
   </div>
-</div>
 
-@if (toast()) {
-  <div class="toast">{{ toast() }}</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card__head">
+        <span class="card__title">{{ L().sourcesTitle }}</span>
+      </div>
+      <div class="s-table">
+        <div class="s-head">
+          <span>{{ L().thSource }}</span>
+          <span>{{ L().thLeads }}</span>
+          <span>{{ L().thConversion }}</span>
+        </div>
+        @for (s of d.sources; track s.key) {
+          <div class="s-row">
+            <span>{{ sourceName(s.key) }}</span>
+            <span class="mono">{{ s.leads }}</span>
+            <span class="mono">{{ s.conversion === null ? '—' : s.conversion + '%' }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__head">
+        <span class="card__title">{{ L().agentsTitle }}</span>
+      </div>
+      <div class="a-table">
+        <div class="a-head">
+          <span>{{ L().thAgent }}</span>
+          <span>{{ L().thLeads }}</span>
+          <span>{{ L().thDeals }}</span>
+          <span>{{ L().thRevenue }}</span>
+        </div>
+        @for (a of d.owners; track a.id) {
+          <div class="a-row">
+            <span>{{ a.name ?? (ar() ? 'غير مسند' : 'Unassigned') }}</span>
+            <span class="mono">{{ a.leads }}</span>
+            <span class="mono">{{ a.deals }}</span>
+            <span class="mono">{{ api.money(a.saleValueMinor) }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
 }

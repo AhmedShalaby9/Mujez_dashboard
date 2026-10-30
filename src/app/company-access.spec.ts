@@ -79,7 +79,7 @@ describe('Company and platform login routing', () => {
   });
 });
 describe('Company owner workspace identity', () => {
-  it('uses the actual company and owner, removes fake badges and notifications, labels preview pages and signs out', async () => {
+  it('uses the actual company and owner, removes fake badges and notifications, connects company routes and signs out', async () => {
     const user = signal(owner);
     const logout = vi.fn(async () => {});
     await TestBed.configureTestingModule({
@@ -93,7 +93,7 @@ describe('Company owner workspace identity', () => {
     expect(f.nativeElement.textContent).toContain('Actual Company');
     expect(f.nativeElement.textContent).toContain('Actual Owner');
     expect(f.nativeElement.textContent).toContain('Company Owner');
-    expect(f.nativeElement.textContent).toContain('design previews');
+    expect(f.nativeElement.textContent).not.toContain('design previews');
     expect(f.nativeElement.textContent).not.toContain('Horizon Realty');
     expect(f.nativeElement.querySelector('.sidebar__itemCount')).toBeNull();
     expect(f.componentInstance.notifications()).toEqual([]);

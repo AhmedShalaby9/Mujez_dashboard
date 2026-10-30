@@ -1,93 +1,241 @@
 <div class="page-head">
   <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
+    <span class="page-head__eyebrow">{{ text('Sales', 'المبيعات') }}</span>
+    <h1 class="page-head__title">{{ text('Dashboard', 'لوحة التحكم') }}</h1>
+    <span class="page-head__sub">{{
+      text(
+        'Current company activity and records. Cairo calendar dates.',
+        'نشاط وسجلات الشركة الحالية. بتوقيت القاهرة.'
+      )
+    }}</span>
   </div>
 </div>
-
 <div class="chip-row">
-  <button type="button" class="chip" [class.chip--active]="segment() === 'all'" (click)="setSegment('all')">
-    {{ L().segAll }}
-  </button>
-  <button type="button" class="chip" [class.chip--active]="segment() === 'res'" (click)="setSegment('res')">
-    {{ L().segRes }}
-  </button>
-  <button type="button" class="chip" [class.chip--active]="segment() === 'com'" (click)="setSegment('com')">
-    {{ L().segCom }}
-  </button>
+  @for (s of segments; track s) {
+    <button class="chip" [class.chip--active]="segment() === s" (click)="load(s)">
+      {{ segmentName(s) }}
+    </button>
+  }
 </div>
-
-<div class="kpis">
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.pipeline }}</span>
-    <span class="kpi__value">EGP 186.4M</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.commission }}</span>
-    <span class="kpi__value kpi__value--ok">EGP 1.9M / 2.4M</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.showings }}</span>
-    <span class="kpi__value">23</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.newLeads }}</span>
-    <span class="kpi__value">58</span>
-  </div>
-</div>
-
-<div class="grid-2">
-  <div class="card">
-    <div class="card__head">
-      <span class="card__title">{{ L().todayTitle }}</span>
-    </div>
-    <div class="event-list">
-      @for (e of todayEvents; track e.id) {
-        <div class="event-row">
-          <span class="event-row__time">{{ e.time }}</span>
-          <span class="pill" [class]="'pill--' + e.type">{{ L().typeNames[e.type] }}</span>
-          <div class="event-row__text">
-            <span class="event-row__title">{{ eventTitle(e) }}</span>
-            <span class="event-row__meta">{{ owner(e) }}</span>
-          </div>
-        </div>
-      }
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card__head">
-      <span class="card__title">{{ L().hotTitle }}</span>
-    </div>
-    <div class="lead-list">
-      @for (l of hotLeads(); track l.id) {
-        <div class="lead-row">
-          <div class="lead-row__score">{{ l.score }}</div>
-          <div class="lead-row__text">
-            <span class="lead-row__name">{{ name(l) }}</span>
-            <span class="lead-row__meta">{{ want(l) }} · {{ l.budget }}</span>
-          </div>
-          <span class="lead-row__owner mono">{{ owner(l) }}</span>
-        </div>
-      }
-    </div>
-  </div>
-</div>
-
-<div class="card">
-  <div class="card__head">
-    <span class="card__title">{{ L().closingsTitle }}</span>
-  </div>
-  <div class="closing-list">
-    @for (c of closings(); track c.id) {
-      <div class="closing-row">
-        <span class="mono closing-row__id">{{ c.id }}</span>
-        <span class="closing-row__deal">{{ deal(c) }}</span>
-        <span class="closing-row__value mono">{{ c.value }}</span>
-        <span class="closing-row__owner">{{ owner(c) }}</span>
-        <span class="closing-row__date">{{ c.date }}</span>
+@if (error()) {
+  <p role="alert">{{ error() }}</p>
+}
+@if (busy()) {
+  <p role="status">{{ text('Loading…', 'جار التحميل…') }}</p>
+}
+@if (data(); as d) {
+  <p class="page-head__sub">
+    {{ d.today }} · {{ d.timeZone }} · {{ text('As of', 'آخر تحديث') }} {{ d.asOf }}
+  </p>
+  <div class="kpis">
+    @if (d.metrics.pipeline; as p) {
+      <div class="kpi">
+        <span class="kpi__label">{{ text('Open sale pipeline', 'قيمة فرص البيع المفتوحة') }}</span
+        ><span class="kpi__value">{{ api.money(p.saleValueMinor) }}</span
+        ><small
+          >{{ p.saleCount }} {{ text('sales', 'بيع') }} · {{ p.leaseCount }}
+          {{ text('leases (excluded from sale value)', 'إيجار (خارج قيمة البيع)') }}</small
+        >
+      </div>
+    }
+    @if (d.metrics.paidCommissionMtd !== undefined) {
+      <div class="kpi">
+        <span class="kpi__label">{{
+          text('Recorded paid commissions this month', 'عمولات مسجلة كمدفوعة هذا الشهر')
+        }}</span
+        ><span class="kpi__value kpi__value--ok">{{
+          api.money(d.metrics.paidCommissionMtd!)
+        }}</span>
+      </div>
+    }
+    @if (d.metrics.todayTasks !== undefined) {
+      <div class="kpi">
+        <span class="kpi__label">{{
+          text('Open tasks due today', 'المهام المفتوحة المستحقة اليوم')
+        }}</span
+        ><span class="kpi__value">{{ d.metrics.todayTasks }}</span>
+      </div>
+    }
+    @if (d.metrics.newLeads7d !== undefined) {
+      <div class="kpi">
+        <span class="kpi__label">{{
+          text('New leads · last 7 days', 'عملاء جدد · آخر ٧ أيام')
+        }}</span
+        ><span class="kpi__value">{{ d.metrics.newLeads7d }}</span>
       </div>
     }
   </div>
-</div>
+  <div class="grid-2">
+    @if (d.todayTasks !== null) {
+      <div class="card">
+        <div class="card__head">
+          <span class="card__title">{{
+            text('Today’s open tasks (up to 8)', 'مهام اليوم المفتوحة (حتى ٨)')
+          }}</span>
+        </div>
+        <div class="event-list">
+          @for (t of d.todayTasks; track t.id) {
+            <a class="event-row" routerLink="/company/tasks"
+              ><span class="pill">{{ t.priority }}</span>
+              <div class="event-row__text">
+                <span class="event-row__title">{{ local(t.title) }}</span
+                ><span class="event-row__meta">{{
+                  t.assignee ?? text('Unassigned', 'غير مسند')
+                }}</span>
+              </div></a
+            >
+          } @empty {
+            <p class="empty">
+              {{ text('No open tasks due today.', 'لا توجد مهام مفتوحة مستحقة اليوم.') }}
+            </p>
+          }
+        </div>
+      </div>
+    }
+    @if (d.scoredLeads !== null) {
+      <div class="card">
+        <div class="card__head">
+          <span class="card__title">{{
+            text('Highest manual lead scores · open leads', 'أعلى تقييمات يدوية · عملاء مفتوحون')
+          }}</span>
+        </div>
+        <div class="lead-list">
+          @for (l of d.scoredLeads; track l.id) {
+            <a class="lead-row" routerLink="/company/leads" [queryParams]="{ leadId: l.id }"
+              ><div class="lead-row__score">{{ l.score }}</div>
+              <div class="lead-row__text">
+                <span class="lead-row__name">{{ local(l.name) }}</span
+                ><span class="lead-row__meta"
+                  >{{ local(l.want) }} · {{ api.money(l.budgetMinor) }}</span
+                >
+              </div>
+              <span class="lead-row__owner">{{
+                l.owner ?? text('Unassigned', 'غير مسند')
+              }}</span></a
+            >
+          } @empty {
+            <p class="empty">
+              {{
+                text('No open leads have a recorded score.', 'لا يوجد عملاء مفتوحون بتقييم مسجل.')
+              }}
+            </p>
+          }
+        </div>
+      </div>
+    }
+  </div>
+  @if (d.keyDates !== null) {
+    <div class="card">
+      <div class="card__head">
+        <span class="card__title">{{
+          text(
+            'Contract key dates · next 14 days (up to 8)',
+            'تواريخ العقود · خلال ١٤ يومًا (حتى ٨)'
+          )
+        }}</span>
+      </div>
+      <div class="closing-list">
+        @for (c of d.keyDates; track c.id) {
+          <a class="closing-row" routerLink="/company/contracts" [queryParams]="{ contractId: c.id }"
+            ><span class="mono closing-row__id">{{ c.reference }}</span
+            ><span class="closing-row__deal">{{ local(c.title) }} · {{ c.status }}</span
+            ><span>{{ api.money(c.valueMinor) }}</span
+            ><span>{{ c.owner ?? '—' }}</span
+            ><span>{{ c.date }}</span></a
+          >
+        } @empty {
+          <p class="empty">
+            {{ text('No contract key dates in this window.', 'لا توجد تواريخ عقود خلال الفترة.') }}
+          </p>
+        }
+      </div>
+    </div>
+  }
+  <div class="grid-2">
+    @if (d.inventory; as inventory) {
+      <div class="card">
+        <div class="card__head">
+          <span class="card__title">{{
+            text('Company inventory · all segments', 'مخزون الشركة · كل القطاعات')
+          }}</span>
+        </div>
+        <div class="inventory-counts">
+          @for (s of ['available', 'hold', 'reserved', 'under_contract', 'sold']; track s) {
+            <a routerLink="/company/units"
+              ><span>{{
+                text(
+                  s.replaceAll('_', ' '),
+                  s === 'available'
+                    ? 'متاح'
+                    : s === 'hold'
+                      ? 'معلق'
+                      : s === 'reserved'
+                        ? 'محجوز'
+                        : s === 'sold'
+                          ? 'مباع'
+                          : 'تحت التعاقد'
+                )
+              }}</span
+              ><strong>{{ inventory[s] }}</strong></a
+            >
+          }
+        </div>
+        @if (d.metrics.projects !== undefined) {
+          <p class="empty">
+            {{ text('Active projects', 'مشروعات غير مؤرشفة') }}: {{ d.metrics.projects }}
+          </p>
+        }
+      </div>
+    }
+    @if (d.chart; as chart) {
+      <div class="card">
+        <div class="card__head">
+          <span class="card__title">{{
+            text(
+              'Currently signed sale value · this quarter',
+              'قيمة البيع الموقّع حاليًا · هذا الربع'
+            )
+          }}</span>
+        </div>
+        <div class="volume-chart">
+          @for (v of chart; track v.month) {
+            <div class="volume-col">
+              <span>{{ api.money(v.valueMinor) }}</span>
+              <div class="volume-bar" [style.height.%]="percent(v.valueMinor)"></div>
+              <span>{{ v.month }}</span
+              ><small>{{ v.deals }} {{ text('sales', 'بيع') }}</small>
+            </div>
+          }
+        </div>
+        <p class="empty">
+          {{ text('Contract values, not cash collections.', 'قيم عقود وليست تحصيلات نقدية.') }}
+        </p>
+      </div>
+    }
+  </div>
+  <div class="card">
+    <div class="card__head">
+      <span class="card__title">{{ text('Current alerts', 'تنبيهات حالية') }}</span>
+    </div>
+    @for (a of d.alerts; track a.id) {
+      <a class="event-row" [routerLink]="a.route"
+        ><strong>{{ a.count }}</strong> {{ alertName(a.id) }}</a
+      >
+    } @empty {
+      <p class="empty">
+        {{
+          text(
+            'No alerts in the modules you can access.',
+            'لا توجد تنبيهات في الوحدات المسموح لك بها.'
+          )
+        }}
+      </p>
+    }
+    @for (l of d.attentionLeads ?? []; track l.id) {
+      <a class="event-row" routerLink="/company/leads" [queryParams]="{ leadId: l.id }"
+        >{{ l.reference }} · {{ local(l.name) }} ·
+        {{ text('reassignment attempts', 'محاولات إعادة إسناد') }}: {{ l.attempts }}</a
+      >
+    }
+  </div>
+}

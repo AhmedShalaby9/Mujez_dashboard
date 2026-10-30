@@ -1,29 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { CompanyUiState, type Lang } from '../company-ui-state';
-
-interface Entry {
-  id: string;
-  actor: string;
-  actorAr: string;
-  action: string;
-  actionAr: string;
-  resource: string;
-  before: string;
-  after: string;
-  at: string;
-}
-
-const SEED: Entry[] = [
-  { id: 'A-9001', actor: 'Dina El Sayed', actorAr: 'دينا السيد', action: 'Extended reservation hold', actionAr: 'تمديد تعليق الحجز', resource: 'RV-922 · MH-P3-401', before: 'expires_at: 2026-10-30 12:00', after: 'expires_at: 2026-11-01 12:00', at: 'Today, 11:12' },
-  { id: 'A-8997', actor: 'Mona Sami', actorAr: 'منى سامي', action: 'Approved commission', actionAr: 'اعتماد عمولة', resource: 'Commission · MJ-0422', before: 'status: calculated', after: 'status: approved', at: 'Today, 09:40' },
-  { id: 'A-8991', actor: 'Khaled Nabil', actorAr: 'خالد نبيل', action: 'Moved deal stage', actionAr: 'نقل مرحلة الصفقة', resource: 'D-280 · Apartment HB-P1-A2-12C', before: 'stage: viewing', after: 'stage: contract', at: 'Yesterday, 17:05' },
-  { id: 'A-8980', actor: 'Youssef Mansour', actorAr: 'يوسف منصور', action: 'Uploaded document', actionAr: 'رفع مستند', resource: 'id_laila_ibrahim.pdf', before: '—', after: 'kind: national_id, linked: Laila Ibrahim', at: 'Yesterday, 10:20' },
-  { id: 'A-8966', actor: 'Mona Sami', actorAr: 'منى سامي', action: 'Reordered routing rule', actionAr: 'إعادة ترتيب قاعدة التوزيع', resource: 'Rule r3 · Budget ≥ EGP 15M', before: 'priority: 4', after: 'priority: 3', at: '2 days ago' },
-  { id: 'A-8951', actor: 'Rana Farouk', actorAr: 'رنا فاروق', action: 'Canceled reservation', actionAr: 'إلغاء حجز', resource: 'RV-879 · MH-P2-C-2D', before: 'status: hold', after: 'status: canceled (reason: client withdrew)', at: '3 days ago' },
-  { id: 'A-8940', actor: 'Dina El Sayed', actorAr: 'دينا السيد', action: 'Lead reassigned (SLA)', actionAr: 'إعادة إسناد عميل (مهلة)', resource: 'Lead L-1996 · Hany Fathy', before: 'owner: Youssef Mansour', after: 'owner: Rana Farouk', at: '4 days ago' },
-  { id: 'A-8922', actor: 'Mona Sami', actorAr: 'منى سامي', action: 'Marked commission paid', actionAr: 'تعليم العمولة كمصروفة', resource: 'Commission · MJ-0355', before: 'status: payable', after: 'status: paid', at: '1 week ago' },
-];
-
+import {
+  CompanyInsightsApi,
+  type AuditEntry,
+  type AuditPage,
+} from '../../../company-insights-api.service';
 interface Copy {
   eyebrow: string;
   title: string;
@@ -75,42 +57,94 @@ const COPY: Record<Lang, Copy> = {
 
 @Component({
   selector: 'app-audit-log',
+  imports: [FormsModule],
   templateUrl: './audit-log.html',
   styleUrl: './audit-log.scss',
 })
 export class AuditLog {
-  private readonly ui = inject(CompanyUiState);
+  readonly ui = inject(CompanyUiState);
+  readonly api = inject(CompanyInsightsApi);
   readonly lang = computed<Lang>(() => this.ui.lang());
-  readonly L = computed(() => COPY[this.lang()]);
   readonly ar = computed(() => this.lang() === 'ar');
-
-  readonly entries = SEED;
-  readonly search = signal('');
-  readonly userFilter = signal('all');
-
-  readonly users = computed(() => ['all', ...Array.from(new Set(this.entries.map((e) => e.actor)))]);
-
-  readonly filtered = computed(() => {
-    const q = this.search().trim().toLowerCase();
-    return this.entries.filter((e) => {
-      if (this.userFilter() !== 'all' && e.actor !== this.userFilter()) return false;
-      if (!q) return true;
-      return e.action.toLowerCase().includes(q) || e.resource.toLowerCase().includes(q);
-    });
-  });
-
-  actor(e: Entry): string {
-    return this.ar() ? e.actorAr : e.actor;
+  readonly L = computed(() => COPY[this.lang()]);
+  readonly entries = signal<AuditEntry[]>([]);
+  readonly selected = signal<AuditEntry | null>(null);
+  readonly error = signal('');
+  readonly busy = signal(false);
+  readonly options = signal<{
+    actors: { id: string | null; name: string | null }[];
+    actions: string[];
+  }>({ actors: [], actions: [] });
+  readonly total = signal(0);
+  readonly nextCursor = signal<string | null>(null);
+  readonly asOf = signal('');
+  search = '';
+  userFilter = '';
+  actionFilter = '';
+  from = '';
+  to = '';
+  private generation = 0;
+  constructor() {
+    void this.load();
+    void this.loadOptions();
   }
-  action(e: Entry): string {
-    return this.ar() ? e.actionAr : e.action;
+  async loadOptions() {
+    try {
+      this.options.set(await this.api.get('/company-audit/options'));
+    } catch (e) {
+      this.error.set((e as Error).message);
+    }
   }
-
-  readonly selected = signal<Entry | null>(null);
-  open(e: Entry): void {
-    this.selected.set(e);
+  async load(more = false) {
+    if (more && this.busy()) return;
+    const n = ++this.generation;
+    this.busy.set(true);
+    this.error.set('');
+    if (!more) {
+      this.entries.set([]);
+      this.nextCursor.set(null);
+    }
+    const q: Record<string, string> = { limit: '50' };
+    if (this.search.trim()) q['q'] = this.search.trim();
+    if (this.userFilter) q['actor'] = this.userFilter;
+    if (this.actionFilter) q['action'] = this.actionFilter;
+    if (this.from) q['from'] = this.from;
+    if (this.to) q['to'] = this.to;
+    if (more && this.nextCursor()) q['cursor'] = this.nextCursor()!;
+    try {
+      const d = await this.api.get<AuditPage>('/company-audit', q);
+      if (n !== this.generation) return;
+      this.entries.update((old) => (more ? [...old, ...d.items] : d.items));
+      this.total.set(d.total);
+      this.nextCursor.set(d.nextCursor);
+      this.asOf.set(d.asOf);
+    } catch (e) {
+      if (n === this.generation) this.error.set((e as Error).message);
+    } finally {
+      if (n === this.generation) this.busy.set(false);
+    }
   }
-  close(): void {
+  actor(e: AuditEntry) {
+    return e.actor ? (e.actor.name ?? e.actor.id) : this.ar() ? 'النظام' : 'System';
+  }
+  action(e: AuditEntry) {
+    return e.action;
+  }
+  date(v: string) {
+    return new Date(v).toLocaleString(this.ar() ? 'ar-EG' : 'en-GB', { timeZone: 'Africa/Cairo' });
+  }
+  json(v: unknown) {
+    return JSON.stringify(v, null, 2) ?? '—';
+  }
+  async open(e: AuditEntry) {
+    this.selected.set(null);
+    try {
+      this.selected.set(await this.api.get('/company-audit/' + e.id));
+    } catch (err) {
+      this.error.set((err as Error).message);
+    }
+  }
+  close() {
     this.selected.set(null);
   }
 }

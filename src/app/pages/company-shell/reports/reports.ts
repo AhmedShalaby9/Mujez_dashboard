@@ -1,69 +1,13 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { CompanyUiState, type Lang } from '../company-ui-state';
-
+import {
+  CompanyInsightsApi,
+  type CompanyReport,
+  volumePercent,
+} from '../../../company-insights-api.service';
+import { AuthService } from '../../../auth.service';
+import { SOURCE_NAMES, STAGE_NAMES } from '../../../sales-api.service';
 type Period = 'month' | 'quarter' | 'ytd';
-
-interface MonthVolume {
-  label: string;
-  value: number;
-}
-
-interface FunnelStage {
-  key: string;
-  name: string;
-  nameAr: string;
-  count: number;
-}
-
-interface SourceRow {
-  source: string;
-  sourceAr: string;
-  leads: number;
-  conversion: number;
-}
-
-interface AgentRow {
-  agent: string;
-  agentAr: string;
-  leads: number;
-  deals: number;
-  revenue: number;
-}
-
-const VOLUME: MonthVolume[] = [
-  { label: 'May', value: 42 },
-  { label: 'Jun', value: 58 },
-  { label: 'Jul', value: 51 },
-  { label: 'Aug', value: 66 },
-  { label: 'Sep', value: 74 },
-  { label: 'Oct', value: 81 },
-];
-
-const FUNNEL: FunnelStage[] = [
-  { key: 'new', name: 'New', nameAr: 'جديد', count: 420 },
-  { key: 'qualified', name: 'Qualified', nameAr: 'مؤهّل', count: 260 },
-  { key: 'viewing', name: 'Viewing', nameAr: 'معاينة', count: 140 },
-  { key: 'offer', name: 'Offer', nameAr: 'عرض', count: 76 },
-  { key: 'contract', name: 'Contract', nameAr: 'عقد', count: 48 },
-  { key: 'won', name: 'Won', nameAr: 'مغلق', count: 34 },
-];
-
-const SOURCES: SourceRow[] = [
-  { source: 'Property Finder', sourceAr: 'بروبرتي فايندر', leads: 310, conversion: 11 },
-  { source: 'Facebook', sourceAr: 'فيسبوك', leads: 420, conversion: 8 },
-  { source: 'Referral', sourceAr: 'توصية', leads: 95, conversion: 24 },
-  { source: 'Google Ads', sourceAr: 'جوجل', leads: 180, conversion: 10 },
-  { source: 'Instagram', sourceAr: 'انستجرام', leads: 260, conversion: 5 },
-  { source: 'Walk-in', sourceAr: 'زيارة مباشرة', leads: 40, conversion: 15 },
-];
-
-const AGENTS: AgentRow[] = [
-  { agent: 'Dina El Sayed', agentAr: 'دينا السيد', leads: 112, deals: 14, revenue: 68_400_000 },
-  { agent: 'Youssef Mansour', agentAr: 'يوسف منصور', leads: 98, deals: 11, revenue: 42_100_000 },
-  { agent: 'Khaled Nabil', agentAr: 'خالد نبيل', leads: 86, deals: 9, revenue: 51_200_000 },
-  { agent: 'Rana Farouk', agentAr: 'رنا فاروق', leads: 74, deals: 6, revenue: 19_800_000 },
-];
-
 interface Copy {
   eyebrow: string;
   title: string;
@@ -87,79 +31,105 @@ const COPY: Record<Lang, Copy> = {
   en: {
     eyebrow: 'Growth',
     title: 'Reports',
-    sub: 'Closed volume, conversion funnel, lead sources and agent performance.',
+    sub: 'Current signed sales and retained lead cohorts, including archived leads. Cairo calendar dates.',
     periodNames: { month: 'This month', quarter: 'This quarter', ytd: 'YTD' },
     exportBtn: 'Export CSV',
-    volumeTitle: 'Closed volume by month',
-    funnelTitle: 'Conversion funnel by stage',
+    volumeTitle: 'Currently signed sale value by month',
+    funnelTitle: 'Current cohort stages (exclusive)',
     sourcesTitle: 'Lead sources',
-    agentsTitle: 'Agent performance',
+    agentsTitle: 'Current assignees / contract owners (top 100)',
     thSource: 'Source',
     thLeads: 'Leads',
     thConversion: 'Conversion',
     thAgent: 'Agent',
     thDeals: 'Deals',
-    thRevenue: 'Revenue',
+    thRevenue: 'Signed sale value',
     toastExported: 'Report exported.',
   },
   ar: {
     eyebrow: 'النمو',
     title: 'التقارير',
-    sub: 'حجم المبيعات وقمع التحويل ومصادر العملاء وأداء الوكلاء.',
+    sub: 'العقود الموقعة حاليًا والعملاء خلال الفترة بما فيهم المؤرشفون. بتوقيت القاهرة.',
     periodNames: { month: 'هذا الشهر', quarter: 'هذا الربع', ytd: 'منذ بداية السنة' },
     exportBtn: 'تصدير CSV',
-    volumeTitle: 'حجم الإغلاق شهريًا',
-    funnelTitle: 'قمع التحويل حسب المرحلة',
+    volumeTitle: 'قيمة المبيعات الموقعة شهريًا',
+    funnelTitle: 'المرحلة الحالية للعملاء خلال الفترة',
     sourcesTitle: 'مصادر العملاء',
-    agentsTitle: 'أداء الوكلاء',
+    agentsTitle: 'المسند إليهم وملاك العقود (أول ١٠٠)',
     thSource: 'المصدر',
     thLeads: 'العملاء',
     thConversion: 'التحويل',
     thAgent: 'الوكيل',
     thDeals: 'الصفقات',
-    thRevenue: 'الإيرادات',
+    thRevenue: 'قيمة البيع الموقّع',
     toastExported: 'تم تصدير التقرير.',
   },
 };
 
-@Component({
-  selector: 'app-reports',
-  templateUrl: './reports.html',
-  styleUrl: './reports.scss',
-})
+@Component({ selector: 'app-reports', templateUrl: './reports.html', styleUrl: './reports.scss' })
 export class Reports {
-  private readonly ui = inject(CompanyUiState);
+  readonly ui = inject(CompanyUiState);
+  readonly api = inject(CompanyInsightsApi);
+  readonly auth = inject(AuthService);
   readonly lang = computed<Lang>(() => this.ui.lang());
-  readonly L = computed(() => COPY[this.lang()]);
   readonly ar = computed(() => this.lang() === 'ar');
-
+  readonly L = computed(() => COPY[this.lang()]);
   readonly period = signal<Period>('quarter');
   readonly periods: Period[] = ['month', 'quarter', 'ytd'];
-
-  readonly volume = VOLUME;
-  readonly maxVolume = Math.max(...VOLUME.map((v) => v.value));
-  readonly funnel = FUNNEL;
-  readonly maxFunnel = FUNNEL[0].count;
-  readonly sources = SOURCES;
-  readonly agents = AGENTS;
-
-  funnelName(f: FunnelStage): string {
-    return this.ar() ? f.nameAr : f.name;
+  readonly data = signal<CompanyReport | null>(null);
+  readonly error = signal('');
+  readonly busy = signal(false);
+  readonly exporting = signal(false);
+  readonly canExport = computed(() => !!this.auth.user()?.permissions.includes('reports.export'));
+  private generation = 0;
+  constructor() {
+    void this.load();
   }
-  sourceName(s: SourceRow): string {
-    return this.ar() ? s.sourceAr : s.source;
+  async load(period = this.period()) {
+    this.period.set(period);
+    const n = ++this.generation;
+    this.busy.set(true);
+    this.error.set('');
+    this.data.set(null);
+    try {
+      const d = await this.api.get<CompanyReport>('/reports', { period });
+      if (n === this.generation) this.data.set(d);
+    } catch (e) {
+      if (n === this.generation) this.error.set((e as Error).message);
+    } finally {
+      if (n === this.generation) this.busy.set(false);
+    }
   }
-  agentName(a: AgentRow): string {
-    return this.ar() ? a.agentAr : a.agent;
+  readonly maxFunnel = computed(() =>
+    Math.max(1, ...(this.data()?.funnel ?? []).map((f) => f.count)),
+  );
+  percent(v: string) {
+    return volumePercent(v, this.data()?.volume ?? []);
   }
-  money(n: number): string {
-    if (n >= 1_000_000) return 'EGP ' + (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
-    return 'EGP ' + n.toLocaleString('en-US');
+  sourceName(k: string) {
+    return SOURCE_NAMES[k]?.[this.ar() ? 1 : 0] ?? k;
   }
-
-  readonly toast = signal<string | null>(null);
-  exportCsv(): void {
-    this.toast.set(this.L().toastExported);
-    setTimeout(() => this.toast.set(null), 2600);
+  stageName(k: string) {
+    return (STAGE_NAMES[this.lang()] as Record<string, string>)[k] ?? k;
+  }
+  async exportCsv() {
+    if (this.exporting() || !this.canExport()) return;
+    this.exporting.set(true);
+    this.error.set('');
+    try {
+      const r = await this.api.exportReport(this.period(), this.lang());
+      const url = URL.createObjectURL(new Blob([r.content], { type: 'text/csv;charset=utf-8' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = r.fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.exporting.set(false);
+    }
   }
 }

@@ -171,7 +171,9 @@ button {
 
 .event-row__time {
   flex: none;
-  font: 500 12px 'IBM Plex Mono', monospace;
+  font:
+    500 12px 'IBM Plex Mono',
+    monospace;
   color: #45443f;
   width: 40px;
 }
@@ -254,7 +256,9 @@ button {
   place-items: center;
   background: #e6e8fb;
   color: #2b37a0;
-  font: 600 12px 'IBM Plex Mono', monospace;
+  font:
+    600 12px 'IBM Plex Mono',
+    monospace;
 }
 
 .lead-row__text {
@@ -320,4 +324,71 @@ button {
 .closing-row__date {
   font-size: 12px;
   color: #6b6a65;
+}
+
+.empty {
+  padding: 10px 14px;
+  color: #6b6a65;
+  font-size: 12px;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+a:hover {
+  background: #f7f6f2;
+}
+.kpi__value {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 18px;
+}
+.closing-row {
+  grid-template-columns: 90px minmax(120px, 1.6fr) minmax(100px, 1fr) 1fr 100px;
+}
+.closing-list {
+  overflow: auto;
+}
+.closing-row {
+  min-width: 650px;
+}
+.inventory-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  padding: 14px;
+}
+.inventory-counts a {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+.volume-chart {
+  display: flex;
+  height: 210px;
+  gap: 16px;
+  padding: 30px 14px 45px;
+  align-items: flex-end;
+}
+.volume-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  font-size: 11px;
+  gap: 5px;
+  min-width: 0;
+}
+.volume-col span {
+  overflow-wrap: anywhere;
+}
+.volume-bar {
+  background: #3d4fd6;
+  width: 50%;
+  min-height: 0;
+  flex-shrink: 0;
+  border-radius: 3px;
 }

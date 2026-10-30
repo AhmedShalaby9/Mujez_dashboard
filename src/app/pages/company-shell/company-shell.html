@@ -129,7 +129,12 @@
                   </div>
                 </a>
               } @empty {
-                <div class="dropdown__empty">{{ L().notifEmpty }}</div>
+                <a
+                  class="dropdown__item"
+                  routerLink="/company/dashboard"
+                  (click)="notifOpen.set(false)"
+                  >{{ L().notifEmpty }}</a
+                >
               }
             </div>
           }
@@ -164,14 +169,6 @@
     </header>
 
     <div class="page">
-      @if (isPreview()) {
-        <p
-          role="note"
-          style="padding: 12px; border: 1px solid #e3d8ab; border-radius: 8px; background: #fff9e7"
-        >
-          {{ preview() }}
-        </p>
-      }
       @if (error()) {
         <p role="alert">{{ error() }}</p>
       }

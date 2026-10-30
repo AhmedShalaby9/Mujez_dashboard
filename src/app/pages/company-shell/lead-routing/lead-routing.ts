@@ -93,6 +93,7 @@ export class LeadRouting implements OnDestroy {
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
   readonly ar = computed(() => this.lang() === 'ar');
+  readonly advancedAvailable = signal(false);
   readonly canManage = computed(
     () => this.auth.user()?.permissions.includes('routing.manage') ?? false,
   );
@@ -202,6 +203,7 @@ export class LeadRouting implements OnDestroy {
       const r = await this.api.get<any>('routing');
       if (n !== this.serial) return;
       this.rules.set(r.items);
+      this.advancedAvailable.set(!!r.advancedAvailable);
       this.worker.set(r.worker);
       this.loaded.set(true);
     } catch (e: any) {

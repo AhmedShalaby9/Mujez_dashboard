@@ -1,6 +1,6 @@
 import { AuthService } from '../../auth.service';
-import { Router, NavigationEnd } from '@angular/router';
-import { Component, computed, signal, DestroyRef } from '@angular/core';
+import { Router } from '@angular/router';
+import { Component, computed, signal } from '@angular/core';
 import { inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { CompanyUiState, type Lang } from './company-ui-state';
@@ -90,7 +90,7 @@ const COPY: Record<Lang, Copy> = {
     otherLang: 'العربية',
     profileMenu: { profile: 'Profile', settings: 'Settings', signOut: 'Sign out' },
     notifTitle: 'Current alerts',
-    notifEmpty: 'CRM notifications are not connected yet',
+    notifEmpty: 'View current alerts on the dashboard',
     nav: EN_NAV,
   },
   ar: {
@@ -100,7 +100,7 @@ const COPY: Record<Lang, Copy> = {
     otherLang: 'English',
     profileMenu: { profile: 'الملف الشخصي', settings: 'الإعدادات', signOut: 'تسجيل الخروج' },
     notifTitle: 'التنبيهات الحالية',
-    notifEmpty: 'تنبيهات CRM غير متصلة بعد',
+    notifEmpty: 'عرض التنبيهات الحالية في لوحة التحكم',
     nav: AR_NAV,
   },
 };
@@ -121,25 +121,6 @@ export class CompanyShell {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   readonly companyName = computed(() => this.auth.user()?.company?.name[this.ui.lang()] ?? '');
-  private readonly destroy = inject(DestroyRef);
-  readonly currentPath = signal(this.router.url);
-  readonly isPreview = computed(
-    () =>
-      !/^\/company\/(leads|pipeline|tasks|projects|units|reservations|contracts|documents|commissions|marketing|lead-routing)(?:[/?]|$)/.test(
-        this.currentPath(),
-      ),
-  );
-  constructor() {
-    const subscription = this.router.events.subscribe((e) => {
-      if (e instanceof NavigationEnd) this.currentPath.set(e.urlAfterRedirects);
-    });
-    this.destroy.onDestroy(() => subscription.unsubscribe());
-  }
-  readonly preview = computed(() =>
-    this.ui.lang() === 'ar'
-      ? 'باقي شاشات CRM معاينة للتصميم حاليًا. الأرقام والعمليات تجريبية ولا تُحفظ. تسجيل الدخول وبيانات الحساب والشركة متصلة بالنظام.'
-      : 'Other CRM screens are currently design previews. Their figures and actions are sample data and changes are not saved. Login, account and company identity are connected.',
-  );
   readonly error = signal('');
   get me() {
     const u = this.auth.user();

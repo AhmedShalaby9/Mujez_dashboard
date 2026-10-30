@@ -795,19 +795,31 @@
         </select></label
       >
       <label
-        >{{ lang() === 'ar' ? 'الخطة المطلوبة' : 'Requested plan'
-        }}<select name="plan" [(ngModel)]="draft.plan">
+        >{{ lang() === 'ar' ? 'الخطة' : 'Plan'
+        }}<select name="plan" [(ngModel)]="draft.plan" [disabled]="!!editing()">
           @for (plan of planTypes; track plan) {
             <option [value]="plan">{{ planLabel(plan) }}</option>
           }
         </select></label
       >
       <p>
-        {{
-          lang() === 'ar'
-            ? 'تسجيل جهة اتصال المسؤول لا يرسل دعوة تلقائية.'
-            : 'Recording the admin contact does not send an invitation.'
-        }}
+        @if (!editing()) {
+          {{
+            lang() === 'ar'
+              ? 'سيتم إنشاء اشتراك تجريبي بالخطة المختارة لمدة ' +
+                trialDays() +
+                ' يومًا، وإرسال رابط الدخول وكلمة المرور المؤقتة إلى بريد الشركة تلقائيًا.'
+              : 'Creates a ' +
+                trialDays() +
+                '-day trial on the selected plan and emails the login link and temporary password to the company email. No payment is collected.'
+          }}
+        } @else {
+          {{
+            lang() === 'ar'
+              ? 'لتغيير خطة الاشتراك، استخدم صفحة الاشتراكات. تعديل البريد لا يغيّر حساب المالك.'
+              : 'Manage plan changes from Subscriptions. Editing the contact email does not transfer the owner account.'
+          }}
+        }
       </p>
       @if (error()) {
         <p role="alert">{{ error() }}</p>

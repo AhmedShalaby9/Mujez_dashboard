@@ -1,33 +1,11 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, OnDestroy } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { CompanyUiState, type Lang } from '../company-ui-state';
-
-type Strategy = 'round_robin' | 'weighted' | 'specific_user' | 'team';
-
-interface Rule {
-  id: string;
-  match: string;
-  matchAr: string;
-  strategy: Strategy;
-  target: string;
-  targetAr: string;
-  slaMinutes: number;
-  active: boolean;
-}
-
-const SEED: Rule[] = [
-  { id: 'r1', match: 'Source = Referral', matchAr: 'المصدر = توصية', strategy: 'specific_user', target: 'Dina El Sayed', targetAr: 'دينا السيد', slaMinutes: 10, active: true },
-  { id: 'r2', match: 'Segment = Commercial', matchAr: 'القطاع = تجاري', strategy: 'team', target: 'Commercial team', targetAr: 'فريق التجاري', slaMinutes: 15, active: true },
-  { id: 'r3', match: 'Budget ≥ EGP 15M', matchAr: 'الميزانية ≥ 15 مليون', strategy: 'weighted', target: 'Senior agents (60/40)', targetAr: 'كبار الوكلاء (60/40)', slaMinutes: 10, active: true },
-  { id: 'r4', match: 'All other leads', matchAr: 'كل العملاء الآخرين', strategy: 'round_robin', target: 'All available agents', targetAr: 'كل الوكلاء المتاحين', slaMinutes: 20, active: true },
-];
-
-interface SimResult {
-  agent: string;
-  agentAr: string;
-  rule: string;
-  ruleAr: string;
-}
-
+import { CompanyGrowthApi, type RoutingRule } from '../../../company-growth-api.service';
+import { AuthService } from '../../../auth.service';
+import { SOURCE_NAMES, minorAmount, majorAmount } from '../../../sales-api.service';
+type Strategy = RoutingRule['strategy'];
+type Rule = RoutingRule;
 interface Copy {
   eyebrow: string;
   title: string;
@@ -53,8 +31,13 @@ const COPY: Record<Lang, Copy> = {
   en: {
     eyebrow: 'Administration',
     title: 'Lead Routing',
-    sub: 'Ordered rules — first match wins. SLA auto-reassigns if there is no first contact in time.',
-    strategyNames: { round_robin: 'Round robin', weighted: 'Weighted', specific_user: 'Specific user', team: 'Team' },
+    sub: 'First eligible matching rule assigns new leads. Periodic SLA reassignment requires an eligible alternate and stops after three attempts.',
+    strategyNames: {
+      round_robin: 'Round robin',
+      weighted: 'Weighted',
+      specific_user: 'Specific user',
+      team: 'Team',
+    },
     thPriority: '#',
     thMatch: 'Match',
     thStrategy: 'Strategy',
@@ -73,8 +56,13 @@ const COPY: Record<Lang, Copy> = {
   ar: {
     eyebrow: 'الإدارة',
     title: 'توزيع العملاء',
-    sub: 'قواعد مرتبة — أول تطابق يُطبّق. إعادة الإسناد تلقائيًا عند تجاوز مهلة أول تواصل.',
-    strategyNames: { round_robin: 'دوري', weighted: 'مرجّح', specific_user: 'مستخدم محدد', team: 'فريق' },
+    sub: 'أول قاعدة مطابقة مؤهلة توزع العملاء الجدد. إعادة الإسناد الدوري تتطلب بديلاً مؤهلاً وتتوقف بعد ثلاث محاولات.',
+    strategyNames: {
+      round_robin: 'دوري',
+      weighted: 'مرجّح',
+      specific_user: 'مستخدم محدد',
+      team: 'فريق',
+    },
     thPriority: '#',
     thMatch: 'التطابق',
     thStrategy: 'الإستراتيجية',
@@ -94,74 +82,259 @@ const COPY: Record<Lang, Copy> = {
 
 @Component({
   selector: 'app-lead-routing',
+  imports: [FormsModule],
   templateUrl: './lead-routing.html',
   styleUrl: './lead-routing.scss',
 })
-export class LeadRouting {
-  private readonly ui = inject(CompanyUiState);
+export class LeadRouting implements OnDestroy {
+  readonly ui = inject(CompanyUiState);
+  readonly api = inject(CompanyGrowthApi);
+  readonly auth = inject(AuthService);
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
   readonly ar = computed(() => this.lang() === 'ar');
-
-  readonly rules = signal<Rule[]>(SEED);
-
-  match(r: Rule): string {
-    return this.ar() ? r.matchAr : r.match;
+  readonly canManage = computed(
+    () => this.auth.user()?.permissions.includes('routing.manage') ?? false,
+  );
+  rules = signal<Rule[]>([]);
+  loading = signal(false);
+  busy = signal(false);
+  error = signal('');
+  loaded = signal(false);
+  worker = signal<{ lastSeenAt: string | null; healthy: boolean } | null>(null);
+  showArchived = false;
+  visible = computed(() => this.rules().filter((r) => this.includeArchived() || !r.archivedAt));
+  includeArchived = signal(false);
+  users = signal<any[]>([]);
+  formOpen = signal(false);
+  editing = signal<Rule | null>(null);
+  sources = Object.keys(SOURCE_NAMES);
+  strategies: Strategy[] = ['round_robin', 'weighted', 'specific_user', 'team'];
+  form: any = {
+    name: '',
+    nameAr: '',
+    source: '',
+    segment: '',
+    minBudget: '',
+    strategy: 'round_robin',
+    teamName: '',
+    teamNameAr: '',
+    slaMinutes: 20,
+    active: false,
+    targets: [],
+  };
+  simSource = signal('website');
+  simSegment = signal<'res' | 'com'>('res');
+  simBudget = signal('');
+  simResult = signal<any>(null);
+  requestId = crypto.randomUUID();
+  private serial = 0;
+  private simSerial = 0;
+  constructor() {
+    void this.reload();
   }
-  target(r: Rule): string {
-    return this.ar() ? r.targetAr : r.target;
+  ngOnDestroy() {
+    this.serial++;
+    this.simSerial++;
   }
-
-  moveUp(i: number): void {
-    if (i === 0) return;
-    this.rules.update((list) => {
-      const copy = [...list];
-      [copy[i - 1], copy[i]] = [copy[i], copy[i - 1]];
-      return copy;
-    });
+  t(en: string, ar: string) {
+    return this.ar() ? ar : en;
   }
-  moveDown(i: number): void {
-    this.rules.update((list) => {
-      if (i === list.length - 1) return list;
-      const copy = [...list];
-      [copy[i + 1], copy[i]] = [copy[i], copy[i + 1]];
-      return copy;
-    });
+  changed() {
+    this.requestId = crypto.randomUUID();
   }
-  toggleActive(r: Rule): void {
-    this.rules.update((list) => list.map((x) => (x.id === r.id ? { ...x, active: !x.active } : x)));
+  sourceName(key: string) {
+    return SOURCE_NAMES[key]?.[this.ar() ? 1 : 0] ?? key;
   }
-
-  readonly simSource = signal('Referral');
-  readonly simSegment = signal<'res' | 'com'>('res');
-  readonly simBudget = signal('5000000');
-  readonly simResult = signal<SimResult | null>(null);
-
-  simulate(): void {
-    const budget = Number(this.simBudget()) || 0;
-    const active = this.rules().filter((r) => r.active);
-    let picked = active[active.length - 1];
-    if (this.simSource() === 'Referral') picked = active.find((r) => r.id === 'r1') ?? picked;
-    else if (this.simSegment() === 'com') picked = active.find((r) => r.id === 'r2') ?? picked;
-    else if (budget >= 15_000_000) picked = active.find((r) => r.id === 'r3') ?? picked;
-    else picked = active.find((r) => r.id === 'r4') ?? picked;
-
-    const agentMap: Record<string, [string, string]> = {
-      r1: ['Dina El Sayed', 'دينا السيد'],
-      r2: ['Youssef Mansour (commercial)', 'يوسف منصور (تجاري)'],
-      r3: ['Khaled Nabil', 'خالد نبيل'],
-      r4: ['Rana Farouk (next in rotation)', 'رنا فاروق (التالي في الدور)'],
-    };
-    const [agent, agentAr] = agentMap[picked.id] ?? ['—', '—'];
-    this.simResult.set({ agent, agentAr, rule: this.match(picked), ruleAr: picked.matchAr });
+  match(r: Rule) {
+    return (
+      [
+        r.source ? this.sourceName(r.source) : '',
+        r.segment
+          ? r.segment === 'res'
+            ? this.t('Residential', 'سكني')
+            : this.t('Commercial', 'تجاري')
+          : '',
+        r.minBudgetMinor !== null ? '≥ ' + this.api.money(r.minBudgetMinor) : '',
+      ]
+        .filter(Boolean)
+        .join(' · ') || this.t('All leads', 'كل العملاء')
+    );
   }
-
-  resultAgent(): string {
+  target(r: Rule) {
+    return (
+      (r.teamName ? r.teamName[this.lang()] + ' · ' : '') +
+        r.targets
+          .map(
+            (t) =>
+              t.name +
+              (r.strategy === 'weighted' ? ' (' + t.weight + ')' : '') +
+              (!t.active ? ' · ' + this.t('Inactive', 'غير نشط') : ''),
+          )
+          .join(', ') || this.t('Configure a user roster', 'اضبط قائمة المستخدمين')
+    );
+  }
+  canUp(r: Rule) {
+    return (
+      this.rules()
+        .filter((r) => !r.archivedAt)
+        .findIndex((x) => x.id === r.id) > 0
+    );
+  }
+  canDown(r: Rule) {
+    const rows = this.rules().filter((r) => !r.archivedAt);
+    return rows.findIndex((x) => x.id === r.id) < rows.length - 1;
+  }
+  date(v: string | null) {
+    return v
+      ? new Intl.DateTimeFormat(this.ar() ? 'ar-EG' : 'en-GB', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+          timeZone: 'Africa/Cairo',
+        }).format(new Date(v))
+      : '—';
+  }
+  async reload() {
+    const n = ++this.serial;
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      const r = await this.api.get<any>('routing');
+      if (n !== this.serial) return;
+      this.rules.set(r.items);
+      this.worker.set(r.worker);
+      this.loaded.set(true);
+    } catch (e: any) {
+      if (n === this.serial) this.error.set(e.message);
+    } finally {
+      if (n === this.serial) this.loading.set(false);
+    }
+  }
+  async edit(r: Rule | null = null) {
+    this.changed();
+    this.error.set('');
+    this.editing.set(r);
+    this.form = r
+      ? {
+          name: r.name.en,
+          nameAr: r.name.ar,
+          source: r.source ?? '',
+          segment: r.segment ?? '',
+          minBudget: r.minBudgetMinor === null ? '' : majorAmount(r.minBudgetMinor),
+          strategy: r.strategy,
+          teamName: r.teamName?.en ?? '',
+          teamNameAr: r.teamName?.ar ?? '',
+          slaMinutes: r.slaMinutes,
+          active: r.active,
+          targets: r.targets.map((t) => ({ userId: t.userId, weight: t.weight })),
+        }
+      : {
+          name: '',
+          nameAr: '',
+          source: '',
+          segment: '',
+          minBudget: '',
+          strategy: 'round_robin',
+          teamName: '',
+          teamNameAr: '',
+          slaMinutes: 20,
+          active: false,
+          targets: [],
+        };
+    this.formOpen.set(true);
+    try {
+      const o = await this.api.get<any>('routing/options');
+      if (!this.formOpen()) return;
+      this.users.set(o.users);
+      if (
+        !r &&
+        !this.form.targets.length &&
+        o.users.some((u: any) => u.id === this.auth.user()?.id)
+      )
+        this.form.targets = [{ userId: this.auth.user()!.id, weight: 1 }];
+    } catch (e: any) {
+      this.error.set(e.message);
+    }
+  }
+  async save() {
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      const r = this.editing(),
+        f = this.form;
+      await this.api.write('routing' + (r ? '/' + r.id + '/update' : ''), {
+        requestId: this.requestId,
+        name: f.name,
+        nameAr: f.nameAr || undefined,
+        source: f.source || null,
+        segment: f.segment || null,
+        minBudgetMinor: minorAmount(f.minBudget, true),
+        strategy: f.strategy,
+        teamName: f.strategy === 'team' ? f.teamName : undefined,
+        teamNameAr: f.teamNameAr || undefined,
+        slaMinutes: Number(f.slaMinutes),
+        active: !!f.active,
+        targets: f.targets.map((t: any) => ({ userId: t.userId, weight: Number(t.weight) })),
+        ...(r ? { version: r.version } : {}),
+      });
+      this.formOpen.set(false);
+      await this.reload();
+    } catch (e: any) {
+      this.error.set(e.message);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+  async action(r: Rule, action: string) {
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      await this.api.write('routing/' + r.id + '/action', {
+        requestId: crypto.randomUUID(),
+        version: r.version,
+        action,
+      });
+      await this.reload();
+    } catch (e: any) {
+      this.error.set(e.message);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+  moveUp(r: Rule) {
+    void this.action(r, 'up');
+  }
+  moveDown(r: Rule) {
+    void this.action(r, 'down');
+  }
+  toggleActive(r: Rule) {
+    void this.action(r, r.active ? 'disable' : 'enable');
+  }
+  async simulate() {
+    const n = ++this.simSerial;
+    this.error.set('');
+    try {
+      const r = await this.api.write('routing/simulate', {
+        source: this.simSource(),
+        segment: this.simSegment(),
+        budgetMinor: minorAmount(this.simBudget(), true),
+      });
+      if (n === this.simSerial) this.simResult.set(r);
+    } catch (e: any) {
+      if (n === this.simSerial) this.error.set(e.message);
+    }
+  }
+  resultAgent() {
     const r = this.simResult();
-    return r ? (this.ar() ? r.agentAr : r.agent) : '';
+    return r?.assignment?.userName ?? r?.fallback?.userName ?? '';
   }
-  resultRule(): string {
+  resultRule() {
     const r = this.simResult();
-    return r ? (this.ar() ? r.ruleAr : r.rule) : '';
+    return (
+      r?.assignment?.ruleName?.[this.lang()] ??
+      this.t('Default owner — no eligible rule', 'المسؤول الافتراضي — لا توجد قاعدة مؤهلة')
+    );
   }
 }

@@ -187,6 +187,7 @@ export const routes: Routes = [
       },
       {
         path: 'marketing',
+        data: { permission: 'marketing.read' },
         loadComponent: () =>
           import('./pages/company-shell/marketing/marketing').then((m) => m.Marketing),
       },
@@ -196,6 +197,7 @@ export const routes: Routes = [
       },
       {
         path: 'lead-routing',
+        data: { permission: 'routing.read' },
         loadComponent: () =>
           import('./pages/company-shell/lead-routing/lead-routing').then((m) => m.LeadRouting),
       },

@@ -2,7 +2,7 @@ import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
 type Severity = 'critical' | 'warning' | 'info' | 'resolved';
-type Service = 'db' | 'redis';
+type Service = 'db' | 'redis' | 'lead-routing';
 import { AuthService } from '../../../auth.service';
 
 interface Alert {
@@ -59,7 +59,7 @@ const COPY: Record<Lang, Copy> = {
     sevAll: 'All severities',
     sev: { critical: 'Critical', warning: 'Warning', info: 'Info', resolved: 'Resolved' },
     svcAll: 'All services',
-    svc: { db: 'Database', redis: 'Redis' },
+    svc: { db: 'Database', redis: 'Redis', 'lead-routing': 'Lead routing worker' },
     emptyTitle: 'No alerts match this filter',
   },
   ar: {
@@ -82,7 +82,7 @@ const COPY: Record<Lang, Copy> = {
     sevAll: 'كل المستويات',
     sev: { critical: 'حرج', warning: 'تحذير', info: 'معلومة', resolved: 'تم الحل' },
     svcAll: 'كل الخدمات',
-    svc: { db: 'قاعدة البيانات', redis: 'Redis' },
+    svc: { db: 'قاعدة البيانات', redis: 'Redis', 'lead-routing': 'عامل توزيع العملاء' },
     emptyTitle: 'لا توجد تنبيهات مطابقة لهذا الفلتر',
   },
 };
@@ -98,7 +98,7 @@ export class SystemHealth {
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
   readonly severities: Severity[] = ['critical', 'warning', 'info', 'resolved'];
-  readonly services: Service[] = ['db', 'redis'];
+  readonly services: Service[] = ['db', 'redis', 'lead-routing'];
 
   readonly alerts = signal<Alert[]>([]);
   readonly sevFilter = signal<Severity | 'all'>('all');

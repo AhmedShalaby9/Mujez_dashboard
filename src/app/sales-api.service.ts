@@ -20,6 +20,12 @@ export interface SalesLead {
   budgetMinor: string | null;
   currency: string;
   source: string;
+  campaign?: { id: string; name: { en: string; ar: string } } | null;
+  assignedAt?: string | null;
+  firstContactAt?: string | null;
+  slaDueAt?: string | null;
+  routingAttempts?: number;
+  routingRule?: { id: string; name: { en: string; ar: string } } | null;
   owner: { id: string; name: string } | null;
   stage: SalesStage;
   score: number | null;

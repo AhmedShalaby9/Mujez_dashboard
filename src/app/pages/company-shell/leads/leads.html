@@ -125,6 +125,19 @@
 @if (detailError() && !selected()) {
   <p role="alert">{{ detailError() }}</p>
 }
+@if (campaignFilter()) {
+  <p>
+    {{
+      t(
+        'Showing leads attributed to the selected campaign.',
+        'عرض العملاء المنسوبين للحملة المختارة.'
+      )
+    }}
+    <button class="btn btn--ghost" (click)="clearCampaignFilter()">
+      {{ t('Show all leads', 'عرض كل العملاء') }}
+    </button>
+  </p>
+}
 @if (selected(); as l) {
   <div class="scrim" (click)="closeDrawer()"></div>
   <div class="drawer">
@@ -158,6 +171,58 @@
         <span class="drawer__k">{{ t('Owner', 'المسؤول') }}</span
         >{{ l.owner?.name || t('Unassigned', 'دون مسؤول') }}
       </div>
+      @if (l.campaign) {
+        <div class="drawer__row">{{ t('Campaign', 'الحملة') }}: {{ l.campaign.name[lang()] }}</div>
+      }
+      @if (l.routingRule) {
+        <div class="drawer__row">
+          {{ t('Routing rule', 'قاعدة التوزيع') }}: {{ l.routingRule.name[lang()] }} ·
+          {{ t('Automatic reassignment attempts', 'محاولات إعادة الإسناد') }}
+          {{ l.routingAttempts ?? 0 }} / 3
+        </div>
+      }
+      @if (l.firstContactAt) {
+        <div class="drawer__row">
+          {{ t('First contact recorded', 'تم تسجيل أول تواصل') }}: {{ date(l.firstContactAt) }}
+        </div>
+      } @else {
+        <p>
+          {{ t('No first-contact record.', 'لا يوجد سجل لأول تواصل.') }}
+          @if (l.slaDueAt) {
+            · {{ t('First-contact record due', 'موعد تسجيل أول تواصل') }}: {{ date(l.slaDueAt) }}
+          }
+        </p>
+      }
+      @if (canManage() && !l.archivedAt && !l.firstContactAt) {
+        <label class="field"
+          >{{ t('Record contact channel', 'تسجيل وسيلة التواصل')
+          }}<select
+            class="textbox"
+            [ngModel]="contactChannel()"
+            (ngModelChange)="contactChannel.set($event); contactChanged()"
+          >
+            <option value="phone">{{ t('Phone', 'هاتف') }}</option>
+            <option value="email">{{ t('Email', 'بريد') }}</option>
+            <option value="meeting">{{ t('Meeting', 'اجتماع') }}</option>
+            <option value="other">{{ t('Other', 'أخرى') }}</option>
+          </select></label
+        ><label class="field"
+          >{{
+            t('Actual contact note (10+ characters)', 'ملاحظة التواصل الفعلي (١٠ أحرف على الأقل)')
+          }}<textarea
+            class="textarea"
+            [ngModel]="contactNote()"
+            (ngModelChange)="contactNote.set($event); contactChanged()"
+            maxlength="1000"
+          ></textarea></label
+        ><button
+          class="btn btn--ghost"
+          [disabled]="saving() || contactNote().trim().length < 10"
+          (click)="recordContact()"
+        >
+          {{ t('Record first contact', 'تسجيل أول تواصل') }}
+        </button>
+      }
       @if (l.opportunity) {
         <div class="drawer__row">
           {{ t('Pipeline deal', 'فرصة') }}: {{ l.opportunity.reference }} ·
@@ -263,7 +328,7 @@
             <div class="activity-row__text">
               <span class="activity-row__title">{{ activityText(a) }}</span
               ><span class="activity-row__time"
-                >{{ a.actor || t('System seed', 'بيانات النظام الأولية') }} · {{ date(a.at) }}</span
+                >{{ a.actor || t('System', 'النظام') }} · {{ date(a.at) }}</span
               >
             </div>
           </div>
@@ -293,7 +358,7 @@
       @if (formError()) {
         <p role="alert">{{ formError() }}</p>
       }
-      <form id="lead-form" (ngSubmit)="submit()">
+      <form id="lead-form" (ngSubmit)="submit()" (input)="formChanged()" (change)="formChanged()">
         <label class="field"
           >{{ t('Full name', 'الاسم الكامل')
           }}<input
@@ -344,14 +409,49 @@
             inputmode="decimal" /></label
         ><label class="field"
           >{{ t('Source', 'المصدر')
-          }}<select class="textbox" [(ngModel)]="draft.source" name="source">
+          }}<select
+            class="textbox"
+            [(ngModel)]="draft.source"
+            name="source"
+            (ngModelChange)="sourceChanged()"
+          >
             @for (s of sources; track s) {
               <option [value]="s">{{ source(s) }}</option>
             }
           </select></label
-        ><label class="field"
+        >
+        @if (canMarketing()) {
+          <label class="field"
+            >{{ t('Search active campaigns', 'بحث الحملات النشطة')
+            }}<input class="textbox" [(ngModel)]="campaignQuery" name="campaignSearch" /></label
+          ><button type="button" class="btn btn--ghost" (click)="loadCampaigns(true)">
+            {{ t('Search campaigns', 'بحث الحملات') }}</button
+          ><label class="field"
+            >{{ t('Campaign attribution (optional)', 'نسبة العميل للحملة (اختياري)')
+            }}<select
+              class="textbox"
+              [(ngModel)]="draft.campaignId"
+              name="campaign"
+              (ngModelChange)="campaignChanged()"
+            >
+              <option value="">{{ t('No campaign', 'بدون حملة') }}</option>
+              @for (c of campaignOptions(); track c.id) {
+                <option [value]="c.id">{{ c.name[lang()] }}</option>
+              }
+            </select></label
+          >
+          @if (campaignPage * 50 < campaignTotal()) {
+            <button type="button" class="btn btn--ghost" (click)="loadCampaigns(false)">
+              {{ t('More campaigns', 'حملات إضافية') }}
+            </button>
+          }
+        }
+        <label class="field"
           >{{ t('Owner', 'المسؤول')
           }}<select class="textbox" [(ngModel)]="draft.ownerId" name="owner">
+            @if (!editing()) {
+              <option value="auto">{{ t('Automatic assignment', 'إسناد تلقائي') }}</option>
+            }
             <option value="">{{ t('Unassigned', 'دون مسؤول') }}</option>
             @for (o of owners(); track o.id) {
               <option [value]="o.id">{{ o.name }}</option>

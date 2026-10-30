@@ -4,69 +4,300 @@
     <h1 class="page-head__title">{{ L().title }}</h1>
     <span class="page-head__sub">{{ L().sub }}</span>
   </div>
+  @if (canManage()) {
+    <button class="btn btn--primary" (click)="edit()">{{ t('New rule', 'قاعدة جديدة') }}</button>
+  }
 </div>
-
+<p>
+  {{
+    t(
+      'Explicit lead ownership overrides routing. Teams here are named user rosters defined in each rule. First contact must be recorded on the lead; no message is sent automatically.',
+      'اختيار مسؤول العميل يدوياً يتجاوز التوزيع. الفرق هنا قوائم مستخدمين مسماة داخل كل قاعدة. يجب تسجيل أول تواصل في العميل؛ لا ترسل رسالة تلقائياً.'
+    )
+  }}
+</p>
+<div class="chip-row">
+  <button class="btn btn--ghost" [disabled]="loading()" (click)="reload()">
+    {{ t('Refresh', 'تحديث') }}</button
+  ><label
+    ><input
+      type="checkbox"
+      [ngModel]="includeArchived()"
+      (ngModelChange)="includeArchived.set($event)"
+    />{{ t('Include archived', 'تضمين المؤرشفة') }}</label
+  >
+</div>
+@if (worker(); as w) {
+  <p [class.worker-stale]="!w.healthy">
+    {{ t('SLA worker', 'عامل مهلة التواصل') }}:
+    {{
+      w.healthy
+        ? t('Healthy', 'سليم')
+        : t('Heartbeat missing or stale', 'إشارة التشغيل مفقودة أو قديمة')
+    }}
+    · {{ date(w.lastSeenAt) }}
+  </p>
+}
+@if (error()) {
+  <p role="alert">{{ error() }}</p>
+}
+@if (loading()) {
+  <p>{{ t('Loading…', 'جارٍ التحميل…') }}</p>
+}
 <div class="card">
   <div class="table-scroll">
-    <div class="rt-table">
-      <div class="rt-head">
-        <span>{{ L().thPriority }}</span>
-        <span>{{ L().thMatch }}</span>
-        <span>{{ L().thStrategy }}</span>
-        <span>{{ L().thTarget }}</span>
-        <span>{{ L().thSla }}</span>
-        <span>{{ L().thActive }}</span>
-        <span></span>
+    <div class="routing-table">
+      <div class="routing-head">
+        <span>{{ L().thPriority }}</span
+        ><span>{{ L().thMatch }}</span
+        ><span>{{ L().thStrategy }}</span
+        ><span>{{ L().thTarget }}</span
+        ><span>{{ L().thSla }}</span
+        ><span>{{ L().thActive }}</span
+        ><span></span>
       </div>
-      @for (r of rules(); track r.id; let i = $index) {
-        <div class="rt-row">
-          <span class="mono">{{ i + 1 }}</span>
-          <span>{{ match(r) }}</span>
-          <span class="rt-cell__sub">{{ L().strategyNames[r.strategy] }}</span>
-          <span class="rt-cell__sub">{{ target(r) }}</span>
-          <span class="mono">{{ r.slaMinutes }} {{ L().minutes }}</span>
-          <button type="button" class="toggle toggle--sm" [class.toggle--on]="r.active" (click)="toggleActive(r)">
-            <span class="toggle__knob"></span>
-          </button>
-          <span class="rt-reorder">
-            <button type="button" class="reorder-btn" [disabled]="i === 0" (click)="moveUp(i)">▲</button>
-            <button type="button" class="reorder-btn" [disabled]="i === rules().length - 1" (click)="moveDown(i)">▼</button>
+      @for (r of visible(); track r.id; let i = $index) {
+        <div class="routing-row">
+          <span>{{ i + 1 }}</span
+          ><span
+            ><strong>{{ r.name[lang()] }}</strong
+            ><small
+              >{{ match(r) }}
+              @if (r.sample) {
+                · {{ t('Sample', 'تجريبي') }}
+              }
+              @if (r.archivedAt) {
+                · {{ t('Archived', 'مؤرشفة') }}
+              }
+            </small></span
+          ><span>{{ L().strategyNames[r.strategy] }}</span
+          ><span>{{ target(r) }}</span
+          ><span>{{ r.slaMinutes || '—' }} {{ r.slaMinutes ? L().minutes : '' }}</span
+          ><span
+            ><button
+              class="btn btn--ghost"
+              [disabled]="busy() || !canManage() || !!r.archivedAt"
+              (click)="toggleActive(r)"
+            >
+              {{ r.active ? t('Enabled', 'مفعلة') : t('Disabled', 'معطلة') }}
+            </button></span
+          ><span>
+            @if (canManage()) {
+              @if (!r.archivedAt) {
+                <button class="row-btn" [disabled]="busy() || !canUp(r)" (click)="moveUp(r)">
+                  ↑</button
+                ><button class="row-btn" [disabled]="busy() || !canDown(r)" (click)="moveDown(r)">
+                  ↓</button
+                ><button class="row-btn" (click)="edit(r)">{{ t('Edit', 'تعديل') }}</button>
+              }
+              <button
+                class="row-btn"
+                [disabled]="busy()"
+                (click)="action(r, r.archivedAt ? 'restore' : 'archive')"
+              >
+                {{ r.archivedAt ? t('Restore', 'استعادة') : t('Archive', 'أرشفة') }}
+              </button>
+            }
           </span>
         </div>
+      }
+      @if (loaded() && !loading() && !visible().length) {
+        <p>
+          {{
+            t(
+              'No saved rules. New leads default to their creator unless an owner is selected.',
+              'لا توجد قواعد محفوظة. المسؤول الافتراضي هو منشئ العميل ما لم يختر مسؤولاً.'
+            )
+          }}
+        </p>
       }
     </div>
   </div>
 </div>
-
-<div class="card sim-card">
-  <div class="card__head">
-    <span class="card__title">{{ L().simTitle }}</span>
-  </div>
-  <div class="sim-body">
-    <div class="field">
-      <span class="field__label">{{ L().simSource }}</span>
-      <select class="textbox" [value]="simSource()" (change)="simSource.set($any($event.target).value)">
-        <option value="Referral">Referral</option>
-        <option value="Facebook">Facebook</option>
-        <option value="Website">Website</option>
-      </select>
-    </div>
-    <div class="field">
-      <span class="field__label">{{ L().simSegment }}</span>
-      <select class="textbox" [value]="simSegment()" (change)="simSegment.set($any($event.target).value)">
-        <option value="res">Residential</option>
-        <option value="com">Commercial</option>
-      </select>
-    </div>
-    <div class="field">
-      <span class="field__label">{{ L().simBudget }}</span>
-      <input class="textbox" type="number" [value]="simBudget()" (input)="simBudget.set($any($event.target).value)" />
-    </div>
-    <button type="button" class="btn btn--primary" (click)="simulate()">{{ L().simBtn }}</button>
+<section class="card simulator">
+  <h2>{{ L().simTitle }}</h2>
+  <div class="sim-inputs">
+    <label
+      >{{ L().simSource
+      }}<select [ngModel]="simSource()" (ngModelChange)="simSource.set($event)">
+        @for (s of sources; track s) {
+          <option [value]="s">{{ sourceName(s) }}</option>
+        }
+      </select></label
+    ><label
+      >{{ L().simSegment
+      }}<select [ngModel]="simSegment()" (ngModelChange)="simSegment.set($event)">
+        <option value="res">{{ t('Residential', 'سكني') }}</option>
+        <option value="com">{{ t('Commercial', 'تجاري') }}</option>
+      </select></label
+    ><label
+      >{{ L().simBudget
+      }}<input
+        inputmode="decimal"
+        [ngModel]="simBudget()"
+        (ngModelChange)="simBudget.set($event)" /></label
+    ><button class="btn btn--primary" (click)="simulate()">{{ L().simBtn }}</button>
   </div>
   @if (simResult()) {
-    <div class="sim-result">
-      {{ L().simResultPrefix }} <strong>{{ resultAgent() }}</strong> — {{ L().simRulePrefix }} "{{ resultRule() }}"
-    </div>
+    <p>
+      {{ L().simResultPrefix }} {{ resultAgent() }} · {{ L().simRulePrefix }} {{ resultRule() }}
+    </p>
+    <small>{{
+      t(
+        'Simulation does not create a lead or advance rotation.',
+        'المحاكاة لا تنشئ عميلاً أو تحرّك الدور.'
+      )
+    }}</small>
   }
-</div>
+</section>
+@if (formOpen()) {
+  <div class="routing-scrim"></div>
+  <section
+    class="routing-form"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="t('Routing rule form', 'نموذج قاعدة التوزيع')"
+  >
+    <h2>{{ editing() ? t('Edit rule', 'تعديل القاعدة') : t('New rule', 'قاعدة جديدة') }}</h2>
+    @if (error()) {
+      <p role="alert">{{ error() }}</p>
+    }
+    <form (ngSubmit)="save()">
+      <label
+        >{{ t('Name', 'الاسم')
+        }}<input
+          [(ngModel)]="form.name"
+          name="name"
+          required
+          maxlength="160"
+          (ngModelChange)="changed()" /></label
+      ><label
+        >{{ t('Arabic name', 'الاسم بالعربية')
+        }}<input
+          [(ngModel)]="form.nameAr"
+          name="nameAr"
+          maxlength="160"
+          (ngModelChange)="changed()" /></label
+      ><label
+        >{{ L().simSource
+        }}<select [(ngModel)]="form.source" name="source" (ngModelChange)="changed()">
+          <option value="">{{ t('Any source', 'كل المصادر') }}</option>
+          @for (s of sources; track s) {
+            <option [value]="s">{{ sourceName(s) }}</option>
+          }
+        </select></label
+      ><label
+        >{{ L().simSegment
+        }}<select [(ngModel)]="form.segment" name="segment" (ngModelChange)="changed()">
+          <option value="">{{ t('Any segment', 'كل القطاعات') }}</option>
+          <option value="res">{{ t('Residential', 'سكني') }}</option>
+          <option value="com">{{ t('Commercial', 'تجاري') }}</option>
+        </select></label
+      ><label
+        >{{ t('Minimum budget (EGP, optional)', 'الحد الأدنى للميزانية (جنيه، اختياري)')
+        }}<input
+          inputmode="decimal"
+          [(ngModel)]="form.minBudget"
+          name="budget"
+          (ngModelChange)="changed()" /></label
+      ><label
+        >{{ L().thStrategy
+        }}<select [(ngModel)]="form.strategy" name="strategy" (ngModelChange)="changed()">
+          @for (s of strategies; track s) {
+            <option [value]="s">{{ L().strategyNames[s] }}</option>
+          }
+        </select></label
+      >
+      @if (form.strategy === 'team') {
+        <label
+          >{{ t('Team roster name', 'اسم قائمة الفريق')
+          }}<input
+            [(ngModel)]="form.teamName"
+            name="team"
+            required
+            (ngModelChange)="changed()" /></label
+        ><label
+          >{{ t('Arabic team name', 'اسم الفريق بالعربية')
+          }}<input [(ngModel)]="form.teamNameAr" name="teamAr" (ngModelChange)="changed()"
+        /></label>
+      }
+      <h3>{{ t('Actual company users', 'مستخدمو الشركة الفعليون') }}</h3>
+      @for (target of form.targets; track $index; let i = $index) {
+        <div class="target-input">
+          <label
+            >{{ t('User', 'المستخدم')
+            }}<select [(ngModel)]="target.userId" [name]="'user' + i" (ngModelChange)="changed()">
+              <option value="">—</option>
+              @for (u of users(); track u.id) {
+                <option [value]="u.id">{{ u.name }}</option>
+              }
+            </select></label
+          >
+          @if (form.strategy === 'weighted') {
+            <label
+              >{{ t('Relative weight', 'الوزن النسبي')
+              }}<input
+                type="number"
+                min="1"
+                max="1000"
+                [(ngModel)]="target.weight"
+                [name]="'weight' + i"
+                (ngModelChange)="changed()"
+            /></label>
+          }
+          <button
+            type="button"
+            class="btn btn--ghost"
+            (click)="form.targets.splice(i, 1); changed()"
+          >
+            {{ t('Remove', 'حذف') }}
+          </button>
+        </div>
+      }
+      <button
+        type="button"
+        class="btn btn--ghost"
+        [disabled]="form.targets.length >= 20"
+        (click)="form.targets.push({ userId: '', weight: 1 }); changed()"
+      >
+        {{ t('Add user', 'إضافة مستخدم') }}</button
+      ><label
+        >{{ t('First-contact SLA (minutes, 0 disables)', 'مهلة أول تواصل (دقائق، صفر للإيقاف)')
+        }}<input
+          type="number"
+          min="0"
+          max="1440"
+          [(ngModel)]="form.slaMinutes"
+          name="sla"
+          (ngModelChange)="changed()" /></label
+      ><label
+        ><input
+          type="checkbox"
+          [(ngModel)]="form.active"
+          name="active"
+          (ngModelChange)="changed()"
+        />{{ t('Enable rule', 'تفعيل القاعدة') }}</label
+      >
+      <p>
+        {{
+          t(
+            'Rule changes apply to future automatic assignments and open first-contact SLAs. Reassignment requires an alternate active roster user and stops after three attempts.',
+            'تُطبق التغييرات على التوزيع الآلي القادم ومهل أول تواصل المفتوحة. تتطلب إعادة الإسناد مستخدماً بديلاً نشطاً وتتوقف بعد ثلاث محاولات.'
+          )
+        }}
+      </p>
+      <footer>
+        <button
+          type="button"
+          class="btn btn--ghost"
+          [disabled]="busy()"
+          (click)="formOpen.set(false)"
+        >
+          {{ t('Cancel', 'إلغاء') }}</button
+        ><button type="submit" class="btn btn--primary" [disabled]="busy()">
+          {{ t('Save', 'حفظ') }}
+        </button>
+      </footer>
+    </form>
+  </section>
+}

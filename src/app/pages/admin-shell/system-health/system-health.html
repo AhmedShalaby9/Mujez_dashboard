@@ -13,14 +13,16 @@
   <p>
     {{ lang() === 'ar' ? 'آخر فحص:' : 'Last checked:' }} {{ d.observedAt }} · PostgreSQL:
     {{ status(d.database.status) }} ({{ d.database.latencyMs ?? '—' }} ms) · Redis:
-    {{ status(d.redis.status) }} ({{ d.redis.latencyMs ?? '—' }} ms)
+    {{ status(d.redis.status) }} ({{ d.redis.latencyMs ?? '—' }} ms) ·
+    {{ lang() === 'ar' ? 'عامل توزيع العملاء' : 'Lead routing worker' }}:
+    {{ status(d.routingWorker?.status) }} · {{ d.routingWorker?.lastSeenAt ?? '—' }}
   </p>
   <p>
     {{ lang() === 'ar' ? 'المقاييس منذ:' : 'Metrics since:' }} {{ d.metrics.startedAt }} ·
     {{
       lang() === 'ar'
-        ? 'زمن الاستجابة لآخر ١٠٠٠٠ طلب. المهام والتخزين غير مراقبين.'
-        : 'Latency: latest 10,000 requests. Jobs and storage are not instrumented.'
+        ? 'زمن الاستجابة لآخر ١٠٠٠٠ طلب. قوائم المهام الأخرى ومساحة قرص الخادم غير مراقبين.'
+        : 'Latency: latest 10,000 requests. Other job queues and host disk are not instrumented.'
     }}
   </p>
 }

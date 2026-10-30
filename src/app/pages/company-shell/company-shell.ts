@@ -125,7 +125,7 @@ export class CompanyShell {
   readonly currentPath = signal(this.router.url);
   readonly isPreview = computed(
     () =>
-      !/^\/company\/(leads|pipeline|tasks|projects|units|reservations|contracts|documents|commissions)(?:[/?]|$)/.test(
+      !/^\/company\/(leads|pipeline|tasks|projects|units|reservations|contracts|documents|commissions|marketing|lead-routing)(?:[/?]|$)/.test(
         this.currentPath(),
       ),
   );

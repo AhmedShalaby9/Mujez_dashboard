@@ -1,5 +1,6 @@
 import { AuthService } from '../../../auth.service';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { BillingApi, toMinor } from '../../../billing-api.service';
 import { CompaniesApi } from '../../../companies-api.service';
 import { Component, computed, inject, signal } from '@angular/core';
@@ -20,6 +21,8 @@ interface Invoice {
   balanceMinor: string;
   taxBps: number;
   description: string;
+  subscriptionId?: string | null;
+  currency?: string;
   number: string;
   companyId: string;
   companyEn: string;
@@ -51,14 +54,28 @@ const STATUS_LABEL: Record<Lang, Record<InvoiceStatus, string>> = {
   },
 };
 
-const STATUS_COLOR: Record<InvoiceStatus, { bg: string; fg: string }> = {
-  draft: { bg: '#eeeeea', fg: '#6e6e73' },
-  open: { bg: '#eeeeea', fg: '#111113' },
-  paid: { bg: '#e7f5ec', fg: '#1e6b3e' },
-  partial: { bg: '#fcf2de', fg: '#83570c' },
-  overdue: { bg: '#fbe7e3', fg: '#a23624' },
-  void: { bg: '#eeeeea', fg: '#8a8a90' },
+const STATUS_COLOR: Record<InvoiceStatus, { bg: string; fg: string; dot: string }> = {
+  draft: { bg: '#F1F1ED', fg: '#6E6E73', dot: '#B4B4AE' },
+  open: { bg: '#EAEFFD', fg: '#2E47A8', dot: '#5B78E5' },
+  paid: { bg: '#E7F5EC', fg: '#1E6B3E', dot: '#2FA35F' },
+  partial: { bg: '#FCF2DE', fg: '#83570C', dot: '#D99A28' },
+  overdue: { bg: '#FBE7E3', fg: '#A23624', dot: '#E2553B' },
+  void: { bg: '#F1F1ED', fg: '#8A8A90', dot: '#C4C4BE' },
 };
+const LOGO: Array<[string, string]> = [
+  ['#EEF5D6', '#3F5A0E'],
+  ['#E6EEFB', '#274A93'],
+  ['#F6E8DE', '#8A4A1E'],
+  ['#EDE7F8', '#55349A'],
+  ['#E3F2EF', '#1D6458'],
+  ['#F7E4E7', '#933045'],
+];
+interface PaymentRow {
+  txId: string;
+  invoiceNumber: string;
+  status: string;
+  amountMinor: string;
+}
 
 interface Copy {
   eyebrow: string;
@@ -274,7 +291,7 @@ const PAGE_SIZE = 10;
   selector: 'app-billing',
   imports: [FormsModule],
   templateUrl: './billing.html',
-  styleUrl: './billing.scss',
+  styleUrls: ['../admin-ui.scss', '../admin-table.scss', './billing.scss'],
 })
 export class Billing {
   private readonly auth = inject(AuthService);
@@ -297,8 +314,14 @@ export class Billing {
     subscriptionId: '',
   };
   private requestId = crypto.randomUUID();
+  private readonly router = inject(Router);
   constructor() {
-    void this.reload();
+    void this.reload().then(() => {
+      // `/admin/billing?invoice=INV-…` opens that invoice (used by Payments → Open invoice).
+      const n = this.router.parseUrl(this.router.url).queryParams['invoice'];
+      const i = n && this.invoices().find((x) => x.number === n);
+      if (i) void this.openView(i);
+    });
   }
   async reload() {
     this.loading.set(true);
@@ -314,6 +337,12 @@ export class Billing {
         })),
       );
       this.companies.set(await this.companiesApi.list());
+      try {
+        this.payments.set(await this.api.list<PaymentRow>('payments'));
+      } catch {}
+      try {
+        this.defaults.set(await this.auth.request('/admin/api/v1/platform-defaults'));
+      } catch {}
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to load invoices');
     } finally {
@@ -382,10 +411,14 @@ export class Billing {
 
   readonly statusTypes: InvoiceStatus[] = ['draft', 'open', 'paid', 'partial', 'overdue', 'void'];
 
-  private readonly invoices = signal<Invoice[]>([]);
+  readonly invoices = signal<Invoice[]>([]);
 
   readonly search = signal('');
   readonly statusFilter = signal<InvoiceStatus | 'all'>('all');
+  /** Payments, for the invoice drawer's "Payments" row. */
+  readonly payments = signal<PaymentRow[]>([]);
+  readonly defaults = signal<{ taxRate: number; paymentTerms: number } | null>(null);
+  readonly soonMsg = signal('');
   readonly sortKey = signal<SortKey>('issue');
   readonly sortDir = signal<'asc' | 'desc'>('desc');
   readonly page = signal(1);
@@ -515,7 +548,7 @@ export class Billing {
     return STATUS_LABEL[this.lang()][s];
   }
 
-  statusColor(s: InvoiceStatus): { bg: string; fg: string } {
+  statusColor(s: InvoiceStatus): { bg: string; fg: string; dot: string } {
     return STATUS_COLOR[s];
   }
 
@@ -529,11 +562,8 @@ export class Billing {
       : `EGP ${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
-  private readonly logoPalette = ['#111113', '#8BB33A', '#111113', '#83570c', '#1e6b3e', '#e2553b'];
-
   logoBg(i: Invoice): string {
-    const code = i.companyId.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-    return this.logoPalette[code % this.logoPalette.length];
+    return LOGO[this.logoIndex(i)][0];
   }
 
   logoInitials(i: Invoice): string {
@@ -650,6 +680,7 @@ export class Billing {
       this.closeRecord();
       this.viewing.set(null);
       await this.reload();
+      this.showToast(this.L().toastRecorded(i.number));
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to record payment');
     } finally {
@@ -686,6 +717,7 @@ export class Billing {
       this.closeVoidDialog();
       this.viewing.set(null);
       await this.reload();
+      this.showToast(this.L().toastVoided(i.number));
     } catch (error) {
       this.voidError.set(error instanceof Error ? error.message : 'Unable to void invoice');
     } finally {
@@ -724,17 +756,151 @@ export class Billing {
       this.closeCredit();
       this.viewing.set(null);
       await this.reload();
+      this.showToast(this.L().toastCredited(i.number));
     } catch (error) {
       this.creditError.set(error instanceof Error ? error.message : 'Unable to issue credit');
     } finally {
       this.saving.set(false);
     }
   }
+  /** Static until email delivery / PDF rendering exist (see BACKEND_MISSING.md). */
   sendInvoice(i: Invoice) {
-    this.error.set('Email delivery is not configured.');
+    this.kebabFor.set(null);
+    this.showToast(
+      this.lang() === 'ar'
+        ? `إرسال الفواتير بالبريد غير متصل بعد — لم يُرسل ${i.number}.`
+        : `Invoice email isn't connected yet — ${i.number} was not sent.`,
+    );
   }
   downloadPdf(i: Invoice) {
-    this.error.set('PDF export is not configured.');
+    this.kebabFor.set(null);
+    this.showToast(
+      this.lang() === 'ar'
+        ? `ملفات PDF غير متاحة بعد — لم يتم إنشاء ${i.number}.pdf.`
+        : `PDF export isn't available yet — ${i.number}.pdf was not generated.`,
+    );
+  }
+  readonly tabs = computed(() => {
+    const ar = this.lang() === 'ar';
+    const list: Array<[InvoiceStatus | 'all', string, string]> = [
+      ['all', 'All', 'الكل'],
+      ['draft', 'Draft', 'مسودة'],
+      ['open', 'Open', 'مفتوحة'],
+      ['partial', 'Partially paid', 'مدفوعة جزئيًا'],
+      ['overdue', 'Overdue', 'متأخرة'],
+      ['paid', 'Paid', 'مدفوعة'],
+      ['void', 'Void', 'ملغاة'],
+    ];
+    return list.map(([k, en, a]) => ({
+      k,
+      label: ar ? a : en,
+      n:
+        k === 'all' ? this.invoices().length : this.invoices().filter((i) => i.status === k).length,
+    }));
+  });
+  readonly hasFilters = computed(() => !!this.search().trim() || this.statusFilter() !== 'all');
+  clearFilters() {
+    this.search.set('');
+    this.statusFilter.set('all');
+    this.page.set(1);
+  }
+  /** Header KPIs from real invoices; "this month" uses issue dates in the current calendar month. */
+  readonly stats = computed(() => {
+    const month = new Date().toISOString().slice(0, 7);
+    const live = this.invoices().filter((i) => !['draft', 'void'].includes(i.status));
+    const thisMonth = live.filter((i) => i.issueDate.startsWith(month));
+    const bal = (i: Invoice) => Number(i.balanceMinor) / 100;
+    const open = live.filter((i) => ['open', 'partial', 'overdue'].includes(i.status));
+    const overdue = live.filter((i) => i.status === 'overdue');
+    return {
+      billed: thisMonth.reduce((n, i) => n + this.total(i), 0),
+      billedN: thisMonth.length,
+      collected: thisMonth.reduce((n, i) => n + i.paidAmount, 0),
+      outstanding: open.reduce((n, i) => n + bal(i), 0),
+      openN: open.length,
+      overdueN: overdue.length,
+      overdueAmt: overdue.reduce((n, i) => n + bal(i), 0),
+    };
+  });
+  short(v: number) {
+    return 'EGP ' + (v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : Math.round(v).toLocaleString('en-US'));
+  }
+  date(iso: string) {
+    const d = new Date(iso.length === 10 ? iso + 'T12:00:00Z' : iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return new Intl.DateTimeFormat(this.lang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(d);
+  }
+  minor(v: string) {
+    return Number(v) / 100;
+  }
+  invoicePayments(i: Invoice) {
+    return this.payments().filter((p) => p.invoiceNumber === i.number);
+  }
+  logoFg(i: Invoice): string {
+    return LOGO[this.logoIndex(i)][1];
+  }
+  private logoIndex(i: Invoice) {
+    return i.companyId.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % LOGO.length;
+  }
+  /** Client-side CSV of the filtered list. */
+  exportCsv() {
+    const head = [
+      'Invoice',
+      'Company ID',
+      'Company',
+      'Description',
+      'Issued',
+      'Due',
+      'Currency',
+      'Subtotal',
+      'Tax',
+      'Total',
+      'Paid',
+      'Credited',
+      'Balance',
+      'Status',
+    ];
+    const rows = this.sorted().map((i) =>
+      [
+        i.number,
+        i.companyId,
+        i.companyEn,
+        i.description,
+        i.issueDate,
+        i.dueDate,
+        (i as any).currency ?? 'EGP',
+        i.subtotalMinor,
+        i.taxMinor,
+        i.totalMinor,
+        i.paidMinor,
+        i.creditedMinor,
+        i.balanceMinor,
+        i.status,
+      ]
+        .map(
+          (v) =>
+            '"' +
+            String(v ?? '')
+              .replace(/^[=+@-]/, "'$&")
+              .replace(/"/g, '""') +
+            '"',
+        )
+        .join(','),
+    );
+    const url = URL.createObjectURL(
+      new Blob(['\uFEFF' + [head.join(','), ...rows].join('\r\n')], {
+        type: 'text/csv;charset=utf-8',
+      }),
+    );
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mujez-invoices.csv';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   private showToast(msg: string): void {

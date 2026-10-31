@@ -1,217 +1,252 @@
-@if (loading()) {
-  <p role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading payments…' }}</p>
-}
-@if (error()) {
-  <p role="alert">
-    {{ error() }}
-    <button class="btn" (click)="reload()">{{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}</button>
-  </p>
-}
-<div (click)="closeKebab()">
-  <div class="page-head">
-    <div class="page-head__text">
-      <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-      <h1 class="page-head__title">{{ L().title }}</h1>
+<div class="pg" (click)="closeKebab()">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ L().title }}</h1>
+      <span>{{
+        lang() === 'ar'
+          ? 'مدفوعات مسجلة يدويًا عبر التحويل البنكي وإنستاباي والبطاقة'
+          : 'Manually recorded bank transfer, InstaPay and card payments'
+      }}</span>
+    </div>
+    <div class="head__actions">
+      <button type="button" class="btn" (click)="notConnected('bankFile')">
+        {{ lang() === 'ar' ? 'مطابقة ملف البنك' : 'Reconcile bank file'
+        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+      </button>
     </div>
   </div>
 
-  <section class="kpis">
-    <div class="kpi">
-      <span class="kpi__label">{{ L().kpis.collected }}</span>
-      <span class="kpi__value mono" style="color: #1e6b3e">{{
-        formatMoney(kpis().collected)
-      }}</span>
-    </div>
-    <div class="kpi">
-      <span class="kpi__label">{{ L().kpis.completed }}</span>
-      <span class="kpi__value mono">{{ kpis().completed }}</span>
-    </div>
-    <div class="kpi">
-      <span class="kpi__label">{{ L().kpis.failed }}</span>
-      <span class="kpi__value mono" style="color: #e2553b">{{ kpis().failed }}</span>
-    </div>
-    <div class="kpi">
-      <span class="kpi__label">{{ L().kpis.refunded }}</span>
-      <span class="kpi__value mono" style="color: #83570c">{{ kpis().refunded }}</span>
-    </div>
-  </section>
+  @if (error() && !refunding()) {
+    <p class="note note--bad" role="alert">
+      {{ error() }}
+      <button type="button" class="link" (click)="reload()">
+        {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+      </button>
+    </p>
+  }
+  @if (loading()) {
+    <p class="muted" role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading payments…' }}</p>
+  }
 
-  <section class="filters">
-    <input
-      type="text"
-      class="filters__search"
-      [placeholder]="L().searchPh"
-      [value]="search()"
-      (input)="setSearch($any($event.target).value)"
-    />
+  <div class="kpis">
+    <button type="button" class="kpi" (click)="setStatusFilter('all')">
+      <span>{{ lang() === 'ar' ? 'المحصل · 30 يومًا' : 'Collected · 30 days' }}</span>
+      <b>{{ short(stats().collected30) }}</b>
+      <small
+        >{{ stats().recentN }}
+        {{ lang() === 'ar' ? 'مدفوعات · صافي بعد الاسترداد' : 'payments · net of refunds' }}</small
+      >
+    </button>
+    <button type="button" class="kpi" (click)="setStatusFilter('pending')">
+      <span>{{ lang() === 'ar' ? 'بانتظار المطابقة' : 'Pending' }}</span>
+      <b>{{ stats().pending }}</b>
+      <small>{{ stats().unmatched }} {{ lang() === 'ar' ? 'غير مطابقة' : 'unmatched' }}</small>
+    </button>
+    <div class="kpi kpi--static">
+      <span
+        >{{ lang() === 'ar' ? 'فاشلة' : 'Failed'
+        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+      >
+      <b>—</b>
+      <small>{{ lang() === 'ar' ? 'يتطلب بوابة الدفع' : 'needs the payment gateway' }}</small>
+    </div>
+    <button type="button" class="kpi" (click)="setStatusFilter('refunded')">
+      <span>{{ lang() === 'ar' ? 'المسترد' : 'Refunded' }}</span>
+      <b>{{ short(stats().refundedYear) }}</b>
+      <small>{{ lang() === 'ar' ? 'هذا العام' : 'this year' }}</small>
+    </button>
+    <div class="kpi kpi--static">
+      <span
+        >{{ lang() === 'ar' ? 'معدل النجاح' : 'Success rate'
+        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+      >
+      <b>—</b>
+      <small>{{ lang() === 'ar' ? 'يتطلب محاولات البوابة' : 'needs gateway attempts' }}</small>
+    </div>
+  </div>
 
-    <div class="chip-row">
+  <div class="tabs" role="tablist">
+    @for (t of tabs(); track t.k) {
       <button
         type="button"
-        class="chip"
-        [class.chip--active]="statusFilter() === 'all'"
-        (click)="setStatusFilter('all')"
+        class="tab"
+        role="tab"
+        [class.tab--on]="statusFilter() === t.k"
+        (click)="setStatusFilter(t.k)"
       >
-        {{ L().statusAll }}
+        {{ t.label }}<span class="tab__n">{{ t.n }}</span>
       </button>
-      @for (s of statusTypes; track s) {
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="statusFilter() === s"
-          (click)="setStatusFilter(s)"
-        >
-          {{ statusLabel(s) }}
-        </button>
-      }
-    </div>
+    }
+  </div>
 
-    <div class="chip-row">
-      <button
-        type="button"
-        class="chip"
-        [class.chip--active]="methodFilter() === 'all'"
-        (click)="setMethodFilter('all')"
+  <div class="filters">
+    <div class="search">
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#8A8A90"
+        stroke-width="1.8"
+        stroke-linecap="round"
       >
-        {{ L().methodAll }}
-      </button>
+        <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" />
+      </svg>
+      <input
+        type="text"
+        [placeholder]="L().searchPh"
+        [value]="search()"
+        (input)="setSearch($any($event.target).value)"
+      />
+    </div>
+    <select [value]="methodFilter()" (change)="setMethodFilter($any($event.target).value)">
+      <option value="all">{{ L().methodAll }}</option>
       @for (m of methodTypes; track m) {
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="methodFilter() === m"
-          (click)="setMethodFilter(m)"
-        >
-          {{ methodLabel(m) }}
-        </button>
+        <option [value]="m">{{ methodLabel(m) }}</option>
       }
-    </div>
-  </section>
+    </select>
+    @if (hasFilters()) {
+      <button type="button" class="link" (click)="clearFilters()">
+        {{ lang() === 'ar' ? 'مسح الفلاتر' : 'Clear filters' }}
+      </button>
+    }
+  </div>
 
   <section class="card">
-    <div class="table-scroll">
-      <div class="table-min">
-        <div class="t-head">
-          <button type="button" class="t-head__cell" (click)="toggleSort('txId')">
-            {{ L().columns.txId }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'txId'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button
-            type="button"
-            class="t-head__cell t-head__cell--grow"
-            (click)="toggleSort('company')"
-          >
-            {{ L().columns.company }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'company'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <span class="t-head__cell">{{ L().columns.method }}</span>
-          <button
-            type="button"
-            class="t-head__cell t-head__cell--end"
-            (click)="toggleSort('amount')"
-          >
-            {{ L().columns.amount }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'amount'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button type="button" class="t-head__cell" (click)="toggleSort('date')">
-            {{ L().columns.date }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'date'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button type="button" class="t-head__cell" (click)="toggleSort('status')">
-            {{ L().columns.status }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'status'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <span class="t-head__cell">{{ L().columns.reconciliation }}</span>
-          <span class="t-head__cell t-head__cell--end"></span>
-        </div>
-
-        @for (p of pageRows(); track p.txId) {
-          <div class="t-row" (click)="openView(p)">
-            <div class="t-cell mono" dir="ltr">{{ p.txId }}</div>
-            <div class="t-cell t-cell--grow">
-              <span class="t-logo" [style.background]="logoBg(p)">{{ logoInitials(p) }}</span>
-              <div class="t-cell__text">
-                <span class="t-cell__main">{{ companyName(p) }}</span>
-                <span class="t-cell__sub" dir="ltr">{{ p.invoiceNumber }}</span>
-              </div>
-            </div>
-            <div class="t-cell">{{ methodLabel(p.method) }}</div>
-            <div class="t-cell t-cell--end mono">{{ formatMoney(p.amount) }}</div>
-            <div class="t-cell">{{ p.paidAt }}</div>
-            <div class="t-cell">
-              <span
-                class="pill"
-                [style.background]="statusColor(p.status).bg"
-                [style.color]="statusColor(p.status).fg"
-              >
-                {{ statusLabel(p.status) }}
-              </span>
-            </div>
-            <div class="t-cell">
-              <span
-                class="pill"
-                [style.background]="reconColor(p.reconciliation).bg"
-                [style.color]="reconColor(p.reconciliation).fg"
-              >
-                {{ reconLabel(p.reconciliation) }}
-              </span>
-            </div>
-            <div class="t-cell t-cell--end t-cell--actions" (click)="$event.stopPropagation()">
-              <div class="kebab-wrap">
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th (click)="toggleSort('txId')">
+              {{ L().columns.txId }}
+              @if (sortKey() === 'txId') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th (click)="toggleSort('company')">
+              {{ L().columns.company }}
+              @if (sortKey() === 'company') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th class="nosort">{{ lang() === 'ar' ? 'الفاتورة' : 'Invoice' }}</th>
+            <th class="nosort">{{ L().columns.method }}</th>
+            <th class="end" (click)="toggleSort('amount')">
+              {{ L().columns.amount }}
+              @if (sortKey() === 'amount') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th (click)="toggleSort('date')">
+              {{ L().columns.date }}
+              @if (sortKey() === 'date') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th (click)="toggleSort('status')">
+              {{ L().columns.status }}
+              @if (sortKey() === 'status') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th class="nosort">{{ L().columns.reconciliation }}</th>
+            <th class="nosort">{{ lang() === 'ar' ? 'المرجع' : 'Reference' }}</th>
+            <th class="nosort act"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of pageRows(); track p.txId) {
+            <tr (click)="openView(p)">
+              <td class="mono strong">{{ p.txId }}</td>
+              <td class="strong">{{ companyName(p) }}</td>
+              <td class="mono soft">{{ p.invoiceNumber }}</td>
+              <td class="soft">{{ methodLabel(p.method) }}</td>
+              <td class="end">
+                <span class="mono">{{
+                  minor(p.amountMinor).toLocaleString('en-US', { minimumFractionDigits: 2 })
+                }}</span>
+                @if (p.refundedMinor !== '0') {
+                  <span class="sub warn"
+                    >{{ lang() === 'ar' ? 'مسترد ' : 'refunded '
+                    }}{{ minor(p.refundedMinor).toLocaleString('en-US') }}</span
+                  >
+                } @else {
+                  <span class="sub">{{ $any(p).currency || 'EGP' }}</span>
+                }
+              </td>
+              <td class="muted">{{ date(p.paidAt) }}</td>
+              <td>
+                <span
+                  class="pill"
+                  [style.background]="statusColor(p.status).bg"
+                  [style.color]="statusColor(p.status).fg"
+                  ><span class="dot" [style.background]="statusColor(p.status).dot"></span
+                  >{{ statusLabel(p.status) }}</span
+                >
+              </td>
+              <td>
+                <span
+                  class="pill"
+                  [style.background]="reconColor(p.reconciliation).bg"
+                  [style.color]="reconColor(p.reconciliation).fg"
+                  >{{ reconLabel(p.reconciliation) }}</span
+                >
+              </td>
+              <td class="mono muted clip">{{ p.gatewayRef }}</td>
+              <td class="act" (click)="$event.stopPropagation()">
                 <button
                   type="button"
-                  class="row-btn row-btn--icon"
+                  class="kebab"
+                  aria-label="Actions"
                   (click)="toggleKebab(p.txId)"
-                  aria-label="More actions"
                 >
                   ⋯
                 </button>
                 @if (kebabFor() === p.txId) {
-                  <div class="dropdown" (click)="$event.stopPropagation()">
-                    <button type="button" class="dropdown__item" (click)="openView(p)">
-                      {{ L().actions.view }}
+                  <div class="menu">
+                    <button type="button" (click)="openView(p)">
+                      {{ lang() === 'ar' ? 'عرض التفاصيل' : 'View details' }}
+                    </button>
+                    @if (p.reconciliation !== 'matched') {
+                      <button type="button" (click)="reconcile(p, 'matched')">
+                        {{ lang() === 'ar' ? 'تأكيد المطابقة' : 'Mark as reconciled' }}
+                      </button>
+                    }
+                    @if (p.reconciliation !== 'unmatched') {
+                      <button type="button" (click)="reconcile(p, 'unmatched')">
+                        {{ lang() === 'ar' ? 'تعليم كغير مطابقة' : 'Mark as unmatched' }}
+                      </button>
+                    }
+                    <button type="button" (click)="goInvoice(p)">
+                      {{ lang() === 'ar' ? 'فتح الفاتورة' : 'Open invoice' }}
                     </button>
                     @if (canRefund(p)) {
-                      <button
-                        type="button"
-                        class="dropdown__item dropdown__item--danger"
-                        (click)="openRefund(p)"
-                      >
-                        {{ L().actions.refund }}
+                      <button type="button" class="bad" (click)="openRefund(p)">
+                        {{ lang() === 'ar' ? 'استرداد…' : 'Refund…' }}
                       </button>
                     }
                   </div>
                 }
-              </div>
-            </div>
-          </div>
-        } @empty {
-          <div class="t-empty">
-            <span class="t-empty__title">{{ L().emptyTitle }}</span>
-            <span class="t-empty__sub">{{ L().emptySub }}</span>
-          </div>
-        }
-      </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
     </div>
-
+    @if (!loading() && !pageRows().length) {
+      <div class="empty">
+        <strong>{{ L().emptyTitle }}</strong
+        ><span>{{ L().emptySub }}</span>
+      </div>
+    }
     <div class="pager">
       <span>{{ pagerText() }}</span>
-      <button type="button" class="btn btn--ghost" [disabled]="page() <= 1" (click)="prevPage()">
+      <button type="button" class="btn btn--sm" [disabled]="page() <= 1" (click)="prevPage()">
         {{ L().prev }}
       </button>
       <button
         type="button"
-        class="btn btn--ghost"
+        class="btn btn--sm"
         [disabled]="page() >= totalPages()"
         (click)="nextPage()"
       >
@@ -219,183 +254,217 @@
       </button>
     </div>
   </section>
+  <span class="muted">{{
+    lang() === 'ar'
+      ? 'لا تُعرض أرقام البطاقات أو مفاتيح البوابة.'
+      : 'Card numbers and gateway secrets are never shown.'
+  }}</span>
 </div>
 
 @if (viewing(); as p) {
   <div class="scrim" (click)="closeView()"></div>
   <aside class="drawer" (click)="$event.stopPropagation()">
-    <div class="drawer__header">
-      <span class="t-logo t-logo--lg" [style.background]="logoBg(p)">{{ logoInitials(p) }}</span>
-      <div class="drawer__headerText">
-        <span class="drawer__name" dir="ltr">{{ p.txId }}</span>
-        <span
-          class="pill"
-          [style.background]="statusColor(p.status).bg"
-          [style.color]="statusColor(p.status).fg"
+    <div class="drawer__head">
+      <span class="logo logo--lg" [style.background]="logoBg(p)" [style.color]="logoFg(p)">{{
+        logoInitials(p)
+      }}</span>
+      <div class="drawer__title">
+        <span class="drawer__name mono">{{ p.txId }}</span>
+        <span class="muted"
+          >{{ companyName(p) }} · <span class="mono">{{ p.invoiceNumber }}</span></span
         >
-          {{ statusLabel(p.status) }}
-        </span>
-      </div>
-      <button type="button" class="drawer__close" (click)="closeView()" aria-label="Close">
-        ×
-      </button>
-    </div>
-
-    <div class="drawer__body">
-      @for (refund of p.refunds ?? []; track refund.number) {
-        <p>
-          {{ refund.number }} · {{ formatMoney(NumberValue(refund.amountMinor) / 100) }} ·
-          {{ refund.reason }}
-        </p>
-      }
-      <p>
-        {{ lang() === 'ar' ? 'المبلغ المسترد' : 'Refunded' }}:
-        {{ formatMoney(NumberValue(p.refundedMinor) / 100) }}
-      </p>
-      <p>
-        {{ lang() === 'ar' ? 'الصافي' : 'Net' }}: {{ formatMoney(NumberValue(p.netMinor) / 100) }}
-      </p>
-      <label
-        >{{ lang() === 'ar' ? 'المطابقة' : 'Reconciliation'
-        }}<select
-          [value]="p.reconciliation"
-          [disabled]="saving()"
-          (change)="reconcile(p, $any($event.target).value)"
-        >
-          <option value="pending">{{ reconLabel('pending') }}</option>
-          <option value="matched">{{ reconLabel('matched') }}</option>
-          <option value="unmatched">{{ reconLabel('unmatched') }}</option>
-        </select></label
-      >
-
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.company }}</span
-        ><span class="drawer__v">{{ companyName(p) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.invoice }}</span
-        ><span class="drawer__v" dir="ltr">{{ p.invoiceNumber }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.method }}</span
-        ><span class="drawer__v">{{ methodLabel(p.method) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.amount }}</span
-        ><span class="drawer__v mono">{{ formatMoney(p.amount) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.date }}</span
-        ><span class="drawer__v">{{ p.paidAt }}</span>
-      </div>
-
-      <div class="drawer__divider"></div>
-
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.gatewayRef }}</span
-        ><span class="drawer__v mono" dir="ltr">{{ p.gatewayRef }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.reconciliation }}</span>
-        <span class="drawer__v">
+        <div class="pills">
+          <span
+            class="pill"
+            [style.background]="statusColor(p.status).bg"
+            [style.color]="statusColor(p.status).fg"
+            ><span class="dot" [style.background]="statusColor(p.status).dot"></span
+            >{{ statusLabel(p.status) }}</span
+          >
           <span
             class="pill"
             [style.background]="reconColor(p.reconciliation).bg"
             [style.color]="reconColor(p.reconciliation).fg"
+            >{{ reconLabel(p.reconciliation) }}</span
           >
-            {{ reconLabel(p.reconciliation) }}
-          </span>
-        </span>
+        </div>
       </div>
+      <button type="button" class="x" (click)="closeView()" [attr.aria-label]="L().drawerClose">
+        ×
+      </button>
     </div>
-
-    <div class="drawer__footer">
-      @if (canRefund(p)) {
-        <button type="button" class="btn btn--danger-outline" (click)="openRefund(p)">
-          {{ L().actions.refund }}
+    <div class="drawer__body">
+      @if (p.reconciliation === 'pending') {
+        <p class="note note--warn">
+          {{
+            lang() === 'ar'
+              ? 'بانتظار المطابقة مع كشف حساب البنك.'
+              : 'Waiting to be matched against the bank statement.'
+          }}
+        </p>
+      } @else if (p.reconciliation === 'unmatched') {
+        <p class="note note--bad">
+          {{
+            lang() === 'ar'
+              ? 'لم تتم مطابقتها مع كشف الحساب — تحقق من المرجع.'
+              : 'Not found on the bank statement — check the reference.'
+          }}
+        </p>
+      }
+      <div class="lines">
+        <div class="hl">
+          <span>{{ L().drawerFields.amount }}</span
+          ><b>{{ formatMoney(minor(p.amountMinor)) }}</b>
+        </div>
+        <div class="soft">
+          <span>{{ lang() === 'ar' ? 'المسترد' : 'Refunded' }}</span
+          ><b [class.warnTxt]="p.refundedMinor !== '0'"
+            >−{{ formatMoney(minor(p.refundedMinor)) }}</b
+          >
+        </div>
+        <div class="hl">
+          <span>{{ lang() === 'ar' ? 'الصافي' : 'Net received' }}</span
+          ><b>{{ formatMoney(minor(p.netMinor)) }}</b>
+        </div>
+      </div>
+      <div class="sect">
+        <span class="sect__label">{{ lang() === 'ar' ? 'المعاملة' : 'TRANSACTION' }}</span>
+        <div class="kv">
+          <span>{{ L().drawerFields.method }}</span
+          ><b>{{ methodLabel(p.method) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ L().drawerFields.date }}</span
+          ><b>{{ date(p.paidAt) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ L().drawerFields.gatewayRef }}</span
+          ><b class="mono">{{ p.gatewayRef }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ L().drawerFields.invoice }}</span
+          ><b class="mono">{{ p.invoiceNumber }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ lang() === 'ar' ? 'العملة' : 'Currency' }}</span
+          ><b>{{ $any(p).currency || 'EGP' }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ L().drawerFields.reconciliation }}</span
+          ><b>{{ reconLabel(p.reconciliation) }}</b>
+        </div>
+      </div>
+      @if (p.refunds?.length) {
+        <div class="sect">
+          <span class="sect__label">{{ lang() === 'ar' ? 'الاستردادات' : 'REFUNDS' }}</span>
+          @for (r of p.refunds; track r.number) {
+            <div class="kv">
+              <span
+                ><span class="mono">{{ r.number }}</span> · {{ r.reason }}</span
+              ><b class="mono">{{ formatMoney(minor(r.amountMinor)) }}</b>
+            </div>
+          }
+        </div>
+      }
+    </div>
+    <div class="drawer__foot">
+      @if (p.reconciliation !== 'matched') {
+        <button
+          type="button"
+          class="btn btn--dark"
+          [disabled]="saving()"
+          (click)="reconcile(p, 'matched')"
+        >
+          {{ lang() === 'ar' ? 'تأكيد المطابقة' : 'Mark as reconciled' }}
         </button>
       }
-      <button type="button" class="btn btn--ghost" (click)="closeView()">
-        {{ L().drawerClose }}
+      @if (canRefund(p)) {
+        <button type="button" class="btn btn--badText" (click)="openRefund(p)">
+          {{ lang() === 'ar' ? 'استرداد…' : 'Refund…' }}
+        </button>
+      }
+      <button type="button" class="btn" (click)="goInvoice(p)">
+        {{ lang() === 'ar' ? 'فتح الفاتورة' : 'Open invoice' }}
       </button>
     </div>
   </aside>
 }
 
 @if (refunding(); as p) {
-  <div class="scrim" (click)="closeRefund()"></div>
-  <div class="dialog" (click)="$event.stopPropagation()">
-    <div class="dialog__header">
-      <div class="drawer__headerText">
-        <span class="dialog__title">{{ L().refundTitle }}</span>
-        <span class="dialog__sub" dir="ltr">{{ L().refundSub(p.txId) }}</span>
-      </div>
+  <div class="scrim scrim--top" (click)="closeRefund()"></div>
+  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__head">
+      <span class="dialog__title">{{ L().refundTitle }} · {{ p.txId }}</span>
+      <span class="dialog__body">{{ L().refundSub(p.txId) }}</span>
     </div>
-    <div class="dialog__body">
-      <div class="chip-row">
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="refundMode() === 'full'"
-          (click)="setRefundMode('full')"
-        >
-          {{ L().refundFull }}
-        </button>
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="refundMode() === 'partial'"
-          (click)="setRefundMode('partial')"
-        >
-          {{ L().refundPartial }}
-        </button>
-      </div>
-      <label class="field">
-        <span class="field__label">{{ L().refundAmount }}</span>
+    <div class="dialog__main">
+      <div class="field">
+        <span>{{ L().refundAmount }}</span>
+        <div class="segs">
+          <button
+            type="button"
+            class="seg"
+            [class.seg--on]="refundMode() === 'full'"
+            (click)="setRefundMode('full')"
+          >
+            {{ L().refundFull }}
+          </button>
+          <button
+            type="button"
+            class="seg"
+            [class.seg--on]="refundMode() === 'partial'"
+            (click)="setRefundMode('partial')"
+          >
+            {{ L().refundPartial }}
+          </button>
+        </div>
         <input
-          type="number"
-          class="input"
-          dir="ltr"
+          class="mono"
+          inputmode="decimal"
           [disabled]="refundMode() === 'full'"
           [value]="refundAmount()"
           (input)="refundAmount.set($any($event.target).value)"
         />
-      </label>
-      <label class="field">
-        <textarea
-          class="textarea"
+      </div>
+      <label class="field"
+        ><span>{{
+          lang() === 'ar' ? 'السبب (10 أحرف على الأقل)' : 'Reason (min. 10 characters)'
+        }}</span
+        ><textarea
           rows="2"
           [placeholder]="L().refundReasonPh"
           [value]="refundReason()"
           (input)="refundReason.set($any($event.target).value)"
         ></textarea>
       </label>
-      <label class="field">
-        <span class="field__label">{{ L().refundTotp }}</span>
-        <input
+      <label class="field"
+        ><span>{{ L().refundTotp }}</span
+        ><input
           type="password"
-          class="input"
-          dir="ltr"
-          maxlength="256"
           autocomplete="current-password"
+          dir="ltr"
           [placeholder]="L().refundTotpPh"
           [value]="refundTotp()"
           (input)="refundTotp.set($any($event.target).value)"
-        />
-      </label>
+      /></label>
       @if (refundError()) {
-        <span class="field__error">{{ refundError() }}</span>
+        <span class="err">{{ refundError() }}</span>
       }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeRefund()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--danger" [disabled]="saving()" (click)="submitRefund()">
-        {{ L().confirmGo }}
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="closeRefund()">{{ L().cancel }}</button>
+      <button
+        type="button"
+        class="btn btn--danger"
+        [disabled]="saving() || refundReason().trim().length < 10 || !refundTotp()"
+        (click)="submitRefund()"
+      >
+        {{ lang() === 'ar' ? 'تسجيل الاسترداد' : 'Record refund' }}
       </button>
     </div>
   </div>
 }
 
 @if (toast(); as msg) {
-  <div class="toast">{{ msg }}</div>
+  <div class="toast"><span></span>{{ msg }}</div>
 }

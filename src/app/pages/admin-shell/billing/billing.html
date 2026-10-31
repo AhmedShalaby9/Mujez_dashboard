@@ -1,223 +1,285 @@
-@if (loading()) {
-  <p role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading invoices…' }}</p>
-}
-@if (error()) {
-  <p role="alert">
-    {{ error() }}
-    <button class="btn" (click)="reload()">{{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}</button>
-  </p>
-}
-<button class="btn btn--primary" (click)="openCreate()">
-  {{ lang() === 'ar' ? 'إنشاء فاتورة' : 'Create invoice' }}
-</button>
-<div (click)="closeKebab()">
-  <div class="page-head">
-    <div class="page-head__text">
-      <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-      <h1 class="page-head__title">{{ L().title }}</h1>
+<div class="pg" (click)="closeKebab()">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ L().title }}</h1>
+      <span>
+        @if (defaults(); as d) {
+          {{
+            lang() === 'ar'
+              ? 'شروط الدفع ' + d.paymentTerms + ' يومًا · الضريبة الافتراضية ' + d.taxRate + '%'
+              : 'Net ' + d.paymentTerms + ' · default tax ' + d.taxRate + '%'
+          }}
+        } @else {
+          {{ lang() === 'ar' ? 'فواتير المنصة للشركات' : 'Platform invoices to companies' }}
+        }
+      </span>
+    </div>
+    <div class="head__actions">
+      <button type="button" class="btn" (click)="exportCsv()">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.9"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+        </svg>
+        {{ lang() === 'ar' ? 'تصدير' : 'Export' }}
+      </button>
+      <button type="button" class="btn btn--dark" (click)="openCreate()">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#C8F169"
+          stroke-width="2.2"
+          stroke-linecap="round"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        {{ lang() === 'ar' ? 'فاتورة جديدة' : 'New invoice' }}
+      </button>
     </div>
   </div>
 
-  <section class="kpis">
-    <div class="kpi">
-      <span class="kpi__label">{{ L().kpis.billed }}</span>
-      <span class="kpi__value mono">{{ formatMoney(kpis().billed) }}</span>
-    </div>
-    <div class="kpi">
-      <span class="kpi__label">{{ L().kpis.collected }}</span>
-      <span class="kpi__value mono" style="color: #1e6b3e">{{
-        formatMoney(kpis().collected)
-      }}</span>
-    </div>
-    <div class="kpi">
-      <span class="kpi__label">{{ L().kpis.outstanding }}</span>
-      <span class="kpi__value mono" style="color: #111113">{{
-        formatMoney(kpis().outstanding)
-      }}</span>
-    </div>
-    <div class="kpi">
-      <span class="kpi__label">{{ L().kpis.overdue }}</span>
-      <span class="kpi__value mono" style="color: #e2553b">{{ formatMoney(kpis().overdue) }}</span>
-    </div>
-    <div class="kpi">
-      <span class="kpi__label">{{ L().kpis.failed }}</span>
-      <span class="kpi__value mono">{{ kpis().failed }}</span>
-    </div>
-  </section>
+  @if (error() && !creating() && !recording() && !voiding() && !crediting()) {
+    <p class="note note--bad" role="alert">
+      {{ error() }}
+      <button type="button" class="link" (click)="reload()">
+        {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+      </button>
+    </p>
+  }
+  @if (loading()) {
+    <p class="muted" role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading invoices…' }}</p>
+  }
 
-  <section class="filters">
-    <input
-      type="text"
-      class="filters__search"
-      [placeholder]="L().searchPh"
-      [value]="search()"
-      (input)="setSearch($any($event.target).value)"
-    />
+  <div class="kpis">
+    <button type="button" class="kpi" (click)="setStatusFilter('all')">
+      <span>{{ lang() === 'ar' ? 'المفوتر · هذا الشهر' : 'Billed · this month' }}</span>
+      <b>{{ short(stats().billed) }}</b>
+      <small>{{ stats().billedN }} {{ lang() === 'ar' ? 'فواتير' : 'invoices' }}</small>
+    </button>
+    <button type="button" class="kpi" (click)="setStatusFilter('paid')">
+      <span>{{ lang() === 'ar' ? 'المحصل · هذا الشهر' : 'Collected · this month' }}</span>
+      <b>{{ short(stats().collected) }}</b>
+      <small>{{ lang() === 'ar' ? 'على فواتير هذا الشهر' : 'on this month’s invoices' }}</small>
+    </button>
+    <button type="button" class="kpi" (click)="setStatusFilter('open')">
+      <span>{{ lang() === 'ar' ? 'المستحق' : 'Outstanding' }}</span>
+      <b>{{ short(stats().outstanding) }}</b>
+      <small>{{ stats().openN }} {{ lang() === 'ar' ? 'فواتير' : 'invoices' }}</small>
+    </button>
+    <button type="button" class="kpi" (click)="setStatusFilter('overdue')">
+      <span>{{ lang() === 'ar' ? 'متأخرة' : 'Overdue' }}</span>
+      <b class="bad">{{ stats().overdueN }}</b>
+      <small>{{ short(stats().overdueAmt) }}</small>
+    </button>
+    <div class="kpi kpi--static">
+      <span
+        >{{ lang() === 'ar' ? 'مدفوعات فاشلة' : 'Failed payments'
+        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+      >
+      <b>—</b>
+      <small>{{ lang() === 'ar' ? 'يتطلب بوابة الدفع' : 'needs the payment gateway' }}</small>
+    </div>
+  </div>
 
-    <div class="chip-row">
+  <div class="tabs" role="tablist">
+    @for (t of tabs(); track t.k) {
       <button
         type="button"
-        class="chip"
-        [class.chip--active]="statusFilter() === 'all'"
-        (click)="setStatusFilter('all')"
+        class="tab"
+        role="tab"
+        [class.tab--on]="statusFilter() === t.k"
+        (click)="setStatusFilter(t.k)"
       >
-        {{ L().statusAll }}
+        {{ t.label }}<span class="tab__n">{{ t.n }}</span>
       </button>
-      @for (s of statusTypes; track s) {
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="statusFilter() === s"
-          (click)="setStatusFilter(s)"
-        >
-          {{ statusLabel(s) }}
-        </button>
-      }
+    }
+  </div>
+
+  <div class="filters">
+    <div class="search">
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#8A8A90"
+        stroke-width="1.8"
+        stroke-linecap="round"
+      >
+        <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" />
+      </svg>
+      <input
+        type="text"
+        [placeholder]="L().searchPh"
+        [value]="search()"
+        (input)="setSearch($any($event.target).value)"
+      />
     </div>
-  </section>
+    @if (hasFilters()) {
+      <button type="button" class="link" (click)="clearFilters()">
+        {{ lang() === 'ar' ? 'مسح الفلاتر' : 'Clear filters' }}
+      </button>
+    }
+  </div>
 
   <section class="card">
-    <div class="table-scroll">
-      <div class="table-min">
-        <div class="t-head">
-          <button type="button" class="t-head__cell" (click)="toggleSort('number')">
-            {{ L().columns.number }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'number'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button
-            type="button"
-            class="t-head__cell t-head__cell--grow"
-            (click)="toggleSort('company')"
-          >
-            {{ L().columns.company }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'company'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button type="button" class="t-head__cell" (click)="toggleSort('issue')">
-            {{ L().columns.issue }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'issue'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button type="button" class="t-head__cell" (click)="toggleSort('due')">
-            {{ L().columns.due }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'due'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button
-            type="button"
-            class="t-head__cell t-head__cell--end"
-            (click)="toggleSort('total')"
-          >
-            {{ L().columns.total }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'total'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button type="button" class="t-head__cell" (click)="toggleSort('status')">
-            {{ L().columns.status }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'status'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <span class="t-head__cell t-head__cell--end"></span>
-        </div>
-
-        @for (i of pageRows(); track i.number) {
-          <div class="t-row" (click)="openView(i)">
-            <div class="t-cell mono" dir="ltr">{{ i.number }}</div>
-            <div class="t-cell t-cell--grow">
-              <span class="t-logo" [style.background]="logoBg(i)">{{ logoInitials(i) }}</span>
-              <span class="t-cell__main">{{ companyName(i) }}</span>
-            </div>
-            <div class="t-cell">{{ i.issueDate }}</div>
-            <div class="t-cell">{{ i.dueDate }}</div>
-            <div class="t-cell t-cell--end mono">{{ formatMoney(total(i)) }}</div>
-            <div class="t-cell">
-              <span
-                class="pill"
-                [style.background]="statusColor(i.status).bg"
-                [style.color]="statusColor(i.status).fg"
-              >
-                {{ statusLabel(i.status) }}
-              </span>
-            </div>
-            <div class="t-cell t-cell--end t-cell--actions" (click)="$event.stopPropagation()">
-              <div class="kebab-wrap">
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th (click)="toggleSort('number')">
+              {{ L().columns.number }}
+              @if (sortKey() === 'number') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th (click)="toggleSort('company')">
+              {{ L().columns.company }}
+              @if (sortKey() === 'company') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th class="nosort">{{ lang() === 'ar' ? 'البيان' : 'Description' }}</th>
+            <th (click)="toggleSort('issue')">
+              {{ lang() === 'ar' ? 'الإصدار' : 'Issued' }}
+              @if (sortKey() === 'issue') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th (click)="toggleSort('due')">
+              {{ lang() === 'ar' ? 'الاستحقاق' : 'Due' }}
+              @if (sortKey() === 'due') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th class="end" (click)="toggleSort('total')">
+              {{ lang() === 'ar' ? 'القيمة' : 'Amount' }}
+              @if (sortKey() === 'total') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th class="nosort">{{ lang() === 'ar' ? 'العملة' : 'Currency' }}</th>
+            <th (click)="toggleSort('status')">
+              {{ L().columns.status }}
+              @if (sortKey() === 'status') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th class="nosort act"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (i of pageRows(); track i.number) {
+            <tr (click)="openView(i)">
+              <td class="mono strong">{{ i.number }}</td>
+              <td>
+                <span class="strong">{{ companyName(i) }}</span>
+                <span class="sub mono">{{ i.companyId }}</span>
+              </td>
+              <td class="soft clip">{{ i.description }}</td>
+              <td class="muted">{{ date(i.issueDate) }}</td>
+              <td [class.late]="i.status === 'overdue'" [class.muted]="i.status !== 'overdue'">
+                {{ date(i.dueDate) }}
+              </td>
+              <td class="end">
+                <span class="mono">{{
+                  total(i).toLocaleString('en-US', { minimumFractionDigits: 2 })
+                }}</span>
+                <span class="sub">
+                  @if (i.status === 'partial') {
+                    {{ lang() === 'ar' ? 'المتبقي ' : 'balance '
+                    }}{{ minor(i.balanceMinor).toLocaleString('en-US') }}
+                  } @else if (i.taxBps) {
+                    {{ lang() === 'ar' ? 'شامل الضريبة ' : 'incl. tax ' }}{{ i.taxBps / 100 }}%
+                  } @else {
+                    {{ lang() === 'ar' ? 'بدون ضريبة' : 'no tax' }}
+                  }
+                </span>
+              </td>
+              <td class="mono muted">{{ $any(i).currency || 'EGP' }}</td>
+              <td>
+                <span
+                  class="pill"
+                  [style.background]="statusColor(i.status).bg"
+                  [style.color]="statusColor(i.status).fg"
+                  ><span class="dot" [style.background]="statusColor(i.status).dot"></span
+                  >{{ statusLabel(i.status) }}</span
+                >
+              </td>
+              <td class="act" (click)="$event.stopPropagation()">
                 <button
                   type="button"
-                  class="row-btn row-btn--icon"
+                  class="kebab"
+                  aria-label="Actions"
                   (click)="toggleKebab(i.number)"
-                  aria-label="More actions"
                 >
                   ⋯
                 </button>
                 @if (kebabFor() === i.number) {
-                  <div class="dropdown" (click)="$event.stopPropagation()">
-                    <button type="button" class="dropdown__item" (click)="openView(i)">
-                      {{ L().actions.view }}
+                  <div class="menu">
+                    <button type="button" (click)="openView(i)">
+                      {{ lang() === 'ar' ? 'عرض الفاتورة' : 'View invoice' }}
                     </button>
+                    <button type="button" (click)="downloadPdf(i)">
+                      {{ L().actions.pdf
+                      }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+                    </button>
+                    @if (i.status === 'draft') {
+                      <button type="button" (click)="issue(i)">
+                        {{ lang() === 'ar' ? 'اعتماد الفاتورة' : 'Finalize invoice' }}
+                      </button>
+                    } @else if (i.status !== 'void' && i.status !== 'paid') {
+                      <button type="button" (click)="sendInvoice(i)">
+                        {{ lang() === 'ar' ? 'إرسال الفاتورة' : 'Send invoice'
+                        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+                      </button>
+                    }
                     @if (canRecord(i)) {
-                      <button type="button" class="dropdown__item" (click)="openRecord(i)">
-                        {{ L().actions.recordPayment }}
+                      <button type="button" (click)="openRecord(i)">
+                        {{ L().actions.recordPayment }}…
                       </button>
                     }
                     @if (canCredit(i)) {
-                      <button type="button" class="dropdown__item" (click)="openCredit(i)">
-                        {{ L().actions.creditNote }}
+                      <button type="button" (click)="openCredit(i)">
+                        {{ L().actions.creditNote }}…
                       </button>
                     }
-                    <button
-                      type="button"
-                      class="dropdown__item"
-                      disabled
-                      title="Email delivery is not configured"
-                    >
-                      {{ L().actions.send }}
-                    </button>
-                    <button
-                      type="button"
-                      class="dropdown__item"
-                      disabled
-                      title="PDF export is not configured"
-                    >
-                      {{ L().actions.pdf }}
-                    </button>
                     @if (canVoid(i)) {
-                      <button
-                        type="button"
-                        class="dropdown__item dropdown__item--danger"
-                        (click)="openVoid(i)"
-                      >
-                        {{ L().actions.voidInvoice }}
+                      <button type="button" class="bad" (click)="openVoid(i)">
+                        {{ L().actions.voidInvoice }}…
                       </button>
                     }
                   </div>
                 }
-              </div>
-            </div>
-          </div>
-        } @empty {
-          <div class="t-empty">
-            <span class="t-empty__title">{{ L().emptyTitle }}</span>
-            <span class="t-empty__sub">{{ L().emptySub }}</span>
-          </div>
-        }
-      </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
     </div>
-
+    @if (!loading() && !pageRows().length) {
+      <div class="empty">
+        <strong>{{ L().emptyTitle }}</strong
+        ><span>{{ L().emptySub }}</span>
+      </div>
+    }
     <div class="pager">
       <span>{{ pagerText() }}</span>
-      <button type="button" class="btn btn--ghost" [disabled]="page() <= 1" (click)="prevPage()">
+      <button type="button" class="btn btn--sm" [disabled]="page() <= 1" (click)="prevPage()">
         {{ L().prev }}
       </button>
       <button
         type="button"
-        class="btn btn--ghost"
+        class="btn btn--sm"
         [disabled]="page() >= totalPages()"
         (click)="nextPage()"
       >
@@ -230,191 +292,295 @@
 @if (viewing(); as i) {
   <div class="scrim" (click)="closeView()"></div>
   <aside class="drawer" (click)="$event.stopPropagation()">
-    <div class="drawer__header">
-      <span class="t-logo t-logo--lg" [style.background]="logoBg(i)">{{ logoInitials(i) }}</span>
-      <div class="drawer__headerText">
-        <span class="drawer__name" dir="ltr">{{ i.number }}</span>
-        <span
-          class="pill"
-          [style.background]="statusColor(i.status).bg"
-          [style.color]="statusColor(i.status).fg"
+    <div class="drawer__head">
+      <span class="logo logo--lg" [style.background]="logoBg(i)" [style.color]="logoFg(i)">{{
+        logoInitials(i)
+      }}</span>
+      <div class="drawer__title">
+        <span class="drawer__name mono">{{ i.number }}</span>
+        <span class="muted"
+          >{{ companyName(i) }} · <span class="mono">{{ i.companyId }}</span></span
         >
-          {{ statusLabel(i.status) }}
-        </span>
+        <div>
+          <span
+            class="pill"
+            [style.background]="statusColor(i.status).bg"
+            [style.color]="statusColor(i.status).fg"
+            ><span class="dot" [style.background]="statusColor(i.status).dot"></span
+            >{{ statusLabel(i.status) }}</span
+          >
+        </div>
       </div>
-      <button type="button" class="drawer__close" (click)="closeView()" aria-label="Close">
+      <button type="button" class="x" (click)="closeView()" [attr.aria-label]="L().drawerClose">
         ×
       </button>
     </div>
-
     <div class="drawer__body">
-      <p>{{ i.description }}</p>
-      @for (note of i.creditNotes ?? []; track note.number) {
-        <p>
-          {{ note.number }} · {{ formatMoney(NumberValue(note.amountMinor) / 100) }} ·
-          {{ note.reason }}
+      @if (i.status === 'void') {
+        <p class="note">
+          {{
+            lang() === 'ar'
+              ? 'ملغاة — محفوظة للتدقيق ولا تُحتسب في الإيراد.'
+              : 'Voided — kept for audit; it no longer counts toward revenue.'
+          }}
+        </p>
+      } @else if (i.status === 'overdue') {
+        <p class="note note--bad">
+          {{
+            lang() === 'ar'
+              ? 'متأخرة منذ ' + date(i.dueDate) + '. لا توجد تذكيرات تلقائية بعد.'
+              : 'Overdue since ' + date(i.dueDate) + '. No automatic reminders are sent yet.'
+          }}
+        </p>
+      } @else if (i.status === 'draft') {
+        <p class="note note--warn">
+          {{
+            lang() === 'ar'
+              ? 'مسودة — لا تُحتسب حتى يتم اعتمادها.'
+              : 'Draft — not counted until it is finalized.'
+          }}
         </p>
       }
-      <div class="drawer__row">
-        <span>{{ lang() === 'ar' ? 'الإشعارات الدائنة' : 'Credits' }}</span
-        ><span>{{ formatMoney(NumberValue(i.creditedMinor) / 100) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span>{{ lang() === 'ar' ? 'الرصيد المستحق' : 'Outstanding balance' }}</span
-        ><span>{{ formatMoney(NumberValue(i.balanceMinor) / 100) }}</span>
-      </div>
-      @if (i.status === 'draft') {
-        <button class="btn btn--primary" [disabled]="saving()" (click)="issue(i)">
-          {{ lang() === 'ar' ? 'إصدار الفاتورة' : 'Issue invoice' }}
-        </button>
-      }
-
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.company }}</span
-        ><span class="drawer__v">{{ companyName(i) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.issue }}</span
-        ><span class="drawer__v">{{ i.issueDate }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.due }}</span
-        ><span class="drawer__v">{{ i.dueDate }}</span>
-      </div>
-
-      <div class="drawer__divider"></div>
-
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.subtotal }}</span
-        ><span class="drawer__v mono">{{ formatMoney(i.subtotal) }}</span>
-      </div>
-      @if (i.taxProfile === 'reverse_charge') {
-        <div class="drawer__row">
-          <span class="drawer__k">{{ L().drawerFields.tax }}</span
-          ><span class="drawer__v">{{ L().drawerFields.reverseCharge }}</span>
+      <div class="lines">
+        <div>
+          <span>{{ i.description }}</span
+          ><b>{{ minor(i.subtotalMinor).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</b>
         </div>
-      } @else {
-        <div class="drawer__row">
-          <span class="drawer__k">{{ L().drawerFields.tax }}</span
-          ><span class="drawer__v mono">{{ formatMoney(tax(i)) }}</span>
+        <div class="soft">
+          <span>{{
+            i.taxBps
+              ? (lang() === 'ar' ? 'الضريبة ' : 'Tax ') + i.taxBps / 100 + '%'
+              : L().drawerFields.reverseCharge
+          }}</span
+          ><b>{{ tax(i).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</b>
+        </div>
+        <div class="hl">
+          <span>{{ L().drawerFields.total }} ({{ $any(i).currency || 'EGP' }})</span
+          ><b>{{ total(i).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</b>
+        </div>
+        <div class="soft">
+          <span>{{ lang() === 'ar' ? 'المدفوع' : 'Paid' }}</span
+          ><b class="ok"
+            >−{{ minor(i.paidMinor).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</b
+          >
+        </div>
+        @if (i.creditedMinor !== '0') {
+          <div class="soft">
+            <span>{{ lang() === 'ar' ? 'إشعارات دائنة' : 'Credited' }}</span
+            ><b class="ok"
+              >−{{
+                minor(i.creditedMinor).toLocaleString('en-US', { minimumFractionDigits: 2 })
+              }}</b
+            >
+          </div>
+        }
+        <div class="hl">
+          <span>{{ lang() === 'ar' ? 'الرصيد المستحق' : 'Balance due' }}</span
+          ><b [class.bad]="i.balanceMinor !== '0'">{{
+            minor(i.balanceMinor).toLocaleString('en-US', { minimumFractionDigits: 2 })
+          }}</b>
+        </div>
+      </div>
+      <div class="sect">
+        <span class="sect__label">{{ lang() === 'ar' ? 'التفاصيل' : 'DETAILS' }}</span>
+        <div class="kv">
+          <span>{{ lang() === 'ar' ? 'الإصدار' : 'Issued' }}</span
+          ><b>{{ date(i.issueDate) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ lang() === 'ar' ? 'الاستحقاق' : 'Due' }}</span
+          ><b>{{ date(i.dueDate) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ lang() === 'ar' ? 'إلى' : 'Bill to' }}</span
+          ><b>{{ companyName(i) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ lang() === 'ar' ? 'المعاملة الضريبية' : 'Tax treatment' }}</span>
+          <b
+            >{{
+              i.taxBps
+                ? (lang() === 'ar' ? 'ضريبة ' : 'Tax ') + i.taxBps / 100 + '%'
+                : L().drawerFields.reverseCharge
+            }}<i class="soon">{{
+              lang() === 'ar' ? 'فاتورة إلكترونية: قريبًا' : 'e-invoice: soon'
+            }}</i></b
+          >
+        </div>
+        @if (i.subscriptionId) {
+          <div class="kv">
+            <span>{{ lang() === 'ar' ? 'الاشتراك' : 'Subscription' }}</span
+            ><b class="mono">{{ i.subscriptionId }}</b>
+          </div>
+        }
+        <div class="kv">
+          <span>{{ lang() === 'ar' ? 'المدفوعات' : 'Payments' }}</span>
+          <b class="mono">
+            @for (p of invoicePayments(i); track p.txId; let last = $last) {
+              {{ p.txId }}{{ last ? '' : ', ' }}
+            } @empty {
+              —
+            }
+          </b>
+        </div>
+      </div>
+      @if (i.creditNotes?.length) {
+        <div class="sect">
+          <span class="sect__label">{{
+            lang() === 'ar' ? 'الإشعارات الدائنة' : 'CREDIT NOTES'
+          }}</span>
+          @for (c of i.creditNotes; track c.number) {
+            <div class="kv">
+              <span
+                ><span class="mono">{{ c.number }}</span> · {{ c.reason }}</span
+              ><b class="mono">{{
+                minor(c.amountMinor).toLocaleString('en-US', { minimumFractionDigits: 2 })
+              }}</b>
+            </div>
+          }
         </div>
       }
-      <div class="drawer__row drawer__row--total">
-        <span class="drawer__k">{{ L().drawerFields.total }}</span
-        ><span class="drawer__v mono">{{ formatMoney(total(i)) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.paid }}</span
-        ><span class="drawer__v mono">{{ formatMoney(i.paidAmount) }}</span>
-      </div>
     </div>
-
-    <div class="drawer__footer">
-      @if (canRecord(i)) {
-        <button type="button" class="btn btn--primary" (click)="openRecord(i)">
-          {{ L().actions.recordPayment }}
+    <div class="drawer__foot">
+      <button type="button" class="btn" (click)="downloadPdf(i)">
+        {{ L().actions.pdf }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+      </button>
+      @if (i.status === 'draft') {
+        <button type="button" class="btn btn--dark" [disabled]="saving()" (click)="issue(i)">
+          {{ lang() === 'ar' ? 'اعتماد الفاتورة' : 'Finalize invoice' }}
         </button>
       }
-      <button type="button" class="btn btn--ghost" disabled title="PDF export is not configured">
-        {{ L().actions.pdf }}
-      </button>
-      <button type="button" class="btn btn--ghost" (click)="closeView()">
-        {{ L().drawerClose }}
-      </button>
+      @if (canRecord(i)) {
+        <button type="button" class="btn btn--dark" (click)="openRecord(i)">
+          {{ lang() === 'ar' ? 'تسجيل دفعة…' : 'Record payment…' }}
+        </button>
+      }
+      @if (canCredit(i)) {
+        <button type="button" class="btn" (click)="openCredit(i)">
+          {{ lang() === 'ar' ? 'إشعار دائن…' : 'Credit note…' }}
+        </button>
+      }
+      @if (canVoid(i)) {
+        <button type="button" class="btn btn--badText" (click)="openVoid(i)">
+          {{ lang() === 'ar' ? 'إلغاء…' : 'Void…' }}
+        </button>
+      }
     </div>
   </aside>
 }
 
 @if (recording(); as i) {
-  <div class="scrim" (click)="closeRecord()"></div>
-  <div class="dialog" (click)="$event.stopPropagation()">
-    <div class="dialog__header">
-      <div class="drawer__headerText">
-        @if (error()) {
-          <p role="alert">{{ error() }}</p>
-        }
-        <label class="field"
-          ><span>{{ lang() === 'ar' ? 'طريقة الدفع' : 'Payment method' }}</span
-          ><select [value]="recordMethod()" (change)="recordMethod.set($any($event.target).value)">
-            <option value="bank">{{ lang() === 'ar' ? 'تحويل بنكي' : 'Bank transfer' }}</option>
-            <option value="card">
-              {{ lang() === 'ar' ? 'بطاقة خارجية' : 'External card payment' }}
-            </option>
-            <option value="instapay">InstaPay</option>
-          </select></label
-        >
-        <label class="field"
-          ><span>{{ lang() === 'ar' ? 'تاريخ استلام الدفعة' : 'Payment received at' }}</span
-          ><input
-            type="datetime-local"
-            class="input"
-            [value]="recordPaidAt()"
-            (input)="recordPaidAt.set($any($event.target).value)"
-        /></label>
-        <span class="dialog__title">{{ L().recordTitle }}</span>
-        <span class="dialog__sub" dir="ltr">{{ L().recordSub(i.number) }}</span>
-      </div>
+  <div class="scrim scrim--top" (click)="closeRecord()"></div>
+  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__head">
+      <span class="dialog__title">{{ L().recordTitle }}</span>
+      <span class="dialog__body">{{ L().recordSub(i.number) }}</span>
     </div>
-    <div class="dialog__body">
-      <div class="chip-row">
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="recordMode() === 'full'"
-          (click)="setRecordMode('full')"
-        >
-          {{ L().recordFull }}
-        </button>
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="recordMode() === 'partial'"
-          (click)="setRecordMode('partial')"
-        >
-          {{ L().recordPartial }}
-        </button>
+    <div class="dialog__main">
+      <div class="field">
+        <span>{{ lang() === 'ar' ? 'طريقة الدفع' : 'Method' }}</span>
+        <div class="segs">
+          @for (m of ['bank', 'instapay', 'card']; track m) {
+            <button
+              type="button"
+              class="seg"
+              [class.seg--on]="recordMethod() === m"
+              (click)="recordMethod.set(m)"
+            >
+              {{
+                m === 'bank'
+                  ? lang() === 'ar'
+                    ? 'تحويل بنكي'
+                    : 'Bank transfer'
+                  : m === 'card'
+                    ? lang() === 'ar'
+                      ? 'بطاقة'
+                      : 'Card'
+                    : 'InstaPay'
+              }}
+            </button>
+          }
+        </div>
       </div>
-      <label class="field">
-        <span class="field__label">{{ L().recordAmount }}</span>
+      <div class="field">
+        <span>{{ L().recordAmount }}</span>
+        <div class="segs">
+          <button
+            type="button"
+            class="seg"
+            [class.seg--on]="recordMode() === 'full'"
+            (click)="setRecordMode('full')"
+          >
+            {{ L().recordFull }}
+          </button>
+          <button
+            type="button"
+            class="seg"
+            [class.seg--on]="recordMode() === 'partial'"
+            (click)="setRecordMode('partial')"
+          >
+            {{ L().recordPartial }}
+          </button>
+        </div>
         <input
-          type="number"
-          class="input"
-          dir="ltr"
+          class="mono"
+          inputmode="decimal"
           [disabled]="recordMode() === 'full'"
           [value]="recordAmount()"
           (input)="recordAmount.set($any($event.target).value)"
         />
-      </label>
-      <label class="field">
-        <span class="field__label">{{ L().recordBankRef }}</span>
-        <input
-          type="text"
-          class="input"
-          [placeholder]="L().recordBankRefPh"
-          [value]="recordBankRef()"
-          (input)="recordBankRef.set($any($event.target).value)"
-        />
-      </label>
+      </div>
+      <div class="grid">
+        <label class="field"
+          ><span>{{ L().recordBankRef }}</span
+          ><input
+            dir="ltr"
+            class="mono"
+            [placeholder]="L().recordBankRefPh"
+            [value]="recordBankRef()"
+            (input)="recordBankRef.set($any($event.target).value)"
+        /></label>
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'تاريخ الدفع' : 'Paid at' }}</span
+          ><input
+            type="datetime-local"
+            dir="ltr"
+            [value]="recordPaidAt()"
+            (input)="recordPaidAt.set($any($event.target).value)"
+        /></label>
+      </div>
+      @if (error()) {
+        <p class="note note--bad" role="alert">{{ error() }}</p>
+      }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeRecord()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="submitRecord()">
-        {{ L().confirmGo }}
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="closeRecord()">{{ L().cancel }}</button>
+      <button
+        type="button"
+        class="btn btn--dark"
+        [disabled]="saving() || !recordBankRef().trim()"
+        (click)="submitRecord()"
+      >
+        {{ lang() === 'ar' ? 'تسجيل الدفعة' : 'Record payment' }}
       </button>
     </div>
   </div>
 }
 
 @if (voiding(); as i) {
-  <div class="scrim" (click)="closeVoidDialog()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ L().voidTitle }}</span>
-      <p class="dialog__text" dir="ltr">{{ L().voidBody(i.number) }}</p>
-      <span class="dialog__warning">{{ L().voidWarning }}</span>
-      <label class="field">
-        <textarea
-          class="textarea"
+  <div class="scrim scrim--top" (click)="closeVoidDialog()"></div>
+  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__head">
+      <span class="dialog__title">{{ L().voidTitle }} · {{ i.number }}</span>
+      <span class="dialog__body">{{ L().voidBody(i.number) }}</span>
+    </div>
+    <div class="dialog__main">
+      <p class="note note--warn">{{ L().voidWarning }}</p>
+      <label class="field"
+        ><span>{{
+          lang() === 'ar' ? 'السبب (10 أحرف على الأقل)' : 'Reason (min. 10 characters)'
+        }}</span
+        ><textarea
           rows="2"
           [placeholder]="L().voidReasonPh"
           [value]="voidReason()"
@@ -422,52 +588,53 @@
         ></textarea>
       </label>
       <label class="field"
-        ><span>{{ lang() === 'ar' ? 'تأكيد كلمة المرور' : 'Confirm your password' }}</span
+        ><span>{{ lang() === 'ar' ? 'كلمة مرورك للتأكيد' : 'Your password to confirm' }}</span
         ><input
           type="password"
           autocomplete="current-password"
-          class="input"
+          dir="ltr"
           [value]="password()"
           (input)="password.set($any($event.target).value)"
       /></label>
       @if (voidError()) {
-        <span class="field__error">{{ voidError() }}</span>
+        <span class="err">{{ voidError() }}</span>
       }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeVoidDialog()">
-        {{ L().cancel }}
-      </button>
-      <button type="button" class="btn btn--danger" [disabled]="saving()" (click)="submitVoid()">
-        {{ L().confirmGo }}
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="closeVoidDialog()">{{ L().cancel }}</button>
+      <button
+        type="button"
+        class="btn btn--danger"
+        [disabled]="saving() || voidReason().trim().length < 10 || !password()"
+        (click)="submitVoid()"
+      >
+        {{ lang() === 'ar' ? 'إلغاء الفاتورة' : 'Void invoice' }}
       </button>
     </div>
   </div>
 }
 
 @if (crediting(); as i) {
-  <div class="scrim" (click)="closeCredit()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__header">
-      <div class="drawer__headerText">
-        <span class="dialog__title">{{ L().creditTitle }}</span>
-        <span class="dialog__sub" dir="ltr">{{ L().creditSub(i.number) }}</span>
-      </div>
+  <div class="scrim scrim--top" (click)="closeCredit()"></div>
+  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__head">
+      <span class="dialog__title">{{ L().creditTitle }} · {{ i.number }}</span>
+      <span class="dialog__body">{{ L().creditSub(i.number) }}</span>
     </div>
-    <div class="dialog__body">
-      <label class="field">
-        <span class="field__label">{{ L().creditAmount }}</span>
-        <input
-          type="number"
-          class="input"
-          dir="ltr"
+    <div class="dialog__main">
+      <label class="field"
+        ><span>{{ L().creditAmount }}</span
+        ><input
+          class="mono"
+          inputmode="decimal"
           [value]="creditAmount()"
           (input)="creditAmount.set($any($event.target).value)"
-        />
-      </label>
-      <label class="field">
-        <textarea
-          class="textarea"
+      /></label>
+      <label class="field"
+        ><span>{{
+          lang() === 'ar' ? 'السبب (10 أحرف على الأقل)' : 'Reason (min. 10 characters)'
+        }}</span
+        ><textarea
           rows="2"
           [placeholder]="L().creditReasonPh"
           [value]="creditReason()"
@@ -475,105 +642,108 @@
         ></textarea>
       </label>
       <label class="field"
-        ><span>{{ lang() === 'ar' ? 'تأكيد كلمة المرور' : 'Confirm your password' }}</span
+        ><span>{{ lang() === 'ar' ? 'كلمة مرورك للتأكيد' : 'Your password to confirm' }}</span
         ><input
           type="password"
           autocomplete="current-password"
-          class="input"
+          dir="ltr"
           [value]="password()"
           (input)="password.set($any($event.target).value)"
       /></label>
       @if (creditError()) {
-        <span class="field__error">{{ creditError() }}</span>
+        <span class="err">{{ creditError() }}</span>
       }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeCredit()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="submitCredit()">
-        {{ L().confirmGo }}
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="closeCredit()">{{ L().cancel }}</button>
+      <button
+        type="button"
+        class="btn btn--dark"
+        [disabled]="saving() || creditReason().trim().length < 10 || !password()"
+        (click)="submitCredit()"
+      >
+        {{ lang() === 'ar' ? 'إصدار إشعار دائن' : 'Issue credit note' }}
       </button>
     </div>
   </div>
 }
 
-@if (toast(); as msg) {
-  <div class="toast">{{ msg }}</div>
-}
-
 @if (creating()) {
   <div class="scrim" (click)="creating.set(false)"></div>
-  <div class="dialog" style="max-height: 85vh; overflow: auto">
-    <form
-      style="padding: 24px; display: grid; gap: 14px"
-      (submit)="$event.preventDefault(); createInvoice()"
-    >
-      <h2>{{ lang() === 'ar' ? 'فاتورة مسودة جديدة' : 'New draft invoice' }}</h2>
-      <label
-        >{{ lang() === 'ar' ? 'الشركة' : 'Company'
-        }}<select [(ngModel)]="draft.companyId" name="company" required>
+  <aside class="drawer">
+    <div class="drawer__head">
+      <div class="drawer__title">
+        <span class="drawer__name">{{
+          lang() === 'ar' ? 'فاتورة مسودة جديدة' : 'New draft invoice'
+        }}</span>
+      </div>
+      <button type="button" class="x" (click)="creating.set(false)">×</button>
+    </div>
+    <form class="drawer__body" (submit)="$event.preventDefault(); createInvoice()">
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'الشركة' : 'Company' }}</span
+        ><select [(ngModel)]="draft.companyId" name="company" required>
           <option value="">—</option>
           @for (c of companies(); track c.id) {
             <option [value]="c.id">{{ c.nameEn }}</option>
           }
         </select></label
       >
-      <label
-        >{{ lang() === 'ar' ? 'الوصف' : 'Description'
-        }}<input
-          class="input"
-          type="text"
-          name="description"
-          [(ngModel)]="draft.description"
-          required /></label
-      ><label
-        >{{ lang() === 'ar' ? 'تاريخ الإصدار' : 'Issue date'
-        }}<input
-          class="input"
-          type="date"
-          name="issueDate"
-          [(ngModel)]="draft.issueDate"
-          required /></label
-      ><label
-        >{{ lang() === 'ar' ? 'تاريخ الاستحقاق' : 'Due date'
-        }}<input
-          class="input"
-          type="date"
-          name="dueDate"
-          [(ngModel)]="draft.dueDate"
-          required /></label
-      ><label
-        >{{ lang() === 'ar' ? 'المجموع الفرعي (ج.م)' : 'Subtotal (EGP)'
-        }}<input
-          class="input"
-          type="text"
-          name="subtotal"
-          [(ngModel)]="draft.subtotal"
-          required /></label
-      ><label
-        >{{ lang() === 'ar' ? 'نسبة الضريبة المسجلة' : 'Tax percentage (explicit)'
-        }}<input
-          class="input"
-          type="text"
-          name="taxPercent"
-          [(ngModel)]="draft.taxPercent"
-          required /></label
-      ><label
-        >{{ lang() === 'ar' ? 'مرجع الاشتراك (اختياري)' : 'Subscription reference (optional)'
-        }}<input class="input" type="text" name="subscriptionId" [(ngModel)]="draft.subscriptionId"
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'الوصف' : 'Description' }}</span
+        ><input name="description" [(ngModel)]="draft.description" required
       /></label>
-      <p>
+      <label class="field"
+        ><span>{{
+          lang() === 'ar' ? 'مرجع الاشتراك (اختياري)' : 'Subscription reference (optional)'
+        }}</span
+        ><input dir="ltr" class="mono" name="subscriptionId" [(ngModel)]="draft.subscriptionId"
+      /></label>
+      <div class="grid">
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'تاريخ الإصدار' : 'Issue date' }}</span
+          ><input type="date" dir="ltr" name="issueDate" [(ngModel)]="draft.issueDate" required
+        /></label>
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'تاريخ الاستحقاق' : 'Due date' }}</span
+          ><input type="date" dir="ltr" name="dueDate" [(ngModel)]="draft.dueDate" required
+        /></label>
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'المجموع الفرعي (ج.م)' : 'Subtotal (EGP)' }}</span
+          ><input
+            class="mono"
+            inputmode="decimal"
+            name="subtotal"
+            [(ngModel)]="draft.subtotal"
+            required
+        /></label>
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'نسبة الضريبة %' : 'Tax %' }}</span
+          ><input
+            class="mono"
+            inputmode="decimal"
+            name="taxPercent"
+            [(ngModel)]="draft.taxPercent"
+            required
+        /></label>
+      </div>
+      <p class="muted">
         {{
           lang() === 'ar'
-            ? 'أدخل نسبة الضريبة المناسبة لهذه الفاتورة.'
-            : 'Enter the tax rate applicable to this invoice.'
+            ? 'تُحفظ كمسودة. اعتمدها لاحقًا لتُحتسب.'
+            : 'Saved as a draft. Finalize it afterwards for it to count.'
         }}
       </p>
       @if (error()) {
-        <p role="alert">{{ error() }}</p>
+        <p class="note note--bad" role="alert">{{ error() }}</p>
       }
-      <button class="btn btn--primary" [disabled]="saving()">
-        {{ lang() === 'ar' ? 'حفظ المسودة' : 'Save draft' }}</button
-      ><button type="button" class="btn" (click)="creating.set(false)">{{ L().cancel }}</button>
+      <button class="btn btn--dark" [disabled]="saving()">
+        {{ lang() === 'ar' ? 'حفظ المسودة' : 'Save draft' }}
+      </button>
     </form>
-  </div>
+  </aside>
+}
+
+@if (toast(); as msg) {
+  <div class="toast"><span></span>{{ msg }}</div>
 }

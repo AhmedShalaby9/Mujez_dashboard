@@ -4,7 +4,7 @@ Things the new Platform Admin design shows that the backend doesn't support yet.
 The frontend renders each one statically. In the UI, these are marked with an amber **Not saved yet / Soon / Sample** tag or a dashed card, and the data is never sent.
 When an item is implemented, remove its tag in the listed file and wire it to the new field or endpoint.
 
-Checked against `mujez_backend` @ `af51c30` (`src/modules/platform/companies`, `src/modules/platform/subscriptions`, `docs/*.md`).
+Checked against `mujez_backend` @ `af51c30` (`src/modules/platform/companies`, `src/modules/platform/subscriptions`, `src/modules/platform/billing`, `docs/*.md`).
 
 ---
 
@@ -102,6 +102,41 @@ shortcuts preselect the next plan), **Renew**, and **Cancel** (at period end).
 | S10 | **Payment** column as payment *status* (Paid / Failed / Pending) | Shows the recorded payment *method* (card/bank/InstaPay). | `paymentStatus` from the latest invoice/payment per subscription. Depends on billing/payments being real. |
 | S11 | **Past due** handling note (grace period, auto-suspend) | The drawer says there's no automatic retry or suspension yet. | Dunning: grace period setting, retries, automatic suspension job. |
 | S12 | Drawer **HISTORY** timeline | Shows the current period start only + a pointer to Audit logs, "Soon" tag. | `GET /subscriptions/:id/history` (created, plan changes, renewals, cancellation) from audit/outbox events. |
+
+## Billing & invoices (`/admin/billing`)
+
+Already real: invoice list (`GET /invoices`), status tabs (draft/open/partial/overdue/paid/void), search, KPIs (billed and
+collected this month, outstanding, overdue count + amount — computed from invoices), drawer with subtotal/tax/total/paid/
+credited/balance lines, credit notes, linked payments (from `GET /payments`), new draft invoice, **Finalize**
+(`/issue`), **Record manual payment**, **Issue credit note** and **Void** (password-confirmed), CSV export (client-side).
+Header terms come from `/platform-defaults` (`paymentTerms`, `taxRate`). `/admin/billing?invoice=INV-…` opens an invoice.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| B1 | **Download PDF** | Menu/drawer item with "Soon" tag. Shows a "not available" toast. | `GET /invoices/:number/pdf` (rendered invoice with company tax details). |
+| B2 | **Send invoice** (email to billing contact) | "Soon" tag, toast only. | `POST /invoices/:number/send`, queued through outbox/email, audited (and record `sentAt`). |
+| B3 | **Failed payments** KPI | Dashed static card (`—`). | Gateway payment attempts with a `failed` state (see Y1). |
+| B4 | **Automatic overdue reminders** (design note: "reminders sent on day 1 and 3") | The drawer says no automatic reminders are sent. | Dunning schedule + reminder log per invoice. |
+| B5 | **Tax treatment / ETA e-invoice** | Shows the entered tax rate + "e-invoice: soon" tag. | Egyptian Tax Authority e-invoice submission (UUID, status) and per-company tax profile. |
+| B6 | **Bill-to email** in the drawer | Shows the company name only. | Include the billing contact email (`companyEmail` / `adminEmail`) in the invoice DTO snapshot. |
+| B7 | Server-side search/filter/totals | All pages are fetched and filtered client-side (`limit` max 100/page). | `GET /invoices?status=&q=&from=&to=` plus a `summary` block (billed/collected/outstanding/overdue) for large datasets. |
+| B8 | Invoice numbering format shown in header (`INV-{YYYY}-{####}`) | Replaced with real payment terms/tax from settings. | Expose the numbering pattern in `/platform-defaults` if it should be shown. |
+
+## Payments (`/admin/payments`)
+
+Already real: payment list, search, method filter, tabs (completed / **pending reconciliation** / refunded / partially refunded),
+KPIs (collected last 30 days net of refunds, pending + unmatched reconciliation, refunded this year), drawer with
+amount/refunded/net, refund history, **Mark as reconciled / unmatched** (`/reconcile`), **Refund** (password-confirmed),
+**Open invoice** (deep link into Billing).
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| Y1 | **Failed** tab + KPI, **Retry charge** action, decline reason ("insufficient funds…") | No Failed tab. Dashed static KPI card. Retry shows a "needs gateway" toast. | Payment-gateway integration that records attempts (`pending/failed/succeeded`), decline codes, and `POST /payments/:id/retry`. Payments today are manual records only. |
+| Y2 | **Success rate** KPI | Dashed static card (`—`). | Derived from Y1 attempts (succeeded ÷ attempted, excluding pending). |
+| Y3 | **Reconcile bank file** button | "Soon" tag, toast only. | `POST /payments/reconciliation/import` (CSV/MT940 upload) that auto-matches by reference and amount and returns matched/unmatched lists. |
+| Y4 | Card **•••• last 4** in the drawer | Not shown. | Store a masked card suffix/brand from the gateway (never the full PAN). |
+| Y5 | "Customer was emailed a payment link" (failed note) | Not shown. | Payment-link generation + email (depends on Y1/B2). |
+| Y6 | Server-side search/filter/totals | Client-side over all pages. | `GET /payments?status=&reconciliation=&method=&q=&from=&to=` + summary block. |
 
 ---
 

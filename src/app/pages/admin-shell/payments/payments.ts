@@ -1,4 +1,5 @@
 import { BillingApi, toMinor } from '../../../billing-api.service';
+import { Router } from '@angular/router';
 import { Component, computed, inject, signal } from '@angular/core';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
@@ -48,13 +49,22 @@ const STATUS_LABEL: Record<Lang, Record<PaymentStatus, string>> = {
   },
 };
 
-const STATUS_COLOR: Record<PaymentStatus, { bg: string; fg: string }> = {
-  pending: { bg: '#eeeeea', fg: '#111113' },
-  completed: { bg: '#e7f5ec', fg: '#1e6b3e' },
-  failed: { bg: '#fbe7e3', fg: '#a23624' },
-  refunded: { bg: '#eeeeea', fg: '#6e6e73' },
-  partial_refund: { bg: '#fcf2de', fg: '#83570c' },
+const STATUS_COLOR: Record<PaymentStatus, { bg: string; fg: string; dot: string }> = {
+  pending: { bg: '#FCF2DE', fg: '#83570C', dot: '#D99A28' },
+  completed: { bg: '#E7F5EC', fg: '#1E6B3E', dot: '#2FA35F' },
+  failed: { bg: '#FBE7E3', fg: '#A23624', dot: '#E2553B' },
+  refunded: { bg: '#F1F1ED', fg: '#6E6E73', dot: '#B4B4AE' },
+  partial_refund: { bg: '#FCF2DE', fg: '#83570C', dot: '#D99A28' },
 };
+type Tab = 'all' | 'completed' | 'pending' | 'refunded' | 'partial_refund';
+const LOGO: Array<[string, string]> = [
+  ['#EEF5D6', '#3F5A0E'],
+  ['#E6EEFB', '#274A93'],
+  ['#F6E8DE', '#8A4A1E'],
+  ['#EDE7F8', '#55349A'],
+  ['#E3F2EF', '#1D6458'],
+  ['#F7E4E7', '#933045'],
+];
 
 const RECON_LABEL: Record<Lang, Record<Reconciliation, string>> = {
   en: { matched: 'Matched', unmatched: 'Unmatched', pending: 'Pending' },
@@ -229,11 +239,12 @@ const PAGE_SIZE = 10;
 @Component({
   selector: 'app-payments',
   templateUrl: './payments.html',
-  styleUrl: './payments.scss',
+  styleUrls: ['../admin-ui.scss', '../admin-table.scss', './payments.scss'],
 })
 export class Payments {
   readonly NumberValue = Number;
   private readonly api = inject(BillingApi);
+  private readonly router = inject(Router);
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly error = signal('');
@@ -291,7 +302,7 @@ export class Payments {
   private readonly payments = signal<Payment[]>([]);
 
   readonly search = signal('');
-  readonly statusFilter = signal<PaymentStatus | 'all'>('all');
+  readonly statusFilter = signal<Tab>('all');
   readonly methodFilter = signal<PaymentMethod | 'all'>('all');
   readonly sortKey = signal<SortKey>('date');
   readonly sortDir = signal<'asc' | 'desc'>('desc');
@@ -325,7 +336,7 @@ export class Payments {
     const status = this.statusFilter();
     const method = this.methodFilter();
     return this.payments().filter((p) => {
-      if (status !== 'all' && p.status !== status) return false;
+      if (!this.inTab(p, status)) return false;
       if (method !== 'all' && p.method !== method) return false;
       if (!q) return true;
       return (
@@ -397,7 +408,7 @@ export class Payments {
     return STATUS_LABEL[this.lang()][s];
   }
 
-  statusColor(s: PaymentStatus): { bg: string; fg: string } {
+  statusColor(s: PaymentStatus): { bg: string; fg: string; dot: string } {
     return STATUS_COLOR[s];
   }
 
@@ -423,11 +434,90 @@ export class Payments {
     return p.status === 'completed' || p.status === 'partial_refund';
   }
 
-  private readonly logoPalette = ['#111113', '#8BB33A', '#111113', '#83570c', '#1e6b3e', '#e2553b'];
-
-  logoBg(p: Payment): string {
+  private logo(p: Payment): [string, string] {
     const code = p.companyId.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-    return this.logoPalette[code % this.logoPalette.length];
+    return LOGO[code % LOGO.length];
+  }
+  logoBg(p: Payment): string {
+    return this.logo(p)[0];
+  }
+  logoFg(p: Payment): string {
+    return this.logo(p)[1];
+  }
+  /** "Pending" = recorded but not yet matched against the bank statement (reconciliation pending). */
+  inTab(p: Payment, t: Tab) {
+    return t === 'all' || (t === 'pending' ? p.reconciliation === 'pending' : p.status === t);
+  }
+  readonly tabs = computed(() => {
+    const ar = this.lang() === 'ar';
+    const list: Array<[Tab, string, string]> = [
+      ['all', 'All', 'الكل'],
+      ['completed', 'Completed', 'مكتملة'],
+      ['pending', 'Pending reconciliation', 'بانتظار المطابقة'],
+      ['refunded', 'Refunded', 'مستردة'],
+      ['partial_refund', 'Partially refunded', 'مستردة جزئيًا'],
+    ];
+    return list.map(([k, en, a]) => ({
+      k,
+      label: ar ? a : en,
+      n: this.payments().filter((p) => this.inTab(p, k)).length,
+    }));
+  });
+  readonly hasFilters = computed(
+    () => !!this.search().trim() || this.statusFilter() !== 'all' || this.methodFilter() !== 'all',
+  );
+  clearFilters() {
+    this.search.set('');
+    this.statusFilter.set('all');
+    this.methodFilter.set('all');
+    this.page.set(1);
+  }
+  readonly stats = computed(() => {
+    const list = this.payments();
+    const since = Date.now() - 30 * 86400000;
+    const year = String(new Date().getFullYear());
+    const recent = list.filter((p) => new Date(p.paidAt).getTime() >= since);
+    return {
+      collected30: recent.reduce((n, p) => n + Number(p.netMinor) / 100, 0),
+      recentN: recent.length,
+      pending: list.filter((p) => p.reconciliation === 'pending').length,
+      unmatched: list.filter((p) => p.reconciliation === 'unmatched').length,
+      refundedYear: list
+        .filter((p) => p.paidAt.startsWith(year))
+        .reduce((n, p) => n + Number(p.refundedMinor) / 100, 0),
+    };
+  });
+  short(v: number) {
+    return 'EGP ' + (v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : Math.round(v).toLocaleString('en-US'));
+  }
+  minor(v: string) {
+    return Number(v) / 100;
+  }
+  date(iso: string) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return new Intl.DateTimeFormat(this.lang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(d);
+  }
+  /** Gateway-only actions; static until a payment gateway / bank import exists (see BACKEND_MISSING.md). */
+  notConnected(what: 'bankFile' | 'retry') {
+    this.kebabFor.set(null);
+    const ar = this.lang() === 'ar';
+    this.showToast(
+      what === 'bankFile'
+        ? ar
+          ? 'استيراد ملف البنك غير متصل بعد — لم تتم مطابقة شيء.'
+          : "Bank-file import isn't connected yet — nothing was matched."
+        : ar
+          ? 'إعادة محاولة الدفع تتطلب بوابة الدفع — غير متاحة بعد.'
+          : 'Retrying a charge needs the payment gateway — not available yet.',
+    );
+  }
+  goInvoice(p: Payment) {
+    void this.router.navigateByUrl('/admin/billing?invoice=' + encodeURIComponent(p.invoiceNumber));
   }
 
   logoInitials(p: Payment): string {
@@ -444,7 +534,7 @@ export class Payments {
     this.page.set(1);
   }
 
-  setStatusFilter(v: PaymentStatus | 'all'): void {
+  setStatusFilter(v: Tab): void {
     this.statusFilter.set(v);
     this.page.set(1);
   }
@@ -533,6 +623,11 @@ export class Payments {
       this.closeRefund();
       this.viewing.set(null);
       await this.reload();
+      this.showToast(
+        this.lang() === 'ar'
+          ? `تم تسجيل الاسترداد لـ ${p.txId}.`
+          : `Refund recorded for ${p.txId}.`,
+      );
     } catch (error) {
       this.refundError.set(error instanceof Error ? error.message : 'Unable to record refund');
     } finally {

@@ -1,271 +1,319 @@
-@if (loading()) {
-  <p role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading subscriptions…' }}</p>
-}
-@if (error()) {
-  <p role="alert">
-    {{ error() }}
-    <button class="btn" (click)="reload()">{{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}</button>
-  </p>
-}
-<button class="btn btn--primary" (click)="creating.set(true)">
-  {{ lang() === 'ar' ? 'إضافة اشتراك' : 'Add subscription' }}
-</button>
-<div (click)="closeKebab()">
-  <div class="page-head">
-    <div class="page-head__text">
-      <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-      <h1 class="page-head__title">{{ L().title }}</h1>
+<div class="pg" (click)="closeKebab()">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ L().title }}</h1>
+      <span>{{
+        lang() === 'ar'
+          ? 'الباقة والدورة وحالة الفوترة لكل شركة'
+          : 'Plan, cycle and billing state for every company'
+      }}</span>
+    </div>
+    <div class="head__actions">
+      <button type="button" class="btn" (click)="openStatic('reminders')">
+        {{ lang() === 'ar' ? 'إرسال تذكيرات التجديد' : 'Send renewal reminders'
+        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+      </button>
+      <button type="button" class="btn btn--dark" (click)="creating.set(true)">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#C8F169"
+          stroke-width="2.2"
+          stroke-linecap="round"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        {{ lang() === 'ar' ? 'اشتراك جديد' : 'New subscription' }}
+      </button>
     </div>
   </div>
 
-  <section class="kpis">
-    <button
-      type="button"
-      class="kpi"
-      [class.kpi--active]="statusFilter() === 'all'"
-      (click)="filterByKpiStatus('all')"
-    >
-      <span class="kpi__label">{{ L().kpis.total }}</span>
-      <span class="kpi__value">{{ kpis().total }}</span>
-    </button>
-    <button
-      type="button"
-      class="kpi"
-      [class.kpi--active]="statusFilter() === 'active'"
-      (click)="filterByKpiStatus('active')"
-    >
-      <span class="kpi__label">{{ L().kpis.active }}</span>
-      <span class="kpi__value" style="color: #1e6b3e">{{ kpis().active }}</span>
-    </button>
-    <button
-      type="button"
-      class="kpi"
-      [class.kpi--active]="statusFilter() === 'trialing'"
-      (click)="filterByKpiStatus('trialing')"
-    >
-      <span class="kpi__label">{{ L().kpis.trialing }}</span>
-      <span class="kpi__value" style="color: #111113">{{ kpis().trialing }}</span>
-    </button>
-    <button
-      type="button"
-      class="kpi"
-      [class.kpi--active]="statusFilter() === 'past_due'"
-      (click)="filterByKpiStatus('past_due')"
-    >
-      <span class="kpi__label">{{ L().kpis.pastDue }}</span>
-      <span class="kpi__value" style="color: #83570c">{{ kpis().pastDue }}</span>
-    </button>
-  </section>
-
-  <section class="filters">
-    <input
-      type="text"
-      class="filters__search"
-      [placeholder]="L().searchPh"
-      [value]="search()"
-      (input)="setSearch($any($event.target).value)"
-    />
-
-    <div class="chip-row">
-      <button
-        type="button"
-        class="chip"
-        [class.chip--active]="statusFilter() === 'all'"
-        (click)="setStatusFilter('all')"
-      >
-        {{ L().statusAll }}
+  @if (error() && !creating() && !changingPlan() && !confirming()) {
+    <p class="note note--bad" role="alert">
+      {{ error() }}
+      <button type="button" class="link" (click)="reload()">
+        {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
       </button>
-      @for (s of statusTypes; track s) {
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="statusFilter() === s"
-          (click)="setStatusFilter(s)"
-        >
-          {{ statusLabel(s) }}
-        </button>
-      }
+    </p>
+  }
+  @if (loading()) {
+    <p class="muted" role="status">
+      {{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading subscriptions…' }}
+    </p>
+  }
+
+  <div class="kpis">
+    <button type="button" class="kpi" (click)="setStatusFilter('all')">
+      <span>{{ lang() === 'ar' ? 'الإيراد الشهري للمنصة' : 'Platform MRR' }}</span>
+      <b>{{ money(stats().mrr) }}</b>
+      <small>{{ lang() === 'ar' ? 'قيم العقود النشطة' : 'active contract terms' }}</small>
+    </button>
+    <button type="button" class="kpi" (click)="setStatusFilter('active')">
+      <span>{{ lang() === 'ar' ? 'نشطة' : 'Active' }}</span>
+      <b>{{ stats().active }}</b>
+      <small
+        >{{ stats().renewSoon }}
+        {{ lang() === 'ar' ? 'تتجدد خلال 7 أيام' : 'renew within 7 days' }}</small
+      >
+    </button>
+    <button type="button" class="kpi" (click)="setStatusFilter('trialing')">
+      <span>{{ lang() === 'ar' ? 'تجريبية' : 'Trialing' }}</span>
+      <b>{{ stats().trialing }}</b>
+      <small
+        >{{ stats().trialSoon }}
+        {{ lang() === 'ar' ? 'تنتهي هذا الأسبوع' : 'end this week' }}</small
+      >
+    </button>
+    <button type="button" class="kpi" (click)="setStatusFilter('past_due')">
+      <span>{{ lang() === 'ar' ? 'متأخرة' : 'Past due' }}</span>
+      <b class="bad">{{ stats().pastDue }}</b>
+      <small
+        >{{ stats().ending }}
+        {{ lang() === 'ar' ? 'تُلغى عند التجديد' : 'cancel at renewal' }}</small
+      >
+    </button>
+    <div class="kpi kpi--static">
+      <span
+        >{{ lang() === 'ar' ? 'معدل الإلغاء' : 'Churn · this month'
+        }}<i class="soon">{{ lang() === 'ar' ? 'بيانات تجريبية' : 'Sample' }}</i></span
+      >
+      <b>2.4%</b>
+      <small>{{ lang() === 'ar' ? '3 إلغاءات' : '3 cancellations' }}</small>
     </div>
+  </div>
 
-    <div class="chip-row">
+  <div class="tabs" role="tablist">
+    @for (t of tabs(); track t.k) {
       <button
         type="button"
-        class="chip"
-        [class.chip--active]="planFilter() === 'all'"
-        (click)="setPlanFilter('all')"
+        class="tab"
+        role="tab"
+        [class.tab--on]="statusFilter() === t.k"
+        (click)="setStatusFilter(t.k)"
       >
-        {{ L().planAll }}
+        {{ t.label }}<span class="tab__n">{{ t.n }}</span>
       </button>
+    }
+  </div>
+
+  <div class="filters">
+    <div class="search">
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#8A8A90"
+        stroke-width="1.8"
+        stroke-linecap="round"
+      >
+        <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" />
+      </svg>
+      <input
+        type="text"
+        [placeholder]="L().searchPh"
+        [value]="search()"
+        (input)="setSearch($any($event.target).value)"
+      />
+    </div>
+    <select [value]="planFilter()" (change)="setPlanFilter($any($event.target).value)">
+      <option value="all">{{ L().planAll }}</option>
       @for (p of planTypes; track p) {
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="planFilter() === p"
-          (click)="setPlanFilter(p)"
-        >
-          {{ planLabel(p) }}
-        </button>
+        <option [value]="p">{{ planLabel(p) }}</option>
       }
-    </div>
-
-    <div class="chip-row">
-      <button
-        type="button"
-        class="chip"
-        [class.chip--active]="paymentFilter() === 'all'"
-        (click)="setPaymentFilter('all')"
-      >
-        {{ L().paymentAll }}
+    </select>
+    <select [value]="paymentFilter()" (change)="setPaymentFilter($any($event.target).value)">
+      <option value="all">{{ L().paymentAll }}</option>
+      @for (m of paymentTypes; track m) {
+        <option [value]="m">{{ paymentLabel(m) }}</option>
+      }
+    </select>
+    @if (hasFilters()) {
+      <button type="button" class="link" (click)="clearFilters()">
+        {{ lang() === 'ar' ? 'مسح الفلاتر' : 'Clear filters' }}
       </button>
-      @for (p of paymentTypes; track p) {
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="paymentFilter() === p"
-          (click)="setPaymentFilter(p)"
-        >
-          {{ paymentLabel(p) }}
-        </button>
-      }
-    </div>
-  </section>
+    }
+  </div>
 
   <section class="card">
-    <div class="table-scroll">
-      <div class="table-min">
-        <div class="t-head">
-          <button
-            type="button"
-            class="t-head__cell t-head__cell--grow"
-            (click)="toggleSort('company')"
-          >
-            {{ L().columns.company }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'company'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button type="button" class="t-head__cell" (click)="toggleSort('plan')">
-            {{ L().columns.plan }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'plan'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button type="button" class="t-head__cell" (click)="toggleSort('status')">
-            {{ L().columns.status }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'status'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button type="button" class="t-head__cell" (click)="toggleSort('payment')">
-            {{ L().columns.payment }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'payment'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <span class="t-head__cell">{{ L().columns.cycle }}</span>
-          <button type="button" class="t-head__cell" (click)="toggleSort('renews')">
-            {{ L().columns.renews }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'renews'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button type="button" class="t-head__cell t-head__cell--end" (click)="toggleSort('mrr')">
-            {{ L().columns.mrr }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'mrr'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <span class="t-head__cell t-head__cell--end"></span>
-        </div>
-
-        @for (s of pageRows(); track s.subId) {
-          <div class="t-row" (click)="openView(s)">
-            <div class="t-cell t-cell--grow">
-              <span class="t-logo" [style.background]="logoBg(s)">{{ logoInitials(s) }}</span>
-              <div class="t-cell__text">
-                <span class="t-cell__main">{{ companyName(s) }}</span>
-                <span class="t-cell__sub" dir="ltr">{{ s.subId }}</span>
-              </div>
-            </div>
-            <div class="t-cell">
-              <span class="plan-dot" [style.background]="planDot(s.plan)"></span>
-              {{ planLabel(s.plan) }}
-            </div>
-            <div class="t-cell">
-              <span
-                class="pill"
-                [style.background]="statusColor(s.status).bg"
-                [style.color]="statusColor(s.status).fg"
-              >
-                {{ statusLabel(s.status) }}
-              </span>
-            </div>
-            <div class="t-cell">
-              <span class="pill pill--outline">{{ paymentLabel(s.payment) }}</span>
-            </div>
-            <div class="t-cell">{{ cycleLabel(s) }}</div>
-            <div class="t-cell">{{ s.renewsOn }}</div>
-            <div class="t-cell t-cell--end mono">{{ formatMrr(s.mrr) }}</div>
-            <div class="t-cell t-cell--end t-cell--actions" (click)="$event.stopPropagation()">
-              <div class="kebab-wrap">
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th (click)="toggleSort('company')">
+              {{ L().columns.company }}
+              @if (sortKey() === 'company') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th (click)="toggleSort('plan')">
+              {{ L().columns.plan }}
+              @if (sortKey() === 'plan') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th class="nosort">{{ L().columns.cycle }}</th>
+            <th class="end" (click)="toggleSort('amount')">
+              {{ lang() === 'ar' ? 'القيمة' : 'Amount' }}
+              @if (sortKey() === 'amount') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th (click)="toggleSort('start')">
+              {{ lang() === 'ar' ? 'البدء' : 'Started' }}
+              @if (sortKey() === 'start') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th (click)="toggleSort('renews')">
+              {{ L().columns.renews }}
+              @if (sortKey() === 'renews') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th (click)="toggleSort('status')">
+              {{ L().columns.status }}
+              @if (sortKey() === 'status') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th (click)="toggleSort('payment')">
+              {{ L().columns.payment }}
+              @if (sortKey() === 'payment') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th class="nosort act"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of pageRows(); track s.subId) {
+            <tr (click)="openView(s)">
+              <td>
+                <div class="co">
+                  <span class="logo" [style.background]="logoBg(s)" [style.color]="logoFg(s)">{{
+                    logoInitials(s)
+                  }}</span>
+                  <span class="co__text"
+                    ><span class="co__name">{{ companyName(s) }}</span
+                    ><span class="co__sub mono">{{ s.subId }}</span></span
+                  >
+                </div>
+              </td>
+              <td>{{ planLabel(s.plan) }}</td>
+              <td class="soft">{{ cycleLabel(s) }}</td>
+              <td class="end">
+                <span class="mono">{{ amount(s) }}</span>
+                <span class="sub">{{
+                  s.cycle === 'annual'
+                    ? lang() === 'ar'
+                      ? '/ سنة'
+                      : '/ year'
+                    : lang() === 'ar'
+                      ? '/ شهر'
+                      : '/ month'
+                }}</span>
+              </td>
+              <td class="muted">{{ date(s.periodStart) }}</td>
+              <td [class.late]="!isEnded(s) && daysTo(s.renewsOn) <= 7">
+                {{ isEnded(s) ? '—' : date(s.renewsOn) }}
+                @if (renewSub(s)) {
+                  <span class="sub">{{ renewSub(s) }}</span>
+                }
+              </td>
+              <td>
+                <span
+                  class="pill"
+                  [style.background]="statusColor(s.status).bg"
+                  [style.color]="statusColor(s.status).fg"
+                  ><span class="dot" [style.background]="statusColor(s.status).dot"></span
+                  >{{ statusLabel(s.status) }}</span
+                >
+                @if (isEnding(s)) {
+                  <span class="sub warn">{{
+                    lang() === 'ar' ? 'تُلغى عند التجديد' : 'Cancels at renewal'
+                  }}</span>
+                }
+              </td>
+              <td>
+                <span class="pill">{{ paymentLabel(s.payment) }}</span>
+              </td>
+              <td class="act" (click)="$event.stopPropagation()">
                 <button
                   type="button"
-                  class="row-btn row-btn--icon"
+                  class="kebab"
+                  aria-label="Actions"
                   (click)="toggleKebab(s.subId)"
-                  aria-label="More actions"
                 >
                   ⋯
                 </button>
                 @if (kebabFor() === s.subId) {
-                  <div class="dropdown" (click)="$event.stopPropagation()">
-                    <button type="button" class="dropdown__item" (click)="openView(s)">
-                      {{ L().actions.view }}
+                  <div class="menu">
+                    <button type="button" (click)="openView(s)">
+                      {{ lang() === 'ar' ? 'عرض الاشتراك' : 'View subscription' }}
                     </button>
-                    @if (
-                      s.status !== 'canceled' && s.status !== 'expired' && !s.cancelAtPeriodEnd
-                    ) {
-                      <button type="button" class="dropdown__item" (click)="openChangePlan(s)">
-                        {{ L().actions.changePlan }}
+                    @if (!isEnded(s) && s.status !== 'suspended') {
+                      @if (neighbour(s, 1); as up) {
+                        <button type="button" (click)="openChangeTo(s, up)">
+                          {{ lang() === 'ar' ? 'ترقية…' : 'Upgrade…' }}
+                        </button>
+                      }
+                      @if (neighbour(s, -1); as down) {
+                        <button type="button" (click)="openChangeTo(s, down)">
+                          {{ lang() === 'ar' ? 'تخفيض…' : 'Downgrade…' }}
+                        </button>
+                      }
+                      <button type="button" (click)="openStatic('cycle', s)">
+                        {{ lang() === 'ar' ? 'تغيير دورة الفوترة…' : 'Change billing cycle…'
+                        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+                      </button>
+                    }
+                    @if (s.status === 'trialing') {
+                      <button type="button" (click)="openStatic('extend', s)">
+                        {{ lang() === 'ar' ? 'تمديد التجربة…' : 'Extend trial…'
+                        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
                       </button>
                     }
                     @if (s.status !== 'suspended') {
-                      <button type="button" class="dropdown__item" (click)="askConfirm(s, 'renew')">
-                        {{ L().actions.renew }}
+                      <button type="button" (click)="askConfirm(s, 'renew')">
+                        {{ lang() === 'ar' ? 'تجديد…' : 'Renew…' }}
                       </button>
                     }
-                    @if (
-                      s.status !== 'canceled' && s.status !== 'expired' && !s.cancelAtPeriodEnd
-                    ) {
-                      <button
-                        type="button"
-                        class="dropdown__item dropdown__item--danger"
-                        (click)="askConfirm(s, 'cancel')"
-                      >
-                        {{ L().actions.cancel }}
+                    @if (!isEnded(s)) {
+                      <button type="button" (click)="openStatic('adjust', s)">
+                        {{ lang() === 'ar' ? 'تسوية يدوية…' : 'Manual adjustment…'
+                        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+                      </button>
+                    }
+                    @if (!isEnded(s) && !s.cancelAtPeriodEnd) {
+                      <button type="button" class="bad" (click)="askConfirm(s, 'cancel')">
+                        {{ lang() === 'ar' ? 'إلغاء الاشتراك…' : 'Cancel subscription…' }}
                       </button>
                     }
                   </div>
                 }
-              </div>
-            </div>
-          </div>
-        } @empty {
-          <div class="t-empty">
-            <span class="t-empty__title">{{ L().emptyTitle }}</span>
-            <span class="t-empty__sub">{{ L().emptySub }}</span>
-          </div>
-        }
-      </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
     </div>
-
+    @if (!loading() && !pageRows().length) {
+      <div class="empty">
+        <strong>{{ L().emptyTitle }}</strong
+        ><span>{{ L().emptySub }}</span>
+      </div>
+    }
     <div class="pager">
       <span>{{ pagerText() }}</span>
-      <button type="button" class="btn btn--ghost" [disabled]="page() <= 1" (click)="prevPage()">
+      <button type="button" class="btn btn--sm" [disabled]="page() <= 1" (click)="prevPage()">
         {{ L().prev }}
       </button>
       <button
         type="button"
-        class="btn btn--ghost"
+        class="btn btn--sm"
         [disabled]="page() >= totalPages()"
         (click)="nextPage()"
       >
@@ -278,130 +326,209 @@
 @if (viewing(); as s) {
   <div class="scrim" (click)="closeView()"></div>
   <aside class="drawer" (click)="$event.stopPropagation()">
-    <div class="drawer__header">
-      <span class="t-logo t-logo--lg" [style.background]="logoBg(s)">{{ logoInitials(s) }}</span>
-      <div class="drawer__headerText">
+    <div class="drawer__head">
+      <span class="logo logo--lg" [style.background]="logoBg(s)" [style.color]="logoFg(s)">{{
+        logoInitials(s)
+      }}</span>
+      <div class="drawer__title">
         <span class="drawer__name">{{ companyName(s) }}</span>
-        <span
-          class="pill"
-          [style.background]="statusColor(s.status).bg"
-          [style.color]="statusColor(s.status).fg"
-        >
-          {{ statusLabel(s.status) }}
-        </span>
+        <span class="mono muted" dir="ltr">{{ s.subId }} · {{ s.companyId }}</span>
+        <div class="pills">
+          <span
+            class="pill"
+            [style.background]="statusColor(s.status).bg"
+            [style.color]="statusColor(s.status).fg"
+            ><span class="dot" [style.background]="statusColor(s.status).dot"></span
+            >{{ statusLabel(s.status) }}</span
+          >
+          <span class="pill">{{ paymentLabel(s.payment) }}</span>
+        </div>
       </div>
-      <button type="button" class="drawer__close" (click)="closeView()" aria-label="Close">
+      <button type="button" class="x" (click)="closeView()" [attr.aria-label]="L().drawerClose">
         ×
       </button>
     </div>
-
     <div class="drawer__body">
-      @if (s.cancelAtPeriodEnd) {
-        <p>
+      @if (isEnding(s)) {
+        <p class="note note--warn">
           {{
             lang() === 'ar'
-              ? 'سيُلغى الاشتراك عند نهاية الفترة'
-              : 'Cancellation scheduled for period end'
+              ? 'يُلغى في ' + date(s.renewsOn) + ' ويستمر الوصول حتى ذلك الحين.'
+              : 'Cancels on ' + date(s.renewsOn) + '. Access continues until then.'
+          }}
+        </p>
+      } @else if (s.status === 'past_due') {
+        <p class="note note--warn">
+          {{
+            lang() === 'ar'
+              ? 'السداد متأخر. لا توجد إعادة محاولة أو إيقاف تلقائي بعد.'
+              : 'Payment is past due. There is no automatic retry or suspension yet.'
           }}
         </p>
       }
       @if (s.pendingVersionId) {
-        <p>
+        <p class="note">
           {{
             lang() === 'ar'
-              ? 'شروط جديدة مجدولة للتجديد اليدوي القادم'
-              : 'Updated terms scheduled for the next manual renewal'
+              ? 'توجد شروط جديدة تُطبق عند التجديد اليدوي القادم.'
+              : 'Updated plan terms will apply at the next manual renewal.'
           }}
         </p>
       }
-      <p>{{ lang() === 'ar' ? 'نسخة الخطة' : 'Plan revision' }}: {{ s.planRevision }}</p>
-
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.subId }}</span
-        ><span class="drawer__v mono" dir="ltr">{{ s.subId }}</span>
+      <div class="sect">
+        <span class="sect__label">{{ lang() === 'ar' ? 'الاشتراك' : 'SUBSCRIPTION' }}</span>
+        <div class="kv">
+          <span>{{ L().drawerFields.plan }}</span
+          ><b>{{ planLabel(s.plan) }} · v{{ s.planRevision }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ L().drawerFields.cycle }}</span
+          ><b>{{ cycleLabel(s) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ lang() === 'ar' ? 'القيمة' : 'Amount' }}</span
+          ><b class="mono">{{ amount(s) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ L().drawerFields.mrr }}</span
+          ><b class="mono">{{ formatMrr(s.mrr) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ lang() === 'ar' ? 'البدء' : 'Started' }}</span
+          ><b>{{ date(s.periodStart) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{
+            isEnded(s)
+              ? lang() === 'ar'
+                ? 'انتهى'
+                : 'Ended'
+              : s.status === 'trialing'
+                ? lang() === 'ar'
+                  ? 'نهاية التجربة'
+                  : 'Trial ends'
+                : lang() === 'ar'
+                  ? 'التجديد القادم'
+                  : 'Next renewal'
+          }}</span>
+          <b>{{ date(s.renewsOn) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ L().drawerFields.payment }}</span
+          ><b>{{ paymentLabel(s.payment) }}</b>
+        </div>
       </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.company }}</span
-        ><span class="drawer__v" dir="ltr">{{ s.companyId }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.plan }}</span
-        ><span class="drawer__v">{{ planLabel(s.plan) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.payment }}</span
-        ><span class="drawer__v">{{ paymentLabel(s.payment) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.cycle }}</span
-        ><span class="drawer__v">{{ cycleLabel(s) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.renews }}</span
-        ><span class="drawer__v">{{ s.renewsOn }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.mrr }}</span
-        ><span class="drawer__v mono">{{ formatMrr(s.mrr) }}</span>
+      <div class="sect">
+        <span class="sect__label"
+          >{{ lang() === 'ar' ? 'السجل' : 'HISTORY'
+          }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+        >
+        <div class="kv">
+          <span>{{ lang() === 'ar' ? 'بداية الفترة الحالية' : 'Current period started' }}</span
+          ><b>{{ date(s.periodStart) }}</b>
+        </div>
+        <p class="muted">
+          {{
+            lang() === 'ar'
+              ? 'سجل التغييرات الكامل متاح في سجل التدقيق.'
+              : 'The full change history is in Audit logs.'
+          }}
+        </p>
       </div>
     </div>
-
-    <div class="drawer__footer">
-      @if (s.status !== 'canceled' && s.status !== 'expired' && !s.cancelAtPeriodEnd) {
-        <button type="button" class="btn btn--primary" (click)="openChangePlan(s)">
-          {{ L().actions.changePlan }}
+    <div class="drawer__foot">
+      @if (!isEnded(s) && s.status !== 'suspended') {
+        <button type="button" class="btn btn--dark" (click)="openChangePlan(s)">
+          {{ lang() === 'ar' ? 'تغيير الباقة…' : 'Change plan…' }}
+        </button>
+      }
+      @if (s.status === 'trialing') {
+        <button type="button" class="btn" (click)="openStatic('extend', s)">
+          {{ lang() === 'ar' ? 'تمديد التجربة…' : 'Extend trial…'
+          }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
         </button>
       }
       @if (s.status !== 'suspended') {
-        <button type="button" class="btn btn--ghost" (click)="askConfirm(s, 'renew')">
-          {{ L().actions.renew }}
+        <button
+          type="button"
+          class="btn"
+          [class.btn--dark]="isEnded(s)"
+          (click)="askConfirm(s, 'renew')"
+        >
+          {{ lang() === 'ar' ? 'تجديد…' : 'Renew…' }}
         </button>
       }
-      @if (s.status !== 'canceled' && s.status !== 'expired' && !s.cancelAtPeriodEnd) {
-        <button type="button" class="btn btn--ghost" (click)="askConfirm(s, 'cancel')">
-          {{ L().actions.cancel }}
+      @if (!isEnded(s) && !s.cancelAtPeriodEnd) {
+        <button type="button" class="btn btn--badText" (click)="askConfirm(s, 'cancel')">
+          {{ lang() === 'ar' ? 'إلغاء…' : 'Cancel…' }}
         </button>
       }
-      <button type="button" class="btn btn--ghost" (click)="closeView()">
-        {{ L().drawerClose }}
-      </button>
     </div>
   </aside>
 }
 
 @if (changingPlan(); as s) {
-  <div class="scrim" (click)="closeChangePlan()"></div>
-  <div class="dialog" (click)="$event.stopPropagation()">
-    <div class="dialog__header">
-      <div class="drawer__headerText">
-        <span class="dialog__title">{{ L().changePlanTitle }}</span>
-        <span class="dialog__sub">{{ L().changePlanSub(companyName(s)) }}</span>
-      </div>
+  <div class="scrim scrim--top" (click)="closeChangePlan()"></div>
+  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__head">
+      <span class="dialog__title">{{ L().changePlanTitle }} · {{ companyName(s) }}</span>
+      <span class="dialog__body">{{ L().changePlanSub(companyName(s)) }}</span>
     </div>
-    <div class="dialog__body">
-      <span class="field__label">{{ L().changePlanLabel }}</span>
-      <div class="chip-row">
-        @for (p of planTypes; track p) {
-          <button
-            type="button"
-            class="chip"
-            [class.chip--active]="newPlan() === p"
-            [disabled]="!isPlanAvailable(p)"
-            (click)="newPlan.set(p)"
-          >
-            {{ planLabel(p) }}
+    <div class="dialog__main">
+      <label class="field">
+        <span>{{ L().changePlanLabel }}</span>
+        <select [value]="newPlan()" (change)="newPlan.set($any($event.target).value)">
+          @for (p of activePlans(); track p.key) {
+            <option [value]="p.key">{{ lang() === 'ar' ? p.nameAr : p.nameEn }}</option>
+          }
+        </select>
+      </label>
+      <div class="field">
+        <span
+          >{{ lang() === 'ar' ? 'دورة الفوترة' : 'Billing cycle'
+          }}<i class="soon">{{ lang() === 'ar' ? 'بدون تغيير' : 'Unchanged' }}</i></span
+        >
+        <div class="segs">
+          <button type="button" class="seg seg--on">{{ cycleLabel(s) }}</button>
+        </div>
+      </div>
+      <div class="field">
+        <span>{{ lang() === 'ar' ? 'التطبيق' : 'Takes effect' }}</span>
+        <div class="segs">
+          <button type="button" class="seg seg--on">
+            {{ lang() === 'ar' ? 'فورًا' : 'Immediately' }}
           </button>
-        }
+          <button type="button" class="seg" disabled>
+            {{ lang() === 'ar' ? 'عند التجديد' : 'At renewal'
+            }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+          </button>
+        </div>
       </div>
+      <div class="sum">
+        <div>
+          <span>{{ lang() === 'ar' ? 'الحالي' : 'Current' }} · {{ planLabel(s.plan) }}</span
+          ><b>{{ amount(s) }}</b>
+        </div>
+        <div>
+          <span>{{ lang() === 'ar' ? 'الجديد' : 'New' }} · {{ planLabel(newPlan()) }}</span
+          ><b>{{ planPrice(newPlan(), s.cycle) }}</b>
+        </div>
+        <small>{{
+          lang() === 'ar'
+            ? 'لا يتم احتساب فرق نسبي أو تحصيل أو استرداد.'
+            : 'No proration, charge or refund is processed.'
+        }}</small>
+      </div>
+      @if (error()) {
+        <p class="note note--bad" role="alert">{{ error() }}</p>
+      }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeChangePlan()">
-        {{ L().confirmCancel }}
-      </button>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="closeChangePlan()">{{ L().confirmCancel }}</button>
       <button
         type="button"
-        class="btn btn--primary"
-        [disabled]="saving()"
+        class="btn btn--dark"
+        [disabled]="saving() || newPlan() === s.plan"
         (click)="submitChangePlan()"
       >
         {{ L().changePlanConfirm }}
@@ -411,53 +538,228 @@
 }
 
 @if (confirming(); as cf) {
-  <div class="scrim" (click)="cancelConfirm()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{
-        cf.kind === 'cancel' ? L().cancelTitle : L().renewTitle
+  <div class="scrim scrim--top" (click)="cancelConfirm()"></div>
+  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__head">
+      <span class="dialog__title"
+        >{{ cf.kind === 'cancel' ? L().cancelTitle : L().renewTitle }} ·
+        {{ companyName(cf.sub) }}</span
+      >
+      <span class="dialog__body">{{
+        cf.kind === 'cancel'
+          ? L().cancelBody(companyName(cf.sub))
+          : L().renewBody(companyName(cf.sub))
       }}</span>
-      <p class="dialog__text">
-        {{
-          cf.kind === 'cancel'
-            ? L().cancelBody(companyName(cf.sub))
-            : L().renewBody(companyName(cf.sub))
-        }}
-      </p>
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelConfirm()">
-        {{ L().confirmCancel }}
-      </button>
+    <div class="dialog__main">
+      @if (cf.kind === 'cancel') {
+        <div class="field">
+          <span>{{ lang() === 'ar' ? 'التوقيت' : 'When' }}</span>
+          <div class="segs">
+            <button type="button" class="seg seg--on">
+              {{ lang() === 'ar' ? 'عند التجديد' : 'At renewal' }} · {{ date(cf.sub.renewsOn) }}
+            </button>
+            <button type="button" class="seg" disabled>
+              {{ lang() === 'ar' ? 'فورًا' : 'Immediately'
+              }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+            </button>
+          </div>
+        </div>
+        <label class="field">
+          <span
+            >{{ lang() === 'ar' ? 'السبب' : 'Reason'
+            }}<i class="soon">{{ lang() === 'ar' ? 'لا يُحفظ بعد' : 'Not saved yet' }}</i></span
+          >
+          <select [value]="cancelReason()" (change)="cancelReason.set($any($event.target).value)">
+            <option value="price">{{ lang() === 'ar' ? 'السعر' : 'Price' }}</option>
+            <option value="features">
+              {{ lang() === 'ar' ? 'ميزات ناقصة' : 'Missing features' }}
+            </option>
+            <option value="competitor">
+              {{ lang() === 'ar' ? 'انتقال لمنافس' : 'Moved to a competitor' }}
+            </option>
+            <option value="closed">
+              {{ lang() === 'ar' ? 'إغلاق النشاط' : 'Business closed' }}
+            </option>
+            <option value="other">{{ lang() === 'ar' ? 'أخرى' : 'Other' }}</option>
+          </select>
+        </label>
+        <label class="field">
+          <span
+            >{{ lang() === 'ar' ? 'ملاحظة داخلية' : 'Internal note'
+            }}<i class="soon">{{ lang() === 'ar' ? 'لا يُحفظ بعد' : 'Not saved yet' }}</i></span
+          >
+          <textarea
+            rows="2"
+            [value]="cancelNote()"
+            (input)="cancelNote.set($any($event.target).value)"
+          ></textarea>
+        </label>
+      } @else {
+        <div class="sum">
+          <div>
+            <span>{{ planLabel(cf.sub.plan) }} · {{ cycleLabel(cf.sub) }}</span
+            ><b>{{ amount(cf.sub) }}</b>
+          </div>
+          <small>{{
+            lang() === 'ar'
+              ? 'يمتد من التاريخ الأحدث بين اليوم ونهاية الفترة، ويلغي أي إلغاء مجدول. لا يتم التحصيل.'
+              : 'Extends from the later of today or period end and clears any scheduled cancellation. No charge is collected.'
+          }}</small>
+        </div>
+      }
+      @if (error()) {
+        <p class="note note--bad" role="alert">{{ error() }}</p>
+      }
+    </div>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="cancelConfirm()">{{ L().confirmCancel }}</button>
       <button
         type="button"
         class="btn"
         [class.btn--danger]="cf.kind === 'cancel'"
-        [class.btn--primary]="cf.kind === 'renew'"
+        [class.btn--dark]="cf.kind === 'renew'"
         [disabled]="saving()"
         (click)="performConfirm()"
       >
+        {{
+          cf.kind === 'cancel'
+            ? lang() === 'ar'
+              ? 'إلغاء الاشتراك'
+              : 'Cancel subscription'
+            : lang() === 'ar'
+              ? 'تجديد'
+              : 'Renew'
+        }}
+      </button>
+    </div>
+  </div>
+}
+
+@if (staticForm(); as sf) {
+  <div class="scrim scrim--top" (click)="staticForm.set(null)"></div>
+  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__head">
+      <span class="dialog__title">
+        {{
+          sf.kind === 'cycle'
+            ? lang() === 'ar'
+              ? 'تغيير دورة الفوترة'
+              : 'Change billing cycle'
+            : sf.kind === 'extend'
+              ? lang() === 'ar'
+                ? 'تمديد التجربة'
+                : 'Extend trial'
+              : sf.kind === 'adjust'
+                ? lang() === 'ar'
+                  ? 'تسوية يدوية'
+                  : 'Manual adjustment'
+                : lang() === 'ar'
+                  ? 'إرسال تذكيرات التجديد'
+                  : 'Send renewal reminders'
+        }}
+        @if (sf.sub) {
+          · {{ companyName(sf.sub) }}
+        }
+      </span>
+      <span class="note note--warn">{{
+        lang() === 'ar'
+          ? 'معاينة تصميم — هذا الإجراء غير متصل بالخادم بعد ولن يغير شيئًا.'
+          : 'Design preview — this action is not connected to the backend yet and will not change anything.'
+      }}</span>
+    </div>
+    <div class="dialog__main">
+      @switch (sf.kind) {
+        @case ('cycle') {
+          <div class="field">
+            <span>{{ lang() === 'ar' ? 'الدورة الجديدة' : 'New cycle' }}</span>
+            <div class="segs">
+              <button type="button" class="seg" [class.seg--on]="sf.sub?.cycle !== 'monthly'">
+                {{ L().cycleLabel.monthly }}
+              </button>
+              <button type="button" class="seg" [class.seg--on]="sf.sub?.cycle !== 'annual'">
+                {{ L().cycleLabel.annual }}
+              </button>
+            </div>
+          </div>
+          <div class="field">
+            <span>{{ lang() === 'ar' ? 'التطبيق' : 'Takes effect' }}</span>
+            <div class="segs">
+              <button type="button" class="seg seg--on">
+                {{ lang() === 'ar' ? 'عند التجديد' : 'At renewal' }}
+              </button>
+            </div>
+          </div>
+        }
+        @case ('extend') {
+          <label class="field">
+            <span>{{ lang() === 'ar' ? 'أيام إضافية' : 'Extra days' }}</span>
+            <select>
+              <option>7</option>
+              <option>14</option>
+              <option>21</option>
+            </select>
+          </label>
+          <label class="field"
+            ><span>{{ lang() === 'ar' ? 'ملاحظة داخلية' : 'Internal note' }}</span
+            ><textarea rows="2"></textarea>
+          </label>
+        }
+        @case ('adjust') {
+          <div class="field">
+            <span>{{ lang() === 'ar' ? 'النوع' : 'Type' }}</span>
+            <div class="segs">
+              <button type="button" class="seg seg--on">
+                {{ lang() === 'ar' ? 'رصيد' : 'Credit' }}
+              </button>
+              <button type="button" class="seg">{{ lang() === 'ar' ? 'رسوم' : 'Charge' }}</button>
+            </div>
+          </div>
+          <label class="field"
+            ><span>{{ lang() === 'ar' ? 'المبلغ (ج.م)' : 'Amount (EGP)' }}</span
+            ><input type="number" min="0" class="mono"
+          /></label>
+          <label class="field"
+            ><span>{{ lang() === 'ar' ? 'ملاحظة داخلية' : 'Internal note' }}</span
+            ><textarea rows="2"></textarea>
+          </label>
+        }
+        @case ('reminders') {
+          <p class="muted">
+            {{ stats().renewSoon }}
+            {{
+              lang() === 'ar'
+                ? 'اشتراكات تتجدد خلال 7 أيام ستتلقى تذكيرًا بالبريد.'
+                : 'subscriptions renewing within 7 days would get an email reminder.'
+            }}
+          </p>
+        }
+      }
+    </div>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="staticForm.set(null)">
+        {{ L().confirmCancel }}
+      </button>
+      <button type="button" class="btn btn--dark btn--dim" (click)="submitStatic()">
         {{ L().confirmGo }}
       </button>
     </div>
   </div>
 }
 
-@if (toast(); as msg) {
-  <div class="toast">{{ msg }}</div>
-}
-
 @if (creating()) {
   <div class="scrim" (click)="creating.set(false)"></div>
-  <div class="dialog">
-    <form
-      style="padding: 24px; display: grid; gap: 16px"
-      (submit)="$event.preventDefault(); createSubscription()"
-    >
-      <h2>{{ lang() === 'ar' ? 'إضافة اشتراك' : 'Add subscription' }}</h2>
-      <label
-        >{{ lang() === 'ar' ? 'الشركة' : 'Company'
-        }}<select name="company" [(ngModel)]="draft.companyId" required>
+  <aside class="drawer">
+    <div class="drawer__head">
+      <div class="drawer__title">
+        <span class="drawer__name">{{ lang() === 'ar' ? 'اشتراك جديد' : 'New subscription' }}</span>
+      </div>
+      <button type="button" class="x" (click)="creating.set(false)">×</button>
+    </div>
+    <form class="drawer__body" (submit)="$event.preventDefault(); createSubscription()">
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'الشركة' : 'Company' }}</span
+        ><select name="company" [(ngModel)]="draft.companyId" required>
           <option value="">—</option>
           @for (c of companies(); track c.id) {
             @if (c.status !== 'archived' && c.status !== 'suspended') {
@@ -466,50 +768,60 @@
           }
         </select></label
       >
-      <label
-        >{{ lang() === 'ar' ? 'الخطة' : 'Plan'
-        }}<select name="plan" [(ngModel)]="draft.plan">
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'الباقة' : 'Plan' }}</span
+        ><select name="plan" [(ngModel)]="draft.plan">
           @for (p of activePlans(); track p.key) {
             <option [value]="p.key">{{ lang() === 'ar' ? p.nameAr : p.nameEn }}</option>
           }
         </select></label
       >
-      <label
-        >{{ lang() === 'ar' ? 'الدورة' : 'Cycle'
-        }}<select name="cycle" [(ngModel)]="draft.cycle">
-          <option value="monthly">{{ L().cycleLabel.monthly }}</option>
-          <option value="annual">{{ L().cycleLabel.annual }}</option>
-        </select></label
-      >
-      <label
-        >{{ lang() === 'ar' ? 'الحالة' : 'Status'
-        }}<select name="status" [(ngModel)]="draft.status">
-          <option value="active">{{ statusLabel('active') }}</option>
-        </select></label
-      >
-      <label
-        >{{ lang() === 'ar' ? 'طريقة الدفع المسجلة' : 'Recorded payment method'
-        }}<select name="payment" [(ngModel)]="draft.payment">
+      <div class="field">
+        <span>{{ lang() === 'ar' ? 'الدورة' : 'Cycle' }}</span>
+        <div class="segs">
+          <button
+            type="button"
+            class="seg"
+            [class.seg--on]="draft.cycle === 'monthly'"
+            (click)="draft.cycle = 'monthly'"
+          >
+            {{ L().cycleLabel.monthly }}
+          </button>
+          <button
+            type="button"
+            class="seg"
+            [class.seg--on]="draft.cycle === 'annual'"
+            (click)="draft.cycle = 'annual'"
+          >
+            {{ L().cycleLabel.annual }}
+          </button>
+        </div>
+      </div>
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'طريقة الدفع المسجلة' : 'Recorded payment method' }}</span
+        ><select name="payment" [(ngModel)]="draft.payment">
           @for (method of paymentTypes; track method) {
             <option [value]="method">{{ paymentLabel(method) }}</option>
           }
         </select></label
       >
-      <p>
+      <p class="muted">
         {{
           lang() === 'ar'
-            ? 'إنشاء الاشتراك لا يثبت السداد ولا يُحصّل دفعة.'
-            : 'Creating a subscription neither confirms payment nor collects a charge.'
+            ? 'يُنشأ الاشتراك نشطًا. إنشاء الاشتراك لا يثبت السداد ولا يُحصّل دفعة.'
+            : 'The subscription is created as active. Creating it neither confirms payment nor collects a charge.'
         }}
       </p>
       @if (error()) {
-        <p role="alert">{{ error() }}</p>
+        <p class="note note--bad" role="alert">{{ error() }}</p>
       }
-      <button class="btn btn--primary" [disabled]="saving()">
-        {{ lang() === 'ar' ? 'حفظ' : 'Save subscription' }}</button
-      ><button class="btn" type="button" (click)="creating.set(false)">
-        {{ L().confirmCancel }}
+      <button class="btn btn--dark" [disabled]="saving()">
+        {{ lang() === 'ar' ? 'حفظ' : 'Save subscription' }}
       </button>
     </form>
-  </div>
+  </aside>
+}
+
+@if (toast(); as msg) {
+  <div class="toast"><span></span>{{ msg }}</div>
 }

@@ -1,371 +1,359 @@
-@if (loading()) {
-  <p role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading plans…' }}</p>
-}
-@if (error()) {
-  <p role="alert">
-    {{ error() }} <button (click)="reload()">{{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}</button>
-  </p>
-}
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-  </div>
-  <div class="page-head__actions">
-    <button type="button" class="btn btn--primary" (click)="openCreate()">{{ L().addBtn }}</button>
-  </div>
-</div>
-
-<div class="plan-grid">
-  @for (p of plans; track p.key) {
-    <section class="plan-card" [class.plan-card--archived]="isArchived(p)">
-      @if (isArchived(p)) {
-        <span class="plan-card__archivedBadge">{{ L().archivedBadge }}</span>
-      }
-      <div class="plan-card__head">
-        <span class="plan-card__dot" [style.background]="p.color"></span>
-        <div class="plan-card__headText">
-          <span class="plan-card__name">{{ name(p) }}</span>
-          <span class="plan-card__desc">{{ desc(p) }}</span>
-        </div>
-      </div>
-
-      <div class="plan-card__price">
-        <span class="plan-card__priceValue">{{ price(p) }}</span>
-        <span class="plan-card__pricePer">{{ per(p) }}</span>
-      </div>
-
-      <div class="plan-card__limits">
-        @for (l of p.limits; track l.labelEn) {
-          <span class="plan-card__limitK">{{ limitLabel(l) }}</span>
-          <span class="plan-card__limitV mono">{{ l.value }}</span>
-        }
-      </div>
-
-      <span class="plan-card__feats">{{ feats(p) }}</span>
-
-      <button type="button" class="plan-card__subscribers" (click)="viewSubscribers(p)">
-        {{ L().viewSubscribers(p.companies) }}
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ L().title }}</h1>
+      <span
+        >{{ plans.length }} {{ lang() === 'ar' ? 'باقات' : 'plans' }} · {{ totalCompanies() }}
+        {{ lang() === 'ar' ? 'شركة مشتركة' : 'companies subscribed' }}</span
+      >
+    </div>
+    <div class="head__actions">
+      <button type="button" class="btn btn--dark" (click)="openCreate()">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#C8F169"
+          stroke-width="2.2"
+          stroke-linecap="round"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        {{ lang() === 'ar' ? 'باقة جديدة' : 'New plan' }}
       </button>
+    </div>
+  </div>
 
-      <div class="plan-card__actions">
-        @if (!isArchived(p)) {
-          <button type="button" class="btn btn--primary btn--grow" (click)="openEdit(p)">
-            {{ L().editBtn }}
-          </button>
-          <button type="button" class="btn btn--danger-outline" (click)="askConfirm(p, 'archive')">
-            {{ L().archiveBtn }}
-          </button>
-        } @else {
-          <button type="button" class="btn btn--ghost btn--grow" (click)="askConfirm(p, 'restore')">
-            {{ L().restoreBtn }}
-          </button>
-        }
-      </div>
-    </section>
+  @if (error() && !editing() && !creating() && !confirming()) {
+    <p class="note note--bad" role="alert">
+      {{ error() }}
+      <button type="button" class="link" (click)="reload()">
+        {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+      </button>
+    </p>
   }
+  @if (loading()) {
+    <p class="muted" role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading plans…' }}</p>
+  }
+
+  <div class="bar-row">
+    <div class="toggle">
+      <button type="button" [class.on]="cycle() === 'm'" (click)="cycle.set('m')">
+        {{ lang() === 'ar' ? 'شهري' : 'Monthly' }}
+      </button>
+      <button type="button" [class.on]="cycle() === 'a'" (click)="cycle.set('a')">
+        {{ lang() === 'ar' ? 'سنوي' : 'Annual' }}
+      </button>
+    </div>
+    <span class="muted">{{
+      lang() === 'ar'
+        ? 'كل تعديل يُحفظ كنسخة جديدة، وتختار من يطبق عليه. لا تتغير الاشتراكات الحالية دون إذن.'
+        : 'Each edit saves a new version and you choose who it applies to. Existing subscriptions never change silently.'
+    }}</span>
+  </div>
+
+  <div class="plans">
+    @for (p of plans; track p.key) {
+      <section
+        class="plan"
+        [class.plan--dark]="popular() === p.key && !p.archived"
+        [class.plan--arch]="p.archived"
+      >
+        <div class="plan__top">
+          <div class="plan__name">
+            <span>{{ name(p) }}</span>
+            @if (p.archived) {
+              <span class="tag">{{ L().archivedBadge }}</span>
+            } @else if (popular() === p.key) {
+              <span class="tag tag--lime">{{
+                lang() === 'ar' ? 'الأكثر طلبًا' : 'Most popular'
+              }}</span>
+            }
+          </div>
+          <span class="plan__desc">{{ desc(p) }}</span>
+          <div class="plan__price">
+            <span class="plan__cur">EGP</span><b>{{ priceNow(p) }}</b
+            ><span class="plan__per">{{ perNow() }}</span>
+          </div>
+          <span class="plan__alt">{{ altPrice(p) }}</span>
+        </div>
+        <div class="plan__stats">
+          <div>
+            <span>{{ lang() === 'ar' ? 'الشركات' : 'Companies' }}</span
+            ><b>{{ p.companies }}</b>
+          </div>
+          <div>
+            <span>{{ lang() === 'ar' ? 'الإيراد التقديري' : 'Est. MRR' }}</span
+            ><b>{{ planMrr(p) }}</b>
+          </div>
+        </div>
+        <div class="plan__limits">
+          @for (l of limitRows(p); track l.k) {
+            <div>
+              <span>{{ l.k }}</span
+              ><b>{{ l.v }}</b>
+            </div>
+          }
+          <div class="static">
+            <span
+              >{{ lang() === 'ar' ? 'العملاء' : 'Leads'
+              }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+            ><b>—</b>
+          </div>
+          <div class="static">
+            <span
+              >{{ lang() === 'ar' ? 'API يوميًا' : 'API / day'
+              }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+            ><b>—</b>
+          </div>
+        </div>
+        @if (chips(p).length) {
+          <div class="plan__chips">
+            @for (c of chips(p); track c) {
+              <span>{{ c }}</span>
+            }
+          </div>
+        }
+        <div class="plan__acts">
+          @if (!p.archived) {
+            <button type="button" class="pbtn pbtn--main" (click)="openEdit(p)">
+              {{ lang() === 'ar' ? 'تعديل' : 'Edit' }}
+            </button>
+          }
+          <button type="button" class="pbtn" (click)="viewSubscribers(p)">
+            {{ lang() === 'ar' ? 'المشتركون' : 'Subscribers' }}
+          </button>
+          @if (!p.archived) {
+            <button type="button" class="pbtn pbtn--bad" (click)="askConfirm(p, 'archive')">
+              {{ L().archiveBtn }}
+            </button>
+          } @else {
+            <button type="button" class="pbtn" (click)="askConfirm(p, 'restore')">
+              {{ L().restoreBtn }}
+            </button>
+          }
+        </div>
+      </section>
+    }
+  </div>
 </div>
 
 @if (editing() || creating()) {
   @let p = editing();
-  <div class="scrim" (click)="closeEdit()"></div>
-  <div class="dialog" (click)="$event.stopPropagation()">
-    <div class="dialog__header">
-      <div class="drawer__headerText">
-        <span class="dialog__title">{{ L().editTitle }}</span>
-        <span class="dialog__sub">{{
-          lang() === 'ar'
-            ? 'حفظ الأسعار والحدود كنُسخة جديدة'
-            : 'Save prices and limits as a new version'
-        }}</span>
-      </div>
+  <div class="scrim scrim--top" (click)="closeEdit()"></div>
+  <div class="dialog dialog--wide" role="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__head">
+      <span class="dialog__title">{{
+        creating()
+          ? lang() === 'ar'
+            ? 'باقة جديدة'
+            : 'New plan'
+          : L().editTitle + ' · ' + name(p!)
+      }}</span>
+      <span class="dialog__body">{{
+        lang() === 'ar'
+          ? 'تُحفظ الأسعار والحدود كنسخة جديدة.'
+          : 'Prices and limits are saved as a new version.'
+      }}</span>
     </div>
-    <div class="dialog__body" style="max-height: 65vh; overflow: auto">
-      @if (creating()) {
-        <label
-          >{{ lang() === 'ar' ? 'رمز الخطة' : 'Plan key'
-          }}<input
-            [(ngModel)]="draft.key"
-            pattern="[a-z0-9]+(-[a-z0-9]+)*"
-            maxlength="64"
-            placeholder="growth-plan"
+    <div class="dialog__main">
+      <div class="grid">
+        @if (creating()) {
+          <label class="field full"
+            ><span>{{ lang() === 'ar' ? 'رمز الباقة' : 'Plan key' }}</span
+            ><input
+              dir="ltr"
+              class="mono"
+              [(ngModel)]="draft.key"
+              pattern="[a-z0-9]+(-[a-z0-9]+)*"
+              maxlength="64"
+              placeholder="growth-plan"
+          /></label>
+        }
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'الاسم بالإنجليزية' : 'English name' }}</span
+          ><input dir="ltr" maxlength="1000" [(ngModel)]="draft.nameEn"
         /></label>
-      }
-      <div style="display: grid; gap: 12px; margin-bottom: 20px">
-        <label
-          >{{ lang() === 'ar' ? 'الاسم بالإنجليزية' : 'English name'
-          }}<input
-            style="
-              display: block;
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #ccc;
-              border-radius: 6px;
-            "
-            type="text"
-            maxlength="1000"
-            [(ngModel)]="draft.nameEn" /></label
-        ><label
-          >{{ lang() === 'ar' ? 'الاسم بالعربية' : 'Arabic name'
-          }}<input
-            style="
-              display: block;
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #ccc;
-              border-radius: 6px;
-            "
-            type="text"
-            maxlength="1000"
-            [(ngModel)]="draft.nameAr" /></label
-        ><label
-          >{{ lang() === 'ar' ? 'الوصف بالإنجليزية' : 'English description'
-          }}<input
-            style="
-              display: block;
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #ccc;
-              border-radius: 6px;
-            "
-            type="text"
-            maxlength="1000"
-            [(ngModel)]="draft.descEn" /></label
-        ><label
-          >{{ lang() === 'ar' ? 'الوصف بالعربية' : 'Arabic description'
-          }}<input
-            style="
-              display: block;
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #ccc;
-              border-radius: 6px;
-            "
-            type="text"
-            maxlength="1000"
-            [(ngModel)]="draft.descAr" /></label
-        ><label
-          >{{ lang() === 'ar' ? 'السعر الشهري (ج.م)' : 'Monthly price (EGP)'
-          }}<input
-            style="
-              display: block;
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #ccc;
-              border-radius: 6px;
-            "
-            type="number"
-            min="0"
-            step="0.01"
-            [(ngModel)]="draft.monthlyPrice" /></label
-        ><label
-          >{{ lang() === 'ar' ? 'السعر السنوي (ج.م)' : 'Annual price (EGP)'
-          }}<input
-            style="
-              display: block;
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #ccc;
-              border-radius: 6px;
-            "
-            type="number"
-            min="0"
-            step="0.01"
-            [(ngModel)]="draft.annualPrice" /></label
-        ><label
-          >{{ lang() === 'ar' ? 'المستخدمون (فارغ: بلا حد)' : 'Users (blank: unlimited)'
-          }}<input
-            style="
-              display: block;
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #ccc;
-              border-radius: 6px;
-            "
-            type="number"
-            min="0"
-            step="1"
-            [(ngModel)]="draft.users" /></label
-        ><label
-          >{{ lang() === 'ar' ? 'حد الوحدات' : 'Listings limit'
-          }}<input
-            style="
-              display: block;
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #ccc;
-              border-radius: 6px;
-            "
-            type="number"
-            min="0"
-            step="1"
-            [(ngModel)]="draft.listings" /></label
-        ><label
-          >{{ lang() === 'ar' ? 'حد المشاريع' : 'Projects limit'
-          }}<input
-            style="
-              display: block;
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #ccc;
-              border-radius: 6px;
-            "
-            type="number"
-            min="0"
-            step="1"
-            [(ngModel)]="draft.projects" /></label
-        ><label
-          >{{ lang() === 'ar' ? 'حد التخزين (جيجابايت)' : 'Storage limit (GB)'
-          }}<input
-            style="
-              display: block;
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #ccc;
-              border-radius: 6px;
-            "
-            type="number"
-            min="0"
-            step="1"
-            [(ngModel)]="draft.storageGb" /></label
-        ><label
-          >{{ lang() === 'ar' ? 'المزايا بالإنجليزية' : 'English features'
-          }}<input
-            style="
-              display: block;
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #ccc;
-              border-radius: 6px;
-            "
-            type="text"
-            maxlength="1000"
-            [(ngModel)]="draft.featsEn" /></label
-        ><label
-          >{{ lang() === 'ar' ? 'المزايا بالعربية' : 'Arabic features'
-          }}<input
-            style="
-              display: block;
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #ccc;
-              border-radius: 6px;
-            "
-            type="text"
-            maxlength="1000"
-            [(ngModel)]="draft.featsAr"
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'الاسم بالعربية' : 'Arabic name' }}</span
+          ><input dir="rtl" maxlength="1000" [(ngModel)]="draft.nameAr"
+        /></label>
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'الوصف بالإنجليزية' : 'English description' }}</span
+          ><input dir="ltr" maxlength="400" [(ngModel)]="draft.descEn"
+        /></label>
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'الوصف بالعربية' : 'Arabic description' }}</span
+          ><input dir="rtl" maxlength="400" [(ngModel)]="draft.descAr"
+        /></label>
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'السعر الشهري (ج.م)' : 'Monthly price (EGP)' }}</span
+          ><input type="number" min="0" step="0.01" class="mono" [(ngModel)]="draft.monthlyPrice"
+        /></label>
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'السعر السنوي (ج.م)' : 'Annual price (EGP)' }}</span
+          ><input type="number" min="0" step="0.01" class="mono" [(ngModel)]="draft.annualPrice"
+        /></label>
+        <label class="field"
+          ><span>{{
+            lang() === 'ar' ? 'المستخدمون (فارغ = بلا حد)' : 'Users (blank = unlimited)'
+          }}</span
+          ><input type="number" min="0" step="1" class="mono" [(ngModel)]="draft.users"
+        /></label>
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'الوحدات' : 'Listings' }}</span
+          ><input type="number" min="0" step="1" class="mono" [(ngModel)]="draft.listings"
+        /></label>
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'المشروعات' : 'Projects' }}</span
+          ><input type="number" min="0" step="1" class="mono" [(ngModel)]="draft.projects"
+        /></label>
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'التخزين (جيجابايت)' : 'Storage (GB)' }}</span
+          ><input type="number" min="0" step="1" class="mono" [(ngModel)]="draft.storageGb"
+        /></label>
+        <label class="field"
+          ><span>{{
+            lang() === 'ar'
+              ? 'المزايا بالإنجليزية (مفصولة بفواصل)'
+              : 'English features (comma-separated)'
+          }}</span
+          ><input dir="ltr" maxlength="1000" [(ngModel)]="draft.featsEn"
+        /></label>
+        <label class="field"
+          ><span>{{
+            lang() === 'ar'
+              ? 'المزايا بالعربية (مفصولة بفواصل)'
+              : 'Arabic features (comma-separated)'
+          }}</span
+          ><input dir="rtl" maxlength="1000" [(ngModel)]="draft.featsAr"
+        /></label>
+        <label class="field"
+          ><span
+            >{{ lang() === 'ar' ? 'حد العملاء' : 'Leads limit'
+            }}<i class="soon">{{ lang() === 'ar' ? 'لا يُحفظ بعد' : 'Not saved yet' }}</i></span
+          ><input type="number" min="0" class="mono" disabled
+        /></label>
+        <label class="field"
+          ><span
+            >{{ lang() === 'ar' ? 'طلبات API يوميًا' : 'API requests / day'
+            }}<i class="soon">{{ lang() === 'ar' ? 'لا يُحفظ بعد' : 'Not saved yet' }}</i></span
+          ><input type="number" min="0" class="mono" disabled
         /></label>
       </div>
-      @if (error()) {
-        <p role="alert">{{ error() }}</p>
-      }
-      @if (!creating() && editScope() === 'migrate') {
-        <p>
-          {{
-            lang() === 'ar'
-              ? 'اختر الاشتراكات لتطبيق الشروط فورًا دون تحصيل دفعة'
-              : 'Select subscriptions for immediate terms changes without collecting payment'
-          }}
-        </p>
-        @for (sub of subscribers(); track sub.subId) {
-          @if (sub.plan === p?.key) {
-            <label style="display: block"
-              ><input
-                type="checkbox"
-                [checked]="selectedIds().includes(sub.subId)"
-                (change)="toggleSelected(sub.subId)"
-              />{{ sub.companyEn }} · {{ sub.subId }}</label
-            >
-          }
+
+      @if (!creating()) {
+        <span class="sect__label">{{ lang() === 'ar' ? 'يُطبق على' : 'APPLIES TO' }}</span>
+        @for (sc of ['new', 'renewal', 'migrate']; track sc) {
+          <button
+            type="button"
+            class="mode"
+            [class.mode--on]="editScope() === sc"
+            (click)="editScope.set($any(sc))"
+          >
+            <span class="radio"></span>
+            <span class="mode__text">
+              <b>{{
+                sc === 'new' ? L().scopeNew : sc === 'renewal' ? L().scopeRenewal : L().scopeMigrate
+              }}</b>
+              <span>{{
+                sc === 'new'
+                  ? L().scopeNewSub
+                  : sc === 'renewal'
+                    ? L().scopeRenewalSub
+                    : L().scopeMigrateSub
+              }}</span>
+            </span>
+          </button>
+        }
+        @if (editScope() === 'migrate') {
+          <p class="muted">
+            {{
+              lang() === 'ar'
+                ? 'اختر الاشتراكات لتطبيق الشروط فورًا دون تحصيل دفعة'
+                : 'Select subscriptions for immediate terms changes without collecting payment'
+            }}
+          </p>
+          <div class="picks">
+            @for (sub of subscribers(); track sub.subId) {
+              @if (sub.plan === p?.key) {
+                <label class="pick"
+                  ><input
+                    type="checkbox"
+                    [checked]="selectedIds().includes(sub.subId)"
+                    (change)="toggleSelected(sub.subId)"
+                  /><span>{{ sub.companyEn }}</span
+                  ><span class="mono muted">{{ sub.subId }}</span></label
+                >
+              }
+            } @empty {
+              <span class="muted">{{
+                lang() === 'ar' ? 'لا توجد اشتراكات' : 'No subscriptions'
+              }}</span>
+            }
+          </div>
         }
       }
-
-      <button
-        [disabled]="creating()"
-        type="button"
-        class="ws-mode"
-        [class.ws-mode--active]="editScope() === 'new'"
-        (click)="editScope.set('new')"
-      >
-        <span class="ws-mode__radio" [class.ws-mode__radio--active]="editScope() === 'new'"></span>
-        <span class="ws-mode__text">
-          <span class="ws-mode__label">{{ L().scopeNew }}</span>
-          <span class="ws-mode__sub">{{ L().scopeNewSub }}</span>
-        </span>
-      </button>
-      <button
-        [disabled]="creating()"
-        type="button"
-        class="ws-mode"
-        [class.ws-mode--active]="editScope() === 'renewal'"
-        (click)="editScope.set('renewal')"
-      >
-        <span
-          class="ws-mode__radio"
-          [class.ws-mode__radio--active]="editScope() === 'renewal'"
-        ></span>
-        <span class="ws-mode__text">
-          <span class="ws-mode__label">{{ L().scopeRenewal }}</span>
-          <span class="ws-mode__sub">{{ L().scopeRenewalSub }}</span>
-        </span>
-      </button>
-      <button
-        [disabled]="creating()"
-        type="button"
-        class="ws-mode"
-        [class.ws-mode--active]="editScope() === 'migrate'"
-        (click)="editScope.set('migrate')"
-      >
-        <span
-          class="ws-mode__radio"
-          [class.ws-mode__radio--active]="editScope() === 'migrate'"
-        ></span>
-        <span class="ws-mode__text">
-          <span class="ws-mode__label">{{ L().scopeMigrate }}</span>
-          <span class="ws-mode__sub">{{ L().scopeMigrateSub }}</span>
-        </span>
-      </button>
+      @if (error()) {
+        <p class="note note--bad" role="alert">{{ error() }}</p>
+      }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeEdit()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="submitEdit()">
-        {{ L().continue }}
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="closeEdit()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--dark" [disabled]="saving()" (click)="submitEdit()">
+        {{ lang() === 'ar' ? 'حفظ الباقة' : 'Save plan' }}
       </button>
     </div>
   </div>
 }
 
 @if (confirming(); as cf) {
-  <div class="scrim" (click)="cancelConfirm()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{
-        cf.kind === 'archive' ? L().archiveTitle : L().restoreTitle
+  <div class="scrim scrim--top" (click)="cancelConfirm()"></div>
+  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__head">
+      <span class="dialog__title"
+        >{{ cf.kind === 'archive' ? L().archiveTitle : L().restoreTitle }} ·
+        {{ name(cf.plan) }}</span
+      >
+      <span class="dialog__body">{{
+        cf.kind === 'archive' ? L().archiveBody(name(cf.plan)) : L().restoreBody(name(cf.plan))
       }}</span>
-      <p class="dialog__text">
-        {{
-          cf.kind === 'archive' ? L().archiveBody(name(cf.plan)) : L().restoreBody(name(cf.plan))
-        }}
-      </p>
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelConfirm()">
-        {{ L().cancel }}
-      </button>
+    <div class="dialog__main">
+      @if (cf.kind === 'archive') {
+        <label class="field">
+          <span
+            >{{ lang() === 'ar' ? 'ملاحظة داخلية' : 'Internal note'
+            }}<i class="soon">{{ lang() === 'ar' ? 'لا يُحفظ بعد' : 'Not saved yet' }}</i></span
+          >
+          <textarea
+            rows="2"
+            [value]="archiveNote()"
+            (input)="archiveNote.set($any($event.target).value)"
+          ></textarea>
+        </label>
+      }
+      @if (error()) {
+        <p class="note note--bad" role="alert">{{ error() }}</p>
+      }
+    </div>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="cancelConfirm()">{{ L().cancel }}</button>
       <button
         type="button"
         class="btn"
         [class.btn--danger]="cf.kind === 'archive'"
-        [class.btn--primary]="cf.kind === 'restore'"
+        [class.btn--dark]="cf.kind === 'restore'"
         [disabled]="saving()"
         (click)="performConfirm()"
       >
-        {{ L().confirmGo }}
+        {{ cf.kind === 'archive' ? L().archiveBtn : L().restoreBtn }}
       </button>
     </div>
   </div>
 }
 
 @if (toast(); as msg) {
-  <div class="toast">{{ msg }}</div>
+  <div class="toast"><span></span>{{ msg }}</div>
 }

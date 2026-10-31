@@ -1,4 +1,5 @@
 import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../../auth.service';
 import { SubscriptionsApi } from '../../../subscriptions-api.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
@@ -136,7 +137,7 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-subscription-plans',
   imports: [FormsModule],
   templateUrl: './subscription-plans.html',
-  styleUrl: './subscription-plans.scss',
+  styleUrls: ['../admin-ui.scss', './subscription-plans.scss'],
 })
 export class SubscriptionPlans {
   private readonly ui = inject(AdminUiState);
@@ -145,6 +146,9 @@ export class SubscriptionPlans {
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
   private readonly api = inject(SubscriptionsApi);
+  private readonly auth = inject(AuthService);
+  readonly cycle = signal<'m' | 'a'>('m');
+  readonly archiveNote = signal('');
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly error = signal('');
@@ -154,7 +158,10 @@ export class SubscriptionPlans {
   }
   readonly creating = signal(false);
   readonly selectedIds = signal<string[]>([]);
-  readonly subscribers = signal<Array<{ subId: string; companyEn: string; plan: string }>>([]);
+  readonly subscribers = signal<
+    Array<{ subId: string; companyEn: string; plan: string; mrr: number; status: string }>
+  >([]);
+  readonly canSubs = computed(() => !!this.auth.user()?.permissions?.includes('sub.manage'));
   draft = {
     key: 'starter',
     nameEn: '',
@@ -217,7 +224,7 @@ export class SubscriptionPlans {
           ],
         })),
       );
-      this.subscribers.set(await this.api.subscriptions());
+      if (this.canSubs()) this.subscribers.set(await this.api.subscriptions());
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to load plans');
     } finally {
@@ -351,7 +358,66 @@ export class SubscriptionPlans {
   }
 
   askConfirm(p: PlanDef, kind: 'archive' | 'restore'): void {
+    this.archiveNote.set('');
     this.confirming.set({ plan: p, kind });
+  }
+  readonly totalCompanies = computed(() =>
+    this.records().reduce((n, p) => n + (p.companies || 0), 0),
+  );
+  /** "Most popular" goes to the plan with the most current subscribers. */
+  readonly popular = computed(() => {
+    const live = this.records().filter((p) => !p.archived && p.companies > 0);
+    return live.length ? live.reduce((a, b) => (b.companies > a.companies ? b : a)).key : null;
+  });
+  money(minor: number) {
+    return Math.round(minor / 100).toLocaleString('en-US');
+  }
+  priceNow(p: PlanDef) {
+    return this.money(this.cycle() === 'a' ? p.annualMinor : p.monthlyMinor);
+  }
+  perNow() {
+    const ar = this.lang() === 'ar';
+    return this.cycle() === 'a' ? (ar ? ' / سنة' : ' / year') : ar ? ' / شهر' : ' / month';
+  }
+  altPrice(p: PlanDef) {
+    const ar = this.lang() === 'ar';
+    return this.cycle() === 'a'
+      ? '≈ EGP ' + this.money(p.annualMinor / 12) + (ar ? ' / شهر' : ' / month')
+      : 'EGP ' + this.money(p.annualMinor) + (ar ? ' سنويًا' : ' billed yearly');
+  }
+  /** Sum of current subscription MRR on this plan (needs `sub.manage`). */
+  planMrr(p: PlanDef): string {
+    if (!this.canSubs()) return '—';
+    const v = this.subscribers()
+      .filter((s) => s.plan === p.key)
+      .reduce((n, s) => n + (Number(s.mrr) || 0), 0);
+    return (
+      'EGP ' +
+      (v >= 1e6
+        ? (v / 1e6).toFixed(2) + 'M'
+        : v >= 1e4
+          ? Math.round(v / 1000) + 'K'
+          : Math.round(v).toLocaleString('en-US'))
+    );
+  }
+  limitRows(p: PlanDef) {
+    const ar = this.lang() === 'ar';
+    const lv = (v: number | null, u = '') =>
+      v === null ? (ar ? 'غير محدود' : 'Unlimited') : v.toLocaleString('en-US') + u;
+    return [
+      { k: ar ? 'المستخدمون' : 'Users', v: lv(p.users) },
+      { k: ar ? 'الوحدات' : 'Listings', v: lv(p.listings) },
+      { k: ar ? 'المشروعات' : 'Projects', v: lv(p.projects) },
+      { k: ar ? 'التخزين' : 'Storage', v: lv(p.storageGb, ' GB') },
+    ];
+  }
+  /** Feature chips from the plan's free-text feature list. */
+  chips(p: PlanDef): string[] {
+    return this.feats(p)
+      .split(/[,،\n·;]+/)
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .slice(0, 6);
   }
 
   cancelConfirm(): void {

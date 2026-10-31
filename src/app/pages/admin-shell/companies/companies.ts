@@ -421,7 +421,7 @@ const PAGE_SIZE = 8;
   selector: 'app-companies',
   imports: [FormsModule],
   templateUrl: './companies.html',
-  styleUrls: ['../admin-ui.scss', './companies.scss'],
+  styleUrls: ['../admin-ui.scss', '../admin-table.scss', './companies.scss'],
 })
 export class Companies {
   authDefaults() {

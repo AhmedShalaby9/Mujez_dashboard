@@ -8,7 +8,17 @@ import { AdminUiState, type Lang } from '../admin-ui-state';
 type Plan = string;
 type SubStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'expired' | 'suspended';
 type PaymentMethod = 'card' | 'bank' | 'instapay';
-type SortKey = 'company' | 'plan' | 'status' | 'payment' | 'renews' | 'mrr';
+type SortKey = 'company' | 'plan' | 'status' | 'payment' | 'renews' | 'mrr' | 'amount' | 'start';
+type Tab = SubStatus | 'all' | 'ending';
+type StaticKind = 'cycle' | 'extend' | 'adjust' | 'reminders';
+const LOGO: Array<[string, string]> = [
+  ['#EEF5D6', '#3F5A0E'],
+  ['#E6EEFB', '#274A93'],
+  ['#F6E8DE', '#8A4A1E'],
+  ['#EDE7F8', '#55349A'],
+  ['#E3F2EF', '#1D6458'],
+  ['#F7E4E7', '#933045'],
+];
 
 interface Subscription {
   version: number;
@@ -26,6 +36,7 @@ interface Subscription {
   status: SubStatus;
   payment: PaymentMethod;
   renewsOn: string;
+  periodStart?: string;
   mrr: number;
 }
 
@@ -60,13 +71,13 @@ const STATUS_LABEL: Record<Lang, Record<SubStatus, string>> = {
   },
 };
 
-const STATUS_COLOR: Record<SubStatus, { bg: string; fg: string }> = {
-  trialing: { bg: '#eeeeea', fg: '#111113' },
-  active: { bg: '#e7f5ec', fg: '#1e6b3e' },
-  past_due: { bg: '#fcf2de', fg: '#83570c' },
-  canceled: { bg: '#eeeeea', fg: '#6e6e73' },
-  expired: { bg: '#fcf2de', fg: '#83570c' },
-  suspended: { bg: '#fbe7e3', fg: '#a23624' },
+const STATUS_COLOR: Record<SubStatus, { bg: string; fg: string; dot: string }> = {
+  trialing: { bg: '#EAEFFD', fg: '#2E47A8', dot: '#5B78E5' },
+  active: { bg: '#E7F5EC', fg: '#1E6B3E', dot: '#2FA35F' },
+  past_due: { bg: '#FCF2DE', fg: '#83570C', dot: '#D99A28' },
+  canceled: { bg: '#F1F1ED', fg: '#6E6E73', dot: '#B4B4AE' },
+  expired: { bg: '#F1F1ED', fg: '#45454A', dot: '#8A8A90' },
+  suspended: { bg: '#FBE7E3', fg: '#A23624', dot: '#E2553B' },
 };
 
 const PAYMENT_LABEL: Record<Lang, Record<PaymentMethod, string>> = {
@@ -249,7 +260,7 @@ const PAGE_SIZE = 10;
   selector: 'app-subscriptions',
   imports: [FormsModule],
   templateUrl: './subscriptions.html',
-  styleUrl: './subscriptions.scss',
+  styleUrls: ['../admin-ui.scss', '../admin-table.scss', './subscriptions.scss'],
 })
 export class Subscriptions {
   private readonly ui = inject(AdminUiState);
@@ -274,7 +285,7 @@ export class Subscriptions {
   private readonly subs = signal<Subscription[]>([]);
 
   readonly search = signal('');
-  readonly statusFilter = signal<SubStatus | 'all'>('all');
+  readonly statusFilter = signal<Tab>('all');
   readonly planFilter = signal<Plan | 'all'>('all');
   readonly paymentFilter = signal<PaymentMethod | 'all'>('all');
   readonly sortKey = signal<SortKey>('company');
@@ -360,7 +371,7 @@ export class Subscriptions {
     const plan = this.planFilter();
     const payment = this.paymentFilter();
     return this.subs().filter((s) => {
-      if (status !== 'all' && s.status !== status) return false;
+      if (!this.inTab(s, status)) return false;
       if (plan !== 'all' && s.plan !== plan) return false;
       if (payment !== 'all' && s.payment !== payment) return false;
       if (!q) return true;
@@ -404,6 +415,14 @@ export class Subscriptions {
         case 'mrr':
           av = a.mrr;
           bv = b.mrr;
+          break;
+        case 'amount':
+          av = Number(a.amountMinor);
+          bv = Number(b.amountMinor);
+          break;
+        case 'start':
+          av = a.periodStart ?? '';
+          bv = b.periodStart ?? '';
           break;
       }
       if (av < bv) return -1 * dir;
@@ -449,7 +468,7 @@ export class Subscriptions {
     return STATUS_LABEL[this.lang()][s];
   }
 
-  statusColor(s: SubStatus): { bg: string; fg: string } {
+  statusColor(s: SubStatus): { bg: string; fg: string; dot: string } {
     return STATUS_COLOR[s];
   }
 
@@ -472,11 +491,15 @@ export class Subscriptions {
       : `EGP ${v.toLocaleString('en-US')}`;
   }
 
-  private readonly logoPalette = ['#111113', '#8BB33A', '#111113', '#83570c', '#1e6b3e', '#e2553b'];
-
-  logoBg(s: Subscription): string {
+  private logo(s: Subscription): [string, string] {
     const code = s.companyId.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-    return this.logoPalette[code % this.logoPalette.length];
+    return LOGO[code % LOGO.length];
+  }
+  logoBg(s: Subscription): string {
+    return this.logo(s)[0];
+  }
+  logoFg(s: Subscription): string {
+    return this.logo(s)[1];
   }
 
   logoInitials(s: Subscription): string {
@@ -493,7 +516,7 @@ export class Subscriptions {
     this.page.set(1);
   }
 
-  setStatusFilter(v: SubStatus | 'all'): void {
+  setStatusFilter(v: Tab): void {
     this.statusFilter.set(v);
     this.page.set(1);
   }
@@ -508,8 +531,131 @@ export class Subscriptions {
     this.page.set(1);
   }
 
-  filterByKpiStatus(status: SubStatus | 'all'): void {
+  filterByKpiStatus(status: Tab): void {
     this.setStatusFilter(status);
+  }
+  private ended(s: Subscription) {
+    return ['canceled', 'expired'].includes(s.status);
+  }
+  /** "Cancels at renewal" = scheduled cancellation that hasn't taken effect yet. */
+  isEnding(s: Subscription) {
+    return s.cancelAtPeriodEnd && !this.ended(s);
+  }
+  inTab(s: Subscription, t: Tab) {
+    return t === 'all' || (t === 'ending' ? this.isEnding(s) : s.status === t);
+  }
+  readonly tabs = computed(() => {
+    const ar = this.lang() === 'ar';
+    const list: Array<[Tab, string, string]> = [
+      ['all', 'All', 'الكل'],
+      ['active', 'Active', 'نشطة'],
+      ['trialing', 'Trialing', 'تجريبية'],
+      ['past_due', 'Past due', 'متأخرة'],
+      ['ending', 'Cancels at renewal', 'تُلغى عند التجديد'],
+      ['canceled', 'Canceled', 'ملغاة'],
+      ['expired', 'Expired', 'منتهية'],
+      ['suspended', 'Suspended', 'موقوفة'],
+    ];
+    return list
+      .map(([k, en, a]) => ({
+        k,
+        label: ar ? a : en,
+        n: this.subs().filter((x) => this.inTab(x, k)).length,
+      }))
+      .filter((t) => t.k !== 'suspended' || t.n > 0);
+  });
+  daysTo(iso: string) {
+    return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
+  }
+  readonly stats = computed(() => {
+    const list = this.subs();
+    const live = list.filter((x) => !this.ended(x));
+    return {
+      mrr: list.reduce((n, x) => n + (Number(x.mrr) || 0), 0),
+      active: list.filter((x) => x.status === 'active').length,
+      trialing: list.filter((x) => x.status === 'trialing').length,
+      trialSoon: list.filter((x) => x.status === 'trialing' && this.daysTo(x.renewsOn) <= 7).length,
+      pastDue: list.filter((x) => x.status === 'past_due').length,
+      renewSoon: live.filter((x) => !x.cancelAtPeriodEnd && this.daysTo(x.renewsOn) <= 7).length,
+      ending: list.filter((x) => this.isEnding(x)).length,
+    };
+  });
+  readonly hasFilters = computed(
+    () =>
+      !!this.search().trim() ||
+      this.statusFilter() !== 'all' ||
+      this.planFilter() !== 'all' ||
+      this.paymentFilter() !== 'all',
+  );
+  clearFilters() {
+    this.search.set('');
+    this.statusFilter.set('all');
+    this.planFilter.set('all');
+    this.paymentFilter.set('all');
+    this.page.set(1);
+  }
+  isEnded(s: Subscription) {
+    return this.ended(s);
+  }
+  amount(s: Subscription) {
+    return 'EGP ' + Math.round(Number(s.amountMinor) / 100).toLocaleString('en-US');
+  }
+  date(iso?: string) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return new Intl.DateTimeFormat(this.lang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(d);
+  }
+  renewSub(s: Subscription): string {
+    if (this.ended(s)) return '';
+    const d = this.daysTo(s.renewsOn),
+      ar = this.lang() === 'ar';
+    if (s.status === 'trialing') return ar ? `تنتهي التجربة خلال ${d} يوم` : `trial ends in ${d} d`;
+    if (this.isEnding(s)) return ar ? 'يُلغى في هذا التاريخ' : 'cancels on this date';
+    return d <= 7 ? (ar ? `خلال ${d} أيام` : `in ${d} days`) : '';
+  }
+  money(v: number) {
+    return 'EGP ' + (v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : Math.round(v).toLocaleString('en-US'));
+  }
+  /** Plan rank from the catalog order, for upgrade/downgrade shortcuts. */
+  private rank(key: Plan) {
+    return this.activePlans().findIndex((p) => p.key === key);
+  }
+  neighbour(s: Subscription, dir: 1 | -1): Plan | null {
+    const list = this.activePlans();
+    const i = this.rank(s.plan);
+    return i < 0 ? null : (list[i + dir]?.key ?? null);
+  }
+  openChangeTo(s: Subscription, plan: Plan) {
+    this.openChangePlan(s);
+    this.newPlan.set(plan);
+  }
+  planPrice(key: Plan, cycle: 'monthly' | 'annual') {
+    const p = this.availablePlans().find((x) => x.key === key) as any;
+    const v = p?.[cycle === 'annual' ? 'annualMinor' : 'monthlyMinor'];
+    return typeof v === 'number' ? 'EGP ' + Math.round(v / 100).toLocaleString('en-US') : '—';
+  }
+
+  // ---- static (design-only) forms; see BACKEND_MISSING.md ----
+  readonly staticForm = signal<{ kind: StaticKind; sub: Subscription | null } | null>(null);
+  readonly cancelReason = signal('price');
+  readonly cancelNote = signal('');
+  openStatic(kind: StaticKind, sub: Subscription | null = null) {
+    this.kebabFor.set(null);
+    this.staticForm.set({ kind, sub });
+  }
+  submitStatic() {
+    const ar = this.lang() === 'ar';
+    this.staticForm.set(null);
+    this.showToast(
+      ar
+        ? 'هذا الإجراء غير متصل بالخادم بعد — لم يتغير شيء.'
+        : "This action isn't connected to the backend yet — nothing was changed.",
+    );
   }
 
   toggleSort(key: SortKey): void {
@@ -572,6 +718,7 @@ export class Subscriptions {
       this.changingPlan.set(null);
       this.viewing.set(null);
       await this.reload();
+      this.showToast(this.L().toastChanged(this.companyName(target), this.planLabel(plan.key)));
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to change plan');
     } finally {
@@ -580,6 +727,8 @@ export class Subscriptions {
   }
 
   askConfirm(s: Subscription, kind: 'cancel' | 'renew'): void {
+    this.cancelReason.set('price');
+    this.cancelNote.set('');
     this.confirming.set({ sub: s, kind });
     this.kebabFor.set(null);
   }
@@ -598,6 +747,10 @@ export class Subscriptions {
       this.confirming.set(null);
       this.viewing.set(null);
       await this.reload();
+      const n = this.companyName(target.sub);
+      this.showToast(
+        target.kind === 'cancel' ? this.L().toastCanceled(n) : this.L().toastRenewed(n),
+      );
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to update subscription');
     } finally {

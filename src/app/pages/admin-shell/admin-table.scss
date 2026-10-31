@@ -1,0 +1,146 @@
+// Shared list-page pieces (status tabs, filters, row menu, pager). Used with admin-ui.scss.
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid #e7e7e2;
+}
+.tab {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  margin-bottom: -1px;
+  padding: 0 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: #6e6e73;
+  cursor: pointer;
+}
+.tab__n {
+  font: 500 11px var(--font-mono);
+  padding: 0 6px;
+  border-radius: 9px;
+  background: #ecece7;
+  color: #6e6e73;
+}
+.tab--on {
+  border-bottom-color: #111113;
+  color: #111113;
+  font-weight: 500;
+  .tab__n {
+    background: #111113;
+    color: #c8f169;
+  }
+}
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  select {
+    width: auto;
+  }
+}
+.search {
+  position: relative;
+  flex: 1 1 240px;
+  max-width: 360px;
+  svg {
+    position: absolute;
+    top: 11px;
+    inset-inline-start: 11px;
+  }
+  input {
+    padding-inline-start: 33px;
+  }
+}
+th:not(.nosort) {
+  cursor: pointer;
+}
+.act {
+  position: relative;
+  width: 52px;
+}
+.kebab {
+  width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #6e6e73;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  &:hover {
+    border-color: #e2e2dc;
+    background: #fff;
+  }
+}
+.menu {
+  position: absolute;
+  top: 44px;
+  inset-inline-end: 12px;
+  z-index: 30;
+  width: 210px;
+  padding: 5px;
+  border: 1px solid #e7e7e2;
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: 0 16px 36px rgba(17, 17, 19, 0.14);
+  button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    color: #111113;
+    text-align: start;
+    cursor: pointer;
+    &:hover {
+      background: #f4f4f1;
+    }
+  }
+  .bad {
+    color: #a23624;
+  }
+  .ok {
+    color: #1e6b3e;
+  }
+}
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 44px 20px;
+  text-align: center;
+  strong {
+    font-size: 15px;
+  }
+  span {
+    color: #6e6e73;
+  }
+}
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-top: 1px solid #f1f1ed;
+  font-size: 12.5px;
+  color: #6e6e73;
+  span {
+    margin-inline-end: auto;
+  }
+}

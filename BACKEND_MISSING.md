@@ -4,7 +4,7 @@ Things the new Platform Admin design shows that the backend doesn't support yet.
 The frontend renders each one statically. In the UI, these are marked with an amber **Not saved yet / Soon / Sample** tag or a dashed card, and the data is never sent.
 When an item is implemented, remove its tag in the listed file and wire it to the new field or endpoint.
 
-Checked against `mujez_backend` @ `af51c30` (`src/modules/platform/companies`, `docs/*.md`).
+Checked against `mujez_backend` @ `af51c30` (`src/modules/platform/companies`, `src/modules/platform/subscriptions`, `docs/*.md`).
 
 ---
 
@@ -62,6 +62,46 @@ Plan prices and default limits shown in the wizard come from `GET /plans` (falls
 | W13 | Custom resource limits at creation (users, listings, projects, storage, unlimited toggles) | Limits | Accept `limits` overrides on create. Today only `/usage/:id/override` exists, and it's +20% for 30 days, not arbitrary values. |
 | W14 | Per-company module on/off at creation | Features | Accept `featureOverrides: [{ key, enabled }]` on create (no expiry). Today `/feature-overrides` requires an expiry within a year and a reason, and the company must exist first. |
 | W15 | **Save draft** | Footer | A draft state (`status: 'draft'`, no owner email, no subscription) + `POST /companies/drafts` / resume. Today the button shows a "not saved yet" toast. |
+
+---
+
+## Subscription plans (`/admin/subscription-plans`)
+
+Already real: plan catalog, monthly/annual prices (toggle), description, users/listings/projects/storage limits,
+feature chips (split from `featsEn/featsAr`), subscriber count, create, versioned edit with new/renewal/migrate scope
+and subscriber selection, archive/restore, and Subscribers link. **Most popular** goes to the plan with the most current
+subscribers. **Est. MRR** per plan sums `mrr` from `GET /subscriptions` (needs `sub.manage`, else `—`).
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| P1 | **Leads** limit row on each card + edit field | Row shows `—` with a "Soon" tag. The edit field is disabled. | `leads` limit on plan versions (`PlanInput.leads`, nullable = unlimited) and its measurement in `/usage`. |
+| P2 | **API requests / day** limit row + edit field | Same as P1. | `apiPerDay` limit on plan versions and enforcement at the API gateway. |
+| P3 | **Est. MRR** per plan for users without `sub.manage` | `—`. | Add `mrrMinor` (sum of current active contract MRR) to each row of `GET /plans`. |
+| P4 | Archive dialog **internal note** | Field shown with a "Not saved yet" tag and not sent. | Optional `reason` on `PlanArchive`, written to the audit log. |
+| P5 | Structured feature list (design shows module chips derived from the plan tier) | Chips are split from free-text `featsEn/featsAr`. | Optional: return the plan's feature entitlements from `/features` keyed by plan, so chips match real module access. |
+| P6 | Design note "Prices exclude 14% VAT" | Left out, because there's no tax configuration. | Tax settings (rate, inclusive/exclusive) in `/settings` or on the plan. |
+
+## Subscriptions (`/admin/subscriptions`)
+
+Already real: list, search, plan and payment-method filters, status tabs including **Cancels at renewal**
+(`cancelAtPeriodEnd`), Platform MRR, Active / Trialing / Past due counts (with "renew within 7 days" and "trial ends this week"),
+amount, cycle, started (`periodStart`), renews/ends, drawer, create subscription, **Change plan** (upgrade/downgrade
+shortcuts preselect the next plan), **Renew**, and **Cancel** (at period end).
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| S1 | **Churn** KPI | Static sample (`2.4%`, `3 cancellations`), dashed card + "Sample" tag. | Monthly churn aggregate (cancellations ÷ subscriptions active at month start), e.g. in `/overview`. |
+| S2 | **Send renewal reminders** button | Opens a preview dialog. Confirm shows "not connected" and nothing is sent. | `POST /subscriptions/reminders` (`withinDays`) queued through the outbox/email worker. Docs: no renewal/dunning worker yet. |
+| S3 | **Change billing cycle…** (row menu) | Preview dialog only. The change-plan dialog keeps the cycle unchanged. | Accept `cycle` on `POST /subscriptions/:id/change` (or a new `/cycle` action), applied at renewal. |
+| S4 | Change plan **"At renewal"** timing | Disabled option with a "Soon" tag. Only "Immediately" works. | `when: 'now' \| 'renewal'` on change. Renewal = store a pending plan version (like the plan-edit renewal scope). |
+| S5 | Change plan **proration preview** | Shows current vs new price and says no proration is processed. | If proration is wanted, `POST /subscriptions/:id/change/preview` returning the prorated amount. |
+| S6 | **Extend trial…** | Preview dialog only (7/14/21 days + note). | `POST /subscriptions/:id/extend-trial` with `days`, `reason`, `version`. Note: new trials aren't offered, so this applies only to historic trialing records. |
+| S7 | **Manual adjustment…** (credit/charge) | Preview dialog only. | `POST /subscriptions/:id/adjustments` with `type: credit\|charge`, `amountMinor`, `reason`, linked to billing/invoices. |
+| S8 | Cancel **reason** + **internal note** | Shown with "Not saved yet" tags and not sent. The cancel API takes only `version`. | `reason` enum (`price/features/competitor/closed/other`) + `note` on `POST /subscriptions/:id/cancel`, stored and audited (also feeds S1). |
+| S9 | Cancel **Immediately** option | Disabled with a "Soon" tag. Cancellation is always at period end. | `when: 'now'` on cancel (ends access immediately, optional refund flag). |
+| S10 | **Payment** column as payment *status* (Paid / Failed / Pending) | Shows the recorded payment *method* (card/bank/InstaPay). | `paymentStatus` from the latest invoice/payment per subscription. Depends on billing/payments being real. |
+| S11 | **Past due** handling note (grace period, auto-suspend) | The drawer says there's no automatic retry or suspension yet. | Dunning: grace period setting, retries, automatic suspension job. |
+| S12 | Drawer **HISTORY** timeline | Shows the current period start only + a pointer to Audit logs, "Soon" tag. | `GET /subscriptions/:id/history` (created, plan changes, renewals, cancellation) from audit/outbox events. |
 
 ---
 

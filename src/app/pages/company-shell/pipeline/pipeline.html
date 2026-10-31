@@ -1,101 +1,124 @@
-@if (error()) {
-  <p role="alert">
-    {{ error() }} · {{ t('Previous data may be stale', 'قد تكون البيانات السابقة قديمة') }}
-  </p>
-}
-@if (loading()) {
-  <p role="status">{{ t('Loading pipeline…', 'جار تحميل الفرص…') }}</p>
-}
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ t('Sales', 'المبيعات') }}</span>
-    <h1 class="page-head__title">{{ t('Pipeline', 'مراحل الصفقات') }}</h1>
-    <span class="page-head__sub">{{
-      t(
-        'Recorded opportunities by lead stage. Column totals include sale values only, across all matching records.',
-        'الفرص المسجلة حسب مرحلة العميل. الإجماليات تشمل قيم البيع لكل السجلات المطابقة.'
-      )
-    }}</span>
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <span
+        >{{ openCount() }} {{ t('open deals', 'فرصة مفتوحة') }} · {{ money(openValue()) }}
+        {{ t('sale value', 'قيمة البيع') }}</span
+      >
+      <h1>{{ t('Pipeline', 'الصفقات') }}</h1>
+    </div>
+    <div class="head__actions">
+      <div class="search">
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#8A8A90"
+          stroke-width="1.8"
+          stroke-linecap="round"
+        >
+          <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" />
+        </svg>
+        <input
+          [placeholder]="t('Search deals', 'ابحث في الفرص')"
+          [value]="q()"
+          (input)="q.set($any($event.target).value)"
+          (keydown.enter)="reload()"
+        />
+      </div>
+      @if (canManage()) {
+        <button type="button" class="btn btn--dark" (click)="openForm()">
+          {{ t('+ New deal', '+ فرصة جديدة') }}
+        </button>
+      }
+    </div>
   </div>
-  <div>
-    <button class="btn" [disabled]="loading()" (click)="reload()">
-      {{ t('Refresh', 'تحديث') }}
-    </button>
-    @if (canManage()) {
-      <button class="btn" (click)="openForm()">{{ t('+ New deal', '+ فرصة جديدة') }}</button>
-    }
-  </div>
-</div>
-<p>
-  {{
-    t(
-      'Stage changes update the linked lead. Won is a CRM status; it does not create a contract, reserve a unit or record a payment. Sample records are labeled.',
-      'تغييرات المرحلة تظهر في العميل المرتبط. الإغلاق حالة في CRM؛ ولا ينشئ عقدًا أو حجزًا أو دفعة. البيانات التجريبية موضحة.'
-    )
-  }}
-</p>
-<label
-  >{{ t('Search pipeline', 'البحث في الفرص') }}<input [(ngModel)]="q" maxlength="100" /><button
-    class="btn"
-    [disabled]="loading()"
-    (click)="reload()"
-  >
-    {{ t('Search', 'بحث') }}
-  </button></label
->
-<p>{{ t('Loaded cards', 'البطاقات المحملة') }} {{ deals().length }} / {{ total() }}</p>
-<div class="board-scroll">
+
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+  @if (loading()) {
+    <p class="muted" role="status">{{ t('Loading pipeline…', 'جار تحميل الصفقات…') }}</p>
+  }
+
   <div class="board">
     @for (col of columns(); track col.stage) {
-      <section class="column">
-        <div class="column__head">
-          <span class="column__title">{{ stageNames()[col.stage] }}</span
-          ><span class="column__count">{{ col.count }} {{ t('deals', 'فرصة') }}</span>
+      <section
+        class="col"
+        [class.col--over]="overStage() === col.stage"
+        [class.col--can]="dragging() && canDrop(dragging(), col.stage)"
+        (dragover)="dragOver($event, col.stage)"
+        (dragleave)="overStage.set(null)"
+        (drop)="drop($event, col.stage)"
+      >
+        <div class="col__head">
+          <div class="col__title">
+            <span class="dot" [style.background]="stageColor[col.stage]"></span>
+            <b>{{ stageNames()[col.stage] }}</b>
+            <span class="count mono">{{ col.count }}</span>
+          </div>
+          <span class="mono col__total">{{ money(col.total) }}</span>
         </div>
-        <div class="column__total mono">
-          {{ t('Sale total', 'إجمالي البيع') }}: {{ money(col.total) }}
-        </div>
-        <div class="column__cards">
-          @for (d of col.items; track d.id) {
-            <div class="deal-card">
-              <span class="deal-card__id mono"
-                >{{ d.reference }}
-                @if (d.sample) {
-                  · {{ t('Sample', 'تجريبي') }}
-                }</span
-              ><span class="deal-card__title">{{ d.title[lang()] }}</span
-              ><span class="deal-card__contact"
-                >{{ d.contact[lang()] }} · {{ d.leadReference }}</span
-              >
-              <div class="deal-card__meta">
-                <span class="deal-card__value mono">{{ money(d.valueMinor) }}</span
-                ><span class="pill" [class.pill--lease]="d.type === 'lease'">{{
-                  d.type === 'lease' ? t('Lease', 'إيجار') : t('Sale', 'بيع')
-                }}</span>
-              </div>
-              <span class="deal-card__owner">{{
-                d.owner?.name || t('Unassigned', 'دون مسؤول')
+        @for (d of col.items; track d.id) {
+          <article
+            class="cardx"
+            [class.cardx--drag]="dragging()?.id === d.id"
+            [attr.draggable]="canManage()"
+            (dragstart)="dragStart($event, d)"
+            (dragend)="dragEnd()"
+          >
+            <div class="cardx__top">
+              <span class="seg-tag" [class.seg-tag--com]="d.type === 'lease'">{{
+                d.type === 'lease' ? t('Lease', 'إيجار') : t('Sale', 'بيع')
               }}</span>
-              @if (canManage()) {
+              @if (d.sample) {
+                <i class="soon">{{ t('Sample', 'تجريبي') }}</i>
+              }
+              @if (canManage() && next(d.stage); as nextStage) {
                 <button
-                  class="deal-card__btn"
+                  type="button"
+                  class="fwd"
+                  [title]="t('Move to ', 'نقل إلى ') + stageNames()[nextStage]"
                   [disabled]="saving() || loading()"
-                  (click)="openForm(d)"
+                  (click)="move(d, nextStage)"
                 >
-                  {{ t('Edit deal', 'تعديل الفرصة') }}
-                </button>
-                @if (next(d.stage); as nextStage) {
-                  <button
-                    class="deal-card__btn"
-                    [disabled]="saving() || loading()"
-                    (click)="move(d, nextStage)"
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.4"
+                    stroke-linecap="round"
+                    class="flip"
                   >
-                    {{ t('Move to', 'نقل إلى') }} {{ stageNames()[nextStage] }}
-                  </button>
-                }
+                    <path d="M9 6l6 6-6 6" />
+                  </svg>
+                </button>
+              }
+            </div>
+            <span class="cardx__title">{{ d.title[lang()] }}</span>
+            <span class="cardx__client"
+              >{{ d.contact[lang()] }} · <span class="mono">{{ d.reference }}</span></span
+            >
+            <div class="cardx__foot">
+              <span class="mono strong">{{ money(d.valueMinor) }}</span>
+              <span
+                class="avatar avatar--sm"
+                [title]="d.owner?.name || t('Unassigned', 'دون مسؤول')"
+                >{{ initials(d.owner?.name) }}</span
+              >
+            </div>
+            @if (canManage()) {
+              <div class="cardx__acts">
+                <button type="button" class="link" [disabled]="saving()" (click)="openForm(d)">
+                  {{ t('Edit', 'تعديل') }}
+                </button>
                 @if (d.stage !== 'won' && d.stage !== 'lost') {
                   <button
-                    class="deal-card__btn"
+                    type="button"
+                    class="link bad"
                     [disabled]="saving() || loading()"
                     (click)="closeAction(d, 'lost')"
                   >
@@ -103,127 +126,187 @@
                   </button>
                 } @else {
                   <button
-                    class="deal-card__btn"
+                    type="button"
+                    class="link"
                     [disabled]="saving() || loading()"
                     (click)="closeAction(d, 'reopen')"
                   >
-                    {{ t('Reopen as new', 'إعادة فتح كجديد') }}
+                    {{ t('Reopen', 'إعادة فتح') }}
                   </button>
                 }
-              }
-            </div>
-          }
-          @if (!col.count && !loading()) {
-            <p>{{ t('No opportunities', 'لا توجد فرص') }}</p>
-          }
-        </div>
+              </div>
+            }
+          </article>
+        }
+        @if (!col.count && !loading()) {
+          <p class="col__empty">{{ t('No opportunities', 'لا توجد فرص') }}</p>
+        }
       </section>
     }
   </div>
+  @if (deals().length < total()) {
+    <button type="button" class="btn more" [disabled]="loading()" (click)="reload(page() + 1)">
+      {{ t('Load more cards', 'تحميل المزيد') }}
+    </button>
+  }
+  <span class="muted">{{
+    t(
+      'Drag a card to the next stage, or use the arrow. Column totals are sale values from the server across all deals; leases are excluded.',
+      'اسحب البطاقة للمرحلة التالية أو استخدم السهم. إجمالي كل عمود قيمة البيع من الخادم لكل الفرص، دون الإيجارات.'
+    )
+  }}</span>
 </div>
-@if (deals().length < total()) {
-  <button class="btn" [disabled]="loading()" (click)="reload(page() + 1)">
-    {{ t('Load more cards', 'تحميل المزيد') }}
-  </button>
-}
+
 @if (dialog()) {
-  <div class="sales-scrim"></div>
-  <section class="sales-dialog" role="dialog" aria-label="Pipeline deal">
-    <h2>{{ editing() ? t('Edit deal', 'تعديل الفرصة') : t('New deal', 'فرصة جديدة') }}</h2>
-    @if (formError()) {
-      <p role="alert">{{ formError() }}</p>
-    }
-    @if (!editing()) {
-      <label
-        >{{ t('Search available leads', 'البحث في العملاء المتاحين')
-        }}<input [(ngModel)]="optionSearch" maxlength="100" /></label
-      ><button class="btn" type="button" [disabled]="optionsLoading()" (click)="loadOptions()">
-        {{ t('Find leads', 'بحث عن العملاء') }}
-      </button>
-      @if (optionsLoading()) {
-        <p role="status">{{ t('Loading leads…', 'جار تحميل العملاء…') }}</p>
-      }
-      @if (leadOptions().length < optionTotal()) {
-        <button
-          class="btn"
-          type="button"
-          [disabled]="optionsLoading()"
-          (click)="loadOptions(optionPage() + 1)"
-        >
-          {{ t('More lead options', 'المزيد من العملاء') }}
-        </button>
-      }
-    }
-    <form (ngSubmit)="save()">
+  <div class="scrim scrim--top" (click)="!saving() && dialog.set(false)"></div>
+  <div class="dialog" role="dialog" aria-label="Pipeline deal">
+    <div class="dialog__head">
+      <span class="dialog__title">{{
+        editing() ? t('Edit deal', 'تعديل الفرصة') : t('New deal', 'فرصة جديدة')
+      }}</span>
       @if (!editing()) {
-        <label
-          >{{ t('Lead (one opportunity per lead)', 'العميل (فرصة واحدة لكل عميل)')
-          }}<select name="lead" [(ngModel)]="draft.leadId" required>
+        <span class="dialog__body">{{
+          t(
+            'One opportunity per lead. Create or reopen a lead first if it is not listed.',
+            'فرصة واحدة لكل عميل. أنشئ العميل أو أعد فتحه أولًا إذا لم يظهر.'
+          )
+        }}</span>
+      }
+    </div>
+    <form id="deal-form" class="dialog__main" (ngSubmit)="save()">
+      @if (formError()) {
+        <p class="note note--bad" role="alert">{{ formError() }}</p>
+      }
+      @if (!editing()) {
+        <div class="field">
+          <span>{{ t('Search available leads', 'البحث في العملاء المتاحين') }}</span>
+          <div class="row2">
+            <input
+              [ngModel]="optionSearch()"
+              (ngModelChange)="optionSearch.set($event)"
+              name="optq"
+              maxlength="100"
+            />
+            <button
+              type="button"
+              class="btn btn--sm"
+              [disabled]="optionsLoading()"
+              (click)="loadOptions()"
+            >
+              {{ t('Find', 'بحث') }}
+            </button>
+          </div>
+        </div>
+        <label class="field"
+          ><span>{{ t('Lead', 'العميل') }}</span
+          ><select name="lead" [(ngModel)]="draft.leadId" required>
             <option value="">—</option>
             @for (l of leadOptions(); track l.id) {
               <option [value]="l.id">{{ l.name[lang()] }} · {{ l.reference }}</option>
             }
           </select></label
         >
-        <p>
-          {{
-            t(
-              'Create or reopen a lead first if it is not available here.',
-              'أنشئ العميل أو أعد فتحه أولًا إذا لم يظهر هنا.'
-            )
-          }}
-        </p>
+        @if (leadOptions().length < optionTotal()) {
+          <button
+            type="button"
+            class="link"
+            [disabled]="optionsLoading()"
+            (click)="loadOptions(optionPage() + 1)"
+          >
+            {{ t('More lead options', 'المزيد من العملاء') }}
+          </button>
+        }
       }
-      <label
-        >{{ t('Deal title', 'عنوان الفرصة')
-        }}<input
-          name="title"
-          [(ngModel)]="draft.title"
-          required
-          minlength="2"
-          maxlength="200" /></label
-      ><label
-        >{{ t('Arabic title (optional)', 'العنوان بالعربية (اختياري)')
-        }}<input name="titleAr" [(ngModel)]="draft.titleAr" maxlength="200" /></label
-      ><label
-        >{{ t('Type', 'النوع')
-        }}<select name="type" [(ngModel)]="draft.type">
-          <option value="sale">{{ t('Sale', 'بيع') }}</option>
-          <option value="lease">{{ t('Lease', 'إيجار') }}</option>
-        </select></label
-      ><label
-        >{{ t('Recorded opportunity value (EGP)', 'قيمة الفرصة المسجلة بالجنيه')
-        }}<input name="value" [(ngModel)]="draft.value" inputmode="decimal" required /></label
-      ><button class="btn" type="button" [disabled]="saving()" (click)="dialog.set(false)">
-        {{ t('Cancel', 'إلغاء') }}</button
-      ><button class="btn" type="submit" [disabled]="saving() || optionsLoading()">
+      <div class="grid">
+        <label class="field"
+          ><span>{{ t('Deal title', 'عنوان الفرصة') }}</span
+          ><input name="title" [(ngModel)]="draft.title" required minlength="2" maxlength="200"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Arabic title (optional)', 'العنوان بالعربية (اختياري)') }}</span
+          ><input dir="rtl" name="titleAr" [(ngModel)]="draft.titleAr" maxlength="200"
+        /></label>
+        <div class="field">
+          <span>{{ t('Type', 'النوع') }}</span>
+          <div class="segs">
+            <button
+              type="button"
+              class="seg"
+              [class.seg--on]="draft.type === 'sale'"
+              (click)="draft.type = 'sale'"
+            >
+              {{ t('Sale', 'بيع') }}
+            </button>
+            <button
+              type="button"
+              class="seg"
+              [class.seg--on]="draft.type === 'lease'"
+              (click)="draft.type = 'lease'"
+            >
+              {{ t('Lease', 'إيجار') }}
+            </button>
+          </div>
+        </div>
+        <label class="field"
+          ><span>{{ t('Value (EGP)', 'القيمة بالجنيه') }}</span
+          ><input class="mono" name="value" [(ngModel)]="draft.value" inputmode="decimal" required
+        /></label>
+      </div>
+    </form>
+    <div class="dialog__foot">
+      <button type="button" class="btn" [disabled]="saving()" (click)="dialog.set(false)">
+        {{ t('Cancel', 'إلغاء') }}
+      </button>
+      <button
+        class="btn btn--dark"
+        type="submit"
+        form="deal-form"
+        [disabled]="saving() || optionsLoading()"
+      >
         {{ t('Save deal', 'حفظ الفرصة') }}
       </button>
-    </form>
-  </section>
+    </div>
+  </div>
 }
+
 @if (closing(); as c) {
-  <div class="sales-scrim"></div>
-  <section class="sales-dialog" role="dialog" aria-label="Change pipeline stage">
-    <h2>
-      {{
-        c.stage === 'lost' ? t('Mark lost', 'تسجيل خسارة') : t('Reopen as new', 'إعادة فتح كجديد')
-      }}
-    </h2>
-    @if (formError()) {
-      <p role="alert">{{ formError() }}</p>
-    }
-    <label
-      >{{ t('Reason (10+ characters)', 'السبب (10 أحرف على الأقل)')
-      }}<textarea [(ngModel)]="reason" maxlength="500"></textarea></label
-    ><button class="btn" [disabled]="saving()" (click)="closing.set(null)">
-      {{ t('Cancel', 'إلغاء') }}</button
-    ><button
-      class="btn"
-      [disabled]="saving() || reason().trim().length < 10"
-      (click)="confirmClose()"
-    >
-      {{ t('Confirm change', 'تأكيد التغيير') }}
-    </button>
-  </section>
+  <div class="scrim scrim--top" (click)="!saving() && closing.set(null)"></div>
+  <div class="dialog" role="dialog" aria-label="Change pipeline stage">
+    <div class="dialog__head">
+      <span class="dialog__title"
+        >{{
+          c.stage === 'lost' ? t('Mark lost', 'تسجيل خسارة') : t('Reopen as new', 'إعادة فتح كجديد')
+        }}
+        · {{ c.deal.title[lang()] }}</span
+      >
+    </div>
+    <div class="dialog__main">
+      @if (formError()) {
+        <p class="note note--bad" role="alert">{{ formError() }}</p>
+      }
+      <label class="field"
+        ><span>{{ t('Reason (10+ characters)', 'السبب (10 أحرف على الأقل)') }}</span
+        ><textarea rows="2" [(ngModel)]="reason" maxlength="500"></textarea>
+      </label>
+    </div>
+    <div class="dialog__foot">
+      <button type="button" class="btn" [disabled]="saving()" (click)="closing.set(null)">
+        {{ t('Cancel', 'إلغاء') }}
+      </button>
+      <button
+        type="button"
+        class="btn"
+        [class.btn--danger]="c.stage === 'lost'"
+        [class.btn--dark]="c.stage !== 'lost'"
+        [disabled]="saving() || reason().trim().length < 10"
+        (click)="confirmClose()"
+      >
+        {{ t('Confirm', 'تأكيد') }}
+      </button>
+    </div>
+  </div>
+}
+
+@if (toast()) {
+  <div class="toast"><span></span>{{ toast() }}</div>
 }

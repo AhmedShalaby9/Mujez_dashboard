@@ -16,7 +16,12 @@ import {
   selector: 'app-pipeline',
   imports: [FormsModule],
   templateUrl: './pipeline.html',
-  styleUrl: './pipeline.scss',
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './pipeline.scss',
+  ],
 })
 export class Pipeline {
   private readonly ui = inject(CompanyUiState);
@@ -96,6 +101,82 @@ export class Pipeline {
       if (serial === this.serial) this.loading.set(false);
     }
   }
+  readonly stageColor: Record<string, string> = {
+    new: '#C4C4BE',
+    qualified: '#5B78E5',
+    viewing: '#D99A28',
+    offer: '#8BB33A',
+    contract: '#111113',
+    won: '#2FA35F',
+    lost: '#E2553B',
+  };
+  readonly toast = signal('');
+  private say(msg: string) {
+    this.toast.set(msg);
+    setTimeout(() => this.toast.set(''), 3500);
+  }
+  readonly openValue = computed(() =>
+    this.stats()
+      .filter((x) => x.stage !== 'won' && x.stage !== 'lost')
+      .reduce((n, x) => n + BigInt(x.saleMinor), 0n)
+      .toString(),
+  );
+  readonly openCount = computed(() =>
+    this.stats()
+      .filter((x) => x.stage !== 'won' && x.stage !== 'lost')
+      .reduce((n, x) => n + x.count, 0),
+  );
+  initials(name: string | undefined) {
+    return (name ?? '?')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join('');
+  }
+  // ---- drag & drop (only moves the API accepts: next stage, lost, reopen) ----
+  readonly dragging = signal<SalesDeal | null>(null);
+  readonly overStage = signal<string | null>(null);
+  canDrop(d: SalesDeal | null, stage: SalesStage) {
+    if (!d || !this.canManage()) return false;
+    if (stage === 'lost') return d.stage !== 'won' && d.stage !== 'lost';
+    if (stage === 'new' && (d.stage === 'won' || d.stage === 'lost')) return true;
+    return this.next(d.stage) === stage;
+  }
+  dragStart(e: DragEvent, d: SalesDeal) {
+    this.dragging.set(d);
+    e.dataTransfer?.setData('text/plain', d.id);
+  }
+  dragEnd() {
+    this.dragging.set(null);
+    this.overStage.set(null);
+  }
+  dragOver(e: DragEvent, stage: SalesStage) {
+    if (this.canDrop(this.dragging(), stage)) {
+      e.preventDefault();
+      this.overStage.set(stage);
+    }
+  }
+  drop(e: DragEvent, stage: SalesStage) {
+    e.preventDefault();
+    const d = this.dragging();
+    this.dragEnd();
+    if (!d || d.stage === stage) return;
+    if (!this.canDrop(d, stage)) {
+      this.say(
+        this.t(
+          'Move one stage at a time, or mark the deal lost.',
+          'انقل مرحلة واحدة في كل مرة، أو سجل الخسارة.',
+        ),
+      );
+      return;
+    }
+    if (stage === 'lost') this.closeAction(d, 'lost');
+    else if (stage === 'new' && (d.stage === 'won' || d.stage === 'lost'))
+      this.closeAction(d, 'reopen');
+    else void this.move(d, stage);
+  }
+
   next(stage: SalesStage) {
     const i = this.stages.indexOf(stage);
     return i < 5 ? this.stages[i + 1] : null;

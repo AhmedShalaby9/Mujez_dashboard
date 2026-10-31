@@ -325,3 +325,40 @@ Already left out of the UI rather than faked. Listed so the full design can be r
 | D4 | **Upcoming renewals** list | `GET /subscriptions?renewingWithin=14d` or include in `/overview`. |
 | D5 | Revenue movement chips (New / Expansion / Churned / Net) | MRR movement breakdown per range. |
 | D6 | Recent companies: plan, status, last active columns | Add `plan`, `status`, `lastActiveAt` to `overview.growth[]`. |
+
+---
+
+# Company CRM (`/company/*`)
+
+Same conventions as above: real wherever the tenant API supports it, design-only parts tagged in the UI.
+Checked against `mujez_backend/src/modules/sales`.
+
+## Leads (`/company/leads`)
+
+Already real: server-paged list with search, stage chips, include-archived, design table (contact + phone, segment tag +
+wants, budget, stage, source, owner, last update, manual score), side panel with quick actions (**Call** = `tel:` link,
+**WhatsApp** = `wa.me` link, **Schedule** = new task for the lead), stage progress + move to next / mark lost / reopen
+(with reason), facts, **Next step** (earliest open linked task), **Latest note** (from the activity timeline), first-contact
+recording with channel + note, activity composer with kind chips, full activity timeline, related leads, edit, archive/restore,
+create with campaign attribution and backend duplicate handling.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| CL1 | **Residential / Commercial** segment switch (header) | Only "All" works. The others show a "not available" toast. | `segment=res\|com` filter on `GET /leads` (and `GET /pipeline`). Filtering a single loaded page would be misleading. |
+| CL2 | Lead **email** | Facts row shows `—` with "Soon". | `email` on leads (create/update + duplicate check). |
+| CL3 | **Last activity** time ("2 h ago") | Shows `updatedAt` labelled "Last update". | `lastActivityAt` on the lead list (latest activity entry). |
+| CL4 | Activity **kinds** (Call / WhatsApp / Viewing / Note) and **call outcome** logging | Saved as notes with a `[Kind]` prefix. Outcome isn't captured. | `kind` + optional `outcome` on `POST /leads/:id/notes` (or a dedicated `/activities` write), shown with their own icons. |
+| CL5 | WhatsApp send / call from inside the CRM | Opens the phone dialer or WhatsApp app. Nothing is logged automatically. | WhatsApp Business / telephony integration that logs messages and calls (see I1). |
+| CL6 | Owner / "My leads" filter | Not shown. | `ownerId` filter on `GET /leads` (agents could default to their own). |
+
+## Pipeline (`/company/pipeline`)
+
+Already real: Kanban board with per-stage server counts and sale totals across all pages, cards (type tag, title, contact,
+reference, value, owner initials), **drag and drop** to the next stage / to Lost / back to New (reopen), next-stage arrow,
+mark lost / reopen with reason, rollback on a rejected write, search, load more, new / edit deal.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| CP1 | **Days in stage** on each card ("12 d") | Not shown. | `stageChangedAt` on deals. |
+| CP2 | Residential / Commercial segment tag + switch | Cards show Sale / Lease (real) instead. No segment switch. | Deal `segment` (from its lead) + filter (see CL1). |
+| CP3 | Drag a card **across several stages** in one move | Only next stage, Lost, or reopen are accepted (the backend moves one stage at a time). | Allow direct jumps if the business wants them (with audit). |

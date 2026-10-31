@@ -20,7 +20,12 @@ import {
   selector: 'app-leads',
   imports: [FormsModule],
   templateUrl: './leads.html',
-  styleUrl: './leads.scss',
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './leads.scss',
+  ],
 })
 export class Leads {
   private readonly ui = inject(CompanyUiState);
@@ -521,6 +526,88 @@ export class Leads {
       this.saving.set(false);
     }
   }
+  // ---- design helpers ----
+  readonly stageColor: Record<string, string> = {
+    new: '#C4C4BE',
+    qualified: '#5B78E5',
+    viewing: '#D99A28',
+    offer: '#8BB33A',
+    contract: '#111113',
+    won: '#2FA35F',
+    lost: '#E2553B',
+  };
+  initials(l: SalesLead) {
+    return this.name(l)
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join('');
+  }
+  ago(iso: string) {
+    const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if (m < 60) return this.t(`${m} min ago`, `منذ ${m} د`);
+    if (m < 1440) return this.t(`${Math.round(m / 60)} h ago`, `منذ ${Math.round(m / 60)} س`);
+    return this.t(`${Math.round(m / 1440)} d ago`, `منذ ${Math.round(m / 1440)} يوم`);
+  }
+  scoreColor(n: number | null) {
+    return n === null ? '#A1A1A6' : n >= 85 ? '#B4442F' : n >= 75 ? '#B7791F' : '#6E6E73';
+  }
+  segLabel(l: SalesLead) {
+    return l.segment === 'com' ? this.t('Com', 'تجاري') : this.t('Res', 'سكني');
+  }
+  /** Latest recorded note, from the real activity timeline. */
+  readonly latestNote = computed(() => {
+    const n = this.timeline().find((a) => a.kind === 'lead.note_added');
+    return n ? { text: String(n.details['note'] ?? ''), by: n.actor, at: n.at } : null;
+  });
+  /** "Next step" = the earliest open linked task. */
+  readonly nextTask = computed(
+    () =>
+      [...this.linkedTasks()]
+        .filter((t) => t.status === 'open')
+        .sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0] ?? null,
+  );
+  waLink(phone: string) {
+    return 'https://wa.me/' + phone.replace(/\D/g, '');
+  }
+  telLink(phone: string) {
+    return 'tel:' + phone.replace(/[^\d+]/g, '');
+  }
+  /** Activity composer: the API stores notes, so the chosen kind is prefixed to the note text. */
+  readonly actKind = signal<'call' | 'whatsapp' | 'meeting' | 'note'>('note');
+  readonly actKinds: Array<['call' | 'whatsapp' | 'meeting' | 'note', string, string]> = [
+    ['call', 'Call', 'مكالمة'],
+    ['whatsapp', 'WhatsApp', 'واتساب'],
+    ['meeting', 'Viewing / meeting', 'معاينة / اجتماع'],
+    ['note', 'Note', 'ملاحظة'],
+  ];
+  async logActivity() {
+    const text = this.note().trim();
+    if (!text) return;
+    const k = this.actKinds.find((x) => x[0] === this.actKind())!;
+    if (this.actKind() !== 'note') this.note.set(`[${k[1]}] ${text}`);
+    await this.mutate('notes');
+    if (this.detailError()) this.note.set(text);
+    else this.note.set('');
+  }
+  stageIndex(s: SalesStage) {
+    return this.stages.indexOf(s);
+  }
+  segmentSoon() {
+    this.toast.set(
+      this.t(
+        'Segment filtering is not available from the API yet.',
+        'التصفية حسب القطاع غير متاحة من الخادم بعد.',
+      ),
+    );
+    setTimeout(() => this.toast.set(''), 3500);
+  }
+  showToast(msg: string) {
+    this.toast.set(msg);
+    setTimeout(() => this.toast.set(''), 3500);
+  }
+
   next(stage: SalesStage) {
     const i = this.stages.indexOf(stage);
     return i < 5 ? this.stages[i + 1] : null;

@@ -1,420 +1,578 @@
-@if (error()) {
-  <p role="alert">
-    {{ error() }} · {{ t('Previous data may be stale', 'قد تكون البيانات السابقة قديمة') }}
-  </p>
-}
-@if (loading()) {
-  <p role="status">{{ t('Loading leads…', 'جار تحميل العملاء…') }}</p>
-}
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ t('Sales', 'المبيعات') }}</span>
-    <h1 class="page-head__title">{{ t('Leads', 'العملاء المحتملون') }}</h1>
-    <span class="page-head__sub">{{
-      t(
-        'Company leads, ownership, source and recorded activity.',
-        'عملاء الشركة ومسؤولوهم ومصادرهم وسجل النشاط.'
-      )
-    }}</span>
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <span>{{ total() }} {{ t('leads', 'عميل') }} · {{ t('Sales', 'المبيعات') }}</span>
+      <h1>{{ t('Leads', 'العملاء المحتملون') }}</h1>
+    </div>
+    <div class="head__actions">
+      <div class="toggle" [title]="t('Segment filter — soon', 'تصفية القطاع — قريبًا')">
+        <button type="button" class="on">{{ t('All', 'الكل') }}</button>
+        <button type="button" (click)="segmentSoon()">{{ t('Residential', 'سكني') }}</button>
+        <button type="button" (click)="segmentSoon()">{{ t('Commercial', 'تجاري') }}</button>
+      </div>
+      @if (canManage()) {
+        <button type="button" class="btn btn--dark" (click)="openNew()">
+          {{ t('+ New lead', '+ عميل جديد') }}
+        </button>
+      }
+    </div>
   </div>
-  <div class="page-head__actions">
-    <button class="btn btn--ghost" [disabled]="loading()" (click)="reload()">
-      {{ t('Refresh', 'تحديث') }}
-    </button>
-    @if (canManage()) {
-      <button class="btn btn--primary" (click)="openNew()">
-        {{ t('+ New lead', '+ عميل جديد') }}
+
+  @if (error()) {
+    <p class="note note--bad" role="alert">
+      {{ error() }} · {{ t('Previous data may be stale', 'قد تكون البيانات السابقة قديمة') }}
+    </p>
+  }
+  @if (campaignFilter()) {
+    <p class="note">
+      {{
+        t(
+          'Showing leads attributed to the selected campaign.',
+          'عرض العملاء المنسوبين للحملة المختارة.'
+        )
+      }}
+      <button type="button" class="link" (click)="clearCampaignFilter()">
+        {{ t('Show all leads', 'عرض كل العملاء') }}
       </button>
-    }
+    </p>
+  }
+
+  <div class="filters">
+    <div class="search">
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#8A8A90"
+        stroke-width="1.8"
+        stroke-linecap="round"
+      >
+        <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" />
+      </svg>
+      <input
+        type="text"
+        [attr.aria-label]="t('Search leads', 'البحث عن عميل')"
+        [placeholder]="t('Search name, phone, want…', 'ابحث بالاسم أو الهاتف أو الطلب…')"
+        [value]="search()"
+        (input)="searchChanged($any($event.target).value)"
+      />
+    </div>
+    <div class="chips">
+      <button
+        type="button"
+        class="chip"
+        [class.on]="stageFilter() === 'all'"
+        (click)="stageFilter.set('all'); reload()"
+      >
+        {{ t('All stages', 'كل المراحل') }}
+      </button>
+      @for (s of stages; track s) {
+        <button
+          type="button"
+          class="chip"
+          [class.on]="stageFilter() === s"
+          (click)="stageFilter.set(s); reload()"
+        >
+          <span class="stage-dot" [style.background]="stageColor[s]"></span>{{ stageNames()[s] }}
+        </button>
+      }
+    </div>
+    <label class="check"
+      ><input
+        type="checkbox"
+        [checked]="archived()"
+        (change)="archived.set($any($event.target).checked); reload()"
+      />{{ t('Include archived', 'يشمل المؤرشف') }}</label
+    >
   </div>
-</div>
-<p>
-  {{
+
+  <section class="card">
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('Contact', 'العميل') }}</th>
+            <th>{{ t('Wants', 'يبحث عن') }}</th>
+            <th>{{ t('Budget', 'الميزانية') }}</th>
+            <th>{{ t('Stage', 'المرحلة') }}</th>
+            <th>{{ t('Source', 'المصدر') }}</th>
+            <th>{{ t('Owner', 'المسؤول') }}</th>
+            <th>{{ t('Last update', 'آخر تحديث') }}</th>
+            <th class="end">{{ t('Score', 'التقييم') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (l of leads(); track l.id) {
+            <tr [class.sel]="selected()?.id === l.id" (click)="open(l.id)">
+              <td>
+                <div class="who">
+                  <span class="avatar">{{ initials(l) }}</span>
+                  <span class="who__text">
+                    <span class="strong"
+                      >{{ name(l) }}
+                      @if (l.sample) {
+                        <i class="soon">{{ t('Sample', 'تجريبي') }}</i>
+                      }
+                    </span>
+                    <span class="mono sub" dir="ltr">{{ l.phone }}</span>
+                  </span>
+                </div>
+              </td>
+              <td>
+                <div class="want">
+                  <span class="seg-tag" [class.seg-tag--com]="l.segment === 'com'">{{
+                    segLabel(l)
+                  }}</span
+                  ><span class="clip">{{ want(l) || '—' }}</span>
+                </div>
+              </td>
+              <td class="mono">{{ money(l.budgetMinor) }}</td>
+              <td>
+                @if (l.archivedAt) {
+                  <span class="muted">{{ t('Archived', 'مؤرشف') }}</span>
+                } @else {
+                  <span class="stage"
+                    ><span class="stage-dot" [style.background]="stageColor[l.stage]"></span
+                    >{{ stageNames()[l.stage] }}</span
+                  >
+                }
+              </td>
+              <td class="muted">{{ source(l.source) }}</td>
+              <td class="soft">{{ l.owner?.name || t('Unassigned', 'دون مسؤول') }}</td>
+              <td class="muted">{{ ago(l.updatedAt) }}</td>
+              <td class="end mono strong" [style.color]="scoreColor(l.score)">
+                {{ l.score ?? '—' }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (!loading() && !leads().length) {
+      <div class="empty">
+        <strong>{{ t('No leads match these filters.', 'لا يوجد عملاء مطابقون.') }}</strong>
+      </div>
+    }
+    <div class="pager">
+      <span>{{ leads().length }} / {{ total() }} · {{ t('Page', 'صفحة') }} {{ page() }}</span>
+      <button
+        type="button"
+        class="btn btn--sm"
+        [disabled]="loading() || page() === 1"
+        (click)="reload(page() - 1)"
+      >
+        {{ t('Previous', 'السابق') }}
+      </button>
+      <button
+        type="button"
+        class="btn btn--sm"
+        [disabled]="loading() || page() * 50 >= total()"
+        (click)="reload(page() + 1)"
+      >
+        {{ t('Next', 'التالي') }}
+      </button>
+    </div>
+  </section>
+  @if (loading()) {
+    <p class="muted" role="status">{{ t('Loading leads…', 'جار تحميل العملاء…') }}</p>
+  }
+  <span class="muted">{{
     t(
       'Scores are entered manually. Sample records are labeled; no automated scoring or external messaging is implied.',
       'التقييمات يدوية. السجلات التجريبية موضحة، ولا يوجد تقييم آلي أو إرسال خارجي.'
     )
-  }}
-</p>
-<input
-  class="search"
-  [attr.aria-label]="t('Search leads', 'البحث عن عميل')"
-  [placeholder]="t('Search name, phone, want…', 'ابحث بالاسم أو الهاتف أو الطلب…')"
-  [value]="search()"
-  (input)="searchChanged($any($event.target).value)"
-/>
-<div class="chip-row">
-  <button
-    class="chip"
-    [class.chip--active]="stageFilter() === 'all'"
-    (click)="stageFilter.set('all'); reload()"
-  >
-    {{ t('All stages', 'كل المراحل') }}
-  </button>
-  @for (s of stages; track s) {
-    <button
-      class="chip"
-      [class.chip--active]="stageFilter() === s"
-      (click)="stageFilter.set(s); reload()"
-    >
-      {{ stageNames()[s] }}
-    </button>
-  }
-  <label
-    ><input
-      type="checkbox"
-      [checked]="archived()"
-      (change)="archived.set($any($event.target).checked); reload()"
-    />{{ t('Include archived', 'يشمل المؤرشف') }}</label
-  >
+  }}</span>
 </div>
-<div class="card">
-  <div class="table-scroll">
-    <div class="l-table">
-      <div class="l-head">
-        <span>{{ t('Contact', 'العميل') }}</span
-        ><span>{{ t('Want / budget', 'الطلب / الميزانية') }}</span
-        ><span>{{ t('Source', 'المصدر') }}</span
-        ><span>{{ t('Owner', 'المسؤول') }}</span
-        ><span>{{ t('Manual score', 'تقييم يدوي') }}</span
-        ><span>{{ t('Stage', 'المرحلة') }}</span>
-      </div>
-      @for (l of leads(); track l.id) {
-        <button class="l-row" (click)="open(l.id)">
-          <span class="l-cell__main"
-            ><span class="l-cell__name"
-              >{{ name(l) }}
-              @if (l.sample) {
-                <small>{{ t('Sample', 'تجريبي') }}</small>
-              }</span
-            ><span class="l-cell__sub mono">{{ l.phone }}</span></span
-          ><span class="l-cell__sub">{{ want(l) }} · {{ money(l.budgetMinor) }}</span
-          ><span class="l-cell__sub">{{ source(l.source) }}</span
-          ><span class="l-cell__sub">{{ l.owner?.name || t('Unassigned', 'دون مسؤول') }}</span
-          ><span class="mono">{{ l.score ?? '—' }}</span
-          ><span class="pill" [class]="'pill--' + l.stage">{{
-            l.archivedAt ? t('Archived', 'مؤرشف') : stageNames()[l.stage]
-          }}</span>
-        </button>
-      }
-      @if (!loading() && !leads().length) {
-        <p class="t-empty">{{ t('No leads match these filters.', 'لا يوجد عملاء مطابقون.') }}</p>
-      }
-    </div>
-  </div>
-</div>
-<div class="chip-row">
-  <span>{{ leads().length }} / {{ total() }} · {{ t('Page', 'صفحة') }} {{ page() }}</span
-  ><button
-    class="btn btn--ghost"
-    [disabled]="loading() || page() === 1"
-    (click)="reload(page() - 1)"
-  >
-    {{ t('Previous', 'السابق') }}</button
-  ><button
-    class="btn btn--ghost"
-    [disabled]="loading() || page() * 50 >= total()"
-    (click)="reload(page() + 1)"
-  >
-    {{ t('Next', 'التالي') }}
-  </button>
-</div>
-@if (detailLoading() && !selected()) {
-  <p role="status">{{ t('Loading lead…', 'جار تحميل العميل…') }}</p>
-}
-@if (detailError() && !selected()) {
-  <p role="alert">{{ detailError() }}</p>
-}
-@if (campaignFilter()) {
-  <p>
-    {{
-      t(
-        'Showing leads attributed to the selected campaign.',
-        'عرض العملاء المنسوبين للحملة المختارة.'
-      )
-    }}
-    <button class="btn btn--ghost" (click)="clearCampaignFilter()">
-      {{ t('Show all leads', 'عرض كل العملاء') }}
-    </button>
-  </p>
-}
-@if (selected(); as l) {
-  <div class="scrim" (click)="closeDrawer()"></div>
-  <div class="drawer">
-    <div class="drawer__header">
-      <div class="drawer__headerText">
-        <span class="drawer__name">{{ name(l) }}</span
-        ><span class="drawer__sub mono">{{ l.phone }} · {{ l.reference }}</span>
-      </div>
-      <button class="drawer__close" (click)="closeDrawer()">✕</button>
-    </div>
-    <div class="drawer__body">
-      @if (detailError()) {
-        <p role="alert">{{ detailError() }}</p>
-      }
-      <div class="meta-row">
-        <span class="pill">{{ stageNames()[l.stage] }}</span
-        ><span class="pill">{{ money(l.budgetMinor) }}</span>
-        @if (l.sample) {
-          <span class="pill">{{ t('Sample record', 'سجل تجريبي') }}</span>
-        }
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ t('Want', 'الطلب') }}</span
-        >{{ want(l) }}
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ t('Source', 'المصدر') }}</span
-        >{{ source(l.source) }}
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ t('Owner', 'المسؤول') }}</span
-        >{{ l.owner?.name || t('Unassigned', 'دون مسؤول') }}
-      </div>
-      @if (l.campaign) {
-        <div class="drawer__row">{{ t('Campaign', 'الحملة') }}: {{ l.campaign.name[lang()] }}</div>
-      }
-      @if (l.routingRule) {
-        <div class="drawer__row">
-          {{ t('Routing rule', 'قاعدة التوزيع') }}: {{ l.routingRule.name[lang()] }} ·
-          {{ t('Automatic reassignment attempts', 'محاولات إعادة الإسناد') }}
-          {{ l.routingAttempts ?? 0 }} / 3
-        </div>
-      }
-      @if (l.firstContactAt) {
-        <div class="drawer__row">
-          {{ t('First contact recorded', 'تم تسجيل أول تواصل') }}: {{ date(l.firstContactAt) }}
-        </div>
-      } @else {
-        <p>
-          {{ t('No first-contact record.', 'لا يوجد سجل لأول تواصل.') }}
-          @if (l.slaDueAt) {
-            · {{ t('First-contact record due', 'موعد تسجيل أول تواصل') }}: {{ date(l.slaDueAt) }}
-          }
-        </p>
-      }
-      @if (canManage() && !l.archivedAt && !l.firstContactAt) {
-        <label class="field"
-          >{{ t('Record contact channel', 'تسجيل وسيلة التواصل')
-          }}<select
-            class="textbox"
-            [ngModel]="contactChannel()"
-            (ngModelChange)="contactChannel.set($event); contactChanged()"
+
+@if (selected() || detailLoading() || (detailError() && !newOpen())) {
+  <div class="scrim scrim--light" (click)="closeDrawer()"></div>
+  <aside class="drawer panel" (click)="$event.stopPropagation()">
+    @if (selected(); as l) {
+      <div class="drawer__head">
+        <span class="avatar avatar--lg">{{ initials(l) }}</span>
+        <div class="drawer__title">
+          <span class="drawer__name">{{ name(l) }}</span>
+          <span class="muted"
+            >{{ stageNames()[l.stage] }} · {{ t('score', 'التقييم') }} {{ l.score ?? '—' }} ·
+            <span class="mono">{{ l.reference }}</span></span
           >
-            <option value="phone">{{ t('Phone', 'هاتف') }}</option>
-            <option value="email">{{ t('Email', 'بريد') }}</option>
-            <option value="meeting">{{ t('Meeting', 'اجتماع') }}</option>
-            <option value="other">{{ t('Other', 'أخرى') }}</option>
-          </select></label
-        ><label class="field"
-          >{{
-            t('Actual contact note (10+ characters)', 'ملاحظة التواصل الفعلي (١٠ أحرف على الأقل)')
-          }}<textarea
-            class="textarea"
-            [ngModel]="contactNote()"
-            (ngModelChange)="contactNote.set($event); contactChanged()"
-            maxlength="1000"
-          ></textarea></label
-        ><button
-          class="btn btn--ghost"
-          [disabled]="saving() || contactNote().trim().length < 10"
-          (click)="recordContact()"
-        >
-          {{ t('Record first contact', 'تسجيل أول تواصل') }}
-        </button>
-      }
-      @if (l.opportunity) {
-        <div class="drawer__row">
-          {{ t('Pipeline deal', 'فرصة') }}: {{ l.opportunity.reference }} ·
-          {{ money(l.opportunity.valueMinor) }}
         </div>
-      }
-      @if (canManage() && !l.archivedAt) {
-        <button class="btn btn--ghost" [disabled]="saving()" (click)="openNew(l)">
-          {{ t('Edit lead', 'تعديل العميل') }}</button
-        ><label class="field"
-          >{{ t('Stage action', 'تغيير المرحلة')
-          }}<select class="textbox" [(ngModel)]="actionStage">
-            <option value="">—</option>
-            @if (next(l.stage); as n) {
-              <option [value]="n">{{ stageNames()[n] }}</option>
-            }
-            @if (l.stage !== 'won' && l.stage !== 'lost') {
-              <option value="lost">{{ t('Mark lost', 'تسجيل خسارة') }}</option>
-            } @else {
-              <option value="reopen">{{ t('Reopen as new', 'إعادة فتح كجديد') }}</option>
-            }
-          </select></label
-        ><button
-          class="btn btn--ghost"
-          [disabled]="
-            saving() ||
-            !actionStage() ||
-            (['lost', 'reopen'].includes(actionStage()) && reason().trim().length < 10)
-          "
-          (click)="mutate('stage')"
+        <button
+          type="button"
+          class="x"
+          (click)="closeDrawer()"
+          [attr.aria-label]="t('Close', 'إغلاق')"
         >
-          {{ t('Apply stage', 'تطبيق المرحلة') }}</button
-        ><label class="field"
-          >{{ t('Note', 'ملاحظة')
-          }}<textarea class="textarea" [(ngModel)]="note" maxlength="2000"></textarea></label
-        ><button
-          class="btn btn--ghost"
-          [disabled]="saving() || !note().trim()"
-          (click)="mutate('notes')"
-        >
-          {{ t('Add note', 'إضافة ملاحظة') }}
+          ×
         </button>
-      }
-      @if (canManage()) {
-        <label class="field"
-          >{{
-            t(
-              'Reason (10+ characters for loss, reopening or archive)',
-              'السبب (10 أحرف على الأقل للخسارة أو إعادة الفتح أو الأرشفة)'
-            )
-          }}<textarea class="textarea" [(ngModel)]="reason" maxlength="500"></textarea></label
-        ><button
-          class="btn btn--ghost"
-          [disabled]="saving() || reason().trim().length < 10"
-          (click)="mutate('archive', l.archivedAt ? 'restore' : 'archive')"
-        >
-          {{
-            l.archivedAt ? t('Restore lead', 'استعادة العميل') : t('Archive lead', 'أرشفة العميل')
-          }}
-        </button>
-      }
-      @if (l.related?.length) {
-        <div class="section-title">{{ t('Related leads', 'عملاء مرتبطون') }}</div>
-        @for (r of l.related; track r.id) {
-          <button class="btn btn--ghost" (click)="open(r.id)">
-            {{ r.name[lang()] }} · {{ r.reference }}
-          </button>
+      </div>
+      <div class="drawer__body">
+        @if (detailError()) {
+          <p class="note note--bad" role="alert">{{ detailError() }}</p>
         }
-      }
-      @if (canReadTasks()) {
-        <div class="section-title">
-          {{ t('Linked tasks', 'المهام المرتبطة') }} ({{ linkedTaskTotal() }})
+        @if (l.sample) {
+          <p class="note">{{ t('Sample record', 'سجل تجريبي') }}</p>
+        }
+        <div class="quick">
+          <a class="btn btn--dark" [href]="telLink(l.phone)">{{ t('Call', 'اتصال') }}</a>
+          <a class="btn" [href]="waLink(l.phone)" target="_blank" rel="noopener">WhatsApp</a>
+          @if (canManageTasks() && !l.archivedAt) {
+            <button type="button" class="btn" (click)="goTasks(true)">
+              {{ t('Schedule', 'جدولة') }}
+            </button>
+          }
         </div>
-        @if (taskLoading()) {
-          <p role="status">{{ t('Loading tasks…', 'جار تحميل المهام…') }}</p>
-        }
-        @if (taskError()) {
-          <p role="alert">{{ taskError() }}</p>
-        }
-        @for (task of linkedTasks(); track task.id) {
-          <p>
-            {{ task.title[lang()] }} · {{ taskStatus(task.status) }} ·
-            {{ taskDate(task.dueDate) }} · {{ task.assignee?.name || t('Unassigned', 'دون مسؤول') }}
-          </p>
-        }
-        @if (!taskLoading() && !taskError() && !linkedTasks().length) {
-          <p>{{ t('No linked tasks', 'لا توجد مهام مرتبطة') }}</p>
-        }
-        <button class="btn btn--ghost" (click)="goTasks()">
-          {{ t('View linked tasks', 'عرض المهام المرتبطة') }}
-        </button>
-        @if (canManageTasks() && !l.archivedAt) {
-          <button class="btn btn--ghost" (click)="goTasks(true)">
-            {{ t('Add task for lead', 'إضافة مهمة للعميل') }}
-          </button>
-        }
-      }
-      <div class="section-title">{{ t('Recorded activity', 'سجل النشاط') }}</div>
-      <div class="thread">
-        @for (a of timeline(); track a.id) {
-          <div class="activity-row">
-            <span class="activity-row__dot"></span>
-            <div class="activity-row__text">
-              <span class="activity-row__title">{{ activityText(a) }}</span
-              ><span class="activity-row__time"
-                >{{ a.actor || t('System', 'النظام') }} · {{ date(a.at) }}</span
+
+        <div class="sect">
+          <div class="sect__row">
+            <span class="sect__label">{{ t('STAGE', 'المرحلة') }}</span>
+            @if (l.stage === 'lost') {
+              <span class="badTxt">{{ t('Lost', 'خسارة') }}</span>
+            }
+          </div>
+          <div class="steps">
+            @for (s of stages; track s) {
+              @if (s !== 'lost') {
+                <span
+                  class="step"
+                  [class.done]="l.stage !== 'lost' && stageIndex(s) < stageIndex(l.stage)"
+                  [class.cur]="s === l.stage"
+                  >{{ stageNames()[s] }}</span
+                >
+              }
+            }
+          </div>
+          @if (canManage() && !l.archivedAt) {
+            <div class="stageAct">
+              <select [(ngModel)]="actionStage">
+                <option value="">{{ t('Change stage…', 'تغيير المرحلة…') }}</option>
+                @if (next(l.stage); as n) {
+                  <option [value]="n">{{ t('Move to ', 'نقل إلى ') }}{{ stageNames()[n] }}</option>
+                }
+                @if (l.stage !== 'won' && l.stage !== 'lost') {
+                  <option value="lost">{{ t('Mark lost', 'تسجيل خسارة') }}</option>
+                } @else {
+                  <option value="reopen">{{ t('Reopen as new', 'إعادة فتح كجديد') }}</option>
+                }
+              </select>
+              @if (actionStage() === 'lost' || actionStage() === 'reopen') {
+                <textarea
+                  rows="2"
+                  [placeholder]="t('Reason (10+ characters)', 'السبب (10 أحرف على الأقل)')"
+                  [(ngModel)]="reason"
+                  maxlength="500"
+                ></textarea>
+              }
+              <button
+                type="button"
+                class="btn btn--sm btn--dark"
+                [disabled]="
+                  saving() ||
+                  !actionStage() ||
+                  (['lost', 'reopen'].includes(actionStage()) && reason().trim().length < 10)
+                "
+                (click)="mutate('stage')"
               >
+                {{ t('Apply', 'تطبيق') }}
+              </button>
+            </div>
+          }
+        </div>
+
+        <div class="facts">
+          <span>{{ t('Wants', 'يبحث عن') }}</span
+          ><b>{{ want(l) || '—' }}</b> <span>{{ t('Budget', 'الميزانية') }}</span
+          ><b class="mono">{{ money(l.budgetMinor) }}</b> <span>{{ t('Phone', 'الهاتف') }}</span
+          ><b class="mono" dir="ltr">{{ l.phone }}</b>
+          <span
+            >{{ t('Email', 'البريد') }}<i class="soon">{{ t('Soon', 'قريبًا') }}</i></span
+          ><b>—</b> <span>{{ t('Source', 'المصدر') }}</span
+          ><b
+            >{{ source(l.source) }}
+            @if (l.campaign) {
+              · {{ l.campaign.name[lang()] }}
+            }
+          </b>
+          <span>{{ t('Owner', 'المسؤول') }}</span
+          ><b>{{ l.owner?.name || t('Unassigned', 'دون مسؤول') }}</b>
+          @if (l.opportunity) {
+            <span>{{ t('Pipeline deal', 'فرصة') }}</span
+            ><b
+              ><span class="mono">{{ l.opportunity.reference }}</span> ·
+              {{ money(l.opportunity.valueMinor) }}</b
+            >
+          }
+          @if (l.routingRule) {
+            <span>{{ t('Routing rule', 'قاعدة التوزيع') }}</span
+            ><b>{{ l.routingRule.name[lang()] }} · {{ l.routingAttempts ?? 0 }}/3</b>
+          }
+        </div>
+
+        @if (canReadTasks()) {
+          <div class="box">
+            <span class="sect__label">{{ t('NEXT STEP', 'الخطوة التالية') }}</span>
+            @if (nextTask(); as nt) {
+              <span
+                >{{ nt.title[lang()] }} · {{ taskDate(nt.dueDate) }} ·
+                {{ nt.assignee?.name || t('Unassigned', 'دون مسؤول') }}</span
+              >
+            } @else {
+              <span class="muted">{{
+                t('No open task for this lead.', 'لا توجد مهمة مفتوحة لهذا العميل.')
+              }}</span>
+            }
+            <div class="box__btns">
+              <button type="button" class="link" (click)="goTasks()">
+                {{ t('Linked tasks', 'المهام المرتبطة') }} ({{ linkedTaskTotal() }})
+              </button>
+              @if (canManageTasks() && !l.archivedAt) {
+                <button type="button" class="link" (click)="goTasks(true)">
+                  {{ t('Add task', 'إضافة مهمة') }}
+                </button>
+              }
             </div>
           </div>
         }
-        @if (!timeline().length) {
-          <p>{{ t('No recorded activity', 'لا توجد أنشطة مسجلة') }}</p>
+        @if (latestNote(); as n) {
+          <div class="box box--note">
+            <span class="sect__label">{{ t('LATEST NOTE', 'آخر ملاحظة') }}</span>
+            <span>{{ n.text }}</span>
+            <span class="sub">{{ n.by || t('System', 'النظام') }} · {{ date(n.at) }}</span>
+          </div>
+        }
+
+        @if (!l.firstContactAt && canManage() && !l.archivedAt) {
+          <div class="box box--warn">
+            <span class="sect__label">{{ t('FIRST CONTACT', 'أول تواصل') }}</span>
+            <span>
+              {{ t('No first-contact record.', 'لا يوجد سجل لأول تواصل.') }}
+              @if (l.slaDueAt) {
+                {{ t('Due', 'الموعد') }}: {{ date(l.slaDueAt) }}
+              }
+            </span>
+            <div class="grid2">
+              <select
+                [ngModel]="contactChannel()"
+                (ngModelChange)="contactChannel.set($event); contactChanged()"
+              >
+                <option value="phone">{{ t('Phone', 'هاتف') }}</option>
+                <option value="email">{{ t('Email', 'بريد') }}</option>
+                <option value="meeting">{{ t('Meeting', 'اجتماع') }}</option>
+                <option value="other">{{ t('Other', 'أخرى') }}</option>
+              </select>
+              <button
+                type="button"
+                class="btn btn--sm"
+                [disabled]="saving() || contactNote().trim().length < 10"
+                (click)="recordContact()"
+              >
+                {{ t('Record first contact', 'تسجيل أول تواصل') }}
+              </button>
+            </div>
+            <textarea
+              rows="2"
+              maxlength="1000"
+              [placeholder]="t('What happened (10+ characters)', 'ماذا حدث (10 أحرف على الأقل)')"
+              [ngModel]="contactNote()"
+              (ngModelChange)="contactNote.set($event); contactChanged()"
+            ></textarea>
+          </div>
+        } @else if (l.firstContactAt) {
+          <p class="muted">
+            {{ t('First contact recorded', 'تم تسجيل أول تواصل') }}: {{ date(l.firstContactAt) }}
+          </p>
+        }
+
+        <div class="sect">
+          <span class="sect__label">{{ t('ACTIVITY', 'النشاط') }}</span>
+          @if (canManage() && !l.archivedAt) {
+            <div class="chips">
+              @for (k of actKinds; track k[0]) {
+                <button
+                  type="button"
+                  class="chip"
+                  [class.on]="actKind() === k[0]"
+                  (click)="actKind.set(k[0])"
+                >
+                  {{ ar() ? k[2] : k[1] }}
+                </button>
+              }
+            </div>
+            <div class="composer">
+              <input
+                [placeholder]="t('What happened?', 'ماذا حدث؟')"
+                [(ngModel)]="note"
+                maxlength="2000"
+                (keydown.enter)="logActivity()"
+              />
+              <button
+                type="button"
+                class="btn btn--sm"
+                [disabled]="saving() || !note().trim()"
+                (click)="logActivity()"
+              >
+                {{ t('Log', 'تسجيل') }}
+              </button>
+            </div>
+          }
+          <div class="tl">
+            @for (a of timeline(); track a.id) {
+              <div class="tl__row">
+                <span class="tl__dot"></span>
+                <div>
+                  <span>{{ activityText(a) }}</span
+                  ><span class="sub"
+                    >{{ a.actor || t('System', 'النظام') }} · {{ date(a.at) }}</span
+                  >
+                </div>
+              </div>
+            } @empty {
+              <p class="muted">{{ t('No recorded activity', 'لا توجد أنشطة مسجلة') }}</p>
+            }
+          </div>
+          @if (timeline().length < activityTotal()) {
+            <button
+              type="button"
+              class="link"
+              [disabled]="detailLoading()"
+              (click)="moreActivity()"
+            >
+              {{ t('Load more activity', 'تحميل المزيد') }}
+            </button>
+          }
+        </div>
+
+        @if (l.related?.length) {
+          <div class="sect">
+            <span class="sect__label">{{ t('RELATED LEADS', 'عملاء مرتبطون') }}</span>
+            @for (r of l.related; track r.id) {
+              <button type="button" class="link" (click)="open(r.id)">
+                {{ r.name[lang()] }} · {{ r.reference }}
+              </button>
+            }
+          </div>
+        }
+
+        @if (canManage()) {
+          <div class="sect">
+            <span class="sect__label">{{ t('MANAGE', 'إدارة') }}</span>
+            @if (!l.archivedAt) {
+              <button type="button" class="btn btn--sm" [disabled]="saving()" (click)="openNew(l)">
+                {{ t('Edit lead', 'تعديل العميل') }}
+              </button>
+            }
+            <textarea
+              rows="2"
+              maxlength="500"
+              [placeholder]="
+                t(
+                  'Reason to archive or restore (10+ characters)',
+                  'سبب الأرشفة أو الاستعادة (10 أحرف على الأقل)'
+                )
+              "
+              [(ngModel)]="reason"
+            ></textarea>
+            <button
+              type="button"
+              class="btn btn--sm btn--badText"
+              [disabled]="saving() || reason().trim().length < 10"
+              (click)="mutate('archive', l.archivedAt ? 'restore' : 'archive')"
+            >
+              {{
+                l.archivedAt
+                  ? t('Restore lead', 'استعادة العميل')
+                  : t('Archive lead', 'أرشفة العميل')
+              }}
+            </button>
+          </div>
         }
       </div>
-      @if (timeline().length < activityTotal()) {
-        <button class="btn btn--ghost" [disabled]="detailLoading()" (click)="moreActivity()">
-          {{ t('Load more activity', 'تحميل المزيد') }}
-        </button>
-      }
-    </div>
-    <div class="drawer__footer">
-      <button class="btn btn--ghost" (click)="closeDrawer()">{{ t('Close', 'إغلاق') }}</button>
-    </div>
-  </div>
+    } @else {
+      <div class="drawer__body">
+        @if (detailError()) {
+          <p class="note note--bad" role="alert">{{ detailError() }}</p>
+        } @else {
+          <p class="muted" role="status">{{ t('Loading lead…', 'جار تحميل العميل…') }}</p>
+        }
+      </div>
+    }
+  </aside>
 }
+
 @if (newOpen()) {
-  <div class="scrim" (click)="closeNew()"></div>
-  <div class="dialog" style="max-height: 90vh; overflow: auto">
-    <div class="dialog__body dialog__body--pad">
+  <div class="scrim scrim--top" (click)="closeNew()"></div>
+  <div class="dialog dialog--wide" role="dialog">
+    <div class="dialog__head">
       <span class="dialog__title">{{
         editing() ? t('Edit lead', 'تعديل العميل') : t('New lead', 'عميل جديد')
       }}</span>
+    </div>
+    <form
+      id="lead-form"
+      class="dialog__main"
+      (ngSubmit)="submit()"
+      (input)="formChanged()"
+      (change)="formChanged()"
+    >
       @if (formError()) {
-        <p role="alert">{{ formError() }}</p>
+        <p class="note note--bad" role="alert">{{ formError() }}</p>
       }
-      <form id="lead-form" (ngSubmit)="submit()" (input)="formChanged()" (change)="formChanged()">
+      <div class="grid">
         <label class="field"
-          >{{ t('Full name', 'الاسم الكامل')
-          }}<input
-            class="textbox"
-            [(ngModel)]="draft.name"
-            name="name"
-            minlength="2"
-            maxlength="160"
-            required /></label
-        ><label class="field"
-          >{{ t('Arabic name (optional)', 'الاسم بالعربية (اختياري)')
-          }}<input
-            class="textbox"
-            [(ngModel)]="draft.nameAr"
-            name="nameAr"
-            maxlength="160" /></label
-        ><label class="field"
-          >{{ t('Phone', 'الهاتف')
-          }}<input
-            class="textbox"
+          ><span>{{ t('Full name', 'الاسم الكامل') }}</span
+          ><input [(ngModel)]="draft.name" name="name" minlength="2" maxlength="160" required
+        /></label>
+        <label class="field"
+          ><span>{{ t('Arabic name (optional)', 'الاسم بالعربية (اختياري)') }}</span
+          ><input dir="rtl" [(ngModel)]="draft.nameAr" name="nameAr" maxlength="160"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Phone', 'الهاتف') }}</span
+          ><input
+            dir="ltr"
             [(ngModel)]="draft.phone"
             name="phone"
             placeholder="+20…"
             maxlength="40"
-            required /></label
-        ><label class="field"
-          >{{ t('Segment', 'الفئة')
-          }}<select class="textbox" [(ngModel)]="draft.segment" name="segment">
-            <option value="res">{{ t('Residential', 'سكني') }}</option>
-            <option value="com">{{ t('Commercial', 'تجاري') }}</option>
-          </select></label
-        ><label class="field"
-          >{{ t('What they want', 'الطلب')
-          }}<input class="textbox" [(ngModel)]="draft.want" name="want" maxlength="1000" /></label
-        ><label class="field"
-          >{{ t('Arabic requirement (optional)', 'الطلب بالعربية (اختياري)')
-          }}<input
-            class="textbox"
-            [(ngModel)]="draft.wantAr"
-            name="wantAr"
-            maxlength="1000" /></label
-        ><label class="field"
-          >{{ t('Budget (EGP, optional)', 'الميزانية بالجنيه (اختياري)')
-          }}<input
-            class="textbox"
-            [(ngModel)]="draft.budget"
-            name="budget"
-            inputmode="decimal" /></label
-        ><label class="field"
-          >{{ t('Source', 'المصدر')
-          }}<select
-            class="textbox"
-            [(ngModel)]="draft.source"
-            name="source"
-            (ngModelChange)="sourceChanged()"
-          >
+            required
+        /></label>
+        <div class="field">
+          <span>{{ t('Segment', 'الفئة') }}</span>
+          <div class="segs">
+            <button
+              type="button"
+              class="seg"
+              [class.seg--on]="draft.segment === 'res'"
+              (click)="draft.segment = 'res'; formChanged()"
+            >
+              {{ t('Residential', 'سكني') }}
+            </button>
+            <button
+              type="button"
+              class="seg"
+              [class.seg--on]="draft.segment === 'com'"
+              (click)="draft.segment = 'com'; formChanged()"
+            >
+              {{ t('Commercial', 'تجاري') }}
+            </button>
+          </div>
+        </div>
+        <label class="field"
+          ><span>{{ t('What they want', 'الطلب') }}</span
+          ><input [(ngModel)]="draft.want" name="want" maxlength="1000"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Arabic requirement (optional)', 'الطلب بالعربية (اختياري)') }}</span
+          ><input dir="rtl" [(ngModel)]="draft.wantAr" name="wantAr" maxlength="1000"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Budget (EGP, optional)', 'الميزانية بالجنيه (اختياري)') }}</span
+          ><input class="mono" [(ngModel)]="draft.budget" name="budget" inputmode="decimal"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Source', 'المصدر') }}</span
+          ><select [(ngModel)]="draft.source" name="source" (ngModelChange)="sourceChanged()">
             @for (s of sources; track s) {
               <option [value]="s">{{ source(s) }}</option>
             }
@@ -422,14 +580,8 @@
         >
         @if (canMarketing()) {
           <label class="field"
-            >{{ t('Search active campaigns', 'بحث الحملات النشطة')
-            }}<input class="textbox" [(ngModel)]="campaignQuery" name="campaignSearch" /></label
-          ><button type="button" class="btn btn--ghost" (click)="loadCampaigns(true)">
-            {{ t('Search campaigns', 'بحث الحملات') }}</button
-          ><label class="field"
-            >{{ t('Campaign attribution (optional)', 'نسبة العميل للحملة (اختياري)')
-            }}<select
-              class="textbox"
+            ><span>{{ t('Campaign attribution (optional)', 'نسبة العميل للحملة (اختياري)') }}</span
+            ><select
               [(ngModel)]="draft.campaignId"
               name="campaign"
               (ngModelChange)="campaignChanged()"
@@ -440,15 +592,24 @@
               }
             </select></label
           >
-          @if (campaignPage * 50 < campaignTotal()) {
-            <button type="button" class="btn btn--ghost" (click)="loadCampaigns(false)">
-              {{ t('More campaigns', 'حملات إضافية') }}
-            </button>
-          }
+          <div class="field">
+            <span>{{ t('Search active campaigns', 'بحث الحملات النشطة') }}</span>
+            <div class="grid2">
+              <input [(ngModel)]="campaignQuery" name="campaignSearch" />
+              <button type="button" class="btn btn--sm" (click)="loadCampaigns(true)">
+                {{ t('Search', 'بحث') }}
+              </button>
+            </div>
+            @if (campaignPage * 50 < campaignTotal()) {
+              <button type="button" class="link" (click)="loadCampaigns(false)">
+                {{ t('More campaigns', 'حملات إضافية') }}
+              </button>
+            }
+          </div>
         }
         <label class="field"
-          >{{ t('Owner', 'المسؤول')
-          }}<select class="textbox" [(ngModel)]="draft.ownerId" name="owner">
+          ><span>{{ t('Owner', 'المسؤول') }}</span
+          ><select [(ngModel)]="draft.ownerId" name="owner">
             @if (!editing()) {
               <option value="auto">{{ t('Automatic assignment', 'إسناد تلقائي') }}</option>
             }
@@ -457,65 +618,74 @@
               <option [value]="o.id">{{ o.name }}</option>
             }
           </select></label
-        ><label class="field"
-          >{{ t('Manual score (optional)', 'التقييم اليدوي (اختياري)')
-          }}<input
-            class="textbox"
+        >
+        <label class="field"
+          ><span>{{ t('Manual score (optional)', 'التقييم اليدوي (اختياري)') }}</span
+          ><input
+            class="mono"
             type="number"
             [(ngModel)]="draft.score"
             name="score"
             min="0"
             max="100"
         /></label>
-      </form>
-    </div>
-    <div class="dialog__footer">
-      <button class="btn btn--ghost" [disabled]="saving()" (click)="closeNew()">
-        {{ t('Cancel', 'إلغاء') }}</button
-      ><button class="btn btn--primary" type="submit" form="lead-form" [disabled]="saving()">
+      </div>
+    </form>
+    <div class="dialog__foot">
+      <button type="button" class="btn" [disabled]="saving()" (click)="closeNew()">
+        {{ t('Cancel', 'إلغاء') }}
+      </button>
+      <button class="btn btn--dark" type="submit" form="lead-form" [disabled]="saving()">
         {{ t('Save lead', 'حفظ العميل') }}
       </button>
     </div>
   </div>
 }
+
 @if (dupOpen()) {
-  <div class="scrim"></div>
-  <div class="dialog">
-    <div class="dialog__body dialog__body--pad">
+  <div class="scrim scrim--top"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
       <span class="dialog__title">{{ t('Possible duplicate', 'احتمال تكرار') }}</span>
-      <p>
-        {{
-          t(
-            'An active lead already uses this phone. Open it, or explicitly create a separate record.',
-            'يوجد عميل نشط بهذا الهاتف. افتحه أو أنشئ سجلًا مستقلًا مع ذكر السبب.'
-          )
-        }}
-      </p>
+      <span class="dialog__body">{{
+        t(
+          'An active lead already uses this phone. Open it, or explicitly create a separate record.',
+          'يوجد عميل نشط بهذا الهاتف. افتحه أو أنشئ سجلًا مستقلًا مع ذكر السبب.'
+        )
+      }}</span>
+    </div>
+    <div class="dialog__main">
       @if (formError()) {
-        <p role="alert">{{ formError() }}</p>
+        <p class="note note--bad" role="alert">{{ formError() }}</p>
       }
-      <select class="textbox" [(ngModel)]="duplicateId">
+      <select [(ngModel)]="duplicateId">
         @for (d of duplicates(); track d.id) {
           <option [value]="d.id">{{ d.name[lang()] }} · {{ d.reference }}</option>
-        }</select
-      ><label class="field"
-        >{{ t('Reason (10+ characters)', 'السبب (10 أحرف على الأقل)')
-        }}<textarea class="textarea" [(ngModel)]="dupReason" maxlength="500"></textarea>
+        }
+      </select>
+      <label class="field"
+        ><span>{{ t('Reason (10+ characters)', 'السبب (10 أحرف على الأقل)') }}</span
+        ><textarea rows="2" [(ngModel)]="dupReason" maxlength="500"></textarea>
       </label>
     </div>
-    <div class="dialog__footer">
-      <button class="btn btn--ghost" [disabled]="saving()" (click)="dupOpen.set(false)">
-        {{ t('Back', 'رجوع') }}</button
-      ><button class="btn btn--ghost" [disabled]="saving()" (click)="useExisting()">
-        {{ t('Open existing', 'فتح الموجود') }}</button
-      ><button
-        class="btn btn--ghost"
+    <div class="dialog__foot">
+      <button type="button" class="btn" [disabled]="saving()" (click)="dupOpen.set(false)">
+        {{ t('Back', 'رجوع') }}
+      </button>
+      <button type="button" class="btn" [disabled]="saving()" (click)="useExisting()">
+        {{ t('Open existing', 'فتح الموجود') }}
+      </button>
+      <button
+        type="button"
+        class="btn"
         [disabled]="saving() || dupReason().trim().length < 10"
         (click)="submit('link')"
       >
-        {{ t('Create and link', 'إنشاء وربط') }}</button
-      ><button
-        class="btn btn--primary"
+        {{ t('Create and link', 'إنشاء وربط') }}
+      </button>
+      <button
+        type="button"
+        class="btn btn--dark"
         [disabled]="saving() || dupReason().trim().length < 10"
         (click)="submit('create')"
       >
@@ -523,4 +693,8 @@
       </button>
     </div>
   </div>
+}
+
+@if (toast()) {
+  <div class="toast"><span></span>{{ toast() }}</div>
 }

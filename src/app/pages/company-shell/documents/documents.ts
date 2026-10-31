@@ -92,7 +92,12 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-documents',
   imports: [FormsModule, RouterLink],
   templateUrl: './documents.html',
-  styleUrl: './documents.scss',
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './documents.scss',
+  ],
 })
 export class Documents implements OnDestroy {
   readonly ui = inject(CompanyUiState);
@@ -186,6 +191,60 @@ export class Documents implements OnDestroy {
   changed() {
     this.requestId = crypto.randomUUID();
   }
+  selected = signal<Doc | null>(null);
+  readonly toast = signal('');
+  soon(msg: string) {
+    this.toast.set(msg);
+    setTimeout(() => this.toast.set(''), 3500);
+  }
+  day(v: string) {
+    return new Intl.DateTimeFormat(this.ar() ? 'ar-EG' : 'en-GB', {
+      dateStyle: 'medium',
+      timeZone: 'Africa/Cairo',
+    }).format(new Date(v));
+  }
+  ext(d: Doc) {
+    const m = /\.([a-z0-9]{1,5})$/i.exec(d.file);
+    return (m ? m[1] : d.mimeType.split('/')[1] || 'file').toUpperCase().slice(0, 4);
+  }
+  /** Design file-type tile colors: [background, text]. */
+  extTone(d: Doc): [string, string] {
+    const e = this.ext(d);
+    if (e === 'PDF') return ['#F8E1DC', '#9A3422'];
+    if (['JPG', 'JPEG', 'PNG'].includes(e)) return ['#EEF6DA', '#111113'];
+    return ['#ECECE7', '#111113'];
+  }
+  size(d: Doc) {
+    return this.bytes(d.sizeBytes);
+  }
+  bytes(v: number | string) {
+    const n = Number(v);
+    if (n < 1024) return n + ' B';
+    if (n < 1048576) return Math.round(n / 1024) + ' KB';
+    if (n < 1073741824) return (n / 1048576).toFixed(1) + ' MB';
+    return (n / 1073741824).toFixed(1) + ' GB';
+  }
+  /** Status from expiry (there is no review / verification state in the API). */
+  status(d: Doc): { label: string; bg: string; fg: string } {
+    if (d.archivedAt) return { label: this.t('Archived', 'مؤرشف'), bg: '#F4F4F1', fg: '#8A8A90' };
+    if (d.expired) return { label: this.t('Expired', 'منتهي'), bg: '#F8E1DC', fg: '#9A3422' };
+    if (d.expiringSoon)
+      return { label: this.t('Expiring soon', 'ينتهي قريبًا'), bg: '#FDF3DC', fg: '#8A5A14' };
+    return { label: this.t('Current', 'ساري'), bg: '#EEF6DA', fg: '#111113' };
+  }
+  isImage(d: Doc) {
+    return d.mimeType.startsWith('image/');
+  }
+  /** Upload a new file with the same kind / title / links (files are immutable in the API). */
+  replace(d: Doc) {
+    this.openUpload();
+    this.newKind.set((this.kinds.includes(d.kind as DocKind) ? d.kind : 'other') as DocKind);
+    this.newSubject.set(d.title);
+    this.leadId = d.leadId ?? '';
+    this.contractId = d.contractId ?? '';
+    if (this.canContracts()) void this.loadContracts(true);
+    if (this.canLeads()) void this.loadLeads(true);
+  }
   async reload() {
     const n = ++this.serial;
     this.loading.set(true);
@@ -207,6 +266,10 @@ export class Documents implements OnDestroy {
       this.docs.set(r.items);
       this.total.set(r.total);
       this.storageBytes.set(r.storageBytes);
+      // Design: the detail panel always shows a file — keep the selection or default to the first row.
+      const cur = this.selected();
+      const same = cur && r.items.find((d) => d.id === cur.id);
+      this.selected.set(same || r.items[0] || null);
     } catch (e: any) {
       if (n === this.serial) this.error.set(e.message);
     } finally {

@@ -493,3 +493,38 @@ splits, approve, mark payable and record paid with receipt evidence, cancel.
 | CM4 | Inline rate / split editing in the panel | Done through the Recalculate dialog. | Nothing required (frontend). Listed for completeness. |
 | CM5 | Split **roles** (Listing agent / Selling agent / Team lead) | Lines show "Agent" or "Company share". | `role` on commission lines. |
 | CM6 | Residential / Commercial segment switch | Not shown. | Segment filter on `GET /commissions` (see CL1). |
+
+## Documents (`/company/documents`)
+
+Already real: design list (file-type tile from the file name, title, kind, linked contract / lead, upload date + uploader,
+size, status), header file count + stored bytes (incl. archived), search, kind chips, include archived, `?contractId=`
+filter, paging; detail panel (file, kind, linked contract / lead links, uploaded, expiry, size, SHA-256), download,
+**Replace** (opens upload prefilled with the same kind / title / links), archive / restore, upload (drop zone, kind, title,
+contract or lead, expiry), `?new=1&kind=` from Contracts / Commissions.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| CD1 | **Verified / Pending review** status and **Mark verified** | Status comes from expiry only (Current / Expiring soon / Expired / Archived). "Mark verified" is a "Soon" button. | Review state on documents (`reviewStatus`, `reviewedBy`, `reviewedAt`) + a verify / reject action (audited). |
+| CD2 | Header "**N need review · M expired**" counts and chip counts (`IDs · 4`) | Shows total files + storage. | `summary` in `GET /documents`: counts by kind, pending review, expired. |
+| CD3 | File **preview** in the panel | Placeholder with the file type. | Inline preview endpoint (correct `Content-Type` + `inline` disposition, or a thumbnail) — downloads are `application/octet-stream` attachments today. |
+| CD4 | Design **categories** (IDs / Contracts / Receipts / Ownership / Other) | Uses the API kinds (National ID, Ownership, Contract, Receipt, Power of attorney, Other). | Nothing required. Listed for completeness. |
+| CD5 | **Replace** as a new version of the same document | Uploads a separate document (the old one stays until archived). | `POST /documents/:id/replace` (version history) if replacements should keep links / requirements attached. |
+| CD6 | `expired` / `expiringSoon` filters | Not available as filters. | `status=expired\|expiring` on `GET /documents`. |
+
+## Marketing (`/company/marketing`)
+
+Already real: KPI strip from the server `totals` (recorded spend, attributed leads + CPL, attributed deals + cost per
+deal, signed sale value ÷ spend), campaigns table (status dot, source · project · status, spend, leads, CPL, deals, sale
+value, multiple, link to attributed leads), status filter, search, include archived, paging, **Activate / End** (status
+change via update), edit, archive / restore, create; **Lead sources** table (leads / won / conversion for this quarter's
+cohort, from `GET /reports`, needs `reports.read`).
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| MK1 | **Budget** and the spend-vs-budget bar (`EGP 180K / 250K`) | Shows spend only. | `budgetMinor` on campaigns. |
+| MK2 | **Viewings** column | Not shown. | Viewings attributed per campaign (count of viewing events on attributed leads). |
+| MK3 | **ROI** (commission ÷ spend) | Shows signed **sale value** ÷ spend, labelled as such. | Attributed commission (gross) per campaign and in `totals`. |
+| MK4 | **Pause / Resume** | Draft → Active → Ended only (no paused state). | `paused` campaign status, if needed. |
+| MK5 | Lead sources **spend** and **CPL** per source | Not shown (source table has leads / won / conversion). | Spend aggregated by source (from campaigns) in `GET /reports` or `GET /marketing`. |
+| MK6 | Lead sources "last 90 days" | Uses the Reports "quarter" period (quarter to date). | Optional: a rolling `90d` period on `GET /reports`. |
+| MK7 | Residential / Commercial segment switch | Not shown. | Segment filter on `GET /marketing` (Reports already accepts `segment`). |

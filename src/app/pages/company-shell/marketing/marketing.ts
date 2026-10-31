@@ -5,6 +5,7 @@ import { CompanyUiState, type Lang } from '../company-ui-state';
 import { CompanyGrowthApi, type Campaign } from '../../../company-growth-api.service';
 import { AuthService } from '../../../auth.service';
 import { SOURCE_NAMES, minorAmount, majorAmount } from '../../../sales-api.service';
+import { CompanyInsightsApi } from '../../../company-insights-api.service';
 interface Copy {
   eyebrow: string;
   title: string;
@@ -67,7 +68,12 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-marketing',
   imports: [FormsModule, RouterLink],
   templateUrl: './marketing.html',
-  styleUrl: './marketing.scss',
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './marketing.scss',
+  ],
 })
 export class Marketing implements OnDestroy {
   readonly ui = inject(CompanyUiState);
@@ -83,6 +89,15 @@ export class Marketing implements OnDestroy {
     () => this.auth.user()?.permissions.includes('projects.read') ?? false,
   );
   readonly canLeads = computed(() => this.auth.user()?.permissions.includes('leads.read') ?? false);
+  readonly canReports = computed(
+    () => this.auth.user()?.permissions.includes('reports.read') ?? false,
+  );
+  readonly insights = inject(CompanyInsightsApi);
+  /** Lead sources for this quarter's lead cohort (from the Reports API). */
+  sourceRows = signal<
+    Array<{ key: string; leads: number; won: number; conversion: number | null }>
+  >([]);
+  readonly toast = signal('');
   campaigns = signal<Campaign[]>([]);
   totals = signal<any>(null);
   loading = signal(false);
@@ -106,6 +121,81 @@ export class Marketing implements OnDestroy {
   private projectSerial = 0;
   constructor() {
     void this.reload();
+    void this.loadSources();
+  }
+  async loadSources() {
+    if (!this.canReports()) return;
+    try {
+      const r = await this.insights.get<any>('/reports', { period: 'quarter' });
+      this.sourceRows.set(
+        [...(r.sources ?? [])]
+          .filter((s: any) => s.leads > 0)
+          .sort((a: any, b: any) => b.leads - a.leads),
+      );
+    } catch {
+      this.sourceRows.set([]);
+    }
+  }
+  readonly statusDot: Record<Campaign['status'], string> = {
+    active: '#8BB33A',
+    draft: '#C4C4BE',
+    ended: '#8A8A90',
+  };
+  /** Signed sale value ÷ recorded spend, as a multiple. */
+  multiple(sale: string | null, spend: string | null) {
+    const sp = Number(spend ?? 0);
+    if (!sp) return '—';
+    return (Number(sale ?? 0) / sp).toFixed(1) + '×';
+  }
+  readonly kpis = computed(() => {
+    const k = this.totals();
+    if (!k) return [];
+    const perDeal = k.deals ? (BigInt(k.spendMinor) / BigInt(k.deals)).toString() : null;
+    return [
+      {
+        label: this.t('Recorded spend', 'الإنفاق المسجل'),
+        value: this.money(k.spendMinor),
+        sub: this.t('campaigns in this view', 'الحملات المعروضة'),
+      },
+      {
+        label: this.t('Attributed leads', 'العملاء المنسوبون'),
+        value: Number(k.leads).toLocaleString('en-US'),
+        sub: this.t('CPL ', 'تكلفة العميل ') + this.money(k.cplMinor),
+      },
+      {
+        label: this.t('Attributed deals', 'صفقات منسوبة'),
+        value: String(k.deals),
+        sub: perDeal ? this.t('cost per deal ', 'تكلفة الصفقة ') + this.money(perDeal) : '—',
+      },
+      {
+        label: this.t('Sale value on spend', 'المبيعات مقابل الإنفاق'),
+        value: this.multiple(k.saleValueMinor, k.spendMinor),
+        sub: this.t('signed sale value ÷ spend', 'قيمة المبيعات الموقعة ÷ الإنفاق'),
+      },
+    ];
+  });
+  /** Draft → Active → Ended through the normal update endpoint. */
+  async setStatus(c: Campaign, status: Campaign['status']) {
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      await this.api.write('marketing/' + c.id + '/update', {
+        requestId: crypto.randomUUID(),
+        version: c.version,
+        name: c.name.en,
+        nameAr: c.name.ar || undefined,
+        source: c.source,
+        projectId: c.projectId,
+        status,
+        spendMinor: c.spendMinor,
+      });
+      await this.reload();
+    } catch (e: any) {
+      this.error.set(e.message);
+    } finally {
+      this.busy.set(false);
+    }
   }
   ngOnDestroy() {
     this.serial++;

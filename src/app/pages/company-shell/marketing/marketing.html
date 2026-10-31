@@ -1,224 +1,328 @@
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
-  </div>
-</div>
-
-<p>
-  {{
-    t(
-      'Campaign registry with manually recorded lifetime spend. Lead attribution is selected on leads. Signed sale values are not collected revenue. No advertising network is synchronized.',
-      'سجل حملات بإنفاق إجمالي مسجل يدوياً. تُحدد نسبة العميل للحملة من شاشة العملاء. قيم المبيعات الموقعة ليست تحصيلاً. لا توجد مزامنة مع شبكات الإعلانات.'
-    )
-  }}
-</p>
-<div class="chip-row">
-  <button class="btn btn--ghost" [disabled]="loading()" (click)="reload()">
-    {{ t('Refresh', 'تحديث') }}
-  </button>
-  @if (canManage()) {
-    <button class="btn btn--primary" (click)="edit()">{{ t('New campaign', 'حملة جديدة') }}</button>
-  }
-  <input
-    [(ngModel)]="search"
-    [placeholder]="t('Search campaigns', 'بحث الحملات')"
-    (keyup.enter)="filter()"
-  /><button class="btn btn--ghost" (click)="filter()">{{ t('Search', 'بحث') }}</button
-  ><select [(ngModel)]="statusFilter" (change)="filter()">
-    <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
-    <option value="draft">{{ L().statusNames.draft }}</option>
-    <option value="active">{{ L().statusNames.active }}</option>
-    <option value="ended">{{ L().statusNames.ended }}</option></select
-  ><label
-    ><input type="checkbox" [(ngModel)]="archived" (change)="filter()" />{{
-      t('Include archived', 'تضمين المؤرشفة')
-    }}</label
-  >
-</div>
-@if (error()) {
-  <p role="alert">{{ error() }}</p>
-}
-@if (loading()) {
-  <p>{{ t('Loading…', 'جارٍ التحميل…') }}</p>
-}
-@if (totals(); as totals) {
-  <div class="kpis">
-    <div class="kpi">
-      <span class="kpi__label">{{ L().kpis.spend }}</span>
-      <span class="kpi__value">{{ money(totals.spendMinor) }}</span>
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <span>{{
+        t('Every lead is attributed to its source and campaign', 'كل عميل منسوب إلى مصدره وحملته')
+      }}</span>
+      <h1>{{ L().title }}</h1>
     </div>
-    <div class="kpi">
-      <span class="kpi__label">{{ L().kpis.leads }}</span>
-      <span class="kpi__value">{{ totals.leads }}</span>
-    </div>
-    <div class="kpi">
-      <span class="kpi__label">{{ L().kpis.cpl }}</span>
-      <span class="kpi__value">{{ money(totals.cplMinor) }}</span>
-    </div>
-    <div class="kpi">
-      <span class="kpi__label">{{ L().kpis.deals }}</span>
-      <span class="kpi__value">{{ totals.deals }}</span>
-    </div>
-    <div class="kpi">
-      <span class="kpi__label">{{ L().kpis.revenue }}</span>
-      <span class="kpi__value kpi__value--ok">{{ money(totals.saleValueMinor) }}</span>
-    </div>
-  </div>
-}
-<div class="card">
-  <div class="table-scroll">
-    <div class="m-table">
-      <div class="m-head">
-        <span>{{ L().thCampaign }}</span>
-        <span>{{ L().thSource }}</span>
-        <span>{{ L().thSpend }}</span>
-        <span>{{ L().thLeads }}</span>
-        <span>{{ L().thCpl }}</span>
-        <span>{{ L().thDeals }}</span>
-        <span>{{ L().thRevenue }}</span>
-      </div>
-      @for (c of campaigns(); track c.id) {
-        <div class="m-row">
-          <span class="m-cell__main">
-            <span class="m-cell__name"
-              >{{ name(c) }}
-              @if (c.sample) {
-                <small>{{ t('Sample', 'تجريبي') }}</small>
-              }
-              @if (c.archivedAt) {
-                <small>{{ t('Archived', 'مؤرشفة') }}</small>
-              }
-            </span>
-            <span class="m-cell__sub">{{ project(c) }} · {{ L().statusNames[c.status] }}</span>
-            @if (canManage()) {
-              @if (!c.archivedAt) {
-                <button class="btn btn--ghost" (click)="edit(c)">{{ t('Edit', 'تعديل') }}</button>
-              }
-              <button class="btn btn--ghost" [disabled]="busy()" (click)="archive(c)">
-                {{ c.archivedAt ? t('Restore', 'استعادة') : t('Archive', 'أرشفة') }}
-              </button>
-            }
-            @if (canLeads()) {
-              <a routerLink="/company/leads" [queryParams]="{ campaignId: c.id }">{{
-                t('View attributed leads', 'عرض العملاء المنسوبين')
-              }}</a>
-            }
-          </span>
-          <span class="m-cell__sub">{{ source(c) }}</span>
-          <span class="mono">{{ money(c.spendMinor) }}</span>
-          <span class="mono">{{ c.leads }}</span>
-          <span class="mono">{{ money(c.cplMinor) }}</span>
-          <span class="mono">{{ c.deals }}</span>
-          <span class="mono m-cell__revenue">{{ money(c.saleValueMinor) }}</span>
-        </div>
+    <div class="head__actions">
+      @if (canManage()) {
+        <button type="button" class="btn btn--dark" (click)="edit()">
+          {{ t('+ New campaign', '+ حملة جديدة') }}
+        </button>
       }
     </div>
   </div>
+
+  @if (kpis().length) {
+    <section class="kpis">
+      @for (k of kpis(); track k.label) {
+        <div class="kpi">
+          <span class="kpi__label">{{ k.label }}</span>
+          <span class="kpi__value mono">{{ k.value }}</span>
+          <span class="kpi__sub">{{ k.sub }}</span>
+        </div>
+      }
+    </section>
+  }
+
+  @if (error() && !formOpen()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+
+  <section class="card" [class.list--busy]="loading()">
+    <div class="c-head">
+      <h2>{{ t('Campaigns', 'الحملات') }}</h2>
+      <span class="muted small">{{
+        t('recorded spend · attributed results', 'الإنفاق المسجل · النتائج المنسوبة')
+      }}</span>
+      <div class="c-tools">
+        <select
+          class="sel"
+          [(ngModel)]="statusFilter"
+          (change)="filter()"
+          [attr.aria-label]="t('Status', 'الحالة')"
+        >
+          <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
+          <option value="draft">{{ L().statusNames.draft }}</option>
+          <option value="active">{{ L().statusNames.active }}</option>
+          <option value="ended">{{ L().statusNames.ended }}</option>
+        </select>
+        <input
+          class="search"
+          type="search"
+          [(ngModel)]="search"
+          [placeholder]="t('Search campaigns', 'بحث الحملات')"
+          (keydown.enter)="filter()"
+        />
+        <label class="check"
+          ><input type="checkbox" [(ngModel)]="archived" (change)="filter()" />{{
+            t('Archived', 'المؤرشفة')
+          }}</label
+        >
+      </div>
+    </div>
+    <div class="scroll-x">
+      <div class="cgrid chead">
+        <span>{{ L().thCampaign }}</span>
+        <span class="end">{{ L().thSpend }}</span>
+        <span class="end">{{ L().thLeads }}</span>
+        <span class="end">CPL</span>
+        <span class="end">{{ L().thDeals }}</span>
+        <span class="end">{{ t('Sale value', 'المبيعات') }}</span>
+        <span class="end">{{ t('× spend', '× الإنفاق') }}</span>
+        <span></span>
+      </div>
+      @for (c of campaigns(); track c.id) {
+        <div class="cgrid crow" [class.crow--dim]="c.status === 'ended' || c.archivedAt">
+          <div class="cell">
+            <span class="name">
+              <span class="dot" [style.background]="statusDot[c.status]"></span>
+              <span class="strong ell">{{ name(c) }}</span>
+              @if (c.sample) {
+                <i class="soon">{{ t('Sample', 'تجريبي') }}</i>
+              }
+              @if (c.archivedAt) {
+                <i class="soon">{{ t('Archived', 'مؤرشفة') }}</i>
+              }
+            </span>
+            <span class="sub ell"
+              >{{ source(c) }} · {{ project(c) }} · {{ L().statusNames[c.status] }}
+              @if (canLeads()) {
+                ·
+                <a routerLink="/company/leads" [queryParams]="{ campaignId: c.id }">{{
+                  t('leads', 'العملاء')
+                }}</a>
+              }
+            </span>
+          </div>
+          <span class="end mono small">{{ money(c.spendMinor) }}</span>
+          <span class="end mono small strong">{{ c.leads }}</span>
+          <span class="end mono small">{{ c.cplMinor ? money(c.cplMinor) : '—' }}</span>
+          <span class="end mono small">{{ c.deals }}</span>
+          <span class="end mono small">{{ money(c.saleValueMinor) }}</span>
+          <span class="end mono small strong">{{ multiple(c.saleValueMinor, c.spendMinor) }}</span>
+          <div class="acts">
+            @if (canManage() && !c.archivedAt) {
+              @if (c.status === 'draft') {
+                <button
+                  type="button"
+                  class="btn btn--sm"
+                  [disabled]="busy()"
+                  (click)="setStatus(c, 'active')"
+                >
+                  {{ t('Activate', 'تفعيل') }}
+                </button>
+              } @else if (c.status === 'active') {
+                <button
+                  type="button"
+                  class="btn btn--sm"
+                  [disabled]="busy()"
+                  (click)="setStatus(c, 'ended')"
+                >
+                  {{ t('End', 'إنهاء') }}
+                </button>
+              }
+              <button type="button" class="btn btn--sm" (click)="edit(c)">
+                {{ t('Edit', 'تعديل') }}
+              </button>
+            }
+            @if (canManage()) {
+              <button
+                type="button"
+                class="btn btn--sm btn--icon"
+                [disabled]="busy()"
+                (click)="archive(c)"
+                [title]="c.archivedAt ? t('Restore', 'استعادة') : t('Archive', 'أرشفة')"
+              >
+                {{ c.archivedAt ? t('Restore', 'استعادة') : t('Archive', 'أرشفة') }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+      @if (loading() && !campaigns().length) {
+        <p class="muted empty" role="status">{{ t('Loading…', 'جار التحميل…') }}</p>
+      }
+      @if (!loading() && !campaigns().length) {
+        <p class="muted empty">
+          {{ t('No campaigns match these filters.', 'لا توجد حملات مطابقة.') }}
+        </p>
+      }
+    </div>
+    @if (total() > 30) {
+      <div class="pager">
+        <span class="muted">{{ t('Page', 'صفحة') }} {{ page() }}</span>
+        <button
+          type="button"
+          class="btn btn--sm"
+          [disabled]="page() === 1 || loading()"
+          (click)="paginate(-1)"
+        >
+          {{ t('Previous', 'السابق') }}
+        </button>
+        <button
+          type="button"
+          class="btn btn--sm"
+          [disabled]="page() * 30 >= total() || loading()"
+          (click)="paginate(1)"
+        >
+          {{ t('Next', 'التالي') }}
+        </button>
+      </div>
+    }
+  </section>
+
+  @if (canReports()) {
+    <section class="card">
+      <div class="c-head">
+        <h2>{{ t('Lead sources', 'مصادر العملاء') }}</h2>
+        <span class="muted small">{{
+          t('leads created this quarter', 'العملاء المضافون هذا الربع')
+        }}</span>
+      </div>
+      <div class="scroll-x">
+        <div class="sgrid chead">
+          <span>{{ L().thSource }}</span>
+          <span class="end">{{ L().thLeads }}</span>
+          <span class="end">{{ t('Won', 'مكسوبة') }}</span>
+          <span class="end">{{ t('Conv.', 'التحويل') }}</span>
+        </div>
+        @for (s of sourceRows(); track s.key) {
+          <div class="sgrid crow">
+            <span class="strong">{{ sourceName(s.key) }}</span>
+            <span class="end mono small">{{ s.leads }}</span>
+            <span class="end mono small">{{ s.won }}</span>
+            <span
+              class="end mono small strong"
+              [style.color]="s.conversion !== null && s.conversion < 2 ? '#B4442F' : null"
+              >{{ s.conversion === null ? '—' : s.conversion + '%' }}</span
+            >
+          </div>
+        }
+        @if (!sourceRows().length) {
+          <p class="muted empty">
+            {{ t('No leads this quarter yet.', 'لا يوجد عملاء هذا الربع بعد.') }}
+          </p>
+        }
+      </div>
+    </section>
+  }
+
+  <p class="muted small">
+    {{
+      t(
+        'Spend is recorded manually per campaign. Signed sale values are not collected revenue. No ad network is synced.',
+        'الإنفاق مسجل يدويًا لكل حملة. قيم المبيعات الموقعة ليست تحصيلًا. لا توجد مزامنة مع شبكات الإعلانات.'
+      )
+    }}
+  </p>
 </div>
 
-@if (totals()) {
-  <div class="chip-row">
-    {{ campaigns().length }} / {{ total()
-    }}<button class="btn btn--ghost" [disabled]="page() === 1 || loading()" (click)="paginate(-1)">
-      {{ t('Previous', 'السابق') }}</button
-    ><button
-      class="btn btn--ghost"
-      [disabled]="page() * 30 >= total() || loading()"
-      (click)="paginate(1)"
-    >
-      {{ t('Next', 'التالي') }}
-    </button>
-  </div>
-  @if (!loading() && !campaigns().length) {
-    <p>{{ t('No campaigns match these filters.', 'لا توجد حملات مطابقة.') }}</p>
-  }
-}
 @if (formOpen()) {
-  <div class="growth-scrim"></div>
+  <div class="scrim scrim--top"></div>
   <section
-    class="growth-form"
+    class="dialog dialog--wide"
     role="dialog"
     aria-modal="true"
     [attr.aria-label]="t('Campaign form', 'نموذج الحملة')"
   >
-    <h2>{{ editing() ? t('Edit campaign', 'تعديل الحملة') : t('New campaign', 'حملة جديدة') }}</h2>
-    @if (error()) {
-      <p role="alert">{{ error() }}</p>
-    }
     <form (ngSubmit)="save()">
-      <label
-        >{{ t('Name', 'الاسم')
-        }}<input
-          [(ngModel)]="form.name"
-          name="name"
-          required
-          maxlength="160"
-          (ngModelChange)="changed()" /></label
-      ><label
-        >{{ t('Arabic name', 'الاسم بالعربية')
-        }}<input
-          [(ngModel)]="form.nameAr"
-          name="nameAr"
-          maxlength="160"
-          (ngModelChange)="changed()" /></label
-      ><label
-        >{{ t('Lead source', 'مصدر العميل')
-        }}<select [(ngModel)]="form.source" name="source" (ngModelChange)="changed()">
-          @for (s of sources; track s) {
-            <option [value]="s">{{ sourceName(s) }}</option>
-          }
-        </select></label
-      ><label
-        >{{ t('Registry status', 'حالة السجل')
-        }}<select [(ngModel)]="form.status" name="status" (ngModelChange)="changed()">
-          @for (s of ['draft', 'active', 'ended']; track s) {
-            <option [value]="s">{{ $any(L().statusNames)[s] }}</option>
-          }
-        </select></label
-      ><label
-        >{{ t('Recorded lifetime spend (EGP)', 'الإنفاق الإجمالي المسجل (جنيه)')
-        }}<input
-          inputmode="decimal"
-          [(ngModel)]="form.spend"
-          name="spend"
-          required
-          (ngModelChange)="changed()"
-      /></label>
-      @if (canProjects()) {
-        <label
-          >{{ t('Search projects', 'بحث المشروعات')
-          }}<input [(ngModel)]="projectQuery" name="projectSearch" /></label
-        ><button type="button" class="btn btn--ghost" (click)="loadProjects(true)">
-          {{ t('Search', 'بحث') }}</button
-        ><label
-          >{{ t('Project (optional)', 'المشروع (اختياري)')
-          }}<select [(ngModel)]="form.projectId" name="project" (ngModelChange)="changed()">
-            <option value="">{{ t('General campaign', 'حملة عامة') }}</option>
-            @for (p of projects(); track p.id) {
-              <option [value]="p.id">{{ p.name[lang()] }}</option>
-            }
-          </select></label
-        >
-        @if (projectPage * 50 < projectTotal()) {
-          <button type="button" class="btn btn--ghost" (click)="loadProjects(false)">
-            {{ t('More projects', 'مشروعات إضافية') }}
-          </button>
+      <div class="dialog__head">
+        <span class="dialog__title">{{
+          editing() ? t('Edit campaign', 'تعديل الحملة') : t('New campaign', 'حملة جديدة')
+        }}</span>
+      </div>
+      <div class="dialog__main">
+        @if (error()) {
+          <p role="alert" class="note note--bad">{{ error() }}</p>
         }
-      }
-      <footer>
-        <button
-          type="button"
-          class="btn btn--ghost"
-          [disabled]="busy()"
-          (click)="formOpen.set(false)"
-        >
-          {{ t('Cancel', 'إلغاء') }}</button
-        ><button type="submit" class="btn btn--primary" [disabled]="busy()">
+        <div class="grid">
+          <label class="field">
+            <span>{{ t('Name', 'الاسم') }}</span>
+            <input
+              [(ngModel)]="form.name"
+              name="name"
+              required
+              maxlength="160"
+              (ngModelChange)="changed()"
+            />
+          </label>
+          <label class="field">
+            <span>{{ t('Arabic name', 'الاسم بالعربية') }}</span>
+            <input
+              [(ngModel)]="form.nameAr"
+              name="nameAr"
+              maxlength="160"
+              dir="rtl"
+              (ngModelChange)="changed()"
+            />
+          </label>
+          <label class="field">
+            <span>{{ t('Lead source', 'مصدر العميل') }}</span>
+            <select [(ngModel)]="form.source" name="source" (ngModelChange)="changed()">
+              @for (s of sources; track s) {
+                <option [value]="s">{{ sourceName(s) }}</option>
+              }
+            </select>
+          </label>
+          <label class="field">
+            <span>{{ t('Status', 'الحالة') }}</span>
+            <select [(ngModel)]="form.status" name="status" (ngModelChange)="changed()">
+              @for (s of ['draft', 'active', 'ended']; track s) {
+                <option [value]="s">{{ $any(L().statusNames)[s] }}</option>
+              }
+            </select>
+          </label>
+          <label class="field full">
+            <span>{{ t('Recorded lifetime spend (EGP)', 'الإنفاق الإجمالي المسجل (جنيه)') }}</span>
+            <input
+              class="mono"
+              inputmode="decimal"
+              [(ngModel)]="form.spend"
+              name="spend"
+              required
+              (ngModelChange)="changed()"
+            />
+          </label>
+        </div>
+        @if (canProjects()) {
+          <div class="field">
+            <span>{{ t('Project (optional)', 'المشروع (اختياري)') }}</span>
+            <div class="pick">
+              <input
+                type="search"
+                [(ngModel)]="projectQuery"
+                name="projectSearch"
+                [placeholder]="t('Search projects', 'بحث المشروعات')"
+              />
+              <button type="button" class="btn btn--sm" (click)="loadProjects(true)">
+                {{ t('Search', 'بحث') }}
+              </button>
+            </div>
+            <select [(ngModel)]="form.projectId" name="project" (ngModelChange)="changed()">
+              <option value="">{{ t('General campaign', 'حملة عامة') }}</option>
+              @for (p of projects(); track p.id) {
+                <option [value]="p.id">{{ p.name[lang()] }}</option>
+              }
+            </select>
+            @if (projectPage * 50 < projectTotal()) {
+              <button type="button" class="link small" (click)="loadProjects(false)">
+                {{ t('More projects', 'مشروعات إضافية') }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+      <div class="dialog__foot">
+        <button type="button" class="btn" [disabled]="busy()" (click)="formOpen.set(false)">
+          {{ t('Cancel', 'إلغاء') }}
+        </button>
+        <button type="submit" class="btn btn--dark" [disabled]="busy()">
           {{ t('Save', 'حفظ') }}
         </button>
-      </footer>
+      </div>
     </form>
   </section>
 }

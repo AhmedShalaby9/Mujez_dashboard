@@ -1,222 +1,357 @@
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
-  </div>
-  <div class="page-head__actions">
-    <button type="button" class="btn btn--primary" [disabled]="!canManage()" (click)="openUpload()">
-      {{ L().uploadBtn }}
-    </button>
-  </div>
-</div>
-
-<div class="chip-row">
-  <button
-    type="button"
-    class="chip"
-    [class.chip--active]="kindFilter() === 'all'"
-    (click)="filter('all')"
-  >
-    {{ L().kindAll }}
-  </button>
-  @for (k of kinds; track k) {
-    <button
-      type="button"
-      class="chip"
-      [class.chip--active]="kindFilter() === k"
-      (click)="filter(k)"
-    >
-      {{ L().kindNames[k] }}
-    </button>
-  }
-</div>
-
-<div class="chip-row">
-  <button class="chip" [disabled]="loading()" (click)="reload()">{{ t('Refresh', 'تحديث') }}</button
-  ><input
-    [(ngModel)]="search"
-    [placeholder]="t('Search files', 'بحث الملفات')"
-    (keyup.enter)="filter()"
-  /><button class="chip" (click)="filter()">{{ t('Search', 'بحث') }}</button
-  ><label
-    ><input type="checkbox" [(ngModel)]="archived" (change)="filter()" />{{
-      t('Include archived', 'تضمين المؤرشفة')
-    }}</label
-  >
-  @if (contractFilter()) {
-    <button class="chip" (click)="showAll()">{{ t('Show all contracts', 'كل العقود') }}</button>
-  }
-</div>
-@if (error()) {
-  <p role="alert">{{ error() }}</p>
-}
-@if (loading()) {
-  <p>{{ t('Loading…', 'جارٍ التحميل…') }}</p>
-}
-<div class="card">
-  <div class="table-scroll">
-    <div class="d-table">
-      <div class="d-head">
-        <span>{{ L().thFile }}</span>
-        <span>{{ L().thSubject }}</span>
-        <span>{{ L().thUploaded }}</span>
-        <span>{{ L().thExpires }}</span>
-      </div>
-      @for (d of docs(); track d.id) {
-        <div class="d-row">
-          <span class="d-cell__main">
-            <a class="d-cell__file" [href]="download(d)" target="_blank" rel="noopener">{{
-              d.file
-            }}</a
-            ><small
-              >{{ d.title }} · {{ d.sizeBytes }} {{ t('bytes', 'بايت') }}
-              @if (d.sample) {
-                · {{ t('Sample', 'تجريبي') }}
-              }
-              @if (d.archivedAt) {
-                · {{ t('Archived', 'مؤرشف') }}
-              }
-            </small>
-            <span class="d-cell__sub">{{ $any(L().kindNames)[d.kind] }}</span>
-          </span>
-          <span class="d-cell__sub">
-            @if (d.contractId && canContracts()) {
-              <a routerLink="/company/contracts" [queryParams]="{ contractId: d.contractId }">{{
-                subject(d)
-              }}</a>
-            } @else if (d.leadId && canLeads()) {
-              <a routerLink="/company/leads" [queryParams]="{ leadId: d.leadId }">{{
-                subject(d)
-              }}</a>
-            } @else {
-              {{ subject(d) }}
-            }
-            @if (canManage()) {
-              <button class="row-btn" [disabled]="busy()" (click)="archive(d)">
-                {{ d.archivedAt ? t('Restore', 'استعادة') : t('Archive', 'أرشفة') }}
-              </button>
-            }
-          </span>
-          <span class="d-cell__sub">{{ uploadedBy(d) }} · {{ date(d.at) }}</span>
-          @if (d.expires) {
-            <span class="pill" [class.pill--warn]="d.expiringSoon || d.expired"
-              >{{ date(d.expires) }}
-              @if (d.expired) {
-                · {{ t('Expired', 'منتهي') }}
-              }
-            </span>
-          } @else {
-            <span class="d-cell__sub">{{ L().noExpiry }}</span>
-          }
-        </div>
-      }
-      @if (!loading() && !docs().length) {
-        <div class="t-empty">{{ L().emptyTitle }}</div>
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <span
+        >{{ total() }} {{ t('files', 'ملف') }} · {{ bytes(storageBytes()) }}
+        {{ t('stored (incl. archived)', 'مخزنة (تشمل المؤرشفة)') }}</span
+      >
+      <h1>{{ L().title }}</h1>
+    </div>
+    <div class="head__actions">
+      @if (canManage()) {
+        <button type="button" class="btn btn--dark" (click)="openUpload()">
+          {{ L().uploadBtn }}
+        </button>
       }
     </div>
   </div>
+
+  <div class="tools">
+    <input
+      class="search"
+      type="search"
+      [(ngModel)]="search"
+      [placeholder]="t('Search files', 'بحث الملفات')"
+      (keydown.enter)="filter()"
+    />
+    <div class="chips">
+      <button
+        type="button"
+        class="chip"
+        [class.on]="kindFilter() === 'all'"
+        (click)="filter('all')"
+      >
+        {{ L().kindAll }}
+      </button>
+      @for (k of kinds; track k) {
+        <button type="button" class="chip" [class.on]="kindFilter() === k" (click)="filter(k)">
+          {{ L().kindNames[k] }}
+        </button>
+      }
+    </div>
+    <label class="check end-auto"
+      ><input type="checkbox" [(ngModel)]="archived" (change)="filter()" />{{
+        t('Include archived', 'تضمين المؤرشفة')
+      }}</label
+    >
+  </div>
+
+  @if (contractFilter()) {
+    <p class="note">
+      {{ t('Showing files for one contract.', 'عرض ملفات عقد واحد.') }}
+      <button type="button" class="link" (click)="showAll()">
+        {{ t('Show all', 'عرض الكل') }}
+      </button>
+    </p>
+  }
+  @if (error() && !uploadOpen()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+
+  <div class="split">
+    <section class="card list" [class.list--busy]="loading()">
+      <div class="lgrid lhead">
+        <span>{{ L().thFile }}</span>
+        <span>{{ L().thSubject }}</span>
+        <span>{{ t('Uploaded', 'تاريخ الرفع') }}</span>
+        <span>{{ t('Size', 'الحجم') }}</span>
+        <span>{{ t('Status', 'الحالة') }}</span>
+      </div>
+      @for (d of docs(); track d.id) {
+        <button
+          type="button"
+          class="lgrid lrow"
+          [class.lrow--on]="selected()?.id === d.id"
+          (click)="selected.set(d)"
+        >
+          <span class="file">
+            <span
+              class="ext mono"
+              [style.background]="extTone(d)[0]"
+              [style.color]="extTone(d)[1]"
+              >{{ ext(d) }}</span
+            >
+            <span class="cell">
+              <span class="strong ell">{{ d.title || d.file }}</span>
+              <span class="sub ell"
+                >{{ $any(L().kindNames)[d.kind] ?? d.kind }}
+                @if (d.sample) {
+                  <i class="soon">{{ t('Sample', 'تجريبي') }}</i>
+                }
+              </span>
+            </span>
+          </span>
+          <span class="ell muted2">{{ subject(d) }}</span>
+          <span class="cell">
+            <span class="small nowrap">{{ day(d.at) }}</span>
+            <span class="sub sub--dim ell">{{ uploadedBy(d) }}</span>
+          </span>
+          <span class="mono small muted">{{ size(d) }}</span>
+          <span class="st" [style.background]="status(d).bg" [style.color]="status(d).fg">{{
+            status(d).label
+          }}</span>
+        </button>
+      }
+      @if (loading() && !docs().length) {
+        <p class="muted empty" role="status">{{ t('Loading…', 'جار التحميل…') }}</p>
+      }
+      @if (!loading() && !docs().length) {
+        <p class="muted empty">{{ L().emptyTitle }}</p>
+      }
+      @if (total() > 30) {
+        <div class="pager">
+          <span class="muted">{{ t('Page', 'صفحة') }} {{ page() }}</span>
+          <button
+            type="button"
+            class="btn btn--sm"
+            [disabled]="page() === 1 || loading()"
+            (click)="paginate(-1)"
+          >
+            {{ t('Previous', 'السابق') }}
+          </button>
+          <button
+            type="button"
+            class="btn btn--sm"
+            [disabled]="page() * 30 >= total() || loading()"
+            (click)="paginate(1)"
+          >
+            {{ t('Next', 'التالي') }}
+          </button>
+        </div>
+      }
+    </section>
+
+    @if (selected(); as d) {
+      <section class="card panel" [attr.aria-label]="d.file">
+        <div class="preview mono">
+          <span
+            class="ext ext--lg"
+            [style.background]="extTone(d)[0]"
+            [style.color]="extTone(d)[1]"
+            >{{ ext(d) }}</span
+          >
+          <span>{{ t('Preview not available', 'المعاينة غير متاحة') }}</span>
+        </div>
+        <div class="p-head">
+          <div class="p-row">
+            <span class="p-title">{{ d.title || d.file }}</span>
+            <button
+              type="button"
+              class="x p-x"
+              (click)="selected.set(null)"
+              [attr.aria-label]="t('Close', 'إغلاق')"
+            >
+              ×
+            </button>
+          </div>
+          <span
+            class="st self-start"
+            [style.background]="status(d).bg"
+            [style.color]="status(d).fg"
+            >{{ status(d).label }}</span
+          >
+        </div>
+        <div class="p-facts">
+          <span>{{ t('File', 'الملف') }}</span
+          ><b class="ell">{{ d.file }}</b> <span>{{ t('Kind', 'النوع') }}</span
+          ><b>{{ $any(L().kindNames)[d.kind] ?? d.kind }}</b> <span>{{ L().thSubject }}</span
+          ><b>
+            @if (d.contractId && canContracts()) {
+              <a routerLink="/company/contracts" [queryParams]="{ contractId: d.contractId }">{{
+                d.contractReference
+              }}</a>
+              @if (d.lead) {
+                <span class="muted"> · {{ d.lead[lang()] }}</span>
+              }
+            } @else if (d.leadId && canLeads()) {
+              <a routerLink="/company/leads" [queryParams]="{ leadId: d.leadId }">{{
+                d.lead?.[lang()]
+              }}</a>
+            } @else {
+              {{ d.contractReference ?? d.lead?.[lang()] ?? '—' }}
+            }
+          </b>
+          <span>{{ t('Uploaded', 'الرفع') }}</span
+          ><b>{{ date(d.at) }} · {{ uploadedBy(d) }}</b> <span>{{ t('Expiry', 'الانتهاء') }}</span
+          ><b [style.color]="d.expired ? '#9A3422' : d.expiringSoon ? '#8A5A14' : null">{{
+            d.expires ? date(d.expires) : t('No expiry', 'بدون انتهاء')
+          }}</b>
+          <span>{{ t('Size', 'الحجم') }}</span
+          ><b class="mono">{{ size(d) }}</b> <span>SHA-256</span
+          ><b class="mono hash" [title]="d.sha256">{{ d.sha256.slice(0, 16) }}…</b>
+        </div>
+        <div class="p-acts">
+          <button
+            type="button"
+            class="btn btn--sm btn--dark"
+            (click)="
+              soon(
+                t(
+                  'Document review is not available from the API yet.',
+                  'مراجعة المستندات غير متاحة من الخادم بعد.'
+                )
+              )
+            "
+          >
+            {{ t('Mark verified', 'توثيق') }}<i class="soon">{{ t('Soon', 'قريبًا') }}</i>
+          </button>
+          <a class="btn btn--sm" [href]="download(d)" target="_blank" rel="noopener">{{
+            t('Download', 'تنزيل')
+          }}</a>
+          @if (canManage() && !d.archivedAt) {
+            <button type="button" class="btn btn--sm" (click)="replace(d)">
+              {{ t('Replace', 'استبدال') }}
+            </button>
+          }
+          @if (canManage()) {
+            <button type="button" class="btn btn--sm" [disabled]="busy()" (click)="archive(d)">
+              {{ d.archivedAt ? t('Restore', 'استعادة') : t('Archive', 'أرشفة') }}
+            </button>
+          }
+        </div>
+      </section>
+    }
+  </div>
 </div>
 
-<p>
-  {{ t('Retained storage', 'التخزين المحفوظ') }}: {{ storageBytes() }}
-  {{ t('bytes (including archived files)', 'بايت (يشمل المؤرشفة)') }} · {{ docs().length }} /
-  {{ total() }}
-</p>
-<div class="chip-row">
-  <button class="chip" [disabled]="page() === 1 || loading()" (click)="paginate(-1)">
-    {{ t('Previous', 'السابق') }}</button
-  ><button class="chip" [disabled]="page() * 30 >= total() || loading()" (click)="paginate(1)">
-    {{ t('Next', 'التالي') }}
-  </button>
-</div>
 @if (uploadOpen()) {
-  <div class="scrim"></div>
-  <section class="dialog" role="dialog" aria-modal="true" [attr.aria-label]="L().uploadTitle">
-    <div class="dialog__body dialog__body--pad">
-      <h2>{{ L().uploadTitle }}</h2>
+  <div class="scrim scrim--top"></div>
+  <section
+    class="dialog dialog--wide"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="L().uploadTitle"
+  >
+    <div class="dialog__head">
+      <span class="dialog__title">{{ L().uploadTitle }}</span>
+      <span class="dialog__body">{{
+        t(
+          'PDF, PNG, JPEG or UTF-8 text, up to 5 MB. Files stay private to your company.',
+          'PDF أو PNG أو JPEG أو نص UTF-8 حتى 5 ميجابايت. الملفات خاصة بشركتك.'
+        )
+      }}</span>
+    </div>
+    <div class="dialog__main">
       @if (error()) {
-        <p role="alert">{{ error() }}</p>
+        <p role="alert" class="note note--bad">{{ error() }}</p>
       }
-      <p>
-        {{
-          t(
-            'PDF, PNG, JPEG or UTF-8 text, up to 5 MB. Files remain private to your company.',
-            'PDF أو PNG أو JPEG أو نص UTF-8 حتى ٥ ميجابايت. الملفات خاصة بشركتك.'
-          )
-        }}
-      </p>
-      <label
-        >{{ L().kindLabel
-        }}<select [ngModel]="newKind()" (ngModelChange)="newKind.set($event); changed()">
-          @for (k of kinds; track k) {
-            <option [value]="k">{{ L().kindNames[k] }}</option>
-          }
-        </select></label
-      ><label
-        >{{ t('Document title', 'عنوان المستند')
-        }}<input
-          [ngModel]="newSubject()"
-          (ngModelChange)="newSubject.set($event); changed()"
-          maxlength="200"
-      /></label>
+      <label class="drop">
+        <input type="file" accept=".pdf,.png,.jpg,.jpeg,.txt" (change)="fileSelected($event)" />
+        @if (newFile(); as f) {
+          <b>{{ f.name }}</b>
+          <span class="muted small"
+            >{{ bytes(f.size) }} · {{ t('click to change', 'انقر للتغيير') }}</span
+          >
+        } @else {
+          <b>{{ t('Choose a file', 'اختر ملفًا') }}</b>
+          <span class="muted small">{{
+            t('PDF, PNG, JPEG or TXT · max 5 MB', 'PDF أو PNG أو JPEG أو TXT · حتى 5 ميجابايت')
+          }}</span>
+        }
+      </label>
+      <div class="grid">
+        <label class="field">
+          <span>{{ L().kindLabel }}</span>
+          <select [ngModel]="newKind()" (ngModelChange)="newKind.set($event); changed()">
+            @for (k of kinds; track k) {
+              <option [value]="k">{{ L().kindNames[k] }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('Document title', 'عنوان المستند') }}</span>
+          <input
+            [ngModel]="newSubject()"
+            (ngModelChange)="newSubject.set($event); changed()"
+            maxlength="200"
+          />
+        </label>
+      </div>
       @if (canContracts()) {
-        <label>{{ t('Search contracts', 'بحث العقود') }}<input [(ngModel)]="contractQuery" /></label
-        ><button class="row-btn" (click)="loadContracts(true)">{{ t('Search', 'بحث') }}</button
-        ><label
-          >{{ t('Contract (optional)', 'العقد (اختياري)')
-          }}<select [(ngModel)]="contractId" (ngModelChange)="chooseContract()">
+        <div class="field">
+          <span>{{ t('Contract (optional)', 'العقد (اختياري)') }}</span>
+          <div class="pick">
+            <input
+              type="search"
+              [(ngModel)]="contractQuery"
+              [placeholder]="t('Search contracts', 'بحث العقود')"
+              (keydown.enter)="loadContracts(true)"
+            />
+            <button type="button" class="btn btn--sm" (click)="loadContracts(true)">
+              {{ t('Search', 'بحث') }}
+            </button>
+          </div>
+          <select [(ngModel)]="contractId" (ngModelChange)="chooseContract()">
             <option value="">—</option>
             @for (c of contractOptions(); track c.id) {
               <option [value]="c.id">{{ c.reference }} · {{ c.contact[lang()] }}</option>
             }
-          </select></label
-        >
-        @if (contractPage * 50 < contractTotal()) {
-          <button class="row-btn" (click)="loadContracts(false)">
-            {{ t('More contracts', 'عقود إضافية') }}
-          </button>
-        }
+          </select>
+          @if (contractPage * 50 < contractTotal()) {
+            <button type="button" class="link small" (click)="loadContracts(false)">
+              {{ t('More contracts', 'عقود إضافية') }}
+            </button>
+          }
+        </div>
       }
       @if (canLeads() && !contractId) {
-        <label>{{ t('Search leads', 'بحث العملاء') }}<input [(ngModel)]="leadQuery" /></label
-        ><button class="row-btn" (click)="loadLeads(true)">{{ t('Search', 'بحث') }}</button
-        ><label
-          >{{ t('Lead (optional)', 'العميل (اختياري)')
-          }}<select [(ngModel)]="leadId" (ngModelChange)="changed()">
+        <div class="field">
+          <span>{{ t('Lead (optional)', 'العميل (اختياري)') }}</span>
+          <div class="pick">
+            <input
+              type="search"
+              [(ngModel)]="leadQuery"
+              [placeholder]="t('Search leads', 'بحث العملاء')"
+              (keydown.enter)="loadLeads(true)"
+            />
+            <button type="button" class="btn btn--sm" (click)="loadLeads(true)">
+              {{ t('Search', 'بحث') }}
+            </button>
+          </div>
+          <select [(ngModel)]="leadId" (ngModelChange)="changed()">
             <option value="">—</option>
             @for (l of leadOptions(); track l.id) {
               <option [value]="l.id">{{ l.reference }} · {{ l.name[lang()] }}</option>
             }
-          </select></label
-        >
-        @if (leadPage * 50 < leadTotal()) {
-          <button class="row-btn" (click)="loadLeads(false)">
-            {{ t('More leads', 'عملاء إضافيون') }}
-          </button>
-        }
+          </select>
+          @if (leadPage * 50 < leadTotal()) {
+            <button type="button" class="link small" (click)="loadLeads(false)">
+              {{ t('More leads', 'عملاء إضافيون') }}
+            </button>
+          }
+        </div>
       }
-      <label
-        >{{ t('Expiry date (optional)', 'تاريخ الانتهاء (اختياري)')
-        }}<input type="date" [(ngModel)]="expiresDate" (ngModelChange)="changed()" /></label
-      ><label
-        >{{ t('Choose file', 'اختيار ملف')
-        }}<input type="file" accept=".pdf,.png,.jpg,.jpeg,.txt" (change)="fileSelected($event)"
-      /></label>
-      @if (newFile(); as f) {
-        <p>{{ f.name }} · {{ f.size }} {{ t('bytes', 'بايت') }}</p>
-      }
+      <label class="field">
+        <span>{{ t('Expiry date (optional)', 'تاريخ الانتهاء (اختياري)') }}</span>
+        <input type="date" [(ngModel)]="expiresDate" (ngModelChange)="changed()" />
+      </label>
     </div>
-    <footer class="dialog__footer">
-      <button class="btn btn--ghost" [disabled]="busy()" (click)="closeUpload()">
-        {{ L().cancel }}</button
-      ><button
-        class="btn btn--primary"
+    <div class="dialog__foot">
+      <button type="button" class="btn" [disabled]="busy()" (click)="closeUpload()">
+        {{ L().cancel }}
+      </button>
+      <button
+        type="button"
+        class="btn btn--dark"
         [disabled]="busy() || !newFile() || newSubject().trim().length < 2"
         (click)="submitUpload()"
       >
         {{ busy() ? t('Uploading…', 'جارٍ الرفع…') : L().upload }}
       </button>
-    </footer>
+    </div>
   </section>
+}
+
+@if (toast()) {
+  <div class="toast"><span></span>{{ toast() }}</div>
 }

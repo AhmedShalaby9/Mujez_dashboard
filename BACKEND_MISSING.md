@@ -591,3 +591,20 @@ returns the whole team), member table (avatar, name, email, role, status, invite
 | TM2 | Invitation **email** | The link is shown to copy and share manually. | Send the activation email from the backend (outbox), with resend. |
 | TM3 | Per-member stats (open leads, deals this month) | Not shown. | Counts per member on `GET /team`, or link to Reports owners. |
 | TM4 | Edit member name / role, remove member | Not available. | `POST /team/:id/update` and remove (keeping records reassigned). |
+
+## Company dashboard (`/company/dashboard`)
+
+Already real: Cairo date + greeting, Residential / Commercial switch (sent to `GET /company-overview` and Reports), KPI
+strip (open pipeline, new leads 7d, tasks due today, paid commission MTD, units available with a fill bar), **Pipeline**
+card from `GET /pipeline` stats (open stages: value + deal count, bar by value), contract key dates in the next 14 days,
+**Today** from `GET /events` (time, type color, contact / lead, place; falls back to today's tasks without calendar
+access), top leads by score, **Team · this quarter** leaderboard from `GET /reports` owners (needs `reports.read`),
+tasks due today, needs-attention alerts, inventory by status.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| CB1 | KPI **deltas** vs previous period (`+12%`, `+3`) | Not shown. | Previous-period values in `GET /company-overview` metrics. |
+| CB2 | Pipeline stages **by segment** | Stage stats cover all segments (labelled when a segment is selected). | `segment` filter on `GET /pipeline` (see CL1). |
+| CB3 | Top leads **segment tag**, **source** and **last touch** columns | Shows wants, budget, owner, score. | `segment`, `source`, `lastActivityAt` on `scoredLeads` in the overview. |
+| CB4 | "Closing in next 14 days" as **deals** (address, type, price, expected close) | Shows contract key dates (the overview's `keyDates`). | Expected close date on pipeline deals, returned in the overview. |
+| CB5 | Agent view (**my** tasks / **my** performance) vs manager view | One layout; sections appear by permission (team leaderboard needs `reports.read`). | Nothing required if permission-based sections are enough; otherwise an explicit role flag on the session. |

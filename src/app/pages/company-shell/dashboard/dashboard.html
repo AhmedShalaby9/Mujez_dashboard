@@ -1,237 +1,216 @@
-<div class="dash">
-  <div class="dash__head">
-    <div class="dash__hello">
-      <span class="dash__date">{{
-        data() ? longDate(data()!.today) : text('Dashboard', 'لوحة التحكم')
-      }}</span>
-      <h1 class="dash__title">{{ greeting() }}</h1>
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <span>{{ data() ? longDate(data()!.today) : text('Dashboard', 'لوحة التحكم') }}</span>
+      <h1>{{ greeting() }}</h1>
     </div>
-    <div class="seg" role="group">
-      @for (s of segments; track s) {
-        <button
-          type="button"
-          class="seg__btn"
-          [class.seg__btn--on]="segment() === s"
-          (click)="load(s)"
-        >
-          {{ segmentName(s) }}
-        </button>
-      }
+    <div class="head__actions">
+      <div class="toggle" role="group" [attr.aria-label]="text('Segment', 'القطاع')">
+        @for (s of segments; track s) {
+          <button type="button" [class.on]="segment() === s" (click)="load(s)">
+            {{ segmentName(s) }}
+          </button>
+        }
+      </div>
     </div>
   </div>
 
   @if (error()) {
-    <p class="notice notice--error" role="alert">{{ error() }}</p>
+    <p class="note note--bad" role="alert">{{ error() }}</p>
   }
-  @if (busy()) {
+  @if (busy() && !data()) {
     <p class="muted" role="status">{{ text('Loading…', 'جار التحميل…') }}</p>
   }
 
   @if (data(); as d) {
-    <!-- KPI strip -->
-    @if (kpiCount()) {
-      <section class="kpis" [style.--kpi-n]="kpiCount()">
-        @if (d.metrics.pipeline; as p) {
-          <a class="kpi" routerLink="/company/pipeline">
-            <span class="kpi__label">{{
-              text('Open sale pipeline', 'قيمة فرص البيع المفتوحة')
-            }}</span>
-            <span class="kpi__value">{{ api.money(p.saleValueMinor) }}</span>
-            <span class="kpi__sub"
-              >{{ p.saleCount }} {{ text('sales', 'بيع') }} · {{ p.leaseCount }}
-              {{ text('leases (excluded from sale value)', 'إيجار (خارج قيمة البيع)') }}</span
-            >
-          </a>
-        }
-        @if (d.metrics.paidCommissionMtd !== undefined) {
-          <a class="kpi" routerLink="/company/commissions">
-            <span class="kpi__label">{{
-              text('Recorded paid commissions this month', 'عمولات مسجلة كمدفوعة هذا الشهر')
-            }}</span>
-            <span class="kpi__value">{{ api.money(d.metrics.paidCommissionMtd!) }}</span>
-            <span class="kpi__sub">{{ text('Month to date', 'منذ بداية الشهر') }}</span>
-          </a>
-        }
-        @if (d.metrics.todayTasks !== undefined) {
-          <a class="kpi" routerLink="/company/tasks">
-            <span class="kpi__label">{{
-              text('Open tasks due today', 'المهام المفتوحة المستحقة اليوم')
-            }}</span>
-            <span class="kpi__value">{{ d.metrics.todayTasks }}</span>
-            <span class="kpi__sub">{{ d.today }}</span>
-          </a>
-        }
-        @if (d.metrics.newLeads7d !== undefined) {
-          <a class="kpi" routerLink="/company/leads">
-            <span class="kpi__label">{{
-              text('New leads · last 7 days', 'عملاء جدد · آخر ٧ أيام')
-            }}</span>
-            <span class="kpi__value">{{ d.metrics.newLeads7d }}</span>
-            <span class="kpi__sub">{{ segmentName(segment()) }}</span>
-          </a>
-        }
-        @if (d.metrics.projects !== undefined) {
-          <a class="kpi" routerLink="/company/projects">
-            <span class="kpi__label">{{ text('Active projects', 'مشروعات غير مؤرشفة') }}</span>
-            <span class="kpi__value">{{ d.metrics.projects }}</span>
-            <span class="kpi__sub">{{ text('Not archived', 'غير مؤرشفة') }}</span>
-          </a>
-        }
-      </section>
-    }
-
-    <!-- Row 1: pipeline / key dates + today -->
-    <div class="row">
-      @if (d.chart !== null || d.keyDates !== null) {
-        <section class="card card--wide">
-          <div class="card__head">
-            <h2>{{ text('Pipeline', 'خط الصفقات') }}</h2>
-            @if (d.metrics.pipeline; as p) {
-              <span class="card__meta mono">{{ api.money(p.saleValueMinor) }}</span>
-            }
-            <a class="card__link" routerLink="/company/pipeline">{{
-              text('Open board', 'فتح اللوحة')
-            }}</a>
-          </div>
-
-          @if (d.chart; as chart) {
-            <div class="stages">
-              <div class="stages__caption">
-                {{
-                  text(
-                    'Currently signed sale value · this quarter',
-                    'قيمة البيع الموقّع حاليًا · هذا الربع'
-                  )
-                }}
-              </div>
-              <div class="stages__bar">
-                @for (m of months(); track m.month) {
-                  <span [style.width]="m.pct" [style.background]="m.color"></span>
-                }
-              </div>
-              <div class="stages__grid">
-                @for (m of months(); track m.month) {
-                  <div class="stage">
-                    <span class="stage__name"
-                      ><span class="stage__dot" [style.background]="m.color"></span
-                      >{{ m.month }}</span
-                    >
-                    <span class="stage__val">{{ api.money(m.valueMinor) }}</span>
-                    <span class="stage__count">{{ m.deals }} {{ text('sales', 'بيع') }}</span>
-                  </div>
-                }
-              </div>
-              <p class="fine">
-                {{
-                  text('Contract values, not cash collections.', 'قيم عقود وليست تحصيلات نقدية.')
-                }}
-              </p>
-            </div>
+    <div class="body" [class.body--busy]="busy()">
+      @if (kpis().length) {
+        <section class="kpis" [style.--n]="kpis().length">
+          @for (k of kpis(); track k.label) {
+            <a class="kpi" [routerLink]="k.route">
+              <span class="kpi__label">{{ k.label }}</span>
+              <span class="kpi__value mono">{{ k.value }}</span>
+              @if (k.bar !== null) {
+                <span class="kpi__bar"><span [style.width.%]="k.bar"></span></span>
+              }
+              <span class="kpi__sub">{{ k.sub }}</span>
+            </a>
           }
+        </section>
+      }
 
-          @if (d.keyDates !== null) {
-            <div class="closings">
-              <div class="closings__label">
-                {{ text('Contract key dates · next 14 days', 'تواريخ العقود · خلال ١٤ يومًا') }}
-              </div>
-              @for (c of d.keyDates; track c.id) {
-                <a
-                  class="closing"
-                  routerLink="/company/contracts"
-                  [queryParams]="{ contractId: c.id }"
+      <div class="row">
+        @if (stages() || d.keyDates !== null) {
+          <section class="card box box--wide">
+            <div class="c-head">
+              <h2>{{ text('Pipeline', 'خط الصفقات') }}</h2>
+              @if (stages(); as s) {
+                <span class="mono muted small"
+                  >{{ api.money(s.total) }} · {{ s.count }} {{ text('open', 'مفتوحة') }}</span
                 >
-                  <span class="closing__main">
-                    <span class="closing__title">{{ local(c.title) }}</span>
-                    <span class="closing__ref mono">{{ c.reference }}</span>
-                  </span>
-                  <span class="closing__owner">{{ c.owner ?? '—' }}</span>
-                  <span class="mono closing__price">{{ api.money(c.valueMinor) }}</span>
-                  <span class="closing__status">{{ c.status }}</span>
-                  <span class="closing__date">{{ c.date }}</span>
-                </a>
-              } @empty {
-                <p class="empty">
-                  {{
-                    text(
-                      'No contract key dates in this window.',
-                      'لا توجد تواريخ عقود خلال الفترة.'
-                    )
-                  }}
-                </p>
+              }
+              <a class="c-link" routerLink="/company/pipeline">{{
+                text('Open board', 'فتح اللوحة')
+              }}</a>
+            </div>
+            @if (stages(); as s) {
+              <div class="stages">
+                <div class="stages__bar">
+                  @for (r of s.rows; track r.key) {
+                    <span [style.width]="r.pct" [style.background]="r.color"></span>
+                  }
+                </div>
+                <div class="stages__grid">
+                  @for (r of s.rows; track r.key) {
+                    <a class="stage" routerLink="/company/pipeline">
+                      <span class="stage__name"
+                        ><span class="dot" [style.background]="r.color"></span
+                        >{{ stageName(r.key) }}</span
+                      >
+                      <span class="stage__val mono">{{ api.money(r.value) }}</span>
+                      <span class="sub">{{ r.count }} {{ text('deals', 'صفقات') }}</span>
+                    </a>
+                  }
+                </div>
+                @if (segment() !== 'all') {
+                  <span class="sub">{{
+                    text('Pipeline stages include all segments.', 'مراحل الصفقات تشمل كل القطاعات.')
+                  }}</span>
+                }
+              </div>
+            }
+            @if (d.keyDates !== null) {
+              <div class="closings">
+                <span class="p-label">{{
+                  text('CONTRACT KEY DATES · NEXT 14 DAYS', 'تواريخ العقود · خلال 14 يومًا')
+                }}</span>
+                @for (c of d.keyDates; track c.id) {
+                  <a
+                    class="closing"
+                    routerLink="/company/contracts"
+                    [queryParams]="{ contractId: c.id }"
+                  >
+                    <span class="cell">
+                      <span class="strong ell">{{ local(c.title) }}</span>
+                      <span class="sub">{{ c.owner ?? '—' }}</span>
+                    </span>
+                    <span class="mono sub">{{ c.reference }}</span>
+                    <span class="mono small">{{ api.money(c.valueMinor) }}</span>
+                    <span class="st">{{ c.status }}</span>
+                    <span class="small muted nowrap">{{ shortDate(c.date) }}</span>
+                  </a>
+                } @empty {
+                  <p class="muted empty">
+                    {{
+                      text(
+                        'No contract key dates in this window.',
+                        'لا توجد تواريخ عقود خلال الفترة.'
+                      )
+                    }}
+                  </p>
+                }
+              </div>
+            }
+          </section>
+        }
+
+        @if (events() !== null || d.todayTasks !== null) {
+          <section class="card box">
+            <div class="c-head">
+              <h2>{{ text('Today', 'اليوم') }}</h2>
+              @if (events(); as ev) {
+                <span class="muted small">{{ ev.length }} {{ text('events', 'مواعيد') }}</span>
+                <a class="c-link" routerLink="/company/calendar">{{
+                  text('Calendar', 'التقويم')
+                }}</a>
+              } @else {
+                <span class="muted small"
+                  >{{ d.todayTasks!.length }} {{ text('open tasks', 'مهام مفتوحة') }}</span
+                >
+                <a class="c-link" routerLink="/company/tasks">{{ text('Tasks', 'المهام') }}</a>
               }
             </div>
-          }
-        </section>
-      }
+            <div class="events">
+              @if (events(); as ev) {
+                @for (e of ev; track e.id) {
+                  <a
+                    class="event"
+                    [class.event--done]="e.status === 'done'"
+                    routerLink="/company/calendar"
+                  >
+                    <span class="event__time mono">{{ time(e.startsAt) }}</span>
+                    <span class="event__bar" [style.background]="eventColor(e.type)"></span>
+                    <span class="cell">
+                      <span class="strong ell">{{ local(e.title) }}</span>
+                      <span class="sub ell"
+                        >{{ e.contact ? local(e.contact.name) : e.lead ? local(e.lead.name) : '' }}
+                        @if (e.place) {
+                          · {{ e.place }}
+                        }
+                      </span>
+                    </span>
+                  </a>
+                } @empty {
+                  <p class="muted empty">
+                    {{ text('Nothing on the calendar today.', 'لا توجد مواعيد اليوم.') }}
+                  </p>
+                }
+              } @else {
+                @for (t of d.todayTasks!; track t.id) {
+                  <a class="event" routerLink="/company/tasks">
+                    <span class="event__time small">{{ priorityName(t.priority) }}</span>
+                    <span class="event__bar" [style.background]="priorityColor(t.priority)"></span>
+                    <span class="cell">
+                      <span class="strong ell">{{ local(t.title) }}</span>
+                      <span class="sub">{{ t.assignee ?? text('Unassigned', 'غير مسند') }}</span>
+                    </span>
+                  </a>
+                } @empty {
+                  <p class="muted empty">
+                    {{ text('No open tasks due today.', 'لا توجد مهام مفتوحة مستحقة اليوم.') }}
+                  </p>
+                }
+              }
+            </div>
+          </section>
+        }
+      </div>
 
-      @if (d.todayTasks !== null) {
-        <section class="card card--narrow">
-          <div class="card__head">
-            <h2>{{ text('Today', 'اليوم') }}</h2>
-            <span class="card__meta"
-              >{{ d.todayTasks.length }} {{ text('open tasks', 'مهام مفتوحة') }}</span
-            >
-            <a class="card__link" routerLink="/company/tasks">{{ text('Tasks', 'المهام') }}</a>
-          </div>
-          <div class="events">
-            @for (t of d.todayTasks; track t.id) {
-              <a class="event" routerLink="/company/tasks">
-                <span class="event__time">{{ priorityName(t.priority) }}</span>
-                <span class="event__bar" [style.background]="priorityColor(t.priority)"></span>
-                <span class="event__text">
-                  <span class="event__title">{{ local(t.title) }}</span>
-                  <span class="event__detail">{{
-                    t.assignee ?? text('Unassigned', 'غير مسند')
-                  }}</span>
-                </span>
-              </a>
-            } @empty {
-              <p class="empty">
-                {{ text('No open tasks due today.', 'لا توجد مهام مفتوحة مستحقة اليوم.') }}
-              </p>
-            }
-          </div>
-        </section>
-      }
-    </div>
-
-    <!-- Row 2: scored leads + attention / inventory -->
-    <div class="row">
-      @if (d.scoredLeads !== null) {
-        <section class="card card--wide">
-          <div class="card__head">
-            <h2>{{ text('Top leads', 'أهم العملاء') }}</h2>
-            <span class="card__meta">{{
-              text('Highest manual scores · open leads', 'أعلى تقييمات يدوية · عملاء مفتوحون')
-            }}</span>
-            <a class="card__link" routerLink="/company/leads">{{
-              text('All leads', 'كل العملاء')
-            }}</a>
-          </div>
-          <div class="leadsWrap">
-            <div class="leads">
-              <div class="leads__row leads__row--head">
+      <div class="row">
+        @if (d.scoredLeads !== null) {
+          <section class="card box box--wide">
+            <div class="c-head">
+              <h2>{{ text('Top leads', 'أهم العملاء') }}</h2>
+              <span class="muted small">{{ text('sorted by score', 'مرتبة حسب التقييم') }}</span>
+              <a class="c-link" routerLink="/company/leads">{{
+                text('All leads', 'كل العملاء')
+              }}</a>
+            </div>
+            <div class="scroll-x">
+              <div class="lgrid lhead">
                 <span>{{ text('Contact', 'العميل') }}</span>
-                <span>{{ text('Wants', 'يبحث عن') }}</span>
-                <span>{{ text('Budget', 'الميزانية') }}</span>
+                <span>{{ text('Looking for', 'يبحث عن') }}</span>
+                <span class="end">{{ text('Budget', 'الميزانية') }}</span>
                 <span>{{ text('Owner', 'المسؤول') }}</span>
                 <span class="end">{{ text('Score', 'التقييم') }}</span>
               </div>
               @for (l of d.scoredLeads; track l.id) {
-                <a class="leads__row" routerLink="/company/leads" [queryParams]="{ leadId: l.id }">
-                  <span class="lead__who">
-                    <span class="lead__avatar">{{ initials(l.name) }}</span>
-                    <span class="lead__name">{{ local(l.name) }}</span>
+                <a class="lgrid lrow" routerLink="/company/leads" [queryParams]="{ leadId: l.id }">
+                  <span class="who">
+                    <span class="avatar">{{ initials(l.name) }}</span>
+                    <span class="strong ell">{{ local(l.name) }}</span>
                   </span>
-                  <span class="lead__want">{{ local(l.want) }}</span>
-                  <span class="mono">{{ api.money(l.budgetMinor) }}</span>
-                  <span class="muted">{{ l.owner ?? text('Unassigned', 'غير مسند') }}</span>
-                  <span class="mono end lead__score" [style.color]="scoreColor(l.score)">{{
+                  <span class="ell muted2">{{ local(l.want) }}</span>
+                  <span class="mono small end">{{ api.money(l.budgetMinor) }}</span>
+                  <span class="small muted ell">{{
+                    l.owner ?? text('Unassigned', 'غير مسند')
+                  }}</span>
+                  <span class="mono strong end" [style.color]="scoreColor(l.score)">{{
                     l.score
                   }}</span>
                 </a>
               } @empty {
-                <p class="empty">
+                <p class="muted empty">
                   {{
                     text(
                       'No open leads have a recorded score.',
@@ -241,29 +220,80 @@
                 </p>
               }
             </div>
-          </div>
-        </section>
-      }
+          </section>
+        }
 
-      <div class="card--narrow stack">
-        <section class="card">
-          <div class="card__head">
+        <div class="box stack">
+          @if (team().length) {
+            <section class="card">
+              <div class="c-head">
+                <h2>{{ text('Team · this quarter', 'الفريق · هذا الربع') }}</h2>
+                <span class="muted small">{{ text('signed volume', 'المبيعات الموقعة') }}</span>
+              </div>
+              @for (a of team(); track a.rank) {
+                <div class="rank">
+                  <span class="rank__n mono">{{ a.rank }}</span>
+                  <span class="cell">
+                    <span class="rank__row">
+                      <span class="strong ell">{{ a.name }}</span>
+                      <span class="sub">{{ a.deals }} {{ text('deals', 'صفقات') }}</span>
+                    </span>
+                    <span class="track"><span [style.width]="a.w"></span></span>
+                  </span>
+                  <span class="mono small">{{ a.vol }}</span>
+                </div>
+              }
+            </section>
+          }
+          @if (events() !== null && d.todayTasks !== null) {
+            <section class="card">
+              <div class="c-head">
+                <h2>{{ text('Tasks', 'المهام') }}</h2>
+                <span class="muted small"
+                  >{{ d.todayTasks.length }} {{ text('due today', 'مستحقة اليوم') }}</span
+                >
+                <a class="c-link" routerLink="/company/tasks">{{ text('View all', 'عرض الكل') }}</a>
+              </div>
+              @for (t of d.todayTasks.slice(0, 6); track t.id) {
+                <a class="task" routerLink="/company/tasks">
+                  <span class="task__dot" [style.background]="priorityColor(t.priority)"></span>
+                  <span class="cell">
+                    <span class="ell">{{ local(t.title) }}</span>
+                    <span class="sub"
+                      >{{ priorityName(t.priority) }} ·
+                      {{ t.assignee ?? text('Unassigned', 'غير مسند') }}</span
+                    >
+                  </span>
+                </a>
+              } @empty {
+                <p class="muted empty">
+                  {{ text('No open tasks due today.', 'لا توجد مهام مفتوحة مستحقة اليوم.') }}
+                </p>
+              }
+            </section>
+          }
+        </div>
+      </div>
+
+      <div class="row">
+        <section class="card box">
+          <div class="c-head">
             <h2>{{ text('Needs attention', 'تحتاج إلى متابعة') }}</h2>
             @if (d.alerts.length) {
-              <span class="pill">{{ d.alerts.length }}</span>
+              <span class="count mono">{{ d.alerts.length }}</span>
             }
           </div>
           @for (a of d.alerts; track a.id) {
             <a class="alert" [routerLink]="a.route">
-              <span class="alert__count mono">{{ a.count }}</span>
-              <span class="alert__text">{{ alertName(a.id) }}</span>
+              <span class="alert__n mono">{{ a.count }}</span>
+              <span class="ell">{{ alertName(a.id) }}</span>
               <span class="alert__go">›</span>
             </a>
           } @empty {
-            <p class="empty">
+            <p class="muted empty">
               {{
                 text(
-                  'No alerts in the modules you can access.',
+                  'All clear in the modules you can access.',
                   'لا توجد تنبيهات في الوحدات المسموح لك بها.'
                 )
               }}
@@ -271,8 +301,8 @@
           }
           @for (l of d.attentionLeads ?? []; track l.id) {
             <a class="alert" routerLink="/company/leads" [queryParams]="{ leadId: l.id }">
-              <span class="alert__count mono">{{ l.attempts }}</span>
-              <span class="alert__text"
+              <span class="alert__n mono">{{ l.attempts }}</span>
+              <span class="ell"
                 >{{ l.reference }} · {{ local(l.name) }} ·
                 {{ text('reassignment attempts', 'محاولات إعادة إسناد') }}</span
               >
@@ -282,18 +312,18 @@
         </section>
 
         @if (d.inventory; as inventory) {
-          <section class="card">
-            <div class="card__head">
+          <section class="card box">
+            <div class="c-head">
               <h2>{{ text('Inventory', 'المخزون') }}</h2>
-              <span class="card__meta">{{ text('All segments', 'كل القطاعات') }}</span>
-              <a class="card__link" routerLink="/company/units">{{ text('Units', 'الوحدات') }}</a>
+              <span class="muted small">{{ text('all segments', 'كل القطاعات') }}</span>
+              <a class="c-link" routerLink="/company/units">{{ text('Units', 'الوحدات') }}</a>
             </div>
             <div class="inv">
               @for (s of ['available', 'hold', 'reserved', 'under_contract', 'sold']; track s) {
                 <a class="inv__cell" routerLink="/company/units">
-                  <span class="inv__label">{{
+                  <span class="sub">{{
                     text(
-                      s.replaceAll('_', ' '),
+                      s === 'under_contract' ? 'Under contract' : s[0].toUpperCase() + s.slice(1),
                       s === 'available'
                         ? 'متاح'
                         : s === 'hold'
@@ -305,17 +335,18 @@
                               : 'تحت التعاقد'
                     )
                   }}</span>
-                  <span class="inv__n mono">{{ inventory[s] }}</span>
+                  <span class="inv__n mono">{{ inventory[s] ?? 0 }}</span>
                 </a>
               }
             </div>
           </section>
         }
       </div>
-    </div>
 
-    <p class="fine">
-      {{ d.today }} · {{ d.timeZone }} · {{ text('As of', 'آخر تحديث') }} {{ d.asOf }}
-    </p>
+      <p class="muted small">
+        {{ text('Contract values, not cash collections.', 'قيم عقود وليست تحصيلات نقدية.') }}
+        {{ d.timeZone }} · {{ text('As of', 'آخر تحديث') }} {{ d.asOf }}
+      </p>
+    </div>
   }
 </div>

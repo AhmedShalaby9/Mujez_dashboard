@@ -256,15 +256,31 @@ a.sidebar__item:hover {
   background: #fff;
 }
 
+.topbar__menuBtn,
+.topbar__switcher,
+.topbar__btn,
+.topbar__iconBtn,
+.topbar__profileBtn {
+  border: 1px solid #c4c4be;
+  border-radius: 9px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.topbar__switcher,
+.topbar__btn,
+.topbar__iconBtn,
+.topbar__profileBtn {
+  &:hover {
+    background: #f6f6f3;
+  }
+}
+
 .topbar__menuBtn {
   display: none;
   flex: none;
   width: 32px;
   height: 30px;
-  border: 1px solid #c4c4be;
-  border-radius: 9px;
-  background: #fff;
-  cursor: pointer;
   font-size: 15px;
 }
 
@@ -275,17 +291,9 @@ a.sidebar__item:hover {
   gap: 8px;
   height: 30px;
   padding: 0 10px;
-  border: 1px solid #c4c4be;
-  border-radius: 9px;
-  background: #fff;
-  cursor: pointer;
   font-size: 12px;
   color: #111113;
   white-space: nowrap;
-
-  &:hover {
-    background: #f6f6f3;
-  }
 }
 
 .topbar__switcherMark {
@@ -341,15 +349,7 @@ a.sidebar__item:hover {
 .topbar__btn {
   height: 30px;
   padding: 0 10px;
-  border: 1px solid #c4c4be;
-  border-radius: 9px;
-  background: #fff;
   font-size: 12px;
-  cursor: pointer;
-
-  &:hover {
-    background: #f6f6f3;
-  }
 }
 
 .topbar__menuWrap {
@@ -360,17 +360,9 @@ a.sidebar__item:hover {
   position: relative;
   width: 32px;
   height: 30px;
-  border: 1px solid #c4c4be;
-  border-radius: 9px;
-  background: #fff;
-  cursor: pointer;
   display: grid;
   place-items: center;
   color: #45454a;
-
-  &:hover {
-    background: #f6f6f3;
-  }
 }
 
 .topbar__badge {
@@ -395,15 +387,7 @@ a.sidebar__item:hover {
   gap: 8px;
   height: 30px;
   padding: 0 8px;
-  border: 1px solid #c4c4be;
-  border-radius: 9px;
-  background: #fff;
-  cursor: pointer;
   font-size: 12px;
-
-  &:hover {
-    background: #f6f6f3;
-  }
 }
 
 .topbar__profileAvatar {
@@ -786,6 +770,16 @@ a.sidebar__item:hover {
   gap: 6px;
 }
 
+.chip,
+.btn--ghost {
+  border: 1px solid #c4c4be;
+  background: #fff;
+
+  &:hover {
+    background: #f6f6f3;
+  }
+}
+
 .chip {
   height: 28px;
   padding: 0 11px;
@@ -793,14 +787,8 @@ a.sidebar__item:hover {
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
-  border: 1px solid #c4c4be;
-  background: #fff;
   color: #45454a;
   font-family: inherit;
-
-  &:hover {
-    background: #f6f6f3;
-  }
 }
 
 .chip--active {
@@ -822,13 +810,7 @@ a.sidebar__item:hover {
 }
 
 .btn--ghost {
-  border: 1px solid #c4c4be;
-  background: #fff;
   color: #111113;
-
-  &:hover {
-    background: #f6f6f3;
-  }
 }
 
 .btn--primary {

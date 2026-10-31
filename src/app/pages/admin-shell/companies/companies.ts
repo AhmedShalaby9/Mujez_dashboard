@@ -1,6 +1,8 @@
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CompaniesApi } from '../../../companies-api.service';
+import { SubscriptionsApi } from '../../../subscriptions-api.service';
+import { FeaturesApi } from '../../../features-api.service';
 import { AuthService } from '../../../auth.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { AdminUiState, type Lang } from '../admin-ui-state';
@@ -8,9 +10,25 @@ import { AdminUiState, type Lang } from '../admin-ui-state';
 type CompanyType = 'brokerage' | 'developer' | 'property_mgmt' | 'hybrid';
 type CompanyStatus = 'pending' | 'trial' | 'active' | 'suspended' | 'expired' | 'archived';
 type Plan = 'starter' | 'pro' | 'business' | 'enterprise';
-type SortKey = 'name' | 'status' | 'plan' | 'type' | 'city' | 'users' | 'mrr' | 'activity';
+type SortKey =
+  'name' | 'status' | 'plan' | 'type' | 'city' | 'users' | 'mrr' | 'activity' | 'created';
 type WsMode = 'read' | 'manage';
 type ConfirmKind = 'suspend' | 'reactivate' | 'archive';
+type Tab =
+  'all' | 'active' | 'trial' | 'pending' | 'pastdue' | 'suspended' | 'expired' | 'archived';
+type SubStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'expired' | 'suspended';
+type ReasonKind = 'payment' | 'security' | 'terms' | 'request';
+interface Resource {
+  used: number | null;
+  limit: number | null;
+  measured: boolean;
+}
+interface Usage {
+  id: string;
+  users: Resource;
+  listings: Resource;
+  storage: Resource;
+}
 
 interface Company {
   slug: string;
@@ -96,14 +114,45 @@ const STATUS_LABEL: Record<Lang, Record<CompanyStatus, string>> = {
   },
 };
 
-const STATUS_COLOR: Record<CompanyStatus, { bg: string; fg: string }> = {
-  pending: { bg: '#eeeeea', fg: '#45454a' },
-  trial: { bg: '#eeeeea', fg: '#111113' },
-  active: { bg: '#e7f5ec', fg: '#1e6b3e' },
-  suspended: { bg: '#fbe7e3', fg: '#a23624' },
-  expired: { bg: '#fcf2de', fg: '#83570c' },
-  archived: { bg: '#eeeeea', fg: '#6e6e73' },
+const STATUS_COLOR: Record<CompanyStatus, { bg: string; fg: string; dot: string }> = {
+  pending: { bg: '#FCF2DE', fg: '#83570C', dot: '#D99A28' },
+  trial: { bg: '#EAEFFD', fg: '#2E47A8', dot: '#5B78E5' },
+  active: { bg: '#E7F5EC', fg: '#1E6B3E', dot: '#2FA35F' },
+  suspended: { bg: '#FBE7E3', fg: '#A23624', dot: '#E2553B' },
+  expired: { bg: '#F1F1ED', fg: '#45454A', dot: '#8A8A90' },
+  archived: { bg: '#F1F1ED', fg: '#6E6E73', dot: '#B4B4AE' },
 };
+
+const SUB_LABEL: Record<SubStatus, [string, string]> = {
+  active: ['Paid', 'مدفوع'],
+  trialing: ['Trialing', 'تجريبي'],
+  past_due: ['Past due', 'متأخر'],
+  canceled: ['Canceled', 'ملغي'],
+  expired: ['Expired', 'منتهي'],
+  suspended: ['Suspended', 'موقوف'],
+};
+const SUB_COLOR: Record<SubStatus, string> = {
+  active: '#1E6B3E',
+  trialing: '#2E47A8',
+  past_due: '#83570C',
+  canceled: '#6E6E73',
+  expired: '#6E6E73',
+  suspended: '#A23624',
+};
+const REASONS: Record<ReasonKind, [string, string]> = {
+  payment: ['Non-payment', 'عدم السداد'],
+  security: ['Security review', 'مراجعة أمنية'],
+  terms: ['Terms violation', 'مخالفة الشروط'],
+  request: ['Customer request', 'طلب العميل'],
+};
+const LOGO: Array<[string, string]> = [
+  ['#EEF5D6', '#3F5A0E'],
+  ['#E6EEFB', '#274A93'],
+  ['#F6E8DE', '#8A4A1E'],
+  ['#EDE7F8', '#55349A'],
+  ['#E3F2EF', '#1D6458'],
+  ['#F7E4E7', '#933045'],
+];
 
 interface Copy {
   eyebrow: string;
@@ -366,21 +415,42 @@ const COPY: Record<Lang, Copy> = {
   },
 };
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 8;
 
 @Component({
   selector: 'app-companies',
   imports: [FormsModule],
   templateUrl: './companies.html',
-  styleUrl: './companies.scss',
+  styleUrls: ['../admin-ui.scss', './companies.scss'],
 })
 export class Companies {
   authDefaults() {
     return this.auth.request('/admin/api/v1/platform-defaults');
   }
   private readonly api = inject(CompaniesApi);
+  private readonly subsApi = inject(SubscriptionsApi);
+  private readonly featuresApi = inject(FeaturesApi);
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  /** Subscription status per company public ID (needs `sub.manage`; empty otherwise). */
+  readonly subs = signal<Record<string, SubStatus>>({});
+  /** Usage/limits per company public ID (needs `usage`; empty otherwise). */
+  readonly usage = signal<Record<string, Usage>>({});
+  private can(p: string) {
+    return !!this.auth.user()?.permissions?.includes(p);
+  }
+  private async loadExtras() {
+    if (this.can('sub.manage'))
+      try {
+        const list = await this.subsApi.subscriptions<{ companyId: string; status: SubStatus }>();
+        this.subs.set(Object.fromEntries(list.map((x) => [x.companyId, x.status])));
+      } catch {}
+    if (this.can('usage'))
+      try {
+        const rows: Usage[] = await this.featuresApi.usage();
+        this.usage.set(Object.fromEntries(rows.map((r) => [r.id, r])));
+      } catch {}
+  }
   readonly loading = signal(false);
   readonly error = signal('');
   readonly saving = signal(false);
@@ -398,7 +468,14 @@ export class Companies {
     plan: 'starter',
   };
   constructor() {
-    void this.reload();
+    void this.reload().then(() => this.openFromUrl());
+    void this.loadExtras();
+  }
+  /** `/admin/companies?company=MJ-…` opens that company's drawer (used by Onboarding). */
+  private openFromUrl() {
+    const id = this.router.parseUrl(this.router.url).queryParams['company'];
+    const c = id && this.companies().find((x) => x.id === id);
+    if (c) this.openView(c);
   }
   async reload() {
     this.loading.set(true);
@@ -605,6 +682,13 @@ export class Companies {
     }
   }
   readonly reason = signal('');
+  readonly reasonKind = signal<ReasonKind>('payment');
+  readonly ack = signal(false);
+  readonly tried = signal(false);
+  readonly reasonKinds = Object.keys(REASONS) as ReasonKind[];
+  reasonLabel(k: ReasonKind) {
+    return REASONS[k][this.lang() === 'ar' ? 1 : 0];
+  }
   private readonly ui = inject(AdminUiState);
 
   readonly lang = computed<Lang>(() => this.ui.lang());
@@ -622,14 +706,14 @@ export class Companies {
   readonly planTypes: Plan[] = ['starter', 'pro', 'business', 'enterprise'];
   readonly wsDurations: Array<30 | 60 | 120> = [30, 60, 120];
 
-  private readonly companies = signal<Company[]>([]);
+  readonly companies = signal<Company[]>([]);
 
   readonly search = signal('');
-  readonly statusFilter = signal<CompanyStatus | 'all'>('all');
+  readonly statusFilter = signal<Tab>('all');
   readonly typeFilter = signal<CompanyType | 'all'>('all');
   readonly planFilter = signal<Plan | 'all'>('all');
-  readonly sortKey = signal<SortKey>('name');
-  readonly sortDir = signal<'asc' | 'desc'>('asc');
+  readonly sortKey = signal<SortKey>('created');
+  readonly sortDir = signal<'asc' | 'desc'>('desc');
   readonly page = signal(1);
 
   readonly viewing = signal<Company | null>(null);
@@ -662,7 +746,7 @@ export class Companies {
     const type = this.typeFilter();
     const plan = this.planFilter();
     return this.companies().filter((c) => {
-      if (status !== 'all' && c.status !== status) return false;
+      if (!this.inTab(c, status)) return false;
       if (type !== 'all' && c.type !== type) return false;
       if (plan !== 'all' && c.plan !== plan) return false;
       if (!q) return true;
@@ -716,6 +800,10 @@ export class Companies {
           av = a.lastActivity;
           bv = b.lastActivity;
           break;
+        case 'created':
+          av = a.createdAt;
+          bv = b.createdAt;
+          break;
       }
       if (av < bv) return -1 * dir;
       if (av > bv) return 1 * dir;
@@ -756,7 +844,7 @@ export class Companies {
     return STATUS_LABEL[this.lang()][s];
   }
 
-  statusColor(s: CompanyStatus): { bg: string; fg: string } {
+  statusColor(s: CompanyStatus): { bg: string; fg: string; dot: string } {
     return STATUS_COLOR[s];
   }
 
@@ -764,11 +852,15 @@ export class Companies {
     return this.lang() === 'ar' ? c.nameAr : c.nameEn;
   }
 
-  private readonly logoPalette = ['#111113', '#8BB33A', '#111113', '#83570c', '#1e6b3e', '#e2553b'];
-
-  logoBg(c: Company): string {
+  private logo(c: Company): [string, string] {
     const code = c.id.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-    return this.logoPalette[code % this.logoPalette.length];
+    return LOGO[code % LOGO.length];
+  }
+  logoBg(c: Company): string {
+    return this.logo(c)[0];
+  }
+  logoFg(c: Company): string {
+    return this.logo(c)[1];
   }
 
   logoInitials(c: Company): string {
@@ -796,7 +888,7 @@ export class Companies {
     this.page.set(1);
   }
 
-  setStatusFilter(v: CompanyStatus | 'all'): void {
+  setStatusFilter(v: Tab): void {
     this.statusFilter.set(v);
     this.page.set(1);
   }
@@ -811,8 +903,102 @@ export class Companies {
     this.page.set(1);
   }
 
-  filterByKpiStatus(status: CompanyStatus | 'all'): void {
-    this.setStatusFilter(status);
+  inTab(c: Company, t: Tab) {
+    return t === 'all' || (t === 'pastdue' ? this.subs()[c.id] === 'past_due' : c.status === t);
+  }
+  readonly tabs = computed(() => {
+    const ar = this.lang() === 'ar';
+    const list: Array<[Tab, string, string]> = [
+      ['all', 'All', 'الكل'],
+      ['active', 'Active', 'نشطة'],
+      ['trial', 'Trial', 'تجريبية'],
+      ['pending', 'Pending', 'قيد الانتظار'],
+      ['pastdue', 'Past due', 'متأخرة السداد'],
+      ['suspended', 'Suspended', 'موقوفة'],
+      ['expired', 'Expired', 'منتهية'],
+      ['archived', 'Archived', 'مؤرشفة'],
+    ];
+    return list
+      .filter(([k]) => k !== 'pastdue' || this.can('sub.manage'))
+      .map(([k, en, a]) => ({
+        k,
+        label: ar ? a : en,
+        n: this.companies().filter((c) => this.inTab(c, k)).length,
+      }));
+  });
+  readonly totalUsers = computed(() => this.companies().reduce((n, c) => n + (c.users || 0), 0));
+  readonly hasFilters = computed(
+    () =>
+      !!this.search().trim() ||
+      this.statusFilter() !== 'all' ||
+      this.typeFilter() !== 'all' ||
+      this.planFilter() !== 'all',
+  );
+  clearFilters(): void {
+    this.search.set('');
+    this.statusFilter.set('all');
+    this.typeFilter.set('all');
+    this.planFilter.set('all');
+    this.page.set(1);
+  }
+  subStatus(c: Company): { label: string; fg: string } | null {
+    const st = this.subs()[c.id];
+    return st ? { label: SUB_LABEL[st][this.lang() === 'ar' ? 1 : 0], fg: SUB_COLOR[st] } : null;
+  }
+  /** Seat usage bar for the Users column; null when no limit is known. */
+  seats(c: Company): { limit: string; w: string; color: string } | null {
+    const u = this.usage()[c.id]?.users;
+    if (!u) return null;
+    if (u.limit === null) return { limit: '∞', w: '12%', color: '#111113' };
+    const p = u.limit ? c.users / u.limit : 1;
+    return {
+      limit: String(u.limit),
+      w: Math.min(100, p * 100).toFixed(0) + '%',
+      color: p >= 0.95 ? '#E2553B' : p >= 0.8 ? '#D99A28' : '#111113',
+    };
+  }
+  usageBars(c: Company) {
+    const u = this.usage()[c.id];
+    if (!u) return [];
+    const ar = this.lang() === 'ar';
+    const rows: Array<[string, Resource, string]> = [
+      [ar ? 'المستخدمون' : 'Users', u.users, ''],
+      [ar ? 'الوحدات' : 'Listings', u.listings, ''],
+      [ar ? 'التخزين' : 'Storage', u.storage, ' GB'],
+    ];
+    return rows.map(([label, r, unit]) => {
+      const measured = r.measured && r.used !== null;
+      const p = measured && r.limit ? r.used! / r.limit : 0;
+      return {
+        label,
+        value: measured
+          ? r.used!.toLocaleString('en-US') +
+            unit +
+            ' / ' +
+            (r.limit === null ? '∞' : r.limit.toLocaleString('en-US') + unit)
+          : ar
+            ? 'غير مقاس'
+            : 'Not measured',
+        w: measured ? (r.limit === null ? 12 : Math.min(100, p * 100)).toFixed(0) + '%' : '0%',
+        color: p >= 0.9 ? '#E2553B' : p >= 0.8 ? '#D99A28' : '#111113',
+        fg: p >= 0.9 ? '#A23624' : '#111113',
+      };
+    });
+  }
+  date(v: string): string {
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return v;
+    return new Intl.DateTimeFormat(this.lang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(d);
+  }
+  goCreate(): void {
+    void this.router.navigateByUrl('/admin/onboarding/new');
+  }
+  goSubscriptions(): void {
+    void this.router.navigateByUrl('/admin/subscriptions');
   }
 
   toggleSort(key: SortKey): void {
@@ -917,7 +1103,15 @@ export class Companies {
 
   askConfirm(c: Company, kind: ConfirmKind): void {
     this.confirming.set({ company: c, kind });
+    this.reason.set('');
+    this.reasonKind.set('payment');
+    this.ack.set(false);
+    this.tried.set(false);
     this.kebabFor.set(null);
+  }
+  confirmReady(): boolean {
+    const cf = this.confirming();
+    return this.reason().trim().length >= 10 && (cf?.kind === 'reactivate' || this.ack());
   }
 
   cancelConfirm(): void {
@@ -927,18 +1121,34 @@ export class Companies {
   async performConfirm(): Promise<void> {
     const target = this.confirming();
     if (!target || this.saving()) return;
+    if (!this.confirmReady()) {
+      this.tried.set(true);
+      return;
+    }
     this.saving.set(true);
     this.error.set('');
+    // The API takes one free-text reason; the category is prefixed until it has its own field.
+    const note = this.reason().trim();
+    const reason =
+      target.kind === 'reactivate' ? note : `[${REASONS[this.reasonKind()][0]}] ${note}`;
     try {
       await this.api.change(target.company.id, 'status', {
         action: target.kind,
         version: target.company.version,
-        reason: this.reason(),
+        reason: reason.slice(0, 500),
       });
+      const name = this.companyName(target.company);
       this.confirming.set(null);
       this.reason.set('');
       this.viewing.set(null);
       await this.reload();
+      this.showToast(
+        target.kind === 'suspend'
+          ? this.L().toastSuspended(name)
+          : target.kind === 'reactivate'
+            ? this.L().toastReactivated(name)
+            : this.L().toastArchived(name),
+      );
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to change status');
     } finally {

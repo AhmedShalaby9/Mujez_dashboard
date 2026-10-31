@@ -1,4 +1,6 @@
 import { CompaniesApi } from '../../../companies-api.service';
+import { SubscriptionsApi } from '../../../subscriptions-api.service';
+import { Router } from '@angular/router';
 import { AuthService } from '../../../auth.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { AdminUiState, type Lang } from '../admin-ui-state';
@@ -7,6 +9,8 @@ type OnboardStatus = 'trial' | 'pending';
 
 interface OnboardingCompany {
   version: number;
+  slug: string;
+  plan: string;
   completedKeys: string[];
   id: string;
   nameEn: string;
@@ -23,14 +27,28 @@ interface StepDef {
 }
 
 const STEPS: StepDef[] = [
-  { labelEn: 'Admin contact verified', labelAr: 'التحقق من جهة اتصال المسؤول' },
-  { labelEn: 'Import inventory', labelAr: 'استيراد المخزون' },
-  { labelEn: 'Invite team', labelAr: 'دعوة الفريق' },
-  { labelEn: 'Connect lead sources', labelAr: 'ربط مصادر العملاء' },
+  { labelEn: 'Admin activated', labelAr: 'تفعيل المدير' },
+  { labelEn: 'Inventory imported', labelAr: 'استيراد الوحدات' },
+  { labelEn: 'Team invited', labelAr: 'دعوة الفريق' },
+  { labelEn: 'Lead sources connected', labelAr: 'ربط مصادر العملاء' },
   { labelEn: 'First deal', labelAr: 'أول صفقة' },
 ];
 
 const STUCK_THRESHOLD = 7;
+const PLAN_LABEL: Record<string, [string, string]> = {
+  starter: ['Starter', 'أساسية'],
+  pro: ['Pro', 'احترافية'],
+  business: ['Business', 'أعمال'],
+  enterprise: ['Enterprise', 'مؤسسات'],
+};
+const LOGO: Array<[string, string]> = [
+  ['#EEF5D6', '#3F5A0E'],
+  ['#E6EEFB', '#274A93'],
+  ['#F6E8DE', '#8A4A1E'],
+  ['#EDE7F8', '#55349A'],
+  ['#E3F2EF', '#1D6458'],
+  ['#F7E4E7', '#933045'],
+];
 
 interface Copy {
   eyebrow: string;
@@ -72,7 +90,7 @@ const COPY: Record<Lang, Copy> = {
   },
   ar: {
     eyebrow: 'الشركات',
-    title: 'التأهيل',
+    title: 'التهيئة',
     statusAll: 'الكل',
     statusTrial: 'تجريبية',
     statusPending: 'قيد الانتظار',
@@ -93,17 +111,78 @@ const COPY: Record<Lang, Copy> = {
 @Component({
   selector: 'app-onboarding',
   templateUrl: './onboarding.html',
-  styleUrl: './onboarding.scss',
+  styleUrls: ['../admin-ui.scss', './onboarding.scss'],
 })
 export class Onboarding {
   private readonly api = inject(CompaniesApi);
+  private readonly subsApi = inject(SubscriptionsApi);
+  private readonly router = inject(Router);
   readonly auth = inject(AuthService);
+  /** Trial end (subscription renewsOn) per company, for trialing subscriptions. Needs `sub.manage`. */
+  readonly trialEnds = signal<Record<string, string>>({});
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly error = signal('');
   readonly stepKeys = ['admin_contact', 'inventory', 'team', 'lead_sources', 'first_deal'];
   constructor() {
     void this.reload();
+    void this.loadTrials();
+  }
+  private async loadTrials() {
+    if (!this.auth.user()?.permissions?.includes('sub.manage')) return;
+    try {
+      const list = await this.subsApi.subscriptions<{
+        companyId: string;
+        status: string;
+        renewsOn: string;
+      }>();
+      this.trialEnds.set(
+        Object.fromEntries(
+          list.filter((x) => x.status === 'trialing').map((x) => [x.companyId, x.renewsOn]),
+        ),
+      );
+    } catch {}
+  }
+  daysLeft(c: OnboardingCompany): number | null {
+    const end = this.trialEnds()[c.id];
+    if (!end) return null;
+    return Math.ceil((new Date(end).getTime() - Date.now()) / 86400000);
+  }
+  trialEndLabel(c: OnboardingCompany): string {
+    const end = this.trialEnds()[c.id];
+    if (!end) return '—';
+    const d = this.daysLeft(c)!;
+    const ar = this.lang() === 'ar';
+    const when = new Intl.DateTimeFormat(ar ? 'ar-EG-u-nu-latn' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+    }).format(new Date(end));
+    return d < 0 ? when : when + ' · ' + (ar ? `${d} يوم` : `${d}d`);
+  }
+  readonly endingSoon = computed(
+    () =>
+      this.companies().filter((c) => {
+        const d = this.daysLeft(c);
+        return d !== null && d >= 0 && d <= 7;
+      }).length,
+  );
+  planName(c: OnboardingCompany) {
+    return PLAN_LABEL[c.plan]?.[this.lang() === 'ar' ? 1 : 0] ?? c.plan ?? '—';
+  }
+  pct(c: OnboardingCompany) {
+    return Math.round((c.completedSteps / this.totalSteps) * 100) + '%';
+  }
+  nextStep(c: OnboardingCompany): string {
+    const i = this.stepKeys.findIndex((k) => !c.completedKeys.includes(k));
+    if (i < 0) return this.lang() === 'ar' ? 'اكتمل الإعداد' : 'Setup complete';
+    return (this.lang() === 'ar' ? 'التالي: ' : 'Next: ') + this.stepLabel(this.steps[i]);
+  }
+  /** Pending companies still need the owner invite; this opens the owner card in Companies. */
+  openInvite(c: OnboardingCompany) {
+    void this.router.navigateByUrl('/admin/companies?company=' + encodeURIComponent(c.id));
+  }
+  goCreate() {
+    void this.router.navigateByUrl('/admin/onboarding/new');
   }
   async reload() {
     this.loading.set(true);
@@ -205,11 +284,15 @@ export class Onboarding {
     return 'pending';
   }
 
-  private readonly logoPalette = ['#111113', '#8BB33A', '#111113', '#83570c', '#1e6b3e', '#e2553b'];
-
-  logoBg(c: OnboardingCompany): string {
+  private logo(c: OnboardingCompany): [string, string] {
     const code = c.id.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-    return this.logoPalette[code % this.logoPalette.length];
+    return LOGO[code % LOGO.length];
+  }
+  logoBg(c: OnboardingCompany): string {
+    return this.logo(c)[0];
+  }
+  logoFg(c: OnboardingCompany): string {
+    return this.logo(c)[1];
   }
 
   logoInitials(c: OnboardingCompany): string {
@@ -233,8 +316,13 @@ export class Onboarding {
     this.viewing.set(null);
   }
 
+  /** Static until the backend has a reminder endpoint (see BACKEND_MISSING.md). */
   sendReminder(c: OnboardingCompany): void {
-    this.error.set('Email reminders are not configured yet.');
+    this.showToast(
+      this.lang() === 'ar'
+        ? `التذكيرات غير متصلة بعد — لم يُرسل شيء إلى ${this.name(c)}.`
+        : `Reminders aren't connected yet — nothing was sent to ${this.name(c)}.`,
+    );
   }
 
   private showToast(msg: string): void {

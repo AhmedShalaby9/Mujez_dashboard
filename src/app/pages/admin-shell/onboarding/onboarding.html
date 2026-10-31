@@ -1,220 +1,283 @@
-@if (loading()) {
-  <p role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading onboarding…' }}</p>
-}
-@if (error()) {
-  <p role="alert">
-    {{ error() }}
-    <button class="btn" (click)="reload()">{{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}</button>
-  </p>
-}
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-  </div>
-</div>
-
-<section class="kpis">
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.total }}</span>
-    <span class="kpi__value">{{ kpis().total }}</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.avgProgress }}</span>
-    <span class="kpi__value" style="color: #111113">{{ kpis().avgProgress }}</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.stuck }}</span>
-    <span class="kpi__value" style="color: #e2553b">{{ kpis().stuck }}</span>
-  </div>
-</section>
-
-<div class="chip-row">
-  <button
-    type="button"
-    class="chip"
-    [class.chip--active]="statusFilter() === 'all'"
-    (click)="setStatusFilter('all')"
-  >
-    {{ L().statusAll }}
-  </button>
-  <button
-    type="button"
-    class="chip"
-    [class.chip--active]="statusFilter() === 'trial'"
-    (click)="setStatusFilter('trial')"
-  >
-    {{ L().statusTrial }}
-  </button>
-  <button
-    type="button"
-    class="chip"
-    [class.chip--active]="statusFilter() === 'pending'"
-    (click)="setStatusFilter('pending')"
-  >
-    {{ L().statusPending }}
-  </button>
-</div>
-
-<div class="onboard-list">
-  @for (c of filtered(); track c.id) {
-    <section class="onboard-card">
-      <div class="onboard-card__top">
-        <span class="t-logo" [style.background]="logoBg(c)">{{ logoInitials(c) }}</span>
-        <div class="onboard-card__head">
-          <div class="onboard-card__nameRow">
-            <span class="onboard-card__name">{{ name(c) }}</span>
-            <span
-              class="pill"
-              [class.pill--trial]="c.status === 'trial'"
-              [class.pill--pending]="c.status === 'pending'"
-            >
-              {{ statusLabel(c.status) }}
-            </span>
-            @if (isStuck(c)) {
-              <span class="pill pill--stuck">{{ L().stuckBadge(c.stuckDays) }}</span>
-            }
-          </div>
-          <span class="onboard-card__sub"
-            >{{ L().signedUp }}: {{ c.signedUp }} ·
-            {{ L().stepOf(c.completedSteps, totalSteps) }}</span
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ L().title }}</h1>
+      <span>{{
+        lang() === 'ar'
+          ? 'شركات ما زالت تجهز مساحة العمل'
+          : 'Companies still setting up their workspace'
+      }}</span>
+    </div>
+    @if (auth.user()?.permissions?.includes('co.create')) {
+      <div class="head__actions">
+        <button type="button" class="btn btn--dark" (click)="goCreate()">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#C8F169"
+            stroke-width="2.2"
+            stroke-linecap="round"
           >
-        </div>
-        <div class="onboard-card__actions">
-          <button
-            type="button"
-            class="btn btn--ghost"
-            disabled
-            title="Email reminders are not configured"
-          >
-            {{ L().sendReminder }}
-          </button>
-          <button type="button" class="btn btn--primary" (click)="openView(c)">
-            {{ L().view }}
-          </button>
-        </div>
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          {{ lang() === 'ar' ? 'إنشاء شركة' : 'Create company' }}
+        </button>
       </div>
+    }
+  </div>
 
-      <div class="stepper">
-        @for (step of steps; track step.labelEn; let i = $index) {
-          <div class="stepper__item">
-            <div class="stepper__node">
-              <span
-                class="stepper__dot"
-                [class.stepper__dot--done]="stepState(c, i) === 'done'"
-                [class.stepper__dot--current]="stepState(c, i) === 'current'"
-              >
-                @if (stepState(c, i) === 'done') {
-                  ✓
-                } @else {
-                  {{ i + 1 }}
-                }
-              </span>
-              @if (i < totalSteps - 1) {
-                <span
-                  class="stepper__line"
-                  [class.stepper__line--done]="stepState(c, i) === 'done'"
-                ></span>
-              }
-            </div>
-            <span
-              class="stepper__label"
-              [class.stepper__label--current]="stepState(c, i) === 'current'"
-            >
-              {{ stepLabel(step) }}
-            </span>
-          </div>
+  @if (error()) {
+    <p class="note note--bad" role="alert">
+      {{ error() }}
+      <button type="button" class="link" (click)="reload()">
+        {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+      </button>
+    </p>
+  }
+  @if (loading()) {
+    <p class="muted" role="status">
+      {{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading onboarding…' }}
+    </p>
+  }
+
+  <div class="stats">
+    <div class="stat">
+      <span>{{ lang() === 'ar' ? 'قيد التهيئة' : 'In onboarding' }}</span>
+      <b>{{ kpis().total }}</b>
+      <small
+        >{{ kpis().stuck }}
+        {{ lang() === 'ar' ? 'متوقفة أكثر من 7 أيام' : 'stuck > 7 days' }}</small
+      >
+    </div>
+    <div class="stat">
+      <span>{{ lang() === 'ar' ? 'تجارب تنتهي خلال 7 أيام' : 'Trials ending ≤ 7 days' }}</span>
+      @if (auth.user()?.permissions?.includes('sub.manage')) {
+        <b>{{ endingSoon() }}</b>
+        <small>{{ lang() === 'ar' ? 'تحتاج متابعة' : 'need a check-in call' }}</small>
+      } @else {
+        <b>—</b>
+        <small>{{
+          lang() === 'ar' ? 'تتطلب صلاحية الاشتراكات' : 'Needs subscriptions permission'
+        }}</small>
+      }
+    </div>
+    <div class="stat stat--static">
+      <span
+        >{{ lang() === 'ar' ? 'متوسط الوقت لأول صفقة' : 'Median time to first deal'
+        }}<i class="soon">{{ lang() === 'ar' ? 'بيانات تجريبية' : 'Sample' }}</i></span
+      >
+      <b>11 {{ lang() === 'ar' ? 'يوم' : 'days' }}</b>
+      <small>{{ lang() === 'ar' ? 'آخر 90 يومًا' : 'last 90 days' }}</small>
+    </div>
+    <div class="stat stat--static">
+      <span
+        >{{ lang() === 'ar' ? 'تحويل التجربة للدفع' : 'Trial → paid'
+        }}<i class="soon">{{ lang() === 'ar' ? 'بيانات تجريبية' : 'Sample' }}</i></span
+      >
+      <b>58%</b>
+      <small>{{ lang() === 'ar' ? '18 من 31 تجربة' : '18 of 31 trials' }}</small>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="cardHead">
+      <h2>{{ lang() === 'ar' ? 'تقدم الإعداد' : 'Setup progress' }}</h2>
+      <div class="legend">
+        @for (s of steps; track s.labelEn; let i = $index) {
+          <span
+            ><b>{{ i + 1 }}</b
+            >{{ stepLabel(s) }}</span
+          >
         }
       </div>
-    </section>
-  } @empty {
-    <div class="t-empty">
-      <span class="t-empty__title">{{ L().emptyTitle }}</span>
-      <span class="t-empty__sub">{{ L().emptySub }}</span>
     </div>
-  }
+    <div class="chips">
+      @for (f of ['all', 'trial', 'pending']; track f) {
+        <button
+          type="button"
+          class="seg"
+          [class.seg--on]="statusFilter() === f"
+          (click)="setStatusFilter($any(f))"
+        >
+          {{ f === 'all' ? L().statusAll : f === 'trial' ? L().statusTrial : L().statusPending }}
+        </button>
+      }
+    </div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ lang() === 'ar' ? 'الشركة' : 'Company' }}</th>
+            <th>{{ lang() === 'ar' ? 'الباقة' : 'Plan' }}</th>
+            <th>{{ lang() === 'ar' ? 'التقدم' : 'Progress' }}</th>
+            <th>{{ lang() === 'ar' ? 'الحالة' : 'Status' }}</th>
+            <th>{{ lang() === 'ar' ? 'نهاية التجربة' : 'Trial ends' }}</th>
+            <th>
+              {{ lang() === 'ar' ? 'مدير النجاح' : 'Success manager'
+              }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+            </th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of filtered(); track c.id) {
+            <tr (click)="openView(c)">
+              <td>
+                <div class="co">
+                  <span class="logo" [style.background]="logoBg(c)" [style.color]="logoFg(c)">{{
+                    logoInitials(c)
+                  }}</span>
+                  <span class="co__text">
+                    <span class="co__name">{{ name(c) }}</span>
+                    <span class="co__sub mono">{{ c.slug || c.id }}</span>
+                  </span>
+                </div>
+              </td>
+              <td>{{ planName(c) }}</td>
+              <td>
+                <div class="prog">
+                  <div class="prog__steps">
+                    @for (s of steps; track s.labelEn; let i = $index) {
+                      <span
+                        [title]="stepLabel(s)"
+                        [class.on]="stepState(c, i) === 'done'"
+                        [class.cur]="stepState(c, i) === 'current'"
+                      ></span>
+                    }
+                  </div>
+                  <span class="mono prog__pct">{{ pct(c) }}</span>
+                </div>
+                <span class="prog__next">{{ nextStep(c) }}</span>
+              </td>
+              <td>
+                <span
+                  class="pill"
+                  [class.pill--trial]="c.status === 'trial'"
+                  [class.pill--pending]="c.status === 'pending'"
+                  >{{ statusLabel(c.status) }}</span
+                >
+                @if (isStuck(c)) {
+                  <span class="stuck">{{ L().stuckBadge(c.stuckDays) }}</span>
+                }
+              </td>
+              <td [class.late]="(daysLeft(c) ?? 99) <= 4">{{ trialEndLabel(c) }}</td>
+              <td class="muted">{{ lang() === 'ar' ? 'غير مُسند' : 'Unassigned' }}</td>
+              <td (click)="$event.stopPropagation()">
+                @if (c.status === 'pending') {
+                  <button type="button" class="btn btn--sm" (click)="openInvite(c)">
+                    {{ lang() === 'ar' ? 'إعادة إرسال الدعوة' : 'Resend invite' }}
+                  </button>
+                } @else {
+                  <button type="button" class="btn btn--sm" (click)="sendReminder(c)">
+                    {{ L().sendReminder
+                    }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (!loading() && !filtered().length) {
+      <div class="empty">
+        <strong>{{ L().emptyTitle }}</strong
+        ><span>{{ L().emptySub }}</span>
+      </div>
+    }
+  </section>
 </div>
 
 @if (viewing(); as c) {
   <div class="scrim" (click)="closeView()"></div>
   <aside class="drawer" (click)="$event.stopPropagation()">
-    <div class="drawer__header">
-      <span class="t-logo t-logo--lg" [style.background]="logoBg(c)">{{ logoInitials(c) }}</span>
-      <div class="drawer__headerText">
+    <div class="drawer__head">
+      <span class="logo logo--lg" [style.background]="logoBg(c)" [style.color]="logoFg(c)">{{
+        logoInitials(c)
+      }}</span>
+      <div class="drawer__title">
         <span class="drawer__name">{{ name(c) }}</span>
-        <span
-          class="pill"
-          [class.pill--trial]="c.status === 'trial'"
-          [class.pill--pending]="c.status === 'pending'"
-        >
-          {{ statusLabel(c.status) }}
-        </span>
+        <span class="mono muted" dir="ltr">{{ c.id }} · {{ c.slug }}</span>
+        <div>
+          <span
+            class="pill"
+            [class.pill--trial]="c.status === 'trial'"
+            [class.pill--pending]="c.status === 'pending'"
+            >{{ statusLabel(c.status) }}</span
+          >
+        </div>
       </div>
-      <button type="button" class="drawer__close" (click)="closeView()" aria-label="Close">
-        ×
-      </button>
+      <button type="button" class="x" (click)="closeView()" aria-label="Close">×</button>
     </div>
 
     <div class="drawer__body">
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().signedUp }}</span
-        ><span class="drawer__v">{{ c.signedUp }}</span>
+      <div class="sect">
+        <div class="kv">
+          <span>{{ L().signedUp }}</span
+          ><b>{{ c.signedUp.slice(0, 10) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ lang() === 'ar' ? 'الباقة' : 'Plan' }}</span
+          ><b>{{ planName(c) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ lang() === 'ar' ? 'نهاية التجربة' : 'Trial ends' }}</span
+          ><b>{{ trialEndLabel(c) }}</b>
+        </div>
       </div>
-
-      <span class="drawer__stepsTitle">{{ L().drawerSteps }}</span>
-      <div class="drawer__steps">
+      <div class="sect">
+        <span class="sect__label">{{ L().drawerSteps }}</span>
+        <p class="muted">
+          {{
+            lang() === 'ar'
+              ? 'خطوات يتم التحقق منها يدويًا؛ تعليمها لا يرسل دعوات ولا يستورد بيانات.'
+              : 'Manually verified milestones — ticking one does not send invites or import data.'
+          }}
+        </p>
         @for (step of steps; track step.labelEn; let i = $index) {
-          <div class="drawer__step">
-            <span
-              class="stepper__dot"
-              [class.stepper__dot--done]="stepState(c, i) === 'done'"
-              [class.stepper__dot--current]="stepState(c, i) === 'current'"
-            >
-              @if (stepState(c, i) === 'done') {
-                ✓
-              } @else {
-                {{ i + 1 }}
-              }
-            </span>
-            <label
-              ><input
-                type="checkbox"
-                [checked]="stepState(c, i) === 'done'"
-                [disabled]="saving() || !auth.user()?.permissions?.includes('co.create')"
-                (change)="toggleStep(c, i)"
-              />{{ stepLabel(step) }}</label
-            >
-          </div>
+          <label class="step">
+            <input
+              type="checkbox"
+              [checked]="stepState(c, i) === 'done'"
+              [disabled]="saving() || !auth.user()?.permissions?.includes('co.create')"
+              (change)="toggleStep(c, i)"
+            />
+            <span class="step__n" [class.on]="stepState(c, i) === 'done'">{{
+              stepState(c, i) === 'done' ? '✓' : i + 1
+            }}</span>
+            {{ stepLabel(step) }}
+          </label>
         }
       </div>
     </div>
 
-    <div class="drawer__footer">
+    <div class="drawer__foot">
       @if (auth.user()?.permissions?.includes('co.suspend')) {
         <button
-          class="btn btn--primary"
+          type="button"
+          class="btn btn--dark"
           [disabled]="saving()"
           (click)="changeStatus(c, 'activate')"
         >
           {{ lang() === 'ar' ? 'تفعيل الشركة' : 'Activate company' }}
         </button>
       }
-
-      <button
-        type="button"
-        class="btn btn--ghost"
-        disabled
-        title="Email reminders are not configured"
-      >
-        {{ L().sendReminder }}
-      </button>
-      <button type="button" class="btn btn--ghost" (click)="closeView()">
-        {{ L().drawerClose }}
-      </button>
+      @if (c.status === 'pending') {
+        <button type="button" class="btn" (click)="openInvite(c)">
+          {{ lang() === 'ar' ? 'إعادة إرسال الدعوة' : 'Resend invite' }}
+        </button>
+      } @else {
+        <button type="button" class="btn" (click)="sendReminder(c)">
+          {{ L().sendReminder }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+        </button>
+      }
+      <button type="button" class="btn" (click)="closeView()">{{ L().drawerClose }}</button>
     </div>
   </aside>
 }
 
 @if (toast(); as msg) {
-  <div class="toast">{{ msg }}</div>
+  <div class="toast"><span></span>{{ msg }}</div>
 }

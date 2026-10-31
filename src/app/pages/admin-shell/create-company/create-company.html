@@ -1,0 +1,722 @@
+<div class="pg">
+  <div class="top">
+    <button type="button" class="back" [attr.aria-label]="t('Back', 'رجوع')" (click)="cancel()">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#111113"
+        stroke-width="2"
+        stroke-linecap="round"
+        class="flip"
+      >
+        <path d="M15 6l-6 6 6 6" />
+      </svg>
+    </button>
+    <div class="head__text">
+      <h1>{{ t('Create company', 'إنشاء شركة') }}</h1>
+      <span>{{
+        t(
+          'Sets up an isolated workspace and invites the first administrator',
+          'ينشئ مساحة عمل معزولة ويدعو أول مدير'
+        )
+      }}</span>
+    </div>
+  </div>
+
+  @if (!done()) {
+    <div class="wiz">
+      <nav class="rail">
+        @for (s of steps(); track $index; let i = $index) {
+          <button type="button" class="rail__step" [class.on]="step() === i" (click)="go(i)">
+            <span class="rail__n" [class.cur]="step() === i" [class.ok]="i < step()">{{
+              i < step() ? '✓' : i + 1
+            }}</span>
+            <span class="rail__text"
+              ><b>{{ s[0] }}</b
+              ><small>{{ s[1] }}</small></span
+            >
+          </button>
+        }
+      </nav>
+
+      <section class="card panel">
+        <div class="panel__head">
+          <small>{{ t('STEP', 'الخطوة') }} {{ step() + 1 }} / 6</small>
+          <span>{{ steps()[step()][0] }}</span>
+        </div>
+
+        <div class="panel__body">
+          @switch (step()) {
+            @case (0) {
+              <div class="grid">
+                <label class="field">
+                  <span>{{ t('Company name (English)', 'اسم الشركة (إنجليزي)') }} <em>*</em></span>
+                  <input
+                    dir="ltr"
+                    placeholder="Nile Realty"
+                    [class.invalid]="err(0, 'nameEn')"
+                    [value]="f().nameEn"
+                    (input)="set('nameEn', $any($event.target).value)"
+                  />
+                  @if (err(0, 'nameEn')) {
+                    <span class="err">{{ err(0, 'nameEn') }}</span>
+                  }
+                </label>
+                <label class="field">
+                  <span>{{ t('Company name (Arabic)', 'اسم الشركة (عربي)') }} <em>*</em></span>
+                  <input
+                    dir="rtl"
+                    placeholder="نايل ريالتي"
+                    [class.invalid]="err(0, 'nameAr')"
+                    [value]="f().nameAr"
+                    (input)="set('nameAr', $any($event.target).value)"
+                  />
+                  @if (err(0, 'nameAr')) {
+                    <span class="err">{{ err(0, 'nameAr') }}</span>
+                  }
+                </label>
+                <label class="field full">
+                  <span>{{ t('Workspace identifier', 'معرّف مساحة العمل') }} <em>*</em></span>
+                  <input
+                    dir="ltr"
+                    class="mono"
+                    [class.invalid]="err(0, 'slug')"
+                    [value]="f().slug"
+                    (input)="setSlug($any($event.target).value)"
+                  />
+                  @if (err(0, 'slug')) {
+                    <span class="err">{{ err(0, 'slug') }}</span>
+                  } @else {
+                    <span class="hint">{{
+                      t(
+                        'Generated from the English name; must be unique.',
+                        'يُنشأ من الاسم الإنجليزي ويجب أن يكون فريدًا.'
+                      )
+                    }}</span>
+                  }
+                </label>
+                <div class="field full">
+                  <span>{{ t('Company type', 'نوع الشركة') }}</span>
+                  <div class="segs">
+                    @for (ty of types; track ty[0]) {
+                      <button
+                        type="button"
+                        class="seg"
+                        [class.seg--on]="f().type === ty[0]"
+                        (click)="set('type', ty[0])"
+                      >
+                        {{ ar() ? ty[2] : ty[1] }}
+                      </button>
+                    }
+                  </div>
+                </div>
+                <label class="field">
+                  <span
+                    >{{ t('Country', 'الدولة')
+                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                  >
+                  <select
+                    [value]="x().country"
+                    (change)="setX('country', $any($event.target).value)"
+                  >
+                    <option value="EG">{{ t('Egypt', 'مصر') }}</option>
+                    <option value="SA">{{ t('Saudi Arabia', 'السعودية') }}</option>
+                    <option value="AE">{{ t('United Arab Emirates', 'الإمارات') }}</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>{{ t('City', 'المدينة') }} <em>*</em></span>
+                  <select [value]="f().city" (change)="set('city', $any($event.target).value)">
+                    @for (c of cities; track c[0]) {
+                      <option [value]="c[0]">{{ ar() ? c[1] : c[0] }}</option>
+                    }
+                  </select>
+                </label>
+                <label class="field full">
+                  <span
+                    >{{ t('Business address', 'عنوان الشركة')
+                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                  >
+                  <input
+                    [placeholder]="
+                      t('90th Street, Fifth Settlement', 'شارع التسعين، التجمع الخامس')
+                    "
+                    [value]="x().address"
+                    (input)="setX('address', $any($event.target).value)"
+                  />
+                </label>
+                <label class="field">
+                  <span
+                    >{{ t('Company email', 'بريد الشركة')
+                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                  >
+                  <input
+                    type="email"
+                    dir="ltr"
+                    placeholder="info@company.eg"
+                    [value]="x().companyEmail"
+                    (input)="setX('companyEmail', $any($event.target).value)"
+                  />
+                </label>
+                <label class="field">
+                  <span>{{ t('Company phone', 'هاتف الشركة') }} <em>*</em></span>
+                  <input
+                    dir="ltr"
+                    placeholder="+20 2 2345 6789"
+                    [class.invalid]="err(0, 'phone')"
+                    [value]="f().phone"
+                    (input)="set('phone', $any($event.target).value)"
+                  />
+                  @if (err(0, 'phone')) {
+                    <span class="err">{{ err(0, 'phone') }}</span>
+                  }
+                </label>
+                <label class="field">
+                  <span
+                    >{{ t('Website', 'الموقع الإلكتروني') }}
+                    <small>{{ t('(optional)', '(اختياري)') }}</small></span
+                  >
+                  <input
+                    dir="ltr"
+                    placeholder="company.eg"
+                    [class.invalid]="err(0, 'website')"
+                    [value]="f().website"
+                    (input)="set('website', $any($event.target).value)"
+                  />
+                  @if (err(0, 'website')) {
+                    <span class="err">{{ err(0, 'website') }}</span>
+                  }
+                </label>
+                <label class="field">
+                  <span
+                    >{{ t('Tax registration no.', 'رقم التسجيل الضريبي')
+                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                  >
+                  <input
+                    dir="ltr"
+                    [value]="x().tax"
+                    (input)="setX('tax', $any($event.target).value)"
+                  />
+                </label>
+                <label class="field">
+                  <span
+                    >{{ t('Commercial registration no.', 'رقم السجل التجاري')
+                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                  >
+                  <input
+                    dir="ltr"
+                    [value]="x().cr"
+                    (input)="setX('cr', $any($event.target).value)"
+                  />
+                </label>
+              </div>
+            }
+            @case (1) {
+              <div class="grid">
+                <label class="field">
+                  <span
+                    >{{ t('Full name', 'الاسم بالكامل')
+                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                  >
+                  <input
+                    [placeholder]="t('Karim Adel', 'كريم عادل')"
+                    [value]="x().aName"
+                    (input)="setX('aName', $any($event.target).value)"
+                  />
+                </label>
+                <label class="field">
+                  <span>{{ t('Work email', 'بريد العمل') }} <em>*</em></span>
+                  <input
+                    type="email"
+                    dir="ltr"
+                    placeholder="karim@company.eg"
+                    [class.invalid]="err(1, 'adminEmail')"
+                    [value]="f().adminEmail"
+                    (input)="set('adminEmail', $any($event.target).value)"
+                  />
+                  @if (err(1, 'adminEmail')) {
+                    <span class="err">{{ err(1, 'adminEmail') }}</span>
+                  } @else {
+                    <span class="hint">{{
+                      t('Becomes the company owner login.', 'يصبح بريد دخول مالك الشركة.')
+                    }}</span>
+                  }
+                </label>
+                <label class="field">
+                  <span
+                    >{{ t('Mobile', 'الموبايل')
+                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                  >
+                  <input
+                    dir="ltr"
+                    placeholder="+20 100 000 0000"
+                    [value]="x().aPhone"
+                    (input)="setX('aPhone', $any($event.target).value)"
+                  />
+                </label>
+                <label class="field">
+                  <span
+                    >{{ t('Job title', 'المسمى الوظيفي')
+                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                  >
+                  <input [value]="x().aTitle" (input)="setX('aTitle', $any($event.target).value)" />
+                </label>
+                <div class="field full">
+                  <span
+                    >{{ t('Preferred language', 'اللغة المفضلة')
+                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                  >
+                  <div class="segs">
+                    <button
+                      type="button"
+                      class="seg"
+                      [class.seg--on]="x().aLang === 'ar'"
+                      (click)="setX('aLang', 'ar')"
+                    >
+                      العربية
+                    </button>
+                    <button
+                      type="button"
+                      class="seg"
+                      [class.seg--on]="x().aLang === 'en'"
+                      (click)="setX('aLang', 'en')"
+                    >
+                      English
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="info">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#111113"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M4 6h16v12H4zM4 7l8 6 8-6" />
+                </svg>
+                <span>{{
+                  t(
+                    'The owner account is created on save and a welcome email with a temporary password is queued to the work email.',
+                    'يتم إنشاء حساب المالك عند الحفظ وجدولة بريد ترحيبي بكلمة مرور مؤقتة إلى بريد العمل.'
+                  )
+                }}</span>
+              </div>
+            }
+            @case (2) {
+              <div class="plans">
+                @for (p of plans(); track p.key) {
+                  <button
+                    type="button"
+                    class="plan"
+                    [class.on]="f().plan === p.key"
+                    (click)="set('plan', p.key)"
+                  >
+                    <span class="plan__top"
+                      ><b>{{ planName(p) }}</b
+                      ><span class="radio"></span
+                    ></span>
+                    <span class="plan__price"
+                      >{{ money(p.monthlyMinor) }}<small>{{ t(' / month', ' / شهر') }}</small></span
+                    >
+                    <span class="plan__desc">{{ planDesc(p) }}</span>
+                  </button>
+                }
+              </div>
+              <div class="grid">
+                <div class="field">
+                  <span
+                    >{{ t('Billing cycle', 'دورة الفوترة')
+                    }}<i class="soon">{{ t('Monthly only', 'شهري فقط') }}</i></span
+                  >
+                  <div class="segs">
+                    <button
+                      type="button"
+                      class="seg"
+                      [class.seg--on]="x().cycle === 'monthly'"
+                      (click)="setX('cycle', 'monthly')"
+                    >
+                      {{ t('Monthly', 'شهري') }}
+                    </button>
+                    <button
+                      type="button"
+                      class="seg"
+                      [class.seg--on]="x().cycle === 'annual'"
+                      (click)="setX('cycle', 'annual')"
+                    >
+                      {{ t('Annual · 2 months free', 'سنوي · شهران مجانًا') }}
+                    </button>
+                  </div>
+                </div>
+                <div class="field">
+                  <span
+                    >{{ t('Start as', 'البدء كـ')
+                    }}<i class="soon">{{ t('Paid only', 'مدفوع فقط') }}</i></span
+                  >
+                  <div class="segs">
+                    <button
+                      type="button"
+                      class="seg"
+                      [class.seg--on]="x().mode === 'trial'"
+                      (click)="setX('mode', 'trial')"
+                    >
+                      {{ t('21-day trial', 'تجربة 21 يومًا') }}
+                    </button>
+                    <button
+                      type="button"
+                      class="seg"
+                      [class.seg--on]="x().mode === 'paid'"
+                      (click)="setX('mode', 'paid')"
+                    >
+                      {{ t('Paid now', 'مدفوع الآن') }}
+                    </button>
+                  </div>
+                </div>
+                <label class="field">
+                  <span
+                    >{{ t('Start date', 'تاريخ البدء')
+                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                  >
+                  <input
+                    type="date"
+                    dir="ltr"
+                    [value]="x().start"
+                    (input)="setX('start', $any($event.target).value)"
+                  />
+                </label>
+                <label class="field">
+                  <span
+                    >{{ t('Payment method', 'طريقة الدفع')
+                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                  >
+                  <select [value]="x().pay" (change)="setX('pay', $any($event.target).value)">
+                    <option value="card">
+                      {{ t('Card / wallet (gateway)', 'بطاقة / محفظة') }}
+                    </option>
+                    <option value="bank">{{ t('Bank transfer', 'تحويل بنكي') }}</option>
+                    <option value="instapay">InstaPay</option>
+                    <option value="invoice">
+                      {{ t('Invoice (net 14)', 'فاتورة (14 يومًا)') }}
+                    </option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span
+                    >{{ t('Discount', 'الخصم')
+                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                  >
+                  <select [value]="x().disc" (change)="setX('disc', $any($event.target).value)">
+                    <option value="0">{{ t('None', 'بدون') }}</option>
+                    <option value="10">10%</option>
+                    <option value="15">15%</option>
+                    <option value="20">20%</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span
+                    >{{ t('Billing currency', 'عملة الفوترة')
+                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                  >
+                  <select [value]="x().cur" (change)="setX('cur', $any($event.target).value)">
+                    <option value="EGP">EGP — {{ t('Egyptian pound', 'جنيه مصري') }}</option>
+                    <option value="USD">USD — {{ t('US dollar', 'دولار أمريكي') }}</option>
+                    <option value="SAR">SAR — {{ t('Saudi riyal', 'ريال سعودي') }}</option>
+                  </select>
+                </label>
+              </div>
+              @if (summary(); as s) {
+                <div class="sum">
+                  <span class="sum__t"
+                    >{{ t('First invoice preview', 'معاينة أول فاتورة')
+                    }}<i class="soon">{{ t('Preview', 'معاينة') }}</i></span
+                  >
+                  <div>
+                    <span>{{ planName(plan()) }} · {{ t('monthly', 'شهري') }}</span
+                    ><b>{{ money(s.base) }}</b>
+                  </div>
+                  @if (s.disc) {
+                    <div>
+                      <span>{{ t('Discount', 'الخصم') }} {{ x().disc }}%</span
+                      ><b>−{{ money(s.disc) }}</b>
+                    </div>
+                  }
+                  @if (s.vat) {
+                    <div>
+                      <span>{{ t('VAT 14%', 'ضريبة 14%') }}</span
+                      ><b>{{ money(s.vat) }}</b>
+                    </div>
+                  }
+                  <div class="sum__total">
+                    <span>{{ t('Total', 'الإجمالي') }}</span
+                    ><b>{{ money(s.total) }}</b>
+                  </div>
+                  <small>{{
+                    t(
+                      'Today the backend starts a monthly subscription at the plan price; discount, VAT and payment collection are not applied yet.',
+                      'حاليًا يبدأ الخادم اشتراكًا شهريًا بسعر الباقة؛ الخصم والضريبة والتحصيل غير مطبقة بعد.'
+                    )
+                  }}</small>
+                </div>
+              }
+            }
+            @case (3) {
+              <p class="note note--warn">
+                {{
+                  t(
+                    'Plan defaults are real. Custom limits at creation are not saved yet — use Usage & limits after the company exists.',
+                    'افتراضيات الباقة حقيقية. الحدود المخصصة عند الإنشاء لا تُحفظ بعد — استخدم صفحة الاستخدام والحدود بعد إنشاء الشركة.'
+                  )
+                }}
+              </p>
+              <div class="limits">
+                @for (l of limitRows(); track l.k) {
+                  <div class="limit">
+                    <span class="limit__text"
+                      ><b>{{ l.label }}</b
+                      ><small>{{ l.def }}</small></span
+                    >
+                    @if (l.v !== null) {
+                      <input
+                        type="number"
+                        min="0"
+                        class="mono"
+                        [value]="l.v"
+                        (input)="setLimit(l.k, $any($event.target).value)"
+                      />
+                    } @else {
+                      <span class="unl">{{ t('Unlimited', 'بلا حد') }}</span>
+                    }
+                    <span class="limit__unit">{{ l.unit }}</span>
+                    <button
+                      type="button"
+                      class="tog"
+                      [class.on]="l.v === null"
+                      (click)="toggleUnlimited(l.k, l.v, l.defVal)"
+                    >
+                      <span></span>{{ t('Unlimited', 'بلا حد') }}
+                    </button>
+                    @if (l.over) {
+                      <span class="pill pill--warn">{{ t('Override', 'استثناء') }}</span>
+                    }
+                  </div>
+                }
+              </div>
+              <button type="button" class="link" (click)="resetLimits()">
+                {{ t('Reset to plan defaults', 'استعادة افتراضيات الباقة') }}
+              </button>
+            }
+            @case (4) {
+              <p class="note note--warn">
+                {{
+                  t(
+                    'Preview of module access for this plan. Per-company feature changes at creation are not saved yet — use Feature management afterwards.',
+                    'معاينة لوحدات هذه الباقة. تغييرات الميزات لكل شركة عند الإنشاء لا تُحفظ بعد — استخدم إدارة الميزات لاحقًا.'
+                  )
+                }}
+              </p>
+              <div class="feats">
+                @for (ft of features; track ft[0]) {
+                  <button
+                    type="button"
+                    class="feat"
+                    [class.over]="featOn(ft[0], ft[3]) !== plans().indexOf(plan()) >= ft[3]"
+                    (click)="toggleFeat(ft[0], ft[3])"
+                  >
+                    <span class="feat__text"
+                      ><b>{{ ar() ? ft[2] : ft[1] }}</b
+                      ><small>{{ featSub(ft[3], featOn(ft[0], ft[3])) }}</small></span
+                    >
+                    <span class="tog" [class.on]="featOn(ft[0], ft[3])"><span></span></span>
+                  </button>
+                }
+              </div>
+            }
+            @case (5) {
+              <div class="review">
+                <div class="rv">
+                  <div class="rv__head">
+                    <b>{{ t('Company', 'الشركة') }}</b
+                    ><button type="button" class="link" (click)="go(0)">
+                      {{ t('Edit', 'تعديل') }}
+                    </button>
+                  </div>
+                  <div class="kv">
+                    <span>{{ t('Name', 'الاسم') }}</span
+                    ><b>{{ f().nameEn }} · {{ f().nameAr }}</b>
+                  </div>
+                  <div class="kv">
+                    <span>{{ t('Workspace', 'مساحة العمل') }}</span
+                    ><b class="mono" dir="ltr">{{ f().slug }}</b>
+                  </div>
+                  <div class="kv">
+                    <span>{{ t('Type', 'النوع') }}</span
+                    ><b>{{ typeName(f().type) }}</b>
+                  </div>
+                  <div class="kv">
+                    <span>{{ t('City', 'المدينة') }}</span
+                    ><b>{{ cityName(f().city) }}</b>
+                  </div>
+                  <div class="kv">
+                    <span>{{ t('Phone', 'الهاتف') }}</span
+                    ><b dir="ltr">{{ f().phone }}</b>
+                  </div>
+                  @if (f().website) {
+                    <div class="kv">
+                      <span>{{ t('Website', 'الموقع') }}</span
+                      ><b dir="ltr">{{ f().website }}</b>
+                    </div>
+                  }
+                </div>
+                <div class="rv">
+                  <div class="rv__head">
+                    <b>{{ t('Owner & plan', 'المالك والباقة') }}</b
+                    ><button type="button" class="link" (click)="go(1)">
+                      {{ t('Edit', 'تعديل') }}
+                    </button>
+                  </div>
+                  <div class="kv">
+                    <span>{{ t('Owner email', 'بريد المالك') }}</span
+                    ><b dir="ltr">{{ f().adminEmail }}</b>
+                  </div>
+                  <div class="kv">
+                    <span>{{ t('Plan', 'الباقة') }}</span
+                    ><b>{{ planName(plan()) }}</b>
+                  </div>
+                  <div class="kv">
+                    <span>{{ t('Price', 'السعر') }}</span
+                    ><b>{{ money(plan().monthlyMinor) }} {{ t('/ month', '/ شهر') }}</b>
+                  </div>
+                  <div class="kv">
+                    <span>{{ t('Modules on', 'الوحدات المفعلة') }}</span
+                    ><b>{{ featCount() }} / {{ features.length }}</b>
+                  </div>
+                </div>
+                <div class="rv full">
+                  <div class="rv__head">
+                    <b>{{ t('Not saved yet', 'لا يُحفظ بعد') }}</b>
+                  </div>
+                  <p class="muted">
+                    {{
+                      t(
+                        'Country, address, company email, tax/CR numbers, administrator name/mobile/title/language, billing cycle, trial, start date, payment method, discount, currency, custom limits and feature overrides are shown for design only and are not sent.',
+                        'الدولة والعنوان وبريد الشركة والأرقام الضريبية/التجارية وبيانات المدير ودورة الفوترة والتجربة وتاريخ البدء وطريقة الدفع والخصم والعملة والحدود والميزات المخصصة للعرض فقط ولا تُرسل.'
+                      )
+                    }}
+                  </p>
+                </div>
+              </div>
+              <p class="muted">
+                {{
+                  t(
+                    'Creating activates the company with a monthly subscription on the selected plan and emails the owner a temporary password.',
+                    'الإنشاء يفعّل الشركة باشتراك شهري على الباقة المختارة ويرسل للمالك كلمة مرور مؤقتة.'
+                  )
+                }}
+              </p>
+            }
+          }
+        </div>
+
+        <div class="panel__foot">
+          @if (hasErrs()) {
+            <span class="err">{{
+              t('Fix the highlighted fields to continue.', 'صحح الحقول المحددة للمتابعة.')
+            }}</span>
+          }
+          @if (error()) {
+            <span class="err" role="alert">{{ error() }}</span>
+          }
+          <div class="panel__btns">
+            <button type="button" class="btn" (click)="saveDraft()">
+              {{ t('Save draft', 'حفظ كمسودة') }}<i class="soon">{{ t('Soon', 'قريبًا') }}</i>
+            </button>
+            @if (step() > 0) {
+              <button type="button" class="btn" (click)="back()">{{ t('Back', 'رجوع') }}</button>
+            }
+            <button type="button" class="btn btn--dark" [disabled]="saving()" (click)="next()">
+              {{
+                step() < 5
+                  ? t('Continue', 'متابعة')
+                  : saving()
+                    ? t('Creating…', 'جار الإنشاء…')
+                    : t('Create company', 'إنشاء الشركة')
+              }}
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  } @else {
+    <section class="card ok">
+      <span class="ok__icon">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#111113"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M5 12l5 5L20 7" />
+        </svg>
+      </span>
+      <div class="ok__text">
+        <b>{{ t('Company created', 'تم إنشاء الشركة') }}</b>
+        <span>{{
+          t(
+            'The workspace is active and the owner’s welcome email is queued.',
+            'مساحة العمل نشطة وتمت جدولة بريد الترحيب للمالك.'
+          )
+        }}</span>
+      </div>
+      <div class="ok__rows">
+        <div class="kv">
+          <span>{{ t('Company ID', 'معرّف الشركة') }}</span
+          ><b class="mono" dir="ltr">{{ done().id }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ t('Name', 'الاسم') }}</span
+          ><b>{{ ar() ? done().nameAr : done().nameEn }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ t('Workspace', 'مساحة العمل') }}</span
+          ><b class="mono" dir="ltr">{{ done().slug }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ t('Owner email', 'بريد المالك') }}</span
+          ><b dir="ltr">{{ done().adminEmail }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ t('Plan', 'الباقة') }}</span
+          ><b>{{ planName(plan()) }}</b>
+        </div>
+        @if (done().emailDelivery?.status) {
+          <div class="kv">
+            <span>{{ t('Welcome email', 'بريد الترحيب') }}</span
+            ><b>{{ done().emailDelivery.status }}</b>
+          </div>
+        }
+      </div>
+      <div class="ok__btns">
+        <button type="button" class="btn btn--dark" (click)="viewCompany()">
+          {{ t('View company', 'عرض الشركة') }}
+        </button>
+        <button type="button" class="btn" (click)="another()">
+          {{ t('Create another', 'إنشاء شركة أخرى') }}
+        </button>
+      </div>
+    </section>
+  }
+</div>
+
+@if (toast()) {
+  <div class="toast"><span></span>{{ toast() }}</div>
+}

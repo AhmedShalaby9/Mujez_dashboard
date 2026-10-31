@@ -1,292 +1,281 @@
-@if (success()) {
-  <p role="status" style="padding: 12px; background: #e7f5ec; color: #1e6b3e; border-radius: 8px">
-    {{ success() }}
-  </p>
-}
-@if (loading()) {
-  <p role="status">{{ lang() === 'ar' ? 'جارٍ تحميل الشركات…' : 'Loading companies…' }}</p>
-}
-@if (error()) {
-  <p role="alert" style="color: #a23624">
-    {{ error() }}
-    <button class="btn" (click)="reload()">{{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}</button>
-  </p>
-}
-<div (click)="closeKebab()">
-  <div class="page-head">
-    <div class="page-head__text">
-      <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-      <h1 class="page-head__title">{{ L().title }}</h1>
+<div class="pg" (click)="closeKebab()">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ L().title }}</h1>
+      <span
+        >{{ companies().length }} {{ lang() === 'ar' ? 'شركة' : 'companies' }} · {{ totalUsers() }}
+        {{ lang() === 'ar' ? 'مستخدم CRM' : 'CRM users' }}</span
+      >
     </div>
-    <div class="page-head__actions">
-      <button type="button" class="btn btn--ghost" (click)="exportCsv()">
+    <div class="head__actions">
+      <button type="button" class="btn" (click)="exportCsv()">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.9"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+        </svg>
         {{ L().exportBtn }}
       </button>
-      <button
-        type="button"
-        class="btn btn--primary"
-        [disabled]="!auth.user()?.permissions?.includes('co.create')"
-        (click)="openForm()"
-      >
-        {{ L().addBtn }}
-      </button>
+      @if (auth.user()?.permissions?.includes('co.create')) {
+        <button type="button" class="btn btn--dark" (click)="goCreate()">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#C8F169"
+            stroke-width="2.2"
+            stroke-linecap="round"
+          >
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          {{ lang() === 'ar' ? 'إنشاء شركة' : 'Create company' }}
+        </button>
+      }
     </div>
   </div>
 
-  <section class="kpis">
-    <button
-      type="button"
-      class="kpi"
-      [class.kpi--active]="statusFilter() === 'all'"
-      (click)="filterByKpiStatus('all')"
-    >
-      <span class="kpi__label">{{ L().kpis.total }}</span>
-      <span class="kpi__value">{{ kpis().total }}</span>
-    </button>
-    <button
-      type="button"
-      class="kpi"
-      [class.kpi--active]="statusFilter() === 'active'"
-      (click)="filterByKpiStatus('active')"
-    >
-      <span class="kpi__label">{{ L().kpis.active }}</span>
-      <span class="kpi__value" style="color: #1e6b3e">{{ kpis().active }}</span>
-    </button>
-    <button
-      type="button"
-      class="kpi"
-      [class.kpi--active]="statusFilter() === 'trial'"
-      (click)="filterByKpiStatus('trial')"
-    >
-      <span class="kpi__label">{{ L().kpis.trial }}</span>
-      <span class="kpi__value" style="color: #111113">{{ kpis().trial }}</span>
-    </button>
-    <button
-      type="button"
-      class="kpi"
-      [class.kpi--active]="statusFilter() === 'suspended'"
-      (click)="filterByKpiStatus('suspended')"
-    >
-      <span class="kpi__label">{{ L().kpis.suspended }}</span>
-      <span class="kpi__value" style="color: #e2553b">{{ kpis().suspended }}</span>
-    </button>
-  </section>
+  @if (success()) {
+    <p class="note note--ok" role="status">{{ success() }}</p>
+  }
+  @if (error()) {
+    <p class="note note--bad" role="alert">
+      {{ error() }}
+      <button type="button" class="link" (click)="reload()">
+        {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+      </button>
+    </p>
+  }
+  @if (loading()) {
+    <p class="muted" role="status">
+      {{ lang() === 'ar' ? 'جارٍ تحميل الشركات…' : 'Loading companies…' }}
+    </p>
+  }
 
-  <section class="filters">
-    <input
-      type="text"
-      class="filters__search"
-      [placeholder]="L().searchPh"
-      [value]="search()"
-      (input)="setSearch($any($event.target).value)"
-    />
-
-    <div class="chip-row">
+  <div class="tabs" role="tablist">
+    @for (t of tabs(); track t.k) {
       <button
         type="button"
-        class="chip"
-        [class.chip--active]="statusFilter() === 'all'"
-        (click)="setStatusFilter('all')"
+        class="tab"
+        role="tab"
+        [class.tab--on]="statusFilter() === t.k"
+        [attr.aria-selected]="statusFilter() === t.k"
+        (click)="setStatusFilter(t.k)"
       >
-        {{ L().statusAll }}
+        {{ t.label }}<span class="tab__n">{{ t.n }}</span>
       </button>
-      @for (s of statusTypes; track s) {
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="statusFilter() === s"
-          (click)="setStatusFilter(s)"
-        >
-          {{ statusLabel(s) }}
-        </button>
-      }
+    }
+  </div>
+
+  <div class="filters">
+    <div class="search">
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#8A8A90"
+        stroke-width="1.8"
+        stroke-linecap="round"
+      >
+        <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" />
+      </svg>
+      <input
+        type="text"
+        [placeholder]="L().searchPh"
+        [value]="search()"
+        (input)="setSearch($any($event.target).value)"
+      />
     </div>
-
-    <div class="chip-row">
-      <button
-        type="button"
-        class="chip"
-        [class.chip--active]="typeFilter() === 'all'"
-        (click)="setTypeFilter('all')"
-      >
-        {{ L().typeAll }}
-      </button>
-      @for (t of companyTypes; track t) {
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="typeFilter() === t"
-          (click)="setTypeFilter(t)"
-        >
-          {{ typeLabel(t) }}
-        </button>
-      }
-    </div>
-
-    <div class="chip-row">
-      <button
-        type="button"
-        class="chip"
-        [class.chip--active]="planFilter() === 'all'"
-        (click)="setPlanFilter('all')"
-      >
-        {{ L().planAll }}
-      </button>
+    <select [value]="planFilter()" (change)="setPlanFilter($any($event.target).value)">
+      <option value="all">{{ L().planAll }}</option>
       @for (p of planTypes; track p) {
-        <button
-          type="button"
-          class="chip"
-          [class.chip--active]="planFilter() === p"
-          (click)="setPlanFilter(p)"
-        >
-          {{ planLabel(p) }}
-        </button>
+        <option [value]="p">{{ planLabel(p) }}</option>
       }
-    </div>
-  </section>
+    </select>
+    <select [value]="typeFilter()" (change)="setTypeFilter($any($event.target).value)">
+      <option value="all">{{ L().typeAll }}</option>
+      @for (t of companyTypes; track t) {
+        <option [value]="t">{{ typeLabel(t) }}</option>
+      }
+    </select>
+    @if (hasFilters()) {
+      <button type="button" class="link" (click)="clearFilters()">
+        {{ lang() === 'ar' ? 'مسح الفلاتر' : 'Clear filters' }}
+      </button>
+    }
+  </div>
 
   <section class="card">
-    <div class="table-scroll">
-      <div class="table-min">
-        <div class="t-head">
-          <button
-            type="button"
-            class="t-head__cell t-head__cell--grow"
-            (click)="toggleSort('name')"
-          >
-            {{ L().columns.company }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'name'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button type="button" class="t-head__cell" (click)="toggleSort('status')">
-            {{ L().columns.status }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'status'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button type="button" class="t-head__cell" (click)="toggleSort('plan')">
-            {{ L().columns.plan }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'plan'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button type="button" class="t-head__cell" (click)="toggleSort('type')">
-            {{ L().columns.type }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'type'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button type="button" class="t-head__cell" (click)="toggleSort('city')">
-            {{ L().columns.city }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'city'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button
-            type="button"
-            class="t-head__cell t-head__cell--end"
-            (click)="toggleSort('users')"
-          >
-            {{ L().columns.users }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'users'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button type="button" class="t-head__cell t-head__cell--end" (click)="toggleSort('mrr')">
-            {{ L().columns.mrr }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'mrr'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <button type="button" class="t-head__cell" (click)="toggleSort('activity')">
-            {{ L().columns.activity }}
-            <span class="sort-arrow" [class.sort-arrow--on]="sortKey() === 'activity'">{{
-              sortDir() === 'asc' ? '↑' : '↓'
-            }}</span>
-          </button>
-          <span class="t-head__cell t-head__cell--end"></span>
-        </div>
-
-        @for (c of pageRows(); track c.id) {
-          <div class="t-row" (click)="openView(c)">
-            <div class="t-cell t-cell--grow">
-              <span class="t-logo" [style.background]="logoBg(c)">{{ logoInitials(c) }}</span>
-              <div class="t-cell__text">
-                <span class="t-cell__main">{{ companyName(c) }}</span>
-                <span class="t-cell__sub">{{ c.id }}</span>
-              </div>
-            </div>
-            <div class="t-cell">
-              <span
-                class="pill"
-                [style.background]="statusColor(c.status).bg"
-                [style.color]="statusColor(c.status).fg"
-              >
-                {{ statusLabel(c.status) }}
-              </span>
-            </div>
-            <div class="t-cell">
-              <span class="plan-dot" [style.background]="planDot(c.plan)"></span>
-              {{ planLabel(c.plan) }}
-            </div>
-            <div class="t-cell">{{ typeLabel(c.type) }}</div>
-            <div class="t-cell">{{ cityLabel(c.city) }}</div>
-            <div class="t-cell t-cell--end mono">{{ c.users }}</div>
-            <div class="t-cell t-cell--end mono">{{ formatMrr(c.mrr) }}</div>
-            <div class="t-cell">{{ c.lastActivity }}</div>
-            <div class="t-cell t-cell--end t-cell--actions" (click)="$event.stopPropagation()">
-              @if (c.status !== 'archived' && auth.user()?.permissions?.includes('ws.read')) {
-                <button type="button" class="row-btn" (click)="openWsDialog(c)">
-                  {{ L().actions.enter }}
-                </button>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th (click)="toggleSort('name')">
+              {{ L().columns.company }}
+              @if (sortKey() === 'name') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
               }
-              <div class="kebab-wrap">
+            </th>
+            <th (click)="toggleSort('type')">
+              {{ L().columns.type }}
+              @if (sortKey() === 'type') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th (click)="toggleSort('plan')">
+              {{ L().columns.plan }}
+              @if (sortKey() === 'plan') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th (click)="toggleSort('users')">
+              {{ L().columns.users }}
+              @if (sortKey() === 'users') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th (click)="toggleSort('status')">
+              {{ lang() === 'ar' ? 'حالة الشركة' : 'Company status' }}
+              @if (sortKey() === 'status') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th class="nosort">{{ lang() === 'ar' ? 'الاشتراك' : 'Subscription' }}</th>
+            <th (click)="toggleSort('created')">
+              {{ lang() === 'ar' ? 'الإنشاء' : 'Created' }}
+              @if (sortKey() === 'created') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th (click)="toggleSort('activity')">
+              {{ lang() === 'ar' ? 'آخر تحديث' : 'Last updated' }}
+              @if (sortKey() === 'activity') {
+                <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
+              }
+            </th>
+            <th class="nosort act"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of pageRows(); track c.id) {
+            <tr (click)="openView(c)">
+              <td>
+                <div class="co">
+                  <span class="logo" [style.background]="logoBg(c)" [style.color]="logoFg(c)">{{
+                    logoInitials(c)
+                  }}</span>
+                  <span class="co__text">
+                    <span class="co__name">{{ companyName(c) }}</span>
+                    <span class="co__sub"
+                      ><span class="mono">{{ c.id }}</span> · {{ cityLabel(c.city) }}</span
+                    >
+                  </span>
+                </div>
+              </td>
+              <td class="soft">{{ typeLabel(c.type) }}</td>
+              <td>{{ planLabel(c.plan) }}</td>
+              <td>
+                <div class="seats">
+                  <span class="mono"
+                    >{{ c.users }}
+                    @if (seats(c); as s) {
+                      / {{ s.limit }}
+                    }
+                  </span>
+                  @if (seats(c); as s) {
+                    <span class="bar"
+                      ><span [style.width]="s.w" [style.background]="s.color"></span
+                    ></span>
+                  }
+                </div>
+              </td>
+              <td>
+                <span
+                  class="pill"
+                  [style.background]="statusColor(c.status).bg"
+                  [style.color]="statusColor(c.status).fg"
+                  ><span class="dot" [style.background]="statusColor(c.status).dot"></span
+                  >{{ statusLabel(c.status) }}</span
+                >
+              </td>
+              <td>
+                @if (subStatus(c); as s) {
+                  <span class="pill pill--sub" [style.color]="s.fg">{{ s.label }}</span>
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </td>
+              <td class="muted">{{ date(c.createdAt) }}</td>
+              <td class="muted">{{ date(c.lastActivity) }}</td>
+              <td class="act" (click)="$event.stopPropagation()">
                 <button
                   type="button"
-                  class="row-btn row-btn--icon"
+                  class="kebab"
+                  aria-label="Actions"
                   (click)="toggleKebab(c.id)"
-                  aria-label="More actions"
                 >
                   ⋯
                 </button>
                 @if (kebabFor() === c.id) {
-                  <div class="dropdown" (click)="$event.stopPropagation()">
-                    <button type="button" class="dropdown__item" (click)="openView(c)">
-                      {{ L().actions.view }}
+                  <div class="menu">
+                    <button type="button" (click)="openView(c)">
+                      {{ lang() === 'ar' ? 'عرض التفاصيل' : 'View details' }}
                     </button>
+                    @if (c.status !== 'archived' && auth.user()?.permissions?.includes('ws.read')) {
+                      <button type="button" (click)="openWsDialog(c)">
+                        {{ lang() === 'ar' ? 'دخول مساحة العمل' : 'Enter workspace' }}
+                      </button>
+                    }
+                    @if (auth.user()?.permissions?.includes('sub.manage')) {
+                      <button type="button" (click)="goSubscriptions()">
+                        {{ lang() === 'ar' ? 'إدارة الاشتراك' : 'Manage subscription' }}
+                      </button>
+                    }
                     @for (kind of rowActions(c); track kind) {
                       <button
                         type="button"
-                        class="dropdown__item"
-                        [class.dropdown__item--danger]="kind === 'suspend' || kind === 'archive'"
+                        [class.ok]="kind === 'reactivate'"
+                        [class.bad]="kind !== 'reactivate'"
                         (click)="askConfirm(c, kind)"
                       >
-                        {{ L().actions[kind] }}
+                        {{ L().actions[kind] }}{{ kind === 'reactivate' ? '' : '…' }}
                       </button>
                     }
                   </div>
                 }
-              </div>
-            </div>
-          </div>
-        } @empty {
-          <div class="t-empty">
-            <span class="t-empty__title">{{ L().emptyTitle }}</span>
-            <span class="t-empty__sub">{{ L().emptySub }}</span>
-          </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (!loading() && !pageRows().length) {
+      <div class="empty">
+        <strong>{{ L().emptyTitle }}</strong>
+        <span>{{ L().emptySub }}</span>
+        @if (hasFilters()) {
+          <button type="button" class="btn" (click)="clearFilters()">
+            {{ lang() === 'ar' ? 'مسح الفلاتر' : 'Clear filters' }}
+          </button>
         }
       </div>
-    </div>
-
+    }
     <div class="pager">
       <span>{{ pagerText() }}</span>
-      <button type="button" class="btn btn--ghost" [disabled]="page() <= 1" (click)="prevPage()">
+      <button type="button" class="btn btn--sm" [disabled]="page() <= 1" (click)="prevPage()">
         {{ L().prev }}
       </button>
       <button
         type="button"
-        class="btn btn--ghost"
+        class="btn btn--sm"
         [disabled]="page() >= totalPages()"
         (click)="nextPage()"
       >
@@ -299,19 +288,29 @@
 @if (viewing(); as c) {
   <div class="scrim" (click)="closeView()"></div>
   <aside class="drawer" (click)="$event.stopPropagation()">
-    <div class="drawer__header">
-      <span class="t-logo t-logo--lg" [style.background]="logoBg(c)">{{ logoInitials(c) }}</span>
-      <div class="drawer__headerText">
+    <div class="drawer__head">
+      <span class="logo logo--lg" [style.background]="logoBg(c)" [style.color]="logoFg(c)">{{
+        logoInitials(c)
+      }}</span>
+      <div class="drawer__title">
         <span class="drawer__name">{{ companyName(c) }}</span>
-        <span
-          class="pill"
-          [style.background]="statusColor(c.status).bg"
-          [style.color]="statusColor(c.status).fg"
-        >
-          {{ statusLabel(c.status) }}
-        </span>
+        <span class="mono drawer__id" dir="ltr">{{ c.id }} · {{ c.slug }}</span>
+        <div class="drawer__pills">
+          <span
+            class="pill"
+            [style.background]="statusColor(c.status).bg"
+            [style.color]="statusColor(c.status).fg"
+            ><span class="dot" [style.background]="statusColor(c.status).dot"></span
+            >{{ statusLabel(c.status) }}</span
+          >
+          @if (subStatus(c); as s) {
+            <span class="pill pill--sub" [style.color]="s.fg"
+              >{{ lang() === 'ar' ? 'الاشتراك: ' : 'Subscription: ' }}{{ s.label }}</span
+            >
+          }
+        </div>
       </div>
-      <button type="button" class="drawer__close" (click)="closeView()" aria-label="Close">
+      <button type="button" class="x" (click)="closeView()" [attr.aria-label]="L().drawerClose">
         ×
       </button>
     </div>
@@ -319,25 +318,115 @@
     <div class="drawer__body">
       @if (L().statusNote(c.status, c.statusReason ?? null); as note) {
         <p
-          class="status-note"
-          [class.status-note--danger]="c.status === 'suspended' || c.status === 'expired'"
-          [class.status-note--neutral]="c.status === 'archived'"
+          class="note"
+          [class.note--bad]="c.status === 'suspended'"
+          [class.note--warn]="c.status !== 'suspended'"
         >
           {{ note }}
         </p>
       }
-      <section class="owner-card">
-        <h3>{{ lang() === 'ar' ? 'حساب مالك الشركة' : 'Company owner account' }}</h3>
+
+      <div class="kpis">
+        <div>
+          <span>{{ L().drawerFields.plan }}</span
+          ><b>{{ planLabel(c.plan) }}</b>
+        </div>
+        <div>
+          <span>{{ L().drawerFields.mrr }}</span
+          ><b>{{ formatMrr(c.mrr) }}</b>
+        </div>
+        <div>
+          <span>{{ L().columns.users }}</span
+          ><b
+            >{{ c.users }}
+            @if (seats(c); as s) {
+              / {{ s.limit }}
+            }
+          </b>
+        </div>
+      </div>
+
+      @if (usageBars(c).length) {
+        <div class="sect">
+          <span class="sect__label">{{ lang() === 'ar' ? 'الاستخدام' : 'USAGE' }}</span>
+          @for (u of usageBars(c); track u.label) {
+            <div class="usage">
+              <div class="usage__row">
+                <span>{{ u.label }}</span
+                ><span class="mono" [style.color]="u.fg">{{ u.value }}</span>
+              </div>
+              <span class="bar bar--lg"
+                ><span [style.width]="u.w" [style.background]="u.color"></span
+              ></span>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="sect">
+        <span class="sect__label">{{ lang() === 'ar' ? 'التفاصيل' : 'DETAILS' }}</span>
+        <div class="kv">
+          <span>{{ L().drawerFields.type }}</span
+          ><b>{{ typeLabel(c.type) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ L().drawerFields.city }}</span
+          ><b>{{ cityLabel(c.city) }}</b>
+        </div>
+        @if (c.cycle) {
+          <div class="kv">
+            <span>{{ L().drawerFields.cycle }}</span
+            ><b>{{ L().cycleNames[c.cycle] }}</b>
+          </div>
+        }
+        <div class="kv">
+          <span>{{ L().drawerFields.owner }}</span
+          ><b>{{ ownerInfo()?.name || '—' }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ L().drawerFields.adminEmail }}</span
+          ><b dir="ltr">{{ c.adminEmail }}</b>
+        </div>
+        @if (c.phone) {
+          <div class="kv">
+            <span>{{ L().drawerFields.phone }}</span
+            ><b dir="ltr">{{ c.phone }}</b>
+          </div>
+        }
+        @if (c.website) {
+          <div class="kv">
+            <span>{{ L().drawerFields.website }}</span
+            ><b dir="ltr">{{ c.website }}</b>
+          </div>
+        }
+        <div class="kv">
+          <span>{{ L().drawerFields.created }}</span
+          ><b>{{ date(c.createdAt) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ lang() === 'ar' ? 'آخر تحديث' : 'Last updated' }}</span
+          ><b>{{ date(c.lastActivity) }}</b>
+        </div>
+      </div>
+
+      <div class="sect">
+        <span class="sect__label">{{
+          lang() === 'ar' ? 'حساب مالك الشركة' : 'OWNER ACCOUNT'
+        }}</span>
         @if (ownerLoading()) {
-          <p>{{ lang() === 'ar' ? 'جار التحميل…' : 'Loading owner…' }}</p>
+          <p class="muted">{{ lang() === 'ar' ? 'جار التحميل…' : 'Loading owner…' }}</p>
         }
         @if (ownerError()) {
-          <p role="alert">{{ ownerError() }}</p>
+          <p class="note note--bad" role="alert">{{ ownerError() }}</p>
         }
         @if (ownerInfo(); as owner) {
-          <p>{{ owner.name }} · {{ owner.email }}</p>
-          <p>
-            {{
+          <div class="kv">
+            <span>{{ owner.name }}</span
+            ><b dir="ltr">{{ owner.email }}</b>
+          </div>
+          <div class="kv">
+            <span>{{ lang() === 'ar' ? 'الحالة' : 'Status' }}</span>
+            <b>{{
               owner.status === 'active'
                 ? lang() === 'ar'
                   ? 'تم تفعيل الحساب'
@@ -349,10 +438,10 @@
                   : lang() === 'ar'
                     ? 'الحساب معطل'
                     : 'Account disabled'
-            }}
-          </p>
+            }}</b>
+          </div>
           @if (owner.must_change_password) {
-            <p>
+            <p class="muted">
               {{
                 lang() === 'ar'
                   ? 'بانتظار تغيير كلمة المرور عند أول دخول'
@@ -361,58 +450,65 @@
             </p>
           }
           @if (ownerDelivery(); as delivery) {
-            <p>
-              {{ lang() === 'ar' ? 'بريد الترحيب:' : 'Welcome email:' }}
-              {{ deliveryLabel(delivery.status) }}
-              @if (delivery.attempts) {
-                · {{ delivery.attempts }} {{ lang() === 'ar' ? 'محاولة' : 'attempt(s)' }}
-              }
-            </p>
-            @if (delivery.accepted_at) {
-              <small>{{ delivery.accepted_at }}</small>
-            }
-            <button class="btn" (click)="loadOwner(c)">
+            <div class="kv">
+              <span>{{ lang() === 'ar' ? 'بريد الترحيب' : 'Welcome email' }}</span>
+              <b
+                >{{ deliveryLabel(delivery.status) }}
+                @if (delivery.attempts) {
+                  · {{ delivery.attempts }} {{ lang() === 'ar' ? 'محاولة' : 'attempt(s)' }}
+                }
+              </b>
+            </div>
+            <button type="button" class="link" (click)="loadOwner(c)">
               {{ lang() === 'ar' ? 'تحديث حالة البريد' : 'Refresh email status' }}
             </button>
+          }
+          @if (owner.invitation_expires_at) {
+            <div class="kv">
+              <span>{{ lang() === 'ar' ? 'تنتهي الدعوة' : 'Invitation expires' }}</span
+              ><b>{{ owner.invitation_expires_at }}</b>
+            </div>
           }
           @if (
             owner.must_change_password &&
             auth.user()?.permissions?.includes('co.create') &&
             ['pending', 'trial', 'active'].includes(c.status)
           ) {
-            <details style="margin-top: 12px">
+            <details class="resend">
               <summary>
                 {{ lang() === 'ar' ? 'إعادة إرسال بيانات الدخول' : 'Resend login details' }}
               </summary>
-              <p>
+              <p class="muted">
                 {{
                   lang() === 'ar'
                     ? 'يتم إنشاء كلمة مرور مؤقتة جديدة وإلغاء القديمة. لا يمكن إعادة تعيين حساب أكمل أول دخول بهذه الطريقة.'
                     : 'Generates a new temporary password and invalidates the previous one. Available only before the owner completes their first password change.'
                 }}
               </p>
-              <form (ngSubmit)="resendWelcome()" style="display: grid; gap: 12px">
-                <label
-                  >{{ lang() === 'ar' ? 'سبب الإعادة' : 'Reason'
-                  }}<input
-                    class="search"
+              <form class="form" (ngSubmit)="resendWelcome()">
+                <label class="field"
+                  ><span>{{ lang() === 'ar' ? 'سبب الإعادة' : 'Reason' }}</span
+                  ><input
                     name="resendReason"
                     [ngModel]="resendReason()"
                     (ngModelChange)="resendReason.set($event)"
                     minlength="10"
-                    required /></label
-                ><label
-                  >{{ lang() === 'ar' ? 'كلمة مرور المشرف الحالية' : 'Your administrator password'
-                  }}<input
-                    class="search"
+                    required
+                /></label>
+                <label class="field"
+                  ><span>{{
+                    lang() === 'ar' ? 'كلمة مرور المشرف الحالية' : 'Your administrator password'
+                  }}</span
+                  ><input
                     type="password"
                     name="resendPassword"
                     [ngModel]="resendPassword()"
                     (ngModelChange)="resendPassword.set($event)"
                     autocomplete="current-password"
-                    required /></label
-                ><button
-                  class="btn btn--primary"
+                    required
+                /></label>
+                <button
+                  class="btn btn--dark"
                   [disabled]="
                     ownerSaving() || !resendPassword() || resendReason().trim().length < 10
                   "
@@ -422,14 +518,10 @@
               </form>
             </details>
           }
-          @if (owner.invitation_expires_at) {
-            <p>
-              {{ lang() === 'ar' ? 'تنتهي الدعوة:' : 'Invitation expires:' }}
-              {{ owner.invitation_expires_at }}
-            </p>
-          }
         } @else if (!ownerLoading() && !ownerError()) {
-          <p>{{ lang() === 'ar' ? 'لم تتم دعوة المالك بعد' : 'Owner has not been invited' }}</p>
+          <p class="muted">
+            {{ lang() === 'ar' ? 'لم تتم دعوة المالك بعد' : 'Owner has not been invited' }}
+          </p>
         }
         @if (
           auth.user()?.permissions?.includes('co.create') &&
@@ -438,7 +530,7 @@
           !ownerError() &&
           (!ownerInfo() || ownerInfo()?.status === 'invited')
         ) {
-          <button class="btn btn--primary" (click)="openOwner(c)">
+          <button type="button" class="btn" (click)="openOwner(c)">
             {{
               ownerInfo()
                 ? lang() === 'ar'
@@ -450,151 +542,92 @@
             }}
           </button>
         }
-      </section>
-
-      @if (auth.user()?.permissions?.includes('co.create') && c.status !== 'archived') {
-        <button class="btn btn--primary" (click)="openForm(c)">
-          {{ lang() === 'ar' ? 'تعديل الشركة' : 'Edit company' }}
-        </button>
-      }
-
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.id }}</span
-        ><span class="drawer__v mono" dir="ltr">{{ c.id }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.type }}</span
-        ><span class="drawer__v">{{ typeLabel(c.type) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.plan }}</span
-        ><span class="drawer__v">{{ planLabel(c.plan) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.city }}</span
-        ><span class="drawer__v">{{ cityLabel(c.city) }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.owner }}</span
-        ><span class="drawer__v">{{ ownerInfo()?.name || '—' }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.adminEmail }}</span
-        ><span class="drawer__v" dir="ltr">{{ c.adminEmail }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.phone }}</span
-        ><span class="drawer__v" dir="ltr">{{ c.phone }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.website }}</span
-        ><span class="drawer__v" dir="ltr">{{ c.website }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.users }}</span
-        ><span class="drawer__v mono">{{ c.users }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.mrr }}</span
-        ><span class="drawer__v mono">{{ formatMrr(c.mrr) }}</span>
-      </div>
-      @if (c.cycle) {
-        <div class="drawer__row">
-          <span class="drawer__k">{{ L().drawerFields.cycle }}</span
-          ><span class="drawer__v">{{ L().cycleNames[c.cycle] }}</span>
-        </div>
-      }
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.created }}</span
-        ><span class="drawer__v">{{ c.createdAt }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerFields.lastActivity }}</span
-        ><span class="drawer__v">{{ c.lastActivity }}</span>
       </div>
     </div>
 
-    <div class="drawer__footer">
-      @if (c.status !== 'archived') {
-        @if (auth.user()?.permissions?.includes('ws.read')) {
-          <button type="button" class="btn btn--primary" (click)="openWsDialog(c)">
-            {{ L().actions.enter }}
-          </button>
-        }
-        @for (kind of rowActions(c); track kind) {
-          <button type="button" class="btn btn--ghost" (click)="askConfirm(c, kind)">
-            {{ L().actions[kind] }}
-          </button>
-        }
+    <div class="drawer__foot">
+      @if (c.status !== 'archived' && auth.user()?.permissions?.includes('ws.read')) {
+        <button type="button" class="btn btn--dark" (click)="openWsDialog(c)">
+          {{ lang() === 'ar' ? 'دخول مساحة العمل' : 'Enter workspace' }}
+        </button>
       }
-      <button type="button" class="btn btn--ghost" (click)="closeView()">
-        {{ L().drawerClose }}
-      </button>
+      @if (auth.user()?.permissions?.includes('co.create') && c.status !== 'archived') {
+        <button type="button" class="btn" (click)="openForm(c)">
+          {{ lang() === 'ar' ? 'تعديل الشركة' : 'Edit company' }}
+        </button>
+      }
+      @if (auth.user()?.permissions?.includes('sub.manage')) {
+        <button type="button" class="btn" (click)="goSubscriptions()">
+          {{ lang() === 'ar' ? 'إدارة الاشتراك' : 'Manage subscription' }}
+        </button>
+      }
+      @for (kind of rowActions(c); track kind) {
+        <button
+          type="button"
+          class="btn"
+          [class.btn--okText]="kind === 'reactivate'"
+          [class.btn--badText]="kind !== 'reactivate'"
+          (click)="askConfirm(c, kind)"
+        >
+          {{ L().actions[kind] }}{{ kind === 'reactivate' ? '' : '…' }}
+        </button>
+      }
     </div>
   </aside>
 }
 
 @if (wsCompany(); as c) {
-  <div class="scrim" (click)="closeWsDialog()"></div>
-  <div class="dialog" (click)="$event.stopPropagation()">
-    <div class="dialog__header">
-      <span class="t-logo" [style.background]="logoBg(c)">{{ logoInitials(c) }}</span>
-      <div class="drawer__headerText">
-        <span class="dialog__title">{{ L().wsTitle }}</span>
-        <span class="dialog__sub">{{ companyName(c) }} · {{ L().wsSub }}</span>
-      </div>
+  <div class="scrim scrim--top" (click)="closeWsDialog()"></div>
+  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__head">
+      <span class="dialog__title">{{ L().wsTitle }}</span>
+      <span class="dialog__body">{{ companyName(c) }} · {{ L().wsSub }}</span>
     </div>
-
-    <div class="dialog__body">
+    <div class="dialog__main">
       <button
         type="button"
-        class="ws-mode"
-        [class.ws-mode--active]="wsMode() === 'read'"
+        class="mode"
+        [class.mode--on]="wsMode() === 'read'"
         (click)="wsMode.set('read')"
       >
-        <span class="ws-mode__radio" [class.ws-mode__radio--active]="wsMode() === 'read'"></span>
-        <span class="ws-mode__text">
-          <span class="ws-mode__label">{{ L().wsModeRead }}</span>
-          <span class="ws-mode__sub">{{ L().wsModeReadSub }}</span>
-        </span>
+        <span class="radio"></span>
+        <span class="mode__text"
+          ><b>{{ L().wsModeRead }}</b
+          ><span>{{ L().wsModeReadSub }}</span></span
+        >
       </button>
       @if (auth.user()?.permissions?.includes('ws.manage')) {
         <button
           type="button"
-          class="ws-mode"
-          [class.ws-mode--active]="wsMode() === 'manage'"
+          class="mode"
+          [class.mode--on]="wsMode() === 'manage'"
           (click)="wsMode.set('manage')"
         >
-          <span
-            class="ws-mode__radio"
-            [class.ws-mode__radio--active]="wsMode() === 'manage'"
-          ></span>
-          <span class="ws-mode__text">
-            <span class="ws-mode__label">{{ L().wsModeManage }}</span>
-            <span class="ws-mode__sub">{{ L().wsModeManageSub }}</span>
-          </span>
+          <span class="radio"></span>
+          <span class="mode__text"
+            ><b>{{ L().wsModeManage }}</b
+            ><span>{{ L().wsModeManageSub }}</span></span
+          >
         </button>
       }
-
       @if (wsMode() === 'manage') {
         <label class="field">
-          <span class="field__label">{{ L().wsReasonLabel }}</span>
+          <span>{{ L().wsReasonLabel }}</span>
           <textarea
-            class="textarea"
             rows="2"
             [placeholder]="L().wsReasonPh"
             [value]="wsReason()"
             (input)="wsReason.set($any($event.target).value)"
           ></textarea>
         </label>
-        <div class="dur-row">
-          <span class="field__label">{{ L().wsDurationLabel }}</span>
-          <div class="chip-row">
+        <div class="field">
+          <span>{{ L().wsDurationLabel }}</span>
+          <div class="segs">
             @for (d of wsDurations; track d) {
               <button
                 type="button"
-                class="chip"
-                [class.chip--active]="wsDuration() === d"
+                class="seg"
+                [class.seg--on]="wsDuration() === d"
                 (click)="wsDuration.set(d)"
               >
                 {{ d }}m
@@ -602,18 +635,13 @@
             }
           </div>
         </div>
-        <button type="button" class="ack-row" (click)="wsAck.set(!wsAck())">
-          <span class="ack-box" [class.ack-box--on]="wsAck()">
-            @if (wsAck()) {
-              ✓
-            }
-          </span>
-          <span class="ack-text">{{ L().wsAck }}</span>
+        <button type="button" class="ack" (click)="wsAck.set(!wsAck())">
+          <span class="box" [class.box--on]="wsAck()">{{ wsAck() ? '✓' : '' }}</span>
+          {{ L().wsAck }}
         </button>
         <label class="field">
-          <span class="field__label">{{ L().wsPasswordLabel }}</span>
+          <span>{{ L().wsPasswordLabel }}</span>
           <input
-            class="search"
             type="password"
             autocomplete="current-password"
             dir="ltr"
@@ -623,19 +651,15 @@
           />
         </label>
       }
-
       @if (wsError()) {
-        <span class="field__error">{{ wsError() }}</span>
+        <span class="err">{{ wsError() }}</span>
       }
     </div>
-
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeWsDialog()">
-        {{ L().wsCancel }}
-      </button>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="closeWsDialog()">{{ L().wsCancel }}</button>
       <button
         type="button"
-        class="btn btn--primary"
+        class="btn btn--dark"
         [disabled]="wsSaving()"
         (click)="submitWsDialog()"
       >
@@ -646,9 +670,25 @@
 }
 
 @if (confirming(); as cf) {
-  <div class="scrim" (click)="cancelConfirm()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
+  <div class="scrim scrim--top" (click)="cancelConfirm()"></div>
+  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__head">
+      <span class="warnIcon" [class.warnIcon--ok]="cf.kind === 'reactivate'">
+        <svg
+          width="17"
+          height="17"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.9"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M12 9v4M12 17h.01M10.3 4l-8 14a2 2 0 0 0 1.7 3h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0z"
+          />
+        </svg>
+      </span>
       <span class="dialog__title">
         {{
           cf.kind === 'suspend'
@@ -657,8 +697,9 @@
               ? L().confirmReactivateTitle
               : L().confirmArchiveTitle
         }}
+        · {{ companyName(cf.company) }}
       </span>
-      <p class="dialog__text">
+      <span class="dialog__body">
         {{
           cf.kind === 'suspend'
             ? L().confirmSuspendBody(companyName(cf.company))
@@ -666,174 +707,158 @@
               ? L().confirmReactivateBody(companyName(cf.company))
               : L().confirmArchiveBody(companyName(cf.company))
         }}
-      </p>
+      </span>
     </div>
-    <div class="dialog__footer">
-      <label
-        >{{ lang() === 'ar' ? 'السبب (10 أحرف على الأقل)' : 'Reason (at least 10 characters)'
-        }}<input
-          class="input"
+    <div class="dialog__main">
+      @if (cf.kind !== 'reactivate') {
+        <label class="field">
+          <span>{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span>
+          <select [value]="reasonKind()" (change)="reasonKind.set($any($event.target).value)">
+            @for (k of reasonKinds; track k) {
+              <option [value]="k">{{ reasonLabel(k) }}</option>
+            }
+          </select>
+        </label>
+      }
+      <label class="field">
+        <span>{{
+          lang() === 'ar'
+            ? 'ملاحظة داخلية (10 أحرف على الأقل)'
+            : 'Internal note (min. 10 characters)'
+        }}</span>
+        <textarea
+          rows="3"
+          maxlength="460"
+          [class.invalid]="tried() && reason().trim().length < 10"
+          [placeholder]="
+            lang() === 'ar' ? 'ماذا حدث ومن وافق' : 'What happened and who approved it'
+          "
           [value]="reason()"
           (input)="reason.set($any($event.target).value)"
-          maxlength="500"
-      /></label>
-      <button type="button" class="btn btn--ghost" (click)="cancelConfirm()">
-        {{ L().confirmCancel }}
-      </button>
+        ></textarea>
+        @if (tried() && reason().trim().length < 10) {
+          <span class="err">{{
+            lang() === 'ar'
+              ? 'أضف ملاحظة من 10 أحرف على الأقل.'
+              : 'Add a note of at least 10 characters.'
+          }}</span>
+        }
+      </label>
+      @if (cf.kind !== 'reactivate') {
+        <button type="button" class="ack" (click)="ack.set(!ack())">
+          <span class="box" [class.box--on]="ack()" [class.box--err]="tried() && !ack()">{{
+            ack() ? '✓' : ''
+          }}</span>
+          {{
+            lang() === 'ar'
+              ? 'أفهم تأثير هذا الإجراء على مستخدمي الشركة.'
+              : 'I understand the impact on this company’s users.'
+          }}
+        </button>
+      }
+    </div>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="cancelConfirm()">{{ L().confirmCancel }}</button>
       <button
         type="button"
-        class="btn btn--danger"
-        [disabled]="saving() || reason().trim().length < 10"
+        class="btn"
+        [class.btn--danger]="cf.kind !== 'reactivate'"
+        [class.btn--dark]="cf.kind === 'reactivate'"
+        [class.btn--dim]="!confirmReady()"
+        [disabled]="saving()"
         (click)="performConfirm()"
       >
-        {{ L().confirmGo }}
+        {{
+          cf.kind === 'suspend'
+            ? lang() === 'ar'
+              ? 'إيقاف الشركة'
+              : 'Suspend company'
+            : cf.kind === 'archive'
+              ? lang() === 'ar'
+                ? 'أرشفة الشركة'
+                : 'Archive company'
+              : L().actions.reactivate
+        }}
       </button>
     </div>
   </div>
 }
 
-@if (toast(); as msg) {
-  <div class="toast">{{ msg }}</div>
-}
-
 @if (formOpen()) {
   <div class="scrim" (click)="formOpen.set(false)"></div>
-  <aside class="drawer" style="overflow: auto">
-    <div class="drawer__header">
-      <h2>{{ lang() === 'ar' ? 'بيانات الشركة' : 'Company details' }}</h2>
-      <button class="btn" (click)="formOpen.set(false)">×</button>
+  <aside class="drawer">
+    <div class="drawer__head">
+      <div class="drawer__title">
+        <span class="drawer__name">{{
+          lang() === 'ar' ? 'بيانات الشركة' : 'Company details'
+        }}</span>
+      </div>
+      <button type="button" class="x" (click)="formOpen.set(false)">×</button>
     </div>
-    <form
-      (submit)="$event.preventDefault(); saveCompany()"
-      style="padding: 24px; display: grid; gap: 16px"
-    >
-      <label
-        >{{ lang() === 'ar' ? 'الاسم بالإنجليزية' : 'English name'
-        }}<input
-          style="
-            display: block;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-          "
+    <form class="drawer__body form" (submit)="$event.preventDefault(); saveCompany()">
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'الاسم بالإنجليزية' : 'English name' }}</span
+        ><input
           type="text"
           name="nameEn"
+          dir="ltr"
           [(ngModel)]="draft.nameEn"
           required
           maxlength="160"
       /></label>
-      <label
-        >{{ lang() === 'ar' ? 'الاسم بالعربية' : 'Arabic name'
-        }}<input
-          style="
-            display: block;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-          "
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'الاسم بالعربية' : 'Arabic name' }}</span
+        ><input
           type="text"
           name="nameAr"
+          dir="rtl"
           [(ngModel)]="draft.nameAr"
           required
           maxlength="160"
       /></label>
-      <label
-        >{{ lang() === 'ar' ? 'معرّف مساحة العمل' : 'Workspace identifier'
-        }}<input
-          style="
-            display: block;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-          "
-          type="text"
-          name="slug"
-          [(ngModel)]="draft.slug"
-          required
-          maxlength="160"
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'معرّف مساحة العمل' : 'Workspace identifier' }}</span
+        ><input type="text" name="slug" dir="ltr" [(ngModel)]="draft.slug" required maxlength="160"
       /></label>
-      <label
-        >{{ lang() === 'ar' ? 'المدينة' : 'City'
-        }}<input
-          style="
-            display: block;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-          "
-          type="text"
-          name="city"
-          [(ngModel)]="draft.city"
-          required
-          maxlength="160"
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'المدينة' : 'City' }}</span
+        ><input type="text" name="city" [(ngModel)]="draft.city" required maxlength="160"
       /></label>
-      <label
-        >{{ lang() === 'ar' ? 'بريد مسؤول الشركة' : 'Admin contact email'
-        }}<input
-          style="
-            display: block;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-          "
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'بريد مسؤول الشركة' : 'Admin contact email' }}</span
+        ><input
           type="email"
           name="adminEmail"
+          dir="ltr"
           [(ngModel)]="draft.adminEmail"
           required
           maxlength="254"
       /></label>
-      <label
-        >{{ lang() === 'ar' ? 'الهاتف' : 'Phone'
-        }}<input
-          style="
-            display: block;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-          "
-          type="text"
-          name="phone"
-          [(ngModel)]="draft.phone"
-          maxlength="160"
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'الهاتف' : 'Phone' }}</span
+        ><input type="text" name="phone" dir="ltr" [(ngModel)]="draft.phone" maxlength="160"
       /></label>
-      <label
-        >{{ lang() === 'ar' ? 'الموقع' : 'Website'
-        }}<input
-          style="
-            display: block;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-          "
-          type="text"
-          name="website"
-          [(ngModel)]="draft.website"
-          maxlength="160"
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'الموقع' : 'Website' }}</span
+        ><input type="text" name="website" dir="ltr" [(ngModel)]="draft.website" maxlength="160"
       /></label>
-      <label
-        >{{ lang() === 'ar' ? 'نوع الشركة' : 'Company type'
-        }}<select name="type" [(ngModel)]="draft.type">
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'نوع الشركة' : 'Company type' }}</span
+        ><select name="type" [(ngModel)]="draft.type">
           @for (type of companyTypes; track type) {
             <option [value]="type">{{ typeLabel(type) }}</option>
           }
         </select></label
       >
-      <label
-        >{{ lang() === 'ar' ? 'الخطة' : 'Plan'
-        }}<select name="plan" [(ngModel)]="draft.plan" [disabled]="!!editing()">
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'الخطة' : 'Plan' }}</span
+        ><select name="plan" [(ngModel)]="draft.plan" [disabled]="!!editing()">
           @for (plan of planTypes; track plan) {
             <option [value]="plan">{{ planLabel(plan) }}</option>
           }
         </select></label
       >
-      <p>
+      <p class="muted">
         @if (!editing()) {
           {{
             lang() === 'ar'
@@ -849,9 +874,9 @@
         }
       </p>
       @if (error()) {
-        <p role="alert">{{ error() }}</p>
+        <p class="note note--bad" role="alert">{{ error() }}</p>
       }
-      <button class="btn btn--primary" type="submit" [disabled]="saving()">
+      <button class="btn btn--dark" type="submit" [disabled]="saving()">
         {{ lang() === 'ar' ? 'حفظ' : 'Save company' }}
       </button>
     </form>
@@ -859,19 +884,23 @@
 }
 
 @if (ownerDialog(); as c) {
-  <div class="scrim" (click)="!ownerSaving() && closeOwner()"></div>
-  <aside class="drawer" style="overflow: auto" aria-label="Company owner invitation">
-    <div class="drawer__header">
-      <h2>{{ lang() === 'ar' ? 'دعوة مالك الشركة' : 'Invite company owner' }}</h2>
-      <button class="btn" [disabled]="ownerSaving()" (click)="closeOwner()">×</button>
+  <div class="scrim scrim--top" (click)="!ownerSaving() && closeOwner()"></div>
+  <aside class="drawer drawer--top" aria-label="Company owner invitation">
+    <div class="drawer__head">
+      <div class="drawer__title">
+        <span class="drawer__name">{{
+          lang() === 'ar' ? 'دعوة مالك الشركة' : 'Invite company owner'
+        }}</span>
+        <span class="muted">{{ companyName(c) }}</span>
+      </div>
+      <button type="button" class="x" [disabled]="ownerSaving()" (click)="closeOwner()">×</button>
     </div>
-    <div style="padding: 24px; display: grid; gap: 16px">
-      <p>{{ companyName(c) }}</p>
-      <p>
-        {{ lang() === 'ar' ? 'البريد المستهدف:' : 'Invitation recipient:' }}
-        {{ ownerInfo()?.email || c.adminEmail }}
-      </p>
-      <p>
+    <div class="drawer__body">
+      <div class="kv">
+        <span>{{ lang() === 'ar' ? 'البريد المستهدف' : 'Invitation recipient' }}</span
+        ><b dir="ltr">{{ ownerInfo()?.email || c.adminEmail }}</b>
+      </div>
+      <p class="note note--warn">
         {{
           lang() === 'ar'
             ? 'رابط تفعيل يدوي للحسابات القديمة صالح لمدة ٢٤ ساعة. الشركات الجديدة تتلقى بيانات الدخول تلقائيًا بالبريد.'
@@ -879,36 +908,33 @@
         }}
       </p>
       @if (ownerError()) {
-        <p role="alert">{{ ownerError() }}</p>
+        <p class="note note--bad" role="alert">{{ ownerError() }}</p>
       }
       @if (ownerLoading()) {
-        <p>{{ lang() === 'ar' ? 'جار التحميل…' : 'Loading…' }}</p>
+        <p class="muted">{{ lang() === 'ar' ? 'جار التحميل…' : 'Loading…' }}</p>
       }
       @if (ownerLink()) {
-        <p role="status">
+        <p class="note note--ok" role="status">
           {{
             lang() === 'ar'
               ? 'تم إنشاء رابط التفعيل. انسخه قبل إغلاق النافذة.'
               : 'Activation link created. Copy it before closing this window.'
           }}
         </p>
-        <label
-          >{{ lang() === 'ar' ? 'رابط التفعيل' : 'Activation link'
-          }}<input
-            style="width: 100%; padding: 12px"
-            readonly
-            [value]="ownerLink()"
-            dir="ltr"
-            (click)="$any($event.target).select()"
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'رابط التفعيل' : 'Activation link' }}</span
+          ><input readonly [value]="ownerLink()" dir="ltr" (click)="$any($event.target).select()"
         /></label>
-        <p>{{ lang() === 'ar' ? 'ينتهي:' : 'Expires:' }} {{ ownerExpires() }}</p>
+        <div class="kv">
+          <span>{{ lang() === 'ar' ? 'ينتهي' : 'Expires' }}</span
+          ><b>{{ ownerExpires() }}</b>
+        </div>
       }
       @if (!ownerLoading() && (!ownerInfo() || ownerInfo()?.status === 'invited')) {
-        <form (ngSubmit)="inviteOwner()" style="display: grid; gap: 16px">
-          <label
-            >{{ lang() === 'ar' ? 'اسم المالك' : 'Owner name'
-            }}<input
-              style="display: block; width: 100%; padding: 10px"
+        <form class="form" (ngSubmit)="inviteOwner()">
+          <label class="field"
+            ><span>{{ lang() === 'ar' ? 'اسم المالك' : 'Owner name' }}</span
+            ><input
               name="ownerName"
               [(ngModel)]="ownerName"
               required
@@ -916,10 +942,9 @@
               maxlength="120"
               [readOnly]="!!ownerInfo()"
           /></label>
-          <label
-            >{{ lang() === 'ar' ? 'سبب الدعوة' : 'Reason'
-            }}<textarea
-              style="display: block; width: 100%; padding: 10px"
+          <label class="field"
+            ><span>{{ lang() === 'ar' ? 'سبب الدعوة' : 'Reason' }}</span
+            ><textarea
               name="ownerReason"
               [(ngModel)]="ownerReason"
               required
@@ -927,10 +952,11 @@
               maxlength="500"
             ></textarea>
           </label>
-          <label
-            >{{ lang() === 'ar' ? 'كلمة مرور حسابك للتأكيد' : 'Your password to confirm'
-            }}<input
-              style="display: block; width: 100%; padding: 10px"
+          <label class="field"
+            ><span>{{
+              lang() === 'ar' ? 'كلمة مرور حسابك للتأكيد' : 'Your password to confirm'
+            }}</span
+            ><input
               type="password"
               name="ownerPassword"
               [(ngModel)]="ownerPassword"
@@ -939,7 +965,7 @@
               maxlength="256"
           /></label>
           <button
-            class="btn btn--primary"
+            class="btn btn--dark"
             [disabled]="
               ownerSaving() ||
               !ownerPassword() ||
@@ -964,7 +990,7 @@
           @if (ownerInfo()) {
             <button
               type="button"
-              class="btn btn--ghost"
+              class="btn btn--badText"
               [disabled]="ownerSaving() || !ownerPassword() || ownerReason().trim().length < 10"
               (click)="inviteOwner(true)"
             >
@@ -975,4 +1001,8 @@
       }
     </div>
   </aside>
+}
+
+@if (toast(); as msg) {
+  <div class="toast"><span></span>{{ msg }}</div>
 }

@@ -424,3 +424,34 @@ Edit), create/edit project / phase / building / unit (shared editor), archive / 
 | CJ2 | Per-**phase / building** unit counts, sold %, from-price in the table and tree | Project-level counts only. Rows show delivery year and floors. | Counts and from-price aggregated per phase and per building. |
 | CJ3 | Separate **Hold** and **Reserved** counts | The API combines them (`heldOrReserved`). | Separate `held` and `reserved` counts. |
 | CJ4 | **Link to the developer contact** from a project | Developer shown as text. | `developerContactId` on projects. |
+
+## Units (`/company/units`)
+
+Already real: card grid (status, type, price, code · project · building, location · listing, beds / area / floor / view),
+header counts (total + available, via a second `status=available&limit=1` query with the same filters), type chips,
+status chips (all five unit statuses), search, listing filter, include-archived, paging, unit drawer (details, project /
+phase / building, **Hold for client** → Reservations, reservation history, edit, archive / restore), create unit.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| CU1 | **Unit photo** on cards and in the drawer | Striped "no photo" placeholder. | Unit media (upload + `coverUrl` on the unit DTO). |
+| CU2 | Residential / Commercial segment switch | Only "All" works. The others show a "not available" toast. | `segment=res\|com` filter on `GET /units` (from the project, or on standalone units). |
+| CU3 | **Warehouse** type chip | Not shown (type enum is apt / villa / office / retail). | Add `warehouse` to the unit type enum, if needed. |
+| CU4 | **Delivery** ("Ready" / "Delivery 2027") in card specs | Not shown on the list (the unit DTO has no delivery year). | `deliveryYear` (from the phase) on the unit DTO. |
+| CU5 | Available count | Extra request per reload. | Optional: `summary` by status in `GET /units`. |
+
+## Reservations (`/company/reservations`)
+
+Already real: design table (unit code → Units, reservation reference, client → Leads, agent · lead reference, recorded
+deposit, time left + hold bar against the server clock, status), status chips (All / Hold / Reserved / Converted /
+Expired / Cancelled), search, `?unitId=` filter, **expiring within 24h** warning + row highlight, new hold (unit, lead,
+assignee, 24/48/72h), confirm with deposit, extend (+24/48/72h with reason), cancel with reason, contract link once
+converted. **Convert** on a reserved row opens Contracts with the reservation prefilled (`?reservationId=`).
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| CR1 | Project · phase · **price** under the unit code | Shows the reservation reference instead. | Unit project / phase name and `priceMinor` on the reservation DTO. |
+| CR2 | Reservation **created** time under the client | Shows the lead reference instead. | `createdAt` on the reservation DTO (`created_at` is selected but not returned). |
+| CR3 | **Open** (active + expiring) and **Expiring < 24h** chips | Chips follow the API statuses. The 24h warning counts the loaded page only. | `status=open` and `expiringWithin=24h` filters, plus `summary` counts (open, expiring) in `GET /reservations`. |
+| CR4 | Residential / Commercial segment switch | Not shown. | Segment filter on `GET /reservations` (see CU2). |
+| CR5 | Hold bar scale | Assumes a 72h maximum on the client. | Optional: return `startedAt` (or hold length) so the bar shows the real fraction used. |

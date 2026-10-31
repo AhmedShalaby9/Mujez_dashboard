@@ -188,7 +188,25 @@ export class Contracts implements OnDestroy {
     void this.reload();
     const id = p.get('contractId');
     if (id) void this.open(id);
+    const resId = p.get('reservationId');
+    if (resId && this.canManage() && this.canReservations()) void this.fromReservation(resId);
   });
+  /** Opens the create form prefilled from a confirmed reservation (Reservations → Convert). */
+  async fromReservation(id: string) {
+    this.newContract();
+    try {
+      const r = await this.api.get<any>('reservations/' + id);
+      if (!this.formOpen() || r.status !== 'reserved') return;
+      this.options.update((o) => ({
+        ...o,
+        reservations: [r, ...(o['reservations'] ?? []).filter((x: any) => x.id !== r.id)],
+      }));
+      this.form.reservationId = r.id;
+      this.chooseReservation();
+    } catch (e: any) {
+      this.error.set(e.message);
+    }
+  }
   ngOnDestroy() {
     this.serial++;
     this.detailSerial++;
@@ -334,7 +352,18 @@ export class Contracts implements OnDestroy {
                 (!d.contractId || d.contractId === this.selected()?.id),
             )
           : r.items;
-      this.options.update((o) => ({ ...o, [key]: reset ? items : [...(o[key] ?? []), ...items] }));
+      // Keep a prefilled reservation (from ?reservationId=) that isn't on the first page.
+      const kept =
+        key === 'reservations' && reset && this.form.reservationId
+          ? (this.options()['reservations'] ?? []).filter(
+              (x: any) =>
+                x.id === this.form.reservationId && !items.some((i: any) => i.id === x.id),
+            )
+          : [];
+      this.options.update((o) => ({
+        ...o,
+        [key]: reset ? [...kept, ...items] : [...(o[key] ?? []), ...items],
+      }));
       this.optionTotal.update((o) => ({ ...o, [key]: r.total }));
       this.optionPage[key] = page;
     } catch (e: any) {

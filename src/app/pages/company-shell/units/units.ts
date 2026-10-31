@@ -70,7 +70,12 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-units',
   imports: [FormsModule, RouterLink, InventoryEditor],
   templateUrl: './units.html',
-  styleUrl: './units.scss',
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './units.scss',
+  ],
 })
 export class Units implements OnDestroy {
   readonly ui = inject(CompanyUiState);
@@ -97,7 +102,10 @@ export class Units implements OnDestroy {
   listing = 'all';
   archived = false;
   total = signal(0);
+  /** Available units with the same search/type/listing filters (separate count query). */
+  availableTotal = signal<number | null>(null);
   page = signal(1);
+  readonly toast = signal('');
   loading = signal(false);
   busy = signal(false);
   error = signal('');
@@ -129,6 +137,48 @@ export class Units implements OnDestroy {
   money(v: string) {
     return this.api.money(v);
   }
+  /** Design status colors: [background, text]. */
+  readonly statusTone: Record<UnitStatus, [string, string]> = {
+    available: ['#EEF6DA', '#111113'],
+    hold: ['#FDF3DC', '#8A5A14'],
+    reserved: ['#FDF3DC', '#8A5A14'],
+    under_contract: ['#E8ECFB', '#2F45A8'],
+    sold: ['#111113', '#FFFFFF'],
+  };
+  title(u: InventoryUnit) {
+    const b = u.building?.[this.lang()];
+    return [this.project(u), b].filter(Boolean).join(' · ');
+  }
+  specs(u: InventoryUnit) {
+    const L = this.L();
+    return [
+      u.bedrooms ? u.bedrooms + ' ' + L.bedrooms : null,
+      Number(u.area).toLocaleString('en-US') + ' ' + L.area,
+      u.floor !== null ? this.t('Floor ', 'الدور ') + u.floor : null,
+      this.view(u) || null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  }
+  price(u: InventoryUnit) {
+    return this.money(u.priceMinor) + (u.listing === 'rental' ? this.t('/mo', '/شهر') : '');
+  }
+  segmentSoon() {
+    this.showToast(
+      this.t(
+        'Segment filtering is not available from the API yet.',
+        'التصفية حسب القطاع غير متاحة من الخادم بعد.',
+      ),
+    );
+  }
+  showToast(msg: string) {
+    this.toast.set(msg);
+    setTimeout(() => this.toast.set(''), 3500);
+  }
+  close() {
+    this.detailSerial++;
+    this.selected.set(null);
+  }
   async reload() {
     const n = ++this.serial;
     this.error.set('');
@@ -143,10 +193,15 @@ export class Units implements OnDestroy {
     if (this.statusFilter() !== 'all') q['status'] = this.statusFilter();
     if (this.listing !== 'all') q['listing'] = this.listing;
     try {
-      const r = await this.api.get<{ items: InventoryUnit[]; total: number }>('units', q);
+      const avail = { ...q, status: 'available', page: '1', limit: '1' };
+      const [r, a] = await Promise.all([
+        this.api.get<{ items: InventoryUnit[]; total: number }>('units', q),
+        this.api.get<{ total: number }>('units', avail).catch(() => null),
+      ]);
       if (n !== this.serial) return;
       this.units.set(r.items);
       this.total.set(r.total);
+      this.availableTotal.set(a?.total ?? null);
     } catch (e: any) {
       if (n === this.serial) this.error.set(e.message);
     } finally {

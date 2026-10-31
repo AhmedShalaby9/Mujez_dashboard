@@ -47,12 +47,12 @@ const COPY: Record<Lang, Copy> = {
       reserved: 'Reserved',
       converted: 'Converted',
       expired: 'Expired',
-      canceled: 'Canceled',
+      canceled: 'Cancelled',
     },
     thUnit: 'Unit',
-    thContact: 'Contact',
+    thContact: 'With',
     thAgent: 'Agent',
-    thExpiry: 'Expires in',
+    thExpiry: 'Expires',
     thStatus: 'Status',
     thActions: 'Actions',
     confirmBtn: 'Confirm',
@@ -83,9 +83,9 @@ const COPY: Record<Lang, Copy> = {
       canceled: 'ملغى',
     },
     thUnit: 'الوحدة',
-    thContact: 'العميل',
+    thContact: 'مع',
     thAgent: 'الوكيل',
-    thExpiry: 'ينتهي بعد',
+    thExpiry: 'ينتهي',
     thStatus: 'الحالة',
     thActions: 'إجراءات',
     confirmBtn: 'تأكيد',
@@ -109,7 +109,12 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-reservations',
   imports: [FormsModule, RouterLink],
   templateUrl: './reservations.html',
-  styleUrl: './reservations.scss',
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './reservations.scss',
+  ],
 })
 export class Reservations implements OnDestroy {
   readonly ui = inject(CompanyUiState);
@@ -197,6 +202,33 @@ export class Reservations implements OnDestroy {
       timeZone: 'Africa/Cairo',
     }).format(new Date(v));
   }
+  /** Design status colors: [background, text]. */
+  readonly statusTone: Record<ResStatus, [string, string]> = {
+    hold: ['#FDF3DC', '#8A5A14'],
+    reserved: ['#EEF6DA', '#111113'],
+    converted: ['#111113', '#FFFFFF'],
+    expired: ['#F4F4F1', '#8A8A90'],
+    canceled: ['#F4F4F1', '#8A8A90'],
+  };
+  isOpen(r: Reservation) {
+    return r.status === 'hold' || r.status === 'reserved';
+  }
+  /** Hours left, measured against the server timestamp. */
+  hoursLeft(r: Reservation) {
+    return Math.max(0, (Date.parse(r.expiresAt) - Date.parse(r.asOf)) / 3600000);
+  }
+  expiring(r: Reservation) {
+    return this.isOpen(r) && this.hoursLeft(r) <= 24;
+  }
+  leftWidth(r: Reservation) {
+    return this.isOpen(r) ? Math.min(100, (this.hoursLeft(r) / 72) * 100) + '%' : '0%';
+  }
+  leftLabel(r: Reservation) {
+    if (this.isOpen(r)) return this.expiry(r) + ' ' + this.t('left', 'متبقية');
+    return r.status === 'expired' ? this.t('Lapsed', 'انتهى') : '—';
+  }
+  /** Open reservations on the loaded page that expire within 24 hours. */
+  readonly expSoon = computed(() => this.reservations().filter((r) => this.expiring(r)).length);
   expiry(r: Reservation) {
     if (!['hold', 'reserved'].includes(r.status)) return '—';
     const min = Math.max(0, Math.ceil((Date.parse(r.expiresAt) - Date.parse(r.asOf)) / 60000));

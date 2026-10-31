@@ -1,257 +1,331 @@
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <span
+        >{{ total() }} {{ t('reservations', 'حجز') }} ·
+        {{ t('confirmed holds last 72h', 'الحجز المؤكد يستمر 72 ساعة') }}</span
+      >
+      <h1>{{ L().title }}</h1>
+    </div>
+    <div class="head__actions">
+      @if (canCreate()) {
+        <button type="button" class="btn btn--dark" (click)="newHold()">
+          {{ t('+ New hold', '+ تعليق جديد') }}
+        </button>
+      }
+    </div>
   </div>
-</div>
 
-<div class="chip-row">
-  <button
-    type="button"
-    class="chip"
-    [class.chip--active]="statusFilter() === 'all'"
-    (click)="filter('all')"
-  >
-    {{ L().statusAll }}
-  </button>
-  @for (s of statuses; track s) {
-    <button
-      type="button"
-      class="chip"
-      [class.chip--active]="statusFilter() === s"
-      (click)="filter(s)"
-    >
-      {{ L().statusNames[s] }}
-    </button>
+  @if (expSoon() > 0) {
+    <div class="warn">
+      <b
+        >{{ expSoon() }}
+        {{
+          expSoon() > 1
+            ? t('reservations expire within 24 hours', 'حجوزات تنتهي خلال 24 ساعة')
+            : t('reservation expires within 24 hours', 'حجز ينتهي خلال 24 ساعة')
+        }}</b
+      >
+      <span>{{
+        t(
+          'Expired reservations release the unit back to available automatically.',
+          'الحجوزات المنتهية تعيد الوحدة متاحة تلقائيًا.'
+        )
+      }}</span>
+    </div>
   }
-</div>
 
-@if (error()) {
-  <p class="res-error" role="alert">{{ error() }}</p>
-}
-@if (loading()) {
-  <p>{{ t('Loading…', 'جارٍ التحميل…') }}</p>
-}
-<div class="chip-row">
-  <button class="chip" [disabled]="loading()" (click)="reload()">
-    {{ t('Refresh', 'تحديث') }}
-  </button>
-  @if (canCreate()) {
-    <button class="chip" (click)="newHold()">{{ t('New hold', 'تعليق جديد') }}</button>
-  }
-  <input
-    [placeholder]="t('Search reservations', 'بحث الحجوزات')"
-    [(ngModel)]="search"
-    (keyup.enter)="filter()"
-  /><button class="chip" (click)="filter()">{{ t('Search', 'بحث') }}</button>
+  <div class="tools">
+    <div class="chips">
+      <button
+        type="button"
+        class="chip"
+        [class.on]="statusFilter() === 'all'"
+        (click)="filter('all')"
+      >
+        {{ L().statusAll }}
+      </button>
+      @for (s of statuses; track s) {
+        <button type="button" class="chip" [class.on]="statusFilter() === s" (click)="filter(s)">
+          {{ L().statusNames[s] }}
+        </button>
+      }
+    </div>
+    <input
+      class="search"
+      type="search"
+      [placeholder]="t('Search reservations', 'بحث الحجوزات')"
+      [(ngModel)]="search"
+      (keydown.enter)="filter()"
+    />
+  </div>
+
   @if (unitFilter()) {
-    <button class="chip" (click)="showAll()">{{ t('Show all units', 'عرض كل الوحدات') }}</button>
+    <p class="note">
+      {{ t('Showing reservations for one unit.', 'عرض حجوزات وحدة واحدة.') }}
+      <button type="button" class="link" (click)="showAll()">
+        {{ t('Show all', 'عرض الكل') }}
+      </button>
+    </p>
   }
-</div>
-<p>
-  {{
-    t(
-      'Expiry shown as of the server timestamp. Deposits are manually recorded amounts, not collected payments. Confirmation reserves for 72 hours.',
-      'الانتهاء حسب وقت الخادم. العربون مبلغ مسجل يدوياً وليس تحصيلاً. التأكيد يحجز لمدة ٧٢ ساعة.'
-    )
-  }}
-</p>
-<div class="card">
-  <div class="table-scroll">
-    <div class="r-table">
-      <div class="r-head">
-        <span>{{ L().thUnit }}</span>
-        <span>{{ L().thContact }}</span>
-        <span>{{ L().thAgent }}</span>
-        <span>{{ L().thExpiry }}</span>
-        <span>{{ L().thStatus }}</span>
-        <span>{{ L().thActions }}</span>
-      </div>
-      @for (r of reservations(); track r.id) {
-        <div class="r-row">
-          <span
-            ><a
-              class="mono"
-              [routerLink]="['/company/units']"
-              [queryParams]="{ unitId: r.unitId }"
-              >{{ r.unit }}</a
-            ><small
-              >{{ r.reference }}
-              @if (r.sample) {
-                · {{ t('Sample', 'تجريبي') }}
-              }
-            </small></span
+  @if (error() && !createOpen() && !confirmTarget() && !extendTarget() && !cancelTarget()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+
+  <section class="card rtable" [class.rtable--busy]="loading()">
+    <div class="rgrid rhead">
+      <span>{{ L().thUnit }}</span>
+      <span>{{ L().thContact }}</span>
+      <span>{{ t('Deposit', 'العربون') }}</span>
+      <span>{{ L().thExpiry }}</span>
+      <span>{{ L().thStatus }}</span>
+      <span></span>
+    </div>
+    @for (r of reservations(); track r.id) {
+      <div class="rgrid rrow" [class.rrow--soon]="expiring(r)">
+        <div class="cell">
+          <a
+            class="mono strong"
+            [routerLink]="['/company/units']"
+            [queryParams]="{ unitId: r.unitId }"
+            >{{ r.unit }}</a
           >
-          <a [routerLink]="['/company/leads']" [queryParams]="{ leadId: r.leadId }">{{
-            contact(r)
-          }}</a>
-          <span class="r-cell__sub">{{ agent(r) }}</span>
-          <span class="mono r-cell__sub"
-            >{{ expiry(r) }}<small>{{ date(r.expiresAt) }}</small></span
-          >
-          <span class="pill" [class]="'pill--' + r.status">{{ L().statusNames[r.status] }}</span>
-          <span class="r-actions">
-            @if (r.contractId) {
-              <a routerLink="/company/contracts" [queryParams]="{ contractId: r.contractId }">{{
-                r.contractReference
-              }}</a>
-            }
-            @if (r.depositMinor !== null) {
-              <small>{{ t('Recorded deposit', 'عربون مسجل') }}: {{ money(r.depositMinor) }}</small>
-            }
-            @if (canManage() && r.status === 'hold') {
-              <button type="button" class="row-btn" (click)="openConfirm(r)">
-                {{ L().confirmBtn }}
-              </button>
-              <button type="button" class="row-btn" (click)="openExtend(r)">
-                {{ L().extendBtn }}
-              </button>
-              <button type="button" class="row-btn row-btn--danger" (click)="openCancel(r)">
-                {{ L().cancelBtn }}
-              </button>
-            } @else if (canManage() && r.status === 'reserved') {
-              <button type="button" class="row-btn" (click)="openExtend(r)">
-                {{ L().extendBtn }}
-              </button>
-              <button type="button" class="row-btn row-btn--danger" (click)="openCancel(r)">
-                {{ L().cancelBtn }}
-              </button>
+          <span class="sub"
+            >{{ r.reference }}
+            @if (r.sample) {
+              <i class="soon">{{ t('Sample', 'تجريبي') }}</i>
             }
           </span>
         </div>
-      }
-      @if (!loading() && !reservations().length) {
-        <div class="t-empty">{{ L().emptyTitle }}</div>
-      }
-    </div>
+        <div class="cell">
+          <a
+            class="strong ell"
+            [routerLink]="['/company/leads']"
+            [queryParams]="{ leadId: r.leadId }"
+            >{{ contact(r) }}</a
+          >
+          <span class="sub ell">{{ agent(r) }} · {{ r.leadReference }}</span>
+        </div>
+        <span class="mono small">{{ r.depositMinor !== null ? money(r.depositMinor) : '—' }}</span>
+        <div class="cell left" [title]="date(r.expiresAt)">
+          <span
+            class="mono small strong"
+            [style.color]="isOpen(r) ? (expiring(r) ? '#B4442F' : '#111113') : '#C4C4BE'"
+            >{{ leftLabel(r) }}</span
+          >
+          <div class="track">
+            <div
+              [style.width]="leftWidth(r)"
+              [style.background]="expiring(r) ? '#B4442F' : '#111113'"
+            ></div>
+          </div>
+        </div>
+        <span
+          class="st"
+          [style.background]="statusTone[r.status][0]"
+          [style.color]="statusTone[r.status][1]"
+          >{{ L().statusNames[r.status] }}</span
+        >
+        <div class="acts">
+          @if (r.contractId) {
+            <a
+              class="btn btn--sm"
+              routerLink="/company/contracts"
+              [queryParams]="{ contractId: r.contractId }"
+              >{{ r.contractReference }}</a
+            >
+          } @else if (canManage() && r.status === 'hold') {
+            <button type="button" class="btn btn--sm" (click)="openExtend(r)">
+              {{ L().extendBtn }}
+            </button>
+            <button type="button" class="btn btn--sm btn--dark" (click)="openConfirm(r)">
+              {{ L().confirmBtn }}
+            </button>
+            <button type="button" class="btn btn--sm" (click)="openCancel(r)">
+              {{ L().cancelBtn }}
+            </button>
+          } @else if (canManage() && r.status === 'reserved') {
+            <button type="button" class="btn btn--sm" (click)="openExtend(r)">
+              {{ L().extendBtn }}
+            </button>
+            <a
+              class="btn btn--sm btn--dark"
+              routerLink="/company/contracts"
+              [queryParams]="{ reservationId: r.id }"
+              >{{ t('Convert', 'تحويل لعقد') }}</a
+            >
+            <button type="button" class="btn btn--sm" (click)="openCancel(r)">
+              {{ L().cancelBtn }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+    @if (loading() && !reservations().length) {
+      <p class="muted empty" role="status">{{ t('Loading…', 'جار التحميل…') }}</p>
+    }
+    @if (!loading() && !reservations().length) {
+      <p class="muted empty">{{ t('No reservations in this view.', 'لا توجد حجوزات هنا.') }}</p>
+    }
+  </section>
+
+  <div class="pager">
+    <span class="muted">{{
+      t(
+        'Times as of the server clock. Deposits are recorded amounts, not collected payments.',
+        'الأوقات حسب ساعة الخادم. العربون مبلغ مسجل وليس تحصيلًا.'
+      )
+    }}</span>
+    @if (total() > 30) {
+      <span class="muted">{{ t('Page', 'صفحة') }} {{ page() }}</span>
+      <button
+        type="button"
+        class="btn btn--sm"
+        [disabled]="page() === 1 || loading()"
+        (click)="paginate(-1)"
+      >
+        {{ t('Previous', 'السابق') }}
+      </button>
+      <button
+        type="button"
+        class="btn btn--sm"
+        [disabled]="page() * 30 >= total() || loading()"
+        (click)="paginate(1)"
+      >
+        {{ t('Next', 'التالي') }}
+      </button>
+    }
   </div>
 </div>
 
 @if (confirmTarget(); as r) {
   <div class="scrim" (click)="closeAll()"></div>
-  <div class="dialog" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      @if (error()) {
-        <p role="alert" class="res-error">{{ error() }}</p>
-      }
+  <section class="dialog" role="dialog" aria-modal="true" [attr.aria-label]="L().confirmTitle">
+    <div class="dialog__head">
       <span class="dialog__title">{{ L().confirmTitle }}</span>
-      <p class="dialog__text">{{ r.unit }} · {{ contact(r) }}</p>
-      <div class="field">
-        <span class="field__label">{{ L().depositLabel }}</span>
+      <span class="dialog__body">{{ r.unit }} · {{ contact(r) }}</span>
+    </div>
+    <div class="dialog__main">
+      @if (error()) {
+        <p role="alert" class="note note--bad">{{ error() }}</p>
+      }
+      <label class="field">
+        <span>{{ L().depositLabel }}</span>
         <input
-          class="textbox"
           inputmode="decimal"
           [value]="depositInput()"
           (input)="depositInput.set($any($event.target).value); changed()"
         />
-      </div>
+      </label>
+      <p class="muted small">
+        {{ t('Confirming reserves the unit for 72 hours.', 'التأكيد يحجز الوحدة لمدة 72 ساعة.') }}
+      </p>
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeAll()">{{ L().cancel }}</button>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="closeAll()">{{ L().cancel }}</button>
       <button
         type="button"
-        class="btn btn--primary"
+        class="btn btn--dark"
         [disabled]="busy() || !depositInput().trim()"
         (click)="applyConfirm()"
       >
-        {{ L().apply }}
+        {{ L().confirmBtn }}
       </button>
     </div>
-  </div>
+  </section>
 }
 
 @if (extendTarget(); as r) {
   <div class="scrim" (click)="closeAll()"></div>
-  <div class="dialog" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      @if (error()) {
-        <p role="alert" class="res-error">{{ error() }}</p>
-      }
+  <section class="dialog" role="dialog" aria-modal="true" [attr.aria-label]="L().extendTitle">
+    <div class="dialog__head">
       <span class="dialog__title">{{ L().extendTitle }}</span>
-      <p class="dialog__text">{{ r.unit }} · {{ contact(r) }}</p>
-      <div class="dur-row">
+      <span class="dialog__body">{{ r.unit }} · {{ contact(r) }} · {{ leftLabel(r) }}</span>
+    </div>
+    <div class="dialog__main">
+      @if (error()) {
+        <p role="alert" class="note note--bad">{{ error() }}</p>
+      }
+      <div class="chips">
         @for (d of [24, 48, 72]; track d) {
           <button
             type="button"
             class="chip"
-            [class.chip--active]="extendDuration() === d"
+            [class.on]="extendDuration() === d"
             (click)="extendDuration.set(d); changed()"
           >
-            {{ d }} {{ t('hours', 'ساعة') }}
+            +{{ d }} {{ t('hours', 'ساعة') }}
           </button>
         }
       </div>
-      <div class="field">
-        <span class="field__label">{{ L().reasonLabel }}</span>
+      <label class="field">
+        <span>{{ L().reasonLabel }}</span>
         <textarea
-          class="textarea"
           rows="2"
           [placeholder]="L().reasonPh"
           [value]="extendReason()"
           (input)="extendReason.set($any($event.target).value); changed()"
         ></textarea>
-      </div>
+      </label>
+      <p class="muted small">{{ t('At least 10 characters.', '10 أحرف على الأقل.') }}</p>
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeAll()">{{ L().cancel }}</button>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="closeAll()">{{ L().cancel }}</button>
       <button
         type="button"
-        class="btn btn--primary"
+        class="btn btn--dark"
         [disabled]="busy() || extendReason().trim().length < 10"
         (click)="applyExtend()"
       >
-        {{ L().apply }}
+        {{ L().extendBtn }}
       </button>
     </div>
-  </div>
+  </section>
 }
 
 @if (cancelTarget(); as r) {
   <div class="scrim" (click)="closeAll()"></div>
-  <div class="dialog" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      @if (error()) {
-        <p role="alert" class="res-error">{{ error() }}</p>
-      }
+  <section class="dialog" role="dialog" aria-modal="true" [attr.aria-label]="L().cancelTitle">
+    <div class="dialog__head">
       <span class="dialog__title">{{ L().cancelTitle }}</span>
-      <p class="dialog__text">{{ r.unit }} · {{ contact(r) }}</p>
-      <div class="field">
-        <span class="field__label">{{ L().reasonLabel }}</span>
+      <span class="dialog__body">{{ r.unit }} · {{ contact(r) }}</span>
+    </div>
+    <div class="dialog__main">
+      @if (error()) {
+        <p role="alert" class="note note--bad">{{ error() }}</p>
+      }
+      <label class="field">
+        <span>{{ L().reasonLabel }}</span>
         <textarea
-          class="textarea"
           rows="2"
           [placeholder]="L().cancelReasonPh"
           [value]="cancelReason()"
           (input)="cancelReason.set($any($event.target).value); changed()"
         ></textarea>
-      </div>
+      </label>
+      <p class="muted small">
+        {{
+          t(
+            'At least 10 characters. The unit goes back to available.',
+            '10 أحرف على الأقل. تعود الوحدة متاحة.'
+          )
+        }}
+      </p>
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeAll()">{{ L().cancel }}</button>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="closeAll()">{{ L().cancel }}</button>
       <button
         type="button"
-        class="btn btn--primary"
+        class="btn btn--danger"
         [disabled]="busy() || cancelReason().trim().length < 10"
         (click)="applyCancel()"
       >
-        {{ L().apply }}
+        {{ L().cancelTitle }}
       </button>
     </div>
-  </div>
+  </section>
 }
 
-<p>
-  {{ t('As of', 'حسب وقت') }}: {{ asOf() }} · {{ reservations().length }} / {{ total() }} ·
-  {{ t('Page', 'صفحة') }} {{ page() }}
-</p>
-<div class="chip-row">
-  <button class="chip" [disabled]="page() === 1 || loading()" (click)="paginate(-1)">
-    {{ t('Previous', 'السابق') }}</button
-  ><button class="chip" [disabled]="page() * 30 >= total() || loading()" (click)="paginate(1)">
-    {{ t('Next', 'التالي') }}
-  </button>
-</div>
 @if (createOpen()) {
   <div class="scrim"></div>
   <section
@@ -260,72 +334,105 @@
     aria-modal="true"
     [attr.aria-label]="t('New hold', 'تعليق جديد')"
   >
-    <div class="dialog__body dialog__body--pad">
+    <div class="dialog__head">
+      <span class="dialog__title">{{ t('New hold', 'تعليق جديد') }}</span>
+      <span class="dialog__body">{{
+        t('Hold an available unit for a lead.', 'تعليق وحدة متاحة لعميل محتمل.')
+      }}</span>
+    </div>
+    <div class="dialog__main">
       @if (error()) {
-        <p role="alert" class="res-error">{{ error() }}</p>
+        <p role="alert" class="note note--bad">{{ error() }}</p>
       }
-      <h2>{{ t('New hold', 'تعليق جديد') }}</h2>
-      <label>{{ t('Search units', 'بحث الوحدات') }}<input [(ngModel)]="unitQuery" /></label
-      ><button class="row-btn" (click)="loadUnits(true)">{{ t('Search', 'بحث') }}</button
-      ><label
-        >{{ t('Available unit', 'الوحدة المتاحة')
-        }}<select [(ngModel)]="form.unitId" (ngModelChange)="changed()">
+      <div class="field">
+        <span>{{ t('Available unit', 'الوحدة المتاحة') }}</span>
+        <div class="pick">
+          <input
+            type="search"
+            [placeholder]="t('Search units', 'بحث الوحدات')"
+            [(ngModel)]="unitQuery"
+            (keydown.enter)="loadUnits(true)"
+          />
+          <button type="button" class="btn btn--sm" (click)="loadUnits(true)">
+            {{ t('Search', 'بحث') }}
+          </button>
+        </div>
+        <select [(ngModel)]="form.unitId" (ngModelChange)="changed()">
           <option value="">—</option>
           @for (u of unitOptions(); track u.id) {
             <option [value]="u.id">
               {{ u.code }} · {{ u.project[lang()] }} · {{ money(u.priceMinor) }}
             </option>
           }
-        </select></label
-      >
-      @if (unitPage * 50 < unitTotal()) {
-        <button class="row-btn" (click)="loadUnits(false)">
-          {{ t('More units', 'وحدات إضافية') }}
-        </button>
-      }
-      <label>{{ t('Search leads', 'بحث العملاء') }}<input [(ngModel)]="leadQuery" /></label
-      ><button class="row-btn" (click)="loadLeads(true)">{{ t('Search', 'بحث') }}</button
-      ><label
-        >{{ t('Lead', 'العميل')
-        }}<select [(ngModel)]="form.leadId" (ngModelChange)="changed()">
+        </select>
+        @if (unitPage * 50 < unitTotal()) {
+          <button type="button" class="link small" (click)="loadUnits(false)">
+            {{ t('More units', 'وحدات إضافية') }}
+          </button>
+        }
+      </div>
+      <div class="field">
+        <span>{{ t('Lead', 'العميل') }}</span>
+        <div class="pick">
+          <input
+            type="search"
+            [placeholder]="t('Search leads', 'بحث العملاء')"
+            [(ngModel)]="leadQuery"
+            (keydown.enter)="loadLeads(true)"
+          />
+          <button type="button" class="btn btn--sm" (click)="loadLeads(true)">
+            {{ t('Search', 'بحث') }}
+          </button>
+        </div>
+        <select [(ngModel)]="form.leadId" (ngModelChange)="changed()">
           <option value="">—</option>
           @for (l of leadOptions(); track l.id) {
             <option [value]="l.id">{{ l.reference }} · {{ l.name[lang()] }}</option>
           }
-        </select></label
-      >
-      @if (leadPage * 50 < leadTotal()) {
-        <button class="row-btn" (click)="loadLeads(false)">
-          {{ t('More leads', 'عملاء إضافيون') }}
-        </button>
-      }
-      <label
-        >{{ t('Assignee', 'المسند إليه')
-        }}<select [(ngModel)]="form.assigneeId" (ngModelChange)="changed()">
+        </select>
+        @if (leadPage * 50 < leadTotal()) {
+          <button type="button" class="link small" (click)="loadLeads(false)">
+            {{ t('More leads', 'عملاء إضافيون') }}
+          </button>
+        }
+      </div>
+      <label class="field">
+        <span>{{ t('Assignee', 'المسند إليه') }}</span>
+        <select [(ngModel)]="form.assigneeId" (ngModelChange)="changed()">
           <option value="">{{ t('Unassigned', 'غير مسند') }}</option>
           @for (a of assignees(); track a.id) {
             <option [value]="a.id">{{ a.name }}</option>
           }
-        </select></label
-      ><label
-        >{{ t('Hold duration', 'مدة التعليق')
-        }}<select [(ngModel)]="form.hours" (ngModelChange)="changed()">
+        </select>
+      </label>
+      <div class="field">
+        <span>{{ t('Hold duration', 'مدة التعليق') }}</span>
+        <div class="chips">
           @for (h of [24, 48, 72]; track h) {
-            <option [ngValue]="h">{{ h }} {{ t('hours', 'ساعة') }}</option>
+            <button
+              type="button"
+              class="chip"
+              [class.on]="form.hours === h"
+              (click)="form.hours = h; changed()"
+            >
+              {{ h }} {{ t('hours', 'ساعة') }}
+            </button>
           }
-        </select></label
-      >
+        </div>
+      </div>
     </div>
-    <footer class="dialog__footer">
-      <button class="btn btn--ghost" [disabled]="busy()" (click)="closeAll()">
-        {{ t('Cancel', 'إلغاء') }}</button
-      ><button
-        class="btn btn--primary"
+    <div class="dialog__foot">
+      <button type="button" class="btn" [disabled]="busy()" (click)="closeAll()">
+        {{ t('Cancel', 'إلغاء') }}
+      </button>
+      <button
+        type="button"
+        class="btn btn--dark"
         [disabled]="busy() || !form.unitId || !form.leadId"
         (click)="create()"
       >
         {{ t('Create hold', 'إنشاء التعليق') }}
       </button>
-    </footer>
+    </div>
   </section>
 }

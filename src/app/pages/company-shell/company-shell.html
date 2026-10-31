@@ -187,28 +187,40 @@
         ≡
       </button>
 
-      <button type="button" class="topbar__switcher" (click)="$event.stopPropagation()">
-        <span class="topbar__switcherMark">M</span>
-        <span class="topbar__switcherLabel">{{ companyName() }}</span>
-        <span class="topbar__switcherCaret">▾</span>
-      </button>
-
-      <div class="topbar__search">
+      <form
+        class="topbar__search"
+        role="search"
+        (submit)="$event.preventDefault(); submitSearch(q)"
+      >
         <input
-          type="text"
+          #q
+          id="company-search"
+          type="search"
           class="topbar__searchInput"
-          disabled
-          title="Search is not available yet"
-          [placeholder]="L().searchPh"
-          [value]="search()"
-          (input)="search.set($any($event.target).value)"
+          [disabled]="!canSearchLeads()"
+          [placeholder]="lang() === 'ar' ? 'ابحث في العملاء…' : 'Search leads…'"
+          [attr.aria-label]="lang() === 'ar' ? 'بحث العملاء' : 'Search leads'"
         />
-      </div>
+        <span class="topbar__kbd mono">Ctrl K</span>
+      </form>
 
       <div class="topbar__actions">
-        <button type="button" class="topbar__btn" (click)="$event.stopPropagation(); toggleLang()">
-          {{ L().otherLang }}
-        </button>
+        <div class="topbar__lang" role="group" aria-label="Language">
+          <button
+            type="button"
+            [class.on]="lang() === 'en'"
+            (click)="$event.stopPropagation(); setLang('en')"
+          >
+            EN
+          </button>
+          <button
+            type="button"
+            [class.on]="lang() === 'ar'"
+            (click)="$event.stopPropagation(); setLang('ar')"
+          >
+            ع
+          </button>
+        </div>
 
         <div class="topbar__menuWrap">
           <button
@@ -237,7 +249,10 @@
 
           @if (notifOpen()) {
             <div class="dropdown dropdown--notif" (click)="$event.stopPropagation()">
-              <div class="dropdown__title">{{ L().notifTitle }}</div>
+              <div class="dropdown__head">
+                <span class="dropdown__title">{{ L().notifTitle }}</span>
+                <span class="dropdown__meta">{{ notifications().length }}</span>
+              </div>
               @for (n of notifications(); track n.id) {
                 <a
                   [routerLink]="n.path"
@@ -257,12 +272,20 @@
                   class="dropdown__item"
                   routerLink="/company/dashboard"
                   (click)="notifOpen.set(false)"
-                  >{{ L().notifEmpty }}</a
+                  >{{
+                    lang() === 'ar' ? 'لا توجد تنبيهات الآن' : 'All clear, nothing needs attention'
+                  }}</a
                 >
               }
             </div>
           }
         </div>
+
+        @if (canNewLead()) {
+          <button type="button" class="topbar__new" (click)="$event.stopPropagation(); newLead()">
+            {{ lang() === 'ar' ? '+ عميل جديد' : '+ New lead' }}
+          </button>
+        }
 
         <div class="topbar__menuWrap">
           <button

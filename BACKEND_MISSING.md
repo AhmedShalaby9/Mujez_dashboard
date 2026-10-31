@@ -608,3 +608,18 @@ tasks due today, needs-attention alerts, inventory by status.
 | CB3 | Top leads **segment tag**, **source** and **last touch** columns | Shows wants, budget, owner, score. | `segment`, `source`, `lastActivityAt` on `scoredLeads` in the overview. |
 | CB4 | "Closing in next 14 days" as **deals** (address, type, price, expected close) | Shows contract key dates (the overview's `keyDates`). | Expected close date on pipeline deals, returned in the overview. |
 | CB5 | Agent view (**my** tasks / **my** performance) vs manager view | One layout; sections appear by permission (team leaderboard needs `reports.read`). | Nothing required if permission-based sections are enough; otherwise an explicit role flag on the session. |
+
+## Company shell (sidebar + top bar)
+
+Already real: permission-filtered grouped nav, brand + company name, signed-in user + role, platform workspace banner
+(read-only / manage, elevate, drop, switch, exit), language switch (EN | ع), **notifications bell** with the live
+"needs attention" alerts from `GET /company-overview` (badge = number of alerts, refreshed on navigation and when
+opened), **sidebar counts** (tasks due today + alert counts on the page each alert opens), **search** (Enter searches
+Leads, Ctrl/⌘ K focuses it), **+ New lead** (opens the Leads create dialog), profile menu with sign out.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| SH1 | **Global search** across contacts, units, deals ("Search contacts, units, deals…") | Searches leads only (`/company/leads?q=`). | `GET /search?q=` returning mixed results (leads, contacts, units, contracts) with type and route. |
+| SH2 | **Notifications feed** (follow-up, assignment, reservation, deal update, duplicate, commission), unread state, **Mark all read** | Shows current alert counts; no per-user feed or read state. | Per-user notifications (`GET /notifications`, `POST /notifications/read`) generated from domain events. |
+| SH3 | **Saved views** in the sidebar ("Hot buyers · under EGP 10M") | Not shown. | Saved filters per user (`GET/POST /saved-views`) that open Leads / Contacts with the stored query. |
+| SH4 | Sidebar **totals** per module (e.g. Leads 128, Pipeline 42) | Counts show only what needs attention. | Optional: lightweight counts endpoint for nav badges. |

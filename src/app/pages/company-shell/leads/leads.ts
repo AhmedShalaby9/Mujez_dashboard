@@ -115,7 +115,19 @@ export class Leads {
   private noteRequest = crypto.randomUUID();
   constructor() {
     this.campaignFilter.set(this.route?.snapshot.queryParamMap.get('campaignId') ?? '');
+    // Top-bar search and "+ New lead" land here as ?q= / ?new=1.
+    this.search.set(this.route?.snapshot.queryParamMap.get('q') ?? '');
     void this.reload();
+    const sub = this.route?.queryParamMap?.subscribe((p) => {
+      const q = p.get('q');
+      if (q !== null && q !== this.search()) {
+        this.search.set(q);
+        void this.reload();
+      }
+      // Any value works; the shell sends a timestamp so repeated clicks re-trigger.
+      if (p.get('new') && this.canManage()) this.openNew();
+    });
+    this.destroy.onDestroy(() => sub?.unsubscribe());
     void this.loadOwners();
     const linked = this.route?.snapshot.queryParamMap.get('leadId');
     if (linked && /^[0-9a-f-]{36}$/i.test(linked)) void this.open(linked);

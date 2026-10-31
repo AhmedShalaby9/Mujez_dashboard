@@ -1,6 +1,9 @@
 import { AuthService } from '../../auth.service';
 import { Router } from '@angular/router';
-import { Component, DestroyRef, computed, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, signal } from '@angular/core';
+import { NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs';
+import { CompanyInsightsApi, type Overview } from '../../company-insights-api.service';
 import { inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { CompanyUiState, type Lang } from './company-ui-state';
@@ -47,6 +50,15 @@ interface Notification {
   time: string;
   attention: boolean;
 }
+
+const ALERT_NAMES: Record<string, [string, string]> = {
+  'overdue-tasks': ['Overdue open tasks', 'مهام مفتوحة متأخرة'],
+  'missing-evidence': ['Contracts missing required evidence', 'عقود ينقصها مستند مطلوب'],
+  'expiring-reservations': ['Reservations expiring within 24 hours', 'حجوزات تنتهي خلال 24 ساعة'],
+  'payable-commissions': ['Commissions ready for payment', 'عمولات جاهزة للصرف'],
+  'first-contact': ['Leads overdue for first contact', 'عملاء تجاوزوا مهلة التواصل الأول'],
+  'routing-worker': ['Routing worker needs attention', 'عامل التوزيع يحتاج مراجعة'],
+};
 
 interface Copy {
   brand: string;
@@ -144,7 +156,20 @@ export class CompanyShell {
   readonly dir = this.ui.dir;
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.ui.lang()]);
-  readonly notifications = computed<Notification[]>(() => []);
+  private readonly insights = inject(CompanyInsightsApi);
+  /** Live alerts from GET /company-overview (permission-filtered on the server). */
+  readonly alerts = signal<Overview['alerts']>([]);
+  readonly notifications = computed<Notification[]>(() =>
+    this.alerts().map((a) => ({
+      id: a.id,
+      path: a.route,
+      title: (ALERT_NAMES[a.id]?.[this.ui.lang() === 'ar' ? 1 : 0] ?? a.id) + ' · ' + a.count,
+      time: '',
+      attention: a.count > 0,
+    })),
+  );
+  /** Sidebar counts: tasks due today + alert counts on the page each alert opens. */
+  private readonly counts = signal<Record<string, number>>({});
 
   readonly visibleNav = computed<NavEntry[]>(() => {
     const perms = this.auth.user()?.permissions ?? [];
@@ -155,7 +180,8 @@ export class CompanyShell {
       if (entry.kind === 'item') {
         const permission = NAV_PERMISSION[entry.path];
         if (permission && !perms.includes(permission)) continue;
-        kept.push(entry);
+        const n = this.counts()[entry.path];
+        kept.push(n ? { ...entry, count: String(n) } : entry);
       } else {
         // Drop a head if nothing in its group survived filtering.
         const next = all.slice(i + 1).findIndex((e) => e.kind === 'head');
@@ -303,6 +329,61 @@ export class CompanyShell {
     void this.router.navigateByUrl('/admin/companies');
   }
 
+  private alertsSerial = 0;
+  async loadAlerts() {
+    const n = ++this.alertsSerial;
+    try {
+      const d = await this.insights.get<Overview>('/company-overview');
+      if (n !== this.alertsSerial) return;
+      this.alerts.set(d.alerts.filter((a) => a.count > 0));
+      const c: Record<string, number> = {};
+      if (d.metrics.todayTasks) c['tasks'] = d.metrics.todayTasks;
+      for (const a of d.alerts) {
+        const path = a.route.replace(/^\/company\//, '').split(/[?#/]/)[0];
+        if (a.count > 0 && path && path !== 'tasks') c[path] = (c[path] ?? 0) + a.count;
+      }
+      this.counts.set(c);
+    } catch {
+      // The bell stays empty if the overview isn't available (no workspace.view).
+      if (n === this.alertsSerial) this.alerts.set([]);
+    }
+  }
+  private readonly navSub = this.router.events
+    .pipe(filter((e) => e instanceof NavigationEnd))
+    .subscribe(() => void this.loadAlerts());
+  private readonly navCleanup = inject(DestroyRef).onDestroy(() => this.navSub.unsubscribe());
+  private readonly initAlerts = void this.loadAlerts();
+
+  readonly canSearchLeads = computed(
+    () => this.auth.user()?.permissions.includes('leads.read') ?? false,
+  );
+  readonly canNewLead = computed(
+    () => this.auth.user()?.permissions.includes('leads.manage') ?? false,
+  );
+  /** Top-bar search goes to Leads (there is no global search endpoint yet). */
+  submitSearch(input: HTMLInputElement) {
+    const q = input.value.trim();
+    if (!q || !this.canSearchLeads()) return;
+    void this.router.navigate(['/company/leads'], { queryParams: { q } });
+  }
+  newLead() {
+    void this.router.navigate(['/company/leads'], { queryParams: { new: Date.now() } });
+  }
+  setLang(l: Lang) {
+    this.ui.lang.set(l);
+  }
+  @HostListener('document:keydown', ['$event'])
+  onKey(e: KeyboardEvent) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      const el = document.getElementById('company-search') as HTMLInputElement | null;
+      if (el) {
+        e.preventDefault();
+        el.focus();
+        el.select();
+      }
+    }
+  }
+
   readonly mobileNavOpen = signal(false);
   readonly notifOpen = signal(false);
   readonly profileOpen = signal(false);
@@ -322,6 +403,7 @@ export class CompanyShell {
   }
 
   toggleNotif(): void {
+    if (!this.notifOpen()) void this.loadAlerts();
     this.notifOpen.set(!this.notifOpen());
     this.profileOpen.set(false);
   }

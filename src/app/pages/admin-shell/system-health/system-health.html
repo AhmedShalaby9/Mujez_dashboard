@@ -1,154 +1,305 @@
-@if (error()) {
-  <p role="alert">
-    {{ error() }} — {{ lang() === 'ar' ? 'البيانات السابقة قديمة' : 'Previous data is stale' }}
-  </p>
-}
-@if (loading() && !data()) {
-  <p role="status">{{ lang() === 'ar' ? 'جار الفحص…' : 'Checking…' }}</p>
-}
-<button type="button" class="chip" [disabled]="loading()" (click)="load()">
-  {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
-</button>
-@if (data(); as d) {
-  <p>
-    {{ lang() === 'ar' ? 'آخر فحص:' : 'Last checked:' }} {{ d.observedAt }} · PostgreSQL:
-    {{ status(d.database.status) }} ({{ d.database.latencyMs ?? '—' }} ms) · Redis:
-    {{ status(d.redis.status) }} ({{ d.redis.latencyMs ?? '—' }} ms) ·
-    {{ lang() === 'ar' ? 'عامل توزيع العملاء' : 'Lead routing worker' }}:
-    {{ status(d.routingWorker?.status) }} · {{ d.routingWorker?.lastSeenAt ?? '—' }}
-  </p>
-  <p>
-    {{ lang() === 'ar' ? 'المقاييس منذ:' : 'Metrics since:' }} {{ d.metrics.startedAt }} ·
-    {{
-      lang() === 'ar'
-        ? 'زمن الاستجابة لآخر ١٠٠٠٠ طلب. قوائم المهام الأخرى ومساحة قرص الخادم غير مراقبين.'
-        : 'Latency: latest 10,000 requests. Other job queues and host disk are not instrumented.'
-    }}
-  </p>
-}
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ L().title }}</h1>
+      <span>{{
+        lang() === 'ar'
+          ? 'رؤية تشغيلية للقراءة فقط · عملية API الحالية · تحديث كل 30 ثانية'
+          : 'Operational visibility — read-only · current API process · refreshes every 30s'
+      }}</span>
+    </div>
+    <div class="head__actions">
+      @if (data(); as d) {
+        <span class="overall" [class.overall--bad]="d.status !== 'healthy'">
+          <span class="dot"></span>
+          {{
+            d.status === 'healthy'
+              ? lang() === 'ar'
+                ? 'كل الفحوصات سليمة'
+                : 'All checks passing'
+              : lang() === 'ar'
+                ? 'أداء متراجع'
+                : 'Degraded'
+          }}
+          · {{ ago(d.observedAt) }}
+        </span>
+      }
+      <button type="button" class="btn" [disabled]="loading()" (click)="load()">
+        {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+      </button>
+    </div>
   </div>
-</div>
 
-<div class="kpis">
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.availability }}</span>
-    <span class="kpi__value kpi__value--ok">{{ data()?.uptimeSeconds ?? '—' }}</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.p50 }}</span>
-    <span class="kpi__value">{{ data()?.metrics.p50 ?? '—' }} ms</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.p95 }}</span>
-    <span class="kpi__value">{{ data()?.metrics.p95 ?? '—' }} ms</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.errorRate }}</span>
-    <span class="kpi__value">{{ data()?.metrics.errorRate ?? '—' }}%</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.jobs }}</span>
-    <span class="kpi__value">{{ status(data()?.redis.status) }}</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.db }}</span>
-    <span class="kpi__value"
-      >{{ data()?.connections.total ?? '—' }}/{{ data()?.connections.max ?? '—' }}</span
-    >
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.storage }}</span>
-    <span class="kpi__value">{{ data()?.memoryMb ?? '—' }} MB</span>
-  </div>
-</div>
+  @if (error()) {
+    <p class="note note--bad" role="alert">
+      {{ error() }} —
+      {{ lang() === 'ar' ? 'قد تكون البيانات المعروضة قديمة' : 'Previous data is stale' }}
+    </p>
+  }
 
-<div class="card chart-card">
-  <div class="chart-card__head">
-    <span class="chart-card__title">{{ L().chartTitle }}</span>
-    <span class="chart-legend">
-      <span class="chart-legend__item"
-        ><span class="chart-legend__dot chart-legend__dot--req"></span
-        >{{ L().chartLegendReq }}</span
-      >
-      <span class="chart-legend__item"
-        ><span class="chart-legend__dot chart-legend__dot--err"></span
-        >{{ L().chartLegendErr }}</span
-      >
-    </span>
+  <div class="segsRow">
+    <div class="segGroup">
+      <span>{{ lang() === 'ar' ? 'البيئة' : 'Environment' }}</span>
+      <div class="toggle">
+        <button type="button" class="on">
+          {{ lang() === 'ar' ? 'هذه البيئة' : 'This environment' }}
+        </button>
+        <button type="button" (click)="soon()">
+          {{ lang() === 'ar' ? 'أخرى' : 'Other'
+          }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+        </button>
+      </div>
+    </div>
+    <div class="segGroup">
+      <span>{{ lang() === 'ar' ? 'المدى' : 'Range' }}</span>
+      <div class="toggle">
+        <button type="button" (click)="soon()">1h</button>
+        <button type="button" class="on">24h</button>
+        <button type="button" (click)="soon()">
+          7d<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+        </button>
+      </div>
+    </div>
+    <div class="segGroup">
+      <span>{{ lang() === 'ar' ? 'الخطورة' : 'Severity' }}</span>
+      <div class="toggle">
+        <button type="button" [class.on]="sevFilter() === 'all'" (click)="setSev('all')">
+          {{ L().sevAll }}
+        </button>
+        @for (s of ['critical', 'warning']; track s) {
+          <button type="button" [class.on]="sevFilter() === s" (click)="setSev($any(s))">
+            {{ sevName($any(s)) }}
+          </button>
+        }
+      </div>
+    </div>
   </div>
-  <div class="chart">
-    @for (b of chartBars(); track $index) {
-      <div
-        class="chart__col"
-        [title]="
-          b.hour + (b.observed ? ': ' + b.req + ' req · ' + b.err + ' err' : ': no observations')
-        "
-      >
-        <div class="chart__bar" [style.height.%]="b.reqPct">
-          <div class="chart__err" [style.height.%]="b.errPct"></div>
+
+  @if (data(); as d) {
+    <div class="kpis kpis--6">
+      <div class="kpi">
+        <span>{{ lang() === 'ar' ? 'مدة التشغيل' : 'Process uptime' }}</span
+        ><b>{{ uptime(d.uptimeSeconds) }}</b>
+        <small>{{ lang() === 'ar' ? 'منذ آخر إعادة تشغيل' : 'since last restart' }}</small>
+      </div>
+      <div class="kpi">
+        <span>{{ lang() === 'ar' ? 'زمن الاستجابة p50' : 'Response p50' }}</span
+        ><b>{{ d.metrics.p50 ?? '—' }} ms</b>
+        <small>p95 {{ d.metrics.p95 ?? '—' }} ms</small>
+      </div>
+      <div class="kpi">
+        <span>{{ lang() === 'ar' ? 'معدل الأخطاء' : 'Error rate' }}</span>
+        <b [class.warnTxt]="d.metrics.errorRate >= 1">{{ d.metrics.errorRate }}%</b>
+        <small>{{ lang() === 'ar' ? 'استجابات 5xx · 24 ساعة' : '5xx responses · 24h' }}</small>
+      </div>
+      <div class="kpi">
+        <span>{{ lang() === 'ar' ? 'المهام الخلفية' : 'Background jobs' }}</span>
+        <b
+          [class.okTxt]="d.routingWorker?.status === 'healthy'"
+          [class.bad]="d.routingWorker?.status === 'down'"
+          >{{ status(d.routingWorker?.status) }}</b
+        >
+        <small>{{
+          lang() === 'ar' ? 'عامل التوزيع · العدد قريبًا' : 'routing worker · counts soon'
+        }}</small>
+      </div>
+      <div class="kpi">
+        <span>{{ lang() === 'ar' ? 'قاعدة البيانات' : 'Database' }}</span>
+        <b
+          [class.okTxt]="d.database?.status === 'healthy'"
+          [class.bad]="d.database?.status === 'down'"
+          >{{ status(d.database?.status) }}</b
+        >
+        <small
+          >{{ d.database?.latencyMs ?? '—' }} ms · {{ lang() === 'ar' ? 'الاتصالات' : 'pool' }}
+          {{ d.connections?.total }}/{{ d.connections?.max }}</small
+        >
+      </div>
+      <div class="kpi kpi--static">
+        <span
+          >{{ lang() === 'ar' ? 'التخزين' : 'Storage'
+          }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+        ><b>—</b>
+        <small>{{ lang() === 'ar' ? 'الذاكرة ' : 'API memory ' }}{{ d.memoryMb }} MB</small>
+      </div>
+    </div>
+
+    <div class="charts">
+      <section class="chart">
+        <div class="chart__head">
+          <span>{{ lang() === 'ar' ? 'طلبات API' : 'API requests' }}</span
+          ><b>{{ reqPerHour() }}</b>
         </div>
+        <div class="chart__bars">
+          @for (b of reqChart(); track $index) {
+            <span [style.height]="b.h" [class.dim]="b.dim" [title]="b.tip"></span>
+          }
+        </div>
+        <div class="chart__axis">
+          <span>{{ lang() === 'ar' ? 'قبل 24 ساعة' : '24 h ago' }}</span
+          ><span>{{ lang() === 'ar' ? 'الآن' : 'now' }}</span>
+        </div>
+      </section>
+      <section class="chart">
+        <div class="chart__head">
+          <span>{{ lang() === 'ar' ? 'معدل الأخطاء' : 'Error rate' }}</span
+          ><b class="bad">{{ d.metrics.errorRate }}%</b>
+        </div>
+        <div class="chart__bars chart__bars--err">
+          @for (b of errChart(); track $index) {
+            <span
+              [style.height]="b.h"
+              [class.hot]="b.hot"
+              [class.dim]="b.dim"
+              [title]="b.tip"
+            ></span>
+          }
+        </div>
+        <div class="chart__axis">
+          <span>{{ lang() === 'ar' ? 'قبل 24 ساعة' : '24 h ago' }}</span
+          ><span>{{ lang() === 'ar' ? 'الآن' : 'now' }}</span>
+        </div>
+      </section>
+      <section class="chart chart--static">
+        <div class="chart__head">
+          <span
+            >{{ lang() === 'ar' ? 'زمن الاستجابة p95 بالساعة' : 'Latency p95 per hour'
+            }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+          ><b>{{ d.metrics.p95 ?? '—' }} ms</b>
+        </div>
+        <p class="muted">
+          {{
+            lang() === 'ar'
+              ? 'تتوفر قيمة إجمالية فقط من آخر 10,000 طلب.'
+              : 'Only an overall value from the latest 10,000 requests is available.'
+          }}
+        </p>
+      </section>
+      <section class="chart chart--static">
+        <div class="chart__head">
+          <span
+            >{{ lang() === 'ar' ? 'فشل المهام الخلفية' : 'Background job failures'
+            }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+          ><b>—</b>
+        </div>
+        <p class="muted">
+          {{
+            lang() === 'ar'
+              ? 'المهام الخلفية غير مرصودة بعد.'
+              : 'Background jobs are not instrumented yet.'
+          }}
+        </p>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="cardHead">
+        <h2>{{ lang() === 'ar' ? 'الخدمات' : 'Dependencies' }}</h2>
+        <span>{{ lang() === 'ar' ? 'فحوصات جاهزية حية' : 'Live readiness probes' }}</span>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ lang() === 'ar' ? 'الخدمة' : 'Service' }}</th>
+              <th>{{ lang() === 'ar' ? 'الحالة' : 'State' }}</th>
+              <th class="end">{{ lang() === 'ar' ? 'زمن الفحص' : 'Probe latency' }}</th>
+              <th>{{ lang() === 'ar' ? 'تفاصيل' : 'Details' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (x of deps(); track x.name) {
+              <tr class="still">
+                <td class="strong">{{ x.name }}</td>
+                <td>
+                  <span
+                    class="pill"
+                    [style.background]="x.st === 'healthy' ? '#E7F5EC' : '#FBE7E3'"
+                    [style.color]="x.st === 'healthy' ? '#1E6B3E' : '#A23624'"
+                    ><span
+                      class="dot"
+                      [style.background]="x.st === 'healthy' ? '#2FA35F' : '#E2553B'"
+                    ></span
+                    >{{ status(x.st) }}</span
+                  >
+                </td>
+                <td class="end mono">
+                  {{ x.latency === null || x.latency === undefined ? '—' : x.latency + ' ms' }}
+                </td>
+                <td class="muted">{{ x.extra }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  } @else if (loading()) {
+    <p class="muted" role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading health…' }}</p>
+  }
+
+  <section class="card">
+    <div class="cardHead">
+      <h2>{{ lang() === 'ar' ? 'تنبيهات التشغيل' : 'Operational alerts' }}</h2>
+      <span
+        >{{ filtered().length }}
+        {{ lang() === 'ar' ? 'مفتوحة · من الفحوصات الحالية' : 'open · from current probes' }}</span
+      >
+    </div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ lang() === 'ar' ? 'التنبيه' : 'Alert' }}</th>
+            <th>{{ lang() === 'ar' ? 'الخدمة' : 'Service' }}</th>
+            <th>{{ lang() === 'ar' ? 'الخطورة' : 'Severity' }}</th>
+            <th>{{ lang() === 'ar' ? 'رُصد' : 'Observed' }}</th>
+            <th>{{ lang() === 'ar' ? 'الحالة' : 'State' }}</th>
+            <th class="end"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of filtered(); track a.id) {
+            <tr class="still">
+              <td class="strong">{{ alertMessage(a) }}</td>
+              <td class="mono soft">{{ a.service }}</td>
+              <td>
+                <span
+                  class="pill"
+                  [style.background]="sevPill(a.severity).bg"
+                  [style.color]="sevPill(a.severity).fg"
+                  ><span class="dot" [style.background]="sevPill(a.severity).dot"></span
+                  >{{ sevName(a.severity) }}</span
+                >
+              </td>
+              <td class="muted">{{ ago(a.time) }}</td>
+              <td class="bad strong">{{ lang() === 'ar' ? 'مفتوح' : 'Open' }}</td>
+              <td class="end">
+                <button type="button" class="btn btn--sm" (click)="soon()">
+                  {{ lang() === 'ar' ? 'إقرار' : 'Acknowledge'
+                  }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (!filtered().length) {
+      <div class="empty">
+        <strong>{{ lang() === 'ar' ? 'لا توجد تنبيهات' : 'No open alerts' }}</strong
+        ><span>{{
+          lang() === 'ar' ? 'كل الفحوصات الحالية سليمة.' : 'Every current probe is passing.'
+        }}</span>
       </div>
     }
-  </div>
+  </section>
+  <span class="muted">{{
+    lang() === 'ar'
+      ? 'المقاييس خاصة بعملية API الحالية وتُعاد عند إعادة التشغيل. لا توجد ادعاءات توفر تاريخية.'
+      : 'Metrics are for this API process and reset on restart. No historical availability is claimed.'
+  }}</span>
 </div>
 
-<div class="section-head">
-  <h2 class="section-head__title">{{ L().alertsTitle }}</h2>
-</div>
-
-<div class="chip-row">
-  <button
-    type="button"
-    class="chip"
-    [class.chip--active]="sevFilter() === 'all'"
-    (click)="setSev('all')"
-  >
-    {{ L().sevAll }}
-  </button>
-  @for (s of severities; track s) {
-    <button type="button" class="chip" [class.chip--active]="sevFilter() === s" (click)="setSev(s)">
-      {{ sevName(s) }}
-    </button>
-  }
-</div>
-
-<div class="chip-row chip-row--second">
-  <button
-    type="button"
-    class="chip"
-    [class.chip--active]="svcFilter() === 'all'"
-    (click)="setSvc('all')"
-  >
-    {{ L().svcAll }}
-  </button>
-  @for (s of services; track s) {
-    <button type="button" class="chip" [class.chip--active]="svcFilter() === s" (click)="setSvc(s)">
-      {{ svcName(s) }}
-    </button>
-  }
-</div>
-
-<div class="card">
-  <div class="alert-list">
-    @for (a of filtered(); track a.id) {
-      <div class="alert-row">
-        <span class="sev-dot" [class]="'sev-dot--' + a.severity"></span>
-        <div class="alert-row__text">
-          <span class="alert-row__msg">{{ alertMessage(a) }}</span>
-          <span class="alert-row__meta">
-            <span class="mono">{{ a.id }}</span> · {{ svcName(a.service) }} · {{ a.time }}
-          </span>
-        </div>
-        <span class="pill" [class]="'pill--' + a.severity">{{ sevName(a.severity) }}</span>
-      </div>
-    }
-    @if (data() && !filtered().length) {
-      <div class="t-empty">{{ L().emptyTitle }}</div>
-    }
-  </div>
-</div>
+@if (toast()) {
+  <div class="toast"><span></span>{{ toast() }}</div>
+}

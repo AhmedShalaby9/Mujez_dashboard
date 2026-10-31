@@ -23,6 +23,9 @@ interface Integration {
   companies: number;
   lastSync: string | null;
   errors24h: number | null;
+  connectorReady?: boolean;
+  credentialConfigured?: boolean;
+  webhookUrl?: string | null;
 
   log: SyncEntry[];
 }
@@ -170,7 +173,7 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-integrations',
   imports: [FormsModule],
   templateUrl: './integrations.html',
-  styleUrl: './integrations.scss',
+  styleUrls: ['../admin-ui.scss', '../admin-table.scss', './integrations.scss'],
 })
 export class Integrations {
   private readonly api = inject(AuthService);
@@ -201,6 +204,9 @@ export class Integrations {
 
   readonly items = signal<Integration[]>([]);
   readonly catFilter = signal<Category | 'all'>('all');
+  readonly statusFilter = signal<Status | 'all'>('all');
+  readonly search = signal('');
+  readonly kebabFor = signal<string | null>(null);
   readonly viewing = signal<Integration | null>(null);
 
   readonly toggling = signal<Integration | null>(null);
@@ -239,15 +245,92 @@ export class Integrations {
   });
 
   readonly filtered = computed(() => {
-    const c = this.catFilter();
-    return this.items().filter((i) => c === 'all' || i.category === c);
+    const c = this.catFilter(),
+      st = this.statusFilter(),
+      q = this.search().trim().toLowerCase();
+    return this.items().filter(
+      (i) =>
+        (c === 'all' || i.category === c) &&
+        (st === 'all' || i.status === st) &&
+        (!q || (i.nameEn + ' ' + i.nameAr + ' ' + i.key).toLowerCase().includes(q)),
+    );
   });
+  readonly tabs = computed(() => {
+    const order: Array<Status | 'all'> = [
+      'all',
+      'healthy',
+      'degraded',
+      'down',
+      'unconfigured',
+      'disabled',
+    ];
+    const ar = this.lang() === 'ar';
+    return order
+      .map((k) => ({
+        k,
+        label: k === 'all' ? (ar ? 'الكل' : 'All') : this.statusName(k),
+        n: k === 'all' ? this.items().length : this.items().filter((i) => i.status === k).length,
+      }))
+      .filter((t) => t.k === 'all' || t.n > 0 || t.k === 'unconfigured' || t.k === 'disabled');
+  });
+  readonly stats = computed(() => {
+    const list = this.items();
+    const errs = list.filter((i) => i.errors24h !== null);
+    return {
+      total: list.length,
+      requested: list.filter((i) => i.enabled).length,
+      ready: list.filter((i) => i.connectorReady).length,
+      degraded: list.filter((i) => i.status === 'degraded' || i.status === 'down').length,
+      errors: errs.length ? errs.reduce((n, i) => n + (i.errors24h ?? 0), 0) : null,
+    };
+  });
+  readonly hasFilters = computed(
+    () => !!this.search().trim() || this.catFilter() !== 'all' || this.statusFilter() !== 'all',
+  );
+  clearFilters() {
+    this.search.set('');
+    this.catFilter.set('all');
+    this.statusFilter.set('all');
+  }
+  pill(s: Status) {
+    return (
+      {
+        healthy: { bg: '#E7F5EC', fg: '#1E6B3E', dot: '#2FA35F' },
+        degraded: { bg: '#FCF2DE', fg: '#83570C', dot: '#D99A28' },
+        down: { bg: '#FBE7E3', fg: '#A23624', dot: '#E2553B' },
+        unconfigured: { bg: '#EAEFFD', fg: '#2E47A8', dot: '#5B78E5' },
+        disabled: { bg: '#F1F1ED', fg: '#6E6E73', dot: '#B4B4AE' },
+      } as Record<Status, { bg: string; fg: string; dot: string }>
+    )[s];
+  }
+  ago(iso: string | null) {
+    if (!iso) return '—';
+    const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    const ar = this.lang() === 'ar';
+    if (m < 60) return ar ? `منذ ${m} دقيقة` : `${m} min ago`;
+    if (m < 2880) return ar ? `منذ ${Math.round(m / 60)} ساعة` : `${Math.round(m / 60)} h ago`;
+    return ar ? `منذ ${Math.round(m / 1440)} يوم` : `${Math.round(m / 1440)} d ago`;
+  }
+  date(iso: string) {
+    return new Intl.DateTimeFormat(this.lang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(iso));
+  }
+  rotateSoon() {
+    this.showToast(
+      this.lang() === 'ar'
+        ? 'تدوير المفاتيح من الخزنة غير متصل بعد — لم يتغير شيء.'
+        : "Key rotation from the vault isn't connected yet — nothing changed.",
+    );
+  }
 
   setCat(c: Category | 'all'): void {
     this.catFilter.set(c);
   }
 
   openView(i: Integration): void {
+    this.kebabFor.set(null);
     this.viewing.set(i);
   }
 
@@ -256,6 +339,7 @@ export class Integrations {
   }
 
   askToggle(i: Integration): void {
+    this.kebabFor.set(null);
     this.toggling.set(i);
     this.toggleReason.set('');
     this.toggleError.set(false);

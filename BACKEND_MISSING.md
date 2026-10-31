@@ -4,7 +4,7 @@ Things the new Platform Admin design shows that the backend doesn't support yet.
 The frontend renders each one statically. In the UI, these are marked with an amber **Not saved yet / Soon / Sample** tag or a dashed card, and the data is never sent.
 When an item is implemented, remove its tag in the listed file and wire it to the new field or endpoint.
 
-Checked against `mujez_backend` @ `af51c30` (`src/modules/platform/companies`, `src/modules/platform/subscriptions`, `src/modules/platform/billing`, `src/modules/platform/features`, `docs/*.md`).
+Checked against `mujez_backend` @ `af51c30` (`src/modules/platform/companies`, `src/modules/platform/subscriptions`, `src/modules/platform/billing`, `src/modules/platform/features`, `src/modules/platform/integrations`, `src/modules/platform/health`, `docs/*.md`).
 
 ---
 
@@ -169,6 +169,40 @@ show "Not measured" (never zero), as the backend requires.
 | U5 | Override with **custom value** and **custom duration** | Fields shown disabled ("+20% only", "30 days only"). | Accept `limit` and `days` on `POST /usage/:id/override` (today fixed `ceil(base×1.2)` for 30 days, non-stacking). |
 | U6 | **Notify company admin** (usage alert email) | "Soon" tag, toast only. | `POST /usage/:id/notify` queued through outbox/email, plus automatic 80/90/100% alerts. |
 | U7 | "Soft-blocked creates" when over limit | Not claimed in the UI. | Quota enforcement in the CRM create paths (docs: modules must call the resolver; not done yet). |
+
+## Integrations (`/admin/integrations`)
+
+Already real: connector registry (`GET /integrations`), status (`unconfigured` / `disabled`, and healthy/degraded/failing when
+reported), category + status filters, search, **Enable availability / Disable for all companies** with reason
+(`/integrations/:key/update`), configuration history (last 20 changes), credential/webhook/companies fields (shown as
+"Not configured" / `—` because the backend returns them empty by design).
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| I1 | Working connectors (WhatsApp, email relay, SMS, Meta/Google ads, portals, inventory feeds, Paymob, bank reconciliation, storage, analytics) | Every connector shows "No provider adapter… set up yet". `connectorReady` is always `false`. | Provider adapters, credentials in a vault, webhook handlers and per-company bindings, one connector at a time. |
+| I2 | **Connected companies**, **Last successful sync**, **Errors · 24h** columns + KPI | `—` (backend returns `0` / `null`). Errors KPI is a dashed static card. | Real values from connector runs: per-company bindings count, last successful sync time, error counter. |
+| I3 | **Leads via integrations** KPI ("68% of new leads · 30d") | Dashed static card. | Lead `source` attribution aggregated over 30 days. |
+| I4 | Drawer **Environment**, **Rate limit**, **Keys rotated** rows | Rows shown with "Soon" tags and `—`. | Per-connector config metadata (environment, rate limit, `rotatedAt`). |
+| I5 | **Rotate keys in vault** (needs a second Super Admin) | "Soon" tag, toast only. | `POST /integrations/:key/rotate` with two-person approval. |
+| I6 | **Recent sync log** in the drawer | "Soon" section. | `GET /integrations/:key/sync-log` (time, result, record count, error). |
+
+## System health (`/admin/system-health`)
+
+Already real (`GET /system-health`, polled every 30 s): overall status, DB / Redis / lead-routing-worker probes with
+latency and last heartbeat, process uptime, p50/p95 latency, 5xx error rate, API memory, DB pool usage, hourly
+requests and 5xx charts (24 h, process-local), alerts from failing probes with severity filter. The page marks data
+stale when a refresh fails.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| H1 | **Environment** switch (Production / Staging) | Only "This environment". "Other" shows a toast. | A cross-environment health endpoint or external monitoring aggregation. |
+| H2 | **Range** 1 h / 7 d | 24 h only. Other options show a toast. | Persisted metrics (Prometheus/time-series DB). Today buckets are in-memory, max 24 h, per process. |
+| H3 | **API availability %** / SLA | Replaced by process uptime. | External uptime monitoring (availability over 30 days). |
+| H4 | **Latency p95 per hour** chart | Dashed static card with the overall p95 only. | Per-bucket latency percentiles. |
+| H5 | **Background jobs** count, queued, failed + **job failures** chart | KPI shows the routing-worker heartbeat. Chart is a dashed static card. | Job queue instrumentation (`activeJobs` is `null` today). |
+| H6 | **Storage** KPI ("71% · 4.1 / 5.8 TB") | Dashed static card showing API memory instead. | `storageBytes` + capacity (null today). |
+| H7 | **Acknowledge** alert / on-call notification, incident history (resolved alerts) | "Soon" button. Only current failing probes are listed. | Persisted incidents with `acknowledgedBy/At`, resolution time, and on-call paging. |
+| H8 | Metrics across replicas | Single process only. | Shared metrics store so multiple API replicas report together. |
 
 ---
 

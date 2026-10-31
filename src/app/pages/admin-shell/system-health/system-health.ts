@@ -90,7 +90,7 @@ const COPY: Record<Lang, Copy> = {
 @Component({
   selector: 'app-system-health',
   templateUrl: './system-health.html',
-  styleUrl: './system-health.scss',
+  styleUrls: ['../admin-ui.scss', '../admin-table.scss', './system-health.scss'],
 })
 export class SystemHealth {
   private readonly ui = inject(AdminUiState);
@@ -171,6 +171,104 @@ export class SystemHealth {
       (a) => (sev === 'all' || a.severity === sev) && (svc === 'all' || a.service === svc),
     );
   });
+
+  readonly toast = signal('');
+  /** Hourly bars for the two real charts (requests, 5xx rate). */
+  readonly reqChart = computed(() => {
+    const bars = (this.data()?.metrics.bars ?? []) as any[];
+    const max = Math.max(1, ...bars.map((b) => b.requests));
+    return bars.map((b) => ({
+      h: Math.max(3, (b.requests / max) * 100).toFixed(0) + '%',
+      dim: !b.observed,
+      tip: this.hourLabel(b.hour) + ' · ' + b.requests,
+    }));
+  });
+  readonly errChart = computed(() => {
+    const bars = (this.data()?.metrics.bars ?? []) as any[];
+    const rates = bars.map((b) => (b.requests ? (b.errors / b.requests) * 100 : 0));
+    const max = Math.max(0.01, ...rates);
+    return bars.map((b, i) => ({
+      h: Math.max(3, (rates[i] / max) * 100).toFixed(0) + '%',
+      hot: rates[i] > 0 && rates[i] >= max * 0.8,
+      dim: !b.observed,
+      tip: this.hourLabel(b.hour) + ' · ' + rates[i].toFixed(2) + '% (' + b.errors + ')',
+    }));
+  });
+  readonly reqPerHour = computed(() => {
+    const bars = ((this.data()?.metrics.bars ?? []) as any[]).filter((b) => b.observed);
+    if (!bars.length) return '—';
+    const avg = bars.reduce((n, b) => n + b.requests, 0) / bars.length;
+    return (avg >= 1000 ? (avg / 1000).toFixed(1) + 'K' : Math.round(avg)) + '/h';
+  });
+  hourLabel(iso: string) {
+    return new Date(iso).toISOString().slice(11, 16) + ' UTC';
+  }
+  uptime(sec: number | undefined) {
+    if (sec === undefined) return '—';
+    const d = Math.floor(sec / 86400),
+      h = Math.floor((sec % 86400) / 3600),
+      m = Math.floor((sec % 3600) / 60);
+    const ar = this.lang() === 'ar';
+    return d
+      ? `${d}${ar ? 'ي' : 'd'} ${h}${ar ? 'س' : 'h'}`
+      : h
+        ? `${h}${ar ? 'س' : 'h'} ${m}${ar ? 'د' : 'm'}`
+        : `${m}${ar ? 'د' : 'm'}`;
+  }
+  ago(iso: string | null | undefined) {
+    if (!iso) return '—';
+    const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+    const ar = this.lang() === 'ar';
+    if (s < 60) return ar ? `منذ ${s} ث` : `${s}s ago`;
+    if (s < 3600) return ar ? `منذ ${Math.round(s / 60)} د` : `${Math.round(s / 60)} min ago`;
+    return ar ? `منذ ${Math.round(s / 3600)} س` : `${Math.round(s / 3600)} h ago`;
+  }
+  /** Dependencies table rows from the live probes. */
+  readonly deps = computed(() => {
+    const d = this.data();
+    if (!d) return [];
+    const ar = this.lang() === 'ar';
+    return [
+      {
+        name: this.svcName('db'),
+        st: d.database?.status,
+        latency: d.database?.latencyMs,
+        extra:
+          (ar ? 'الاتصالات ' : 'pool ') +
+          d.connections?.total +
+          '/' +
+          d.connections?.max +
+          (d.connections?.waiting
+            ? ' · ' + d.connections.waiting + (ar ? ' بالانتظار' : ' waiting')
+            : ''),
+      },
+      { name: this.svcName('redis'), st: d.redis?.status, latency: d.redis?.latencyMs, extra: '' },
+      {
+        name: this.svcName('lead-routing'),
+        st: d.routingWorker?.status,
+        latency: null,
+        extra: (ar ? 'آخر إشارة ' : 'last heartbeat ') + this.ago(d.routingWorker?.lastSeenAt),
+      },
+    ];
+  });
+  sevPill(s: Severity) {
+    return (
+      {
+        critical: { bg: '#FBE7E3', fg: '#A23624', dot: '#E2553B' },
+        warning: { bg: '#FCF2DE', fg: '#83570C', dot: '#D99A28' },
+        info: { bg: '#EAEFFD', fg: '#2E47A8', dot: '#5B78E5' },
+        resolved: { bg: '#E7F5EC', fg: '#1E6B3E', dot: '#2FA35F' },
+      } as Record<Severity, { bg: string; fg: string; dot: string }>
+    )[s];
+  }
+  soon() {
+    this.toast.set(
+      this.lang() === 'ar'
+        ? 'هذا الخيار غير متصل بالخادم بعد.'
+        : "This option isn't connected to the backend yet.",
+    );
+    setTimeout(() => this.toast.set(''), 3500);
+  }
 
   setSev(s: Severity | 'all'): void {
     this.sevFilter.set(s);

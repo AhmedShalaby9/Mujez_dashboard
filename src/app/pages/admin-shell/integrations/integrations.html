@@ -1,201 +1,378 @@
-@if (error()) {
-  <p role="alert">
-    {{ error() }}
-    <button type="button" class="btn" (click)="load()">
-      {{ lang() === 'ar' ? 'إعادة المحاولة' : 'Retry' }}
-    </button>
-  </p>
-}
-@if (loading()) {
-  <p role="status">{{ lang() === 'ar' ? 'جار التحميل…' : 'Loading…' }}</p>
-}
-<p>
-  {{
-    lang() === 'ar'
-      ? 'سجل إعدادات التكاملات. الموصلات وبيانات اعتماد المزودين لم يتم إعدادها بعد.'
-      : 'Integration configuration registry. Provider connectors and credentials are pending.'
-  }}
-</p>
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
+<div class="pg" (click)="kebabFor.set(null)">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ L().title }}</h1>
+      <span>{{
+        lang() === 'ar'
+          ? 'موصلات على مستوى المنصة يمكن للشركات تفعيلها. المفاتيح محفوظة في خزنة ولا تُعرض.'
+          : 'Platform-level connectors companies can enable. Secrets are stored in a vault and never shown.'
+      }}</span>
+    </div>
   </div>
-</div>
 
-<div class="kpis">
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.total }}</span>
-    <span class="kpi__value">{{ kpis().total }}</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.healthy }}</span>
-    <span class="kpi__value">{{ kpis().healthy }}</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.degraded }}</span>
-    <span class="kpi__value kpi__value--warn">{{ kpis().degraded }}</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.unavailable }}</span>
-    <span class="kpi__value kpi__value--danger">{{ kpis().unavailable }}</span>
-  </div>
-</div>
-
-<div class="chip-row">
-  <button
-    type="button"
-    class="chip"
-    [class.chip--active]="catFilter() === 'all'"
-    (click)="setCat('all')"
-  >
-    {{ L().catAll }}
-  </button>
-  @for (c of categories; track c) {
-    <button type="button" class="chip" [class.chip--active]="catFilter() === c" (click)="setCat(c)">
-      {{ catName(c) }}
-    </button>
+  @if (error() && !toggling()) {
+    <p class="note note--bad" role="alert">
+      {{ error() }}
+      <button type="button" class="link" (click)="load()">
+        {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+      </button>
+    </p>
   }
-</div>
+  @if (loading()) {
+    <p class="muted" role="status">
+      {{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading integrations…' }}
+    </p>
+  }
 
-<div class="card">
-  <div class="table-scroll">
-    <div class="i-table">
-      <div class="i-head">
-        <span>{{ L().colIntegration }}</span>
-        <span>{{ L().colCategory }}</span>
-        <span>{{ L().colStatus }}</span>
-        <span class="t-end">{{ L().colCompanies }}</span>
-        <span>{{ L().colLastSync }}</span>
-        <span class="t-end">{{ L().colErrors }}</span>
-        <span>{{ L().colAvailable }}</span>
-      </div>
-      @for (i of filtered(); track i.key) {
-        <div class="i-row" (click)="openView(i)">
-          <span class="i-cell__main">{{ name(i) }}</span>
-          <span>{{ catName(i.category) }}</span>
-          <span>
-            <span class="pill" [class]="'pill--' + i.status">{{ statusName(i.status) }}</span>
-          </span>
-          <span class="mono t-end">{{ i.companies }}</span>
-          <span>{{ i.lastSync || '—' }}</span>
-          <span class="mono t-end" [class.t-danger]="(i.errors24h || 0) > 0">{{
-            i.errors24h ?? '—'
-          }}</span>
-          <span (click)="$event.stopPropagation()">
-            <button
-              type="button"
-              class="toggle"
-              [attr.aria-label]="name(i)"
-              [attr.aria-pressed]="i.enabled"
-              [class.toggle--on]="i.enabled"
-              (click)="askToggle(i)"
-            >
-              <span class="toggle__knob"></span>
-            </button>
-          </span>
-        </div>
-      }
-      @if (!filtered().length) {
-        <div class="t-empty">{{ L().emptyTitle }}</div>
-      }
+  <div class="kpis">
+    <button type="button" class="kpi" (click)="statusFilter.set('all')">
+      <span>{{ lang() === 'ar' ? 'الموصلات' : 'Connectors' }}</span
+      ><b>{{ stats().total }}</b>
+      <small
+        >{{ stats().requested }}
+        {{ lang() === 'ar' ? 'مطلوب تفعيلها' : 'requested enabled' }}</small
+      >
+    </button>
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'موصلات جاهزة' : 'Connectors live' }}</span
+      ><b>{{ stats().ready }}</b>
+      <small>{{ lang() === 'ar' ? 'مزود ومفاتيح مُعدّة' : 'provider + credentials set up' }}</small>
+    </div>
+    <button type="button" class="kpi" (click)="statusFilter.set('degraded')">
+      <span>{{ lang() === 'ar' ? 'متدهورة' : 'Degraded' }}</span
+      ><b class="warnTxt">{{ stats().degraded }}</b>
+      <small>{{ lang() === 'ar' ? 'متدهورة أو متعطلة' : 'degraded or failing' }}</small>
+    </button>
+    <div class="kpi" [class.kpi--static]="stats().errors === null">
+      <span
+        >{{ lang() === 'ar' ? 'أخطاء · 24 ساعة' : 'Errors · 24h' }}
+        @if (stats().errors === null) {
+          <i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+        }
+      </span>
+      <b class="bad">{{ stats().errors ?? '—' }}</b>
+      <small>{{ lang() === 'ar' ? 'لكل الموصلات' : 'across all connectors' }}</small>
+    </div>
+    <div class="kpi kpi--static">
+      <span
+        >{{ lang() === 'ar' ? 'عملاء عبر التكاملات' : 'Leads via integrations'
+        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+      ><b>—</b>
+      <small>{{ lang() === 'ar' ? 'من العملاء الجدد · 30 يومًا' : 'of new leads · 30d' }}</small>
     </div>
   </div>
+
+  <div class="tabs" role="tablist">
+    @for (t of tabs(); track t.k) {
+      <button
+        type="button"
+        class="tab"
+        role="tab"
+        [class.tab--on]="statusFilter() === t.k"
+        (click)="statusFilter.set(t.k)"
+      >
+        {{ t.label }}<span class="tab__n">{{ t.n }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="filters">
+    <div class="search">
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#8A8A90"
+        stroke-width="1.8"
+        stroke-linecap="round"
+      >
+        <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" />
+      </svg>
+      <input
+        type="text"
+        [placeholder]="lang() === 'ar' ? 'ابحث عن تكامل' : 'Search integrations'"
+        [value]="search()"
+        (input)="search.set($any($event.target).value)"
+      />
+    </div>
+    <select [value]="catFilter()" (change)="setCat($any($event.target).value)">
+      <option value="all">{{ L().catAll }}</option>
+      @for (c of categories; track c) {
+        <option [value]="c">{{ catName(c) }}</option>
+      }
+    </select>
+    @if (hasFilters()) {
+      <button type="button" class="link" (click)="clearFilters()">
+        {{ lang() === 'ar' ? 'مسح الفلاتر' : 'Clear filters' }}
+      </button>
+    }
+  </div>
+
+  <section class="card">
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ L().colIntegration }}</th>
+            <th>{{ L().colCategory }}</th>
+            <th>{{ L().colStatus }}</th>
+            <th class="end">{{ lang() === 'ar' ? 'الشركات المتصلة' : 'Connected companies' }}</th>
+            <th>{{ lang() === 'ar' ? 'آخر مزامنة ناجحة' : 'Last successful sync' }}</th>
+            <th class="end">{{ L().colErrors }}</th>
+            <th class="act"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (i of filtered(); track i.key) {
+            <tr (click)="openView(i)">
+              <td>
+                <span class="strong">{{ name(i) }}</span
+                ><span class="sub mono">{{ i.key }}</span>
+              </td>
+              <td class="soft">{{ catName(i.category) }}</td>
+              <td>
+                <span
+                  class="pill"
+                  [style.background]="pill(i.status).bg"
+                  [style.color]="pill(i.status).fg"
+                  ><span class="dot" [style.background]="pill(i.status).dot"></span
+                  >{{ statusName(i.status) }}</span
+                >
+              </td>
+              <td class="end mono">{{ i.connectorReady ? i.companies : '—' }}</td>
+              <td class="muted">{{ ago(i.lastSync) }}</td>
+              <td class="end mono" [class.bad]="(i.errors24h ?? 0) > 0">
+                {{ i.errors24h ?? '—' }}
+              </td>
+              <td class="act" (click)="$event.stopPropagation()">
+                <button
+                  type="button"
+                  class="kebab"
+                  aria-label="Actions"
+                  (click)="kebabFor.set(kebabFor() === i.key ? null : i.key)"
+                >
+                  ⋯
+                </button>
+                @if (kebabFor() === i.key) {
+                  <div class="menu">
+                    <button type="button" (click)="openView(i)">
+                      {{ lang() === 'ar' ? 'عرض الإعدادات' : 'View configuration' }}
+                    </button>
+                    <button type="button" (click)="openView(i)">
+                      {{ lang() === 'ar' ? 'سجل التغييرات' : 'Configuration history' }}
+                    </button>
+                    @if (i.enabled) {
+                      <button type="button" class="bad" (click)="askToggle(i)">
+                        {{ lang() === 'ar' ? 'تعطيل لكل الشركات…' : 'Disable for all companies…' }}
+                      </button>
+                    } @else {
+                      <button type="button" (click)="askToggle(i)">
+                        {{ lang() === 'ar' ? 'إتاحة التكامل…' : 'Enable availability…' }}
+                      </button>
+                    }
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (!loading() && !filtered().length) {
+      <div class="empty">
+        <strong>{{ lang() === 'ar' ? 'لا توجد نتائج' : 'Nothing matches' }}</strong>
+      </div>
+    }
+  </section>
+  <span class="muted">{{
+    lang() === 'ar'
+      ? 'الإتاحة هنا طلب فقط. لا يعمل الموصل حتى يتم إعداد المزود والمفاتيح.'
+      : 'Availability here is a request only. A connector works once its provider and credentials are set up.'
+  }}</span>
 </div>
 
-@if (viewing(); as v) {
+@if (viewing(); as i) {
   <div class="scrim" (click)="closeView()"></div>
-  <div class="drawer" (click)="$event.stopPropagation()">
-    <div class="drawer__header">
-      <div class="drawer__headerText">
-        <span class="drawer__name">{{ name(v) }}</span>
-        <span class="drawer__sub">{{ catName(v.category) }}</span>
+  <aside class="drawer" (click)="$event.stopPropagation()">
+    <div class="drawer__head">
+      <span class="logo logo--lg">{{ name(i).slice(0, 2).toUpperCase() }}</span>
+      <div class="drawer__title">
+        <span class="drawer__name">{{ name(i) }}</span>
+        <span class="mono muted"
+          >{{ lang() === 'ar' ? 'تكامل' : 'integration' }} · {{ i.key }}</span
+        >
+        <div>
+          <span
+            class="pill"
+            [style.background]="pill(i.status).bg"
+            [style.color]="pill(i.status).fg"
+            ><span class="dot" [style.background]="pill(i.status).dot"></span
+            >{{ statusName(i.status) }}</span
+          >
+        </div>
       </div>
-      <button type="button" class="drawer__close" (click)="closeView()">✕</button>
-    </div>
-    <div class="drawer__body">
-      <span class="drawer__sectionTitle">{{ L().drawerConfig }}</span>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerCredentials }}</span>
-        <span class="drawer__v mono">{{ lang() === 'ar' ? 'غير مهيأ' : 'Not configured' }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerWebhook }}</span>
-        <span class="drawer__v mono" dir="ltr">{{
-          lang() === 'ar' ? 'غير متاح' : 'Not available'
-        }}</span>
-      </div>
-      <div class="drawer__row">
-        <span class="drawer__k">{{ L().drawerConnected }}</span>
-        <span class="drawer__v mono">{{ v.companies }}</span>
-      </div>
-
-      <span class="drawer__sectionTitle">{{ L().drawerLog }}</span>
-      <div class="drawer__log">
-        @if (!v.log.length) {
-          <p>
-            {{ lang() === 'ar' ? 'لا توجد تغييرات مسجلة' : 'No configuration changes recorded' }}
-          </p>
-        }
-        @for (e of v.log; track e.time) {
-          <div class="drawer__logRow">
-            <span class="mono drawer__logTime">{{ e.time }}</span>
-            <span>{{ logMessage(e) }}</span>
-          </div>
-        }
-      </div>
-    </div>
-    <div class="drawer__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeView()">
-        {{ L().drawerClose }}
+      <button type="button" class="x" (click)="closeView()" [attr.aria-label]="L().drawerClose">
+        ×
       </button>
     </div>
-  </div>
+    <div class="drawer__body">
+      @if (!i.connectorReady) {
+        <p class="note note--warn">
+          {{
+            lang() === 'ar'
+              ? 'لم يتم إعداد مزود أو مفاتيح أو ربط شركات لهذا التكامل بعد. لا يتم إرسال أو استيراد أي بيانات.'
+              : 'No provider adapter, credentials or company binding is set up yet. Nothing is sent or imported.'
+          }}
+        </p>
+      }
+      <div class="sect">
+        <span class="sect__label">{{ lang() === 'ar' ? 'الإعدادات' : 'CONFIGURATION' }}</span>
+        <div class="kv">
+          <span>{{ L().colCategory }}</span
+          ><b>{{ catName(i.category) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ L().colAvailable }}</span
+          ><b>{{
+            i.enabled ? (lang() === 'ar' ? 'نعم' : 'Yes') : lang() === 'ar' ? 'لا' : 'No'
+          }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ L().drawerCredentials }}</span>
+          <b class="muted">{{
+            i.credentialConfigured
+              ? '•••••••••••• (' + L().drawerVaultRef + ')'
+              : lang() === 'ar'
+                ? 'غير مُعدّة'
+                : 'Not configured'
+          }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ L().drawerWebhook }}</span
+          ><b class="mono muted">{{ i.webhookUrl || '—' }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ L().drawerConnected }}</span
+          ><b class="mono">{{ i.connectorReady ? i.companies : '—' }}</b>
+        </div>
+        <div class="kv">
+          <span
+            >{{ lang() === 'ar' ? 'البيئة' : 'Environment'
+            }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+          ><b>—</b>
+        </div>
+        <div class="kv">
+          <span
+            >{{ lang() === 'ar' ? 'حد المعدل' : 'Rate limit'
+            }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+          ><b>—</b>
+        </div>
+        <div class="kv">
+          <span
+            >{{ lang() === 'ar' ? 'آخر تدوير' : 'Keys rotated'
+            }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+          ><b>—</b>
+        </div>
+      </div>
+      <div class="sect">
+        <span class="sect__label">{{ L().drawerLog }}</span>
+        @for (e of i.log; track $index) {
+          <div class="kv">
+            <span class="mono">{{ date(e.time) }}</span
+            ><b>{{ logMessage(e) }}</b>
+          </div>
+        } @empty {
+          <p class="muted">{{ lang() === 'ar' ? 'لا توجد تغييرات بعد.' : 'No changes yet.' }}</p>
+        }
+      </div>
+      <div class="sect">
+        <span class="sect__label"
+          >{{ lang() === 'ar' ? 'سجل المزامنة' : 'RECENT SYNC LOG'
+          }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+        >
+        <p class="muted">
+          {{ lang() === 'ar' ? 'يظهر عند تشغيل الموصل.' : 'Appears once the connector runs.' }}
+        </p>
+      </div>
+    </div>
+    <div class="drawer__foot">
+      @if (i.enabled) {
+        <button type="button" class="btn btn--badText" (click)="askToggle(i)">
+          {{ lang() === 'ar' ? 'تعطيل لكل الشركات…' : 'Disable for all companies…' }}
+        </button>
+      } @else {
+        <button type="button" class="btn btn--dark" (click)="askToggle(i)">
+          {{ lang() === 'ar' ? 'إتاحة التكامل…' : 'Enable availability…' }}
+        </button>
+      }
+      <button type="button" class="btn" (click)="rotateSoon()">
+        {{ lang() === 'ar' ? 'تدوير المفاتيح' : 'Rotate keys in vault'
+        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+      </button>
+    </div>
+  </aside>
 }
 
-@if (toggling(); as t) {
-  <div class="scrim" (click)="cancelToggle()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
+@if (toggling(); as i) {
+  <div class="scrim scrim--top" (click)="cancelToggle()"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
       <span class="dialog__title">
-        {{ t.enabled ? L().disableTitle(name(t)) : L().enableTitle(name(t)) }}
+        {{
+          i.enabled
+            ? lang() === 'ar'
+              ? 'تعطيل '
+              : 'Disable '
+            : lang() === 'ar'
+              ? 'إتاحة '
+              : 'Enable '
+        }}{{ name(i) }}
       </span>
-      <p class="dialog__text">
-        {{ t.enabled ? L().disableBody(t.companies) : L().enableBody }}
-      </p>
-      @if (toggling()) {
-        <label class="field">
-          <span class="field__label">{{ L().reasonLabel }}</span>
-          <textarea
-            class="textarea"
-            rows="2"
-            [(ngModel)]="toggleReason"
-            name="toggleReason"
-          ></textarea>
-          @if (toggleError()) {
-            <span class="field__error">{{ L().reasonError }}</span>
-          }
-        </label>
+      <span class="dialog__body">{{
+        i.enabled
+          ? lang() === 'ar'
+            ? 'لن تتمكن أي شركة من استخدام هذا التكامل.'
+            : 'No company will be able to use this integration.'
+          : lang() === 'ar'
+            ? 'يُسجل طلب الإتاحة. يظل التكامل غير مُعدّ حتى يتم إعداد المزود.'
+            : 'Records the availability request. It stays unconfigured until the provider is set up.'
+      }}</span>
+    </div>
+    <div class="dialog__main">
+      <label class="field">
+        <span>{{
+          lang() === 'ar' ? 'السبب (5 أحرف على الأقل)' : 'Reason (min. 5 characters)'
+        }}</span>
+        <textarea
+          rows="2"
+          [class.invalid]="toggleError()"
+          [value]="toggleReason()"
+          (input)="toggleReason.set($any($event.target).value)"
+        ></textarea>
+      </label>
+      @if (error()) {
+        <p class="note note--bad" role="alert">{{ error() }}</p>
       }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelToggle()">
-        {{ L().cancel }}
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="cancelToggle()">
+        {{ lang() === 'ar' ? 'إلغاء' : 'Cancel' }}
       </button>
       <button
         type="button"
         class="btn"
-        [class.btn--danger]="t.enabled"
-        [class.btn--primary]="!t.enabled"
+        [class.btn--danger]="i.enabled"
+        [class.btn--dark]="!i.enabled"
         [disabled]="saving()"
         (click)="confirmToggle()"
       >
-        {{ L().confirm }}
+        {{ lang() === 'ar' ? 'تأكيد' : 'Confirm' }}
       </button>
     </div>
   </div>
 }
 
 @if (toast(); as msg) {
-  <div class="toast">{{ msg }}</div>
+  <div class="toast"><span></span>{{ msg }}</div>
 }

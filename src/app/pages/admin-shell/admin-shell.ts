@@ -191,7 +191,7 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-admin-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './admin-shell.html',
-  styleUrl: './admin-shell.scss',
+  styleUrls: ['./admin-sidebar.scss', './admin-shell.scss'],
 })
 export class AdminShell {
   readonly overview = inject(OverviewApi);

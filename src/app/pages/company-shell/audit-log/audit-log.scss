@@ -26,7 +26,7 @@ button {
 
 .page-head__eyebrow {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .page-head__title {
@@ -38,7 +38,7 @@ button {
 
 .page-head__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .search {
@@ -47,14 +47,14 @@ button {
   max-width: 420px;
   height: 32px;
   padding: 0 12px;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   border-radius: 6px;
   font-size: 13px;
   outline: none;
 
   &:focus {
-    border-color: var(--platform-primary, #3d4fd6);
-    box-shadow: 0 0 0 3px #e6e8fb;
+    border-color: var(--platform-primary, #111113);
+    box-shadow: 0 0 0 3px #eeeeea;
   }
 }
 
@@ -71,30 +71,30 @@ button {
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #45443f;
+  color: #45454a;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
 .chip--active {
-  border-color: var(--platform-primary, #3d4fd6);
-  background: #e6e8fb;
-  color: #2b37a0;
+  border-color: var(--platform-primary, #111113);
+  background: #eeeeea;
+  color: #111113;
 }
 
 .mono {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Geist Mono', monospace;
 }
 
 .card {
   display: flex;
   flex-direction: column;
   background: #fff;
-  border: 1px solid #e4e2dc;
+  border: 1px solid #e2e2dc;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -117,16 +117,16 @@ button {
 
 .au-head {
   padding: 8px 14px;
-  border-bottom: 1px solid #eeede8;
+  border-bottom: 1px solid #eeeeea;
   font-size: 11px;
-  color: #8a8983;
+  color: #8a8a90;
 }
 
 .au-row {
   width: 100%;
   padding: 10px 14px;
   border: 0;
-  border-bottom: 1px solid #f2f1ed;
+  border-bottom: 1px solid #f1f1ed;
   background: #fff;
   text-align: start;
   font-size: 13px;
@@ -134,7 +134,7 @@ button {
   font-family: inherit;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 
   &:last-child {
@@ -151,7 +151,7 @@ button {
 
 .au-cell__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -160,7 +160,7 @@ button {
 .t-empty {
   padding: 32px 14px;
   text-align: center;
-  color: #8a8983;
+  color: #8a8a90;
   font-size: 13px;
 }
 
@@ -191,7 +191,7 @@ button {
   align-items: center;
   gap: 12px;
   padding: 16px 18px;
-  border-bottom: 1px solid #eeede8;
+  border-bottom: 1px solid #eeeeea;
 }
 
 .drawer__headerText {
@@ -209,7 +209,7 @@ button {
 
 .drawer__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .drawer__close {
@@ -219,12 +219,12 @@ button {
   border: 0;
   background: transparent;
   font-size: 18px;
-  color: #6b6a65;
+  color: #6e6e73;
   cursor: pointer;
   border-radius: 6px;
 
   &:hover {
-    background: #f4f3ef;
+    background: #f4f4f1;
   }
 }
 
@@ -245,7 +245,7 @@ button {
 }
 
 .drawer__k {
-  color: #8a8983;
+  color: #8a8a90;
 }
 
 .diff-grid {
@@ -264,11 +264,11 @@ button {
 }
 
 .diff-box--before {
-  background: #f8e1dc;
+  background: #fbe7e3;
 }
 
 .diff-box--after {
-  background: #dceee1;
+  background: #e7f5ec;
 }
 
 .diff-box__title {
@@ -276,7 +276,7 @@ button {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .diff-box__value {
@@ -288,7 +288,7 @@ button {
   display: flex;
   justify-content: flex-end;
   padding: 12px 18px;
-  border-top: 1px solid #eeede8;
+  border-top: 1px solid #eeeeea;
 }
 
 .btn {
@@ -303,12 +303,12 @@ button {
 }
 
 .btn--ghost {
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #17181a;
+  color: #111113;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 

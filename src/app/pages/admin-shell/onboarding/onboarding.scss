@@ -28,7 +28,7 @@ button {
 
 .page-head__eyebrow {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .page-head__title {
@@ -50,22 +50,22 @@ button {
 }
 
 .btn--ghost {
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #17181a;
+  color: #111113;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
 .btn--primary {
   border: 0;
-  background: var(--platform-primary, #3d4fd6);
+  background: var(--platform-primary, #111113);
   color: #fff;
 
   &:hover {
-    background: #2f3fb8;
+    background: #2a2b30;
   }
 }
 
@@ -75,8 +75,8 @@ button {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 1px;
-  background: #e4e2dc;
-  border: 1px solid #e4e2dc;
+  background: #e2e2dc;
+  border: 1px solid #e2e2dc;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -91,17 +91,17 @@ button {
 
 .kpi__label {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .kpi__value {
   white-space: nowrap;
   font:
-    500 21px 'IBM Plex Mono',
+    500 21px 'Geist Mono',
     'IBM Plex Sans Arabic',
     monospace;
   letter-spacing: -0.02em;
-  color: #17181a;
+  color: #111113;
 }
 
 // ---- filter chips ----
@@ -119,20 +119,20 @@ button {
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #45443f;
+  color: #45454a;
   font-family: inherit;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
 .chip--active {
-  border-color: var(--platform-primary, #3d4fd6);
-  background: #e6e8fb;
-  color: #2b37a0;
+  border-color: var(--platform-primary, #111113);
+  background: #eeeeea;
+  color: #111113;
 }
 
 // ---- onboarding list ----
@@ -149,7 +149,7 @@ button {
   gap: 16px;
   padding: 14px 16px;
   background: #fff;
-  border: 1px solid #e4e2dc;
+  border: 1px solid #e2e2dc;
   border-radius: 8px;
 }
 
@@ -201,7 +201,7 @@ button {
 
 .onboard-card__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .onboard-card__actions {
@@ -219,18 +219,18 @@ button {
 }
 
 .pill--trial {
-  background: #e6e8fb;
-  color: #2b37a0;
+  background: #eeeeea;
+  color: #111113;
 }
 
 .pill--pending {
-  background: #eeede8;
-  color: #45443f;
+  background: #eeeeea;
+  color: #45454a;
 }
 
 .pill--stuck {
-  background: #f8e1dc;
-  color: #9a3422;
+  background: #fbe7e3;
+  color: #a23624;
 }
 
 // ---- stepper ----
@@ -265,43 +265,43 @@ button {
   display: grid;
   place-items: center;
   font:
-    600 11px 'IBM Plex Mono',
+    600 11px 'Geist Mono',
     monospace;
-  background: #eeede8;
-  color: #8a8983;
+  background: #eeeeea;
+  color: #8a8a90;
 }
 
 .stepper__dot--done {
-  background: var(--platform-primary, #3d4fd6);
+  background: var(--platform-primary, #111113);
   color: #fff;
 }
 
 .stepper__dot--current {
-  background: #e6e8fb;
-  color: #2b37a0;
-  box-shadow: 0 0 0 2px var(--platform-primary, #3d4fd6);
+  background: #eeeeea;
+  color: #111113;
+  box-shadow: 0 0 0 2px var(--platform-primary, #111113);
 }
 
 .stepper__line {
   flex: 1;
   height: 2px;
-  background: #eeede8;
+  background: #eeeeea;
   margin-inline: 2px;
 }
 
 .stepper__line--done {
-  background: var(--platform-primary, #3d4fd6);
+  background: var(--platform-primary, #111113);
 }
 
 .stepper__label {
   font-size: 11px;
-  color: #8a8983;
+  color: #8a8a90;
   text-align: center;
   white-space: nowrap;
 }
 
 .stepper__label--current {
-  color: #17181a;
+  color: #111113;
   font-weight: 500;
 }
 
@@ -311,16 +311,16 @@ button {
   align-items: center;
   gap: 4px;
   padding: 32px 14px;
-  color: #8a8983;
+  color: #8a8a90;
   text-align: center;
   background: #fff;
-  border: 1px solid #e4e2dc;
+  border: 1px solid #e2e2dc;
   border-radius: 8px;
 }
 
 .t-empty__title {
   font-weight: 500;
-  color: #45443f;
+  color: #45454a;
 }
 
 .t-empty__sub {
@@ -354,7 +354,7 @@ button {
   align-items: center;
   gap: 12px;
   padding: 16px 18px;
-  border-bottom: 1px solid #eeede8;
+  border-bottom: 1px solid #eeeeea;
 }
 
 .drawer__headerText {
@@ -380,12 +380,12 @@ button {
   border: 0;
   background: transparent;
   font-size: 18px;
-  color: #6b6a65;
+  color: #6e6e73;
   cursor: pointer;
   border-radius: 6px;
 
   &:hover {
-    background: #f4f3ef;
+    background: #f4f4f1;
   }
 }
 
@@ -406,13 +406,13 @@ button {
 }
 
 .drawer__k {
-  color: #8a8983;
+  color: #8a8a90;
 }
 
 .drawer__stepsTitle {
   font-size: 12px;
   font-weight: 600;
-  color: #6b6a65;
+  color: #6e6e73;
   margin-top: 6px;
 }
 
@@ -434,7 +434,7 @@ button {
   flex-wrap: wrap;
   gap: 6px;
   padding: 12px 18px;
-  border-top: 1px solid #eeede8;
+  border-top: 1px solid #eeeeea;
 }
 
 // ---- toast ----
@@ -448,7 +448,7 @@ button {
   max-width: min(420px, calc(100vw - 32px));
   padding: 10px 16px;
   border-radius: 8px;
-  background: #16182a;
+  background: #111113;
   color: #fff;
   font-size: 13px;
   text-align: center;

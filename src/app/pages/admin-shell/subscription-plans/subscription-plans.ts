@@ -187,10 +187,10 @@ export class SubscriptionPlans {
           perAr: 'شهريًا',
           color: (
             {
-              starter: '#C3C5D6',
-              pro: '#3D4FD6',
-              business: '#7E89E6',
-              enterprise: '#F5B841',
+              starter: '#a1a1a6',
+              pro: '#111113',
+              business: '#8BB33A',
+              enterprise: '#c8f169',
             } as Record<string, string>
           )[v.key],
           limits: [

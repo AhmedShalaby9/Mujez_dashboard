@@ -14,7 +14,7 @@ textarea {
 
 .mono {
   font:
-    500 12px 'IBM Plex Mono',
+    500 12px 'Geist Mono',
     monospace;
 }
 
@@ -36,7 +36,7 @@ textarea {
 
 .page-head__eyebrow {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .page-head__title {
@@ -63,32 +63,32 @@ textarea {
 }
 
 .btn--ghost {
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #17181a;
+  color: #111113;
 
   &:hover:not(:disabled) {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
 .btn--danger {
   border: 0;
-  background: #b4442f;
+  background: #e2553b;
   color: #fff;
 
   &:hover {
-    background: #9a3422;
+    background: #a23624;
   }
 }
 
 .btn--danger-outline {
-  border: 1px solid #e5b3a8;
+  border: 1px solid #fbe7e3;
   background: #fff;
-  color: #b4442f;
+  color: #e2553b;
 
   &:hover {
-    background: #f8e1dc;
+    background: #fbe7e3;
   }
 }
 
@@ -98,8 +98,8 @@ textarea {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1px;
-  background: #e4e2dc;
-  border: 1px solid #e4e2dc;
+  background: #e2e2dc;
+  border: 1px solid #e2e2dc;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -114,7 +114,7 @@ textarea {
 
 .kpi__label {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .kpi__value {
@@ -122,7 +122,7 @@ textarea {
   font-size: 18px;
   font-weight: 500;
   letter-spacing: -0.02em;
-  color: #17181a;
+  color: #111113;
 }
 
 // ---- filters ----
@@ -137,15 +137,15 @@ textarea {
   height: 32px;
   width: min(360px, 100%);
   padding: 0 10px;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   border-radius: 6px;
   background: #fff;
   font-size: 13px;
   outline: none;
 
   &:focus {
-    border-color: var(--platform-primary, #3d4fd6);
-    box-shadow: 0 0 0 3px #e6e8fb;
+    border-color: var(--platform-primary, #111113);
+    box-shadow: 0 0 0 3px #eeeeea;
   }
 }
 
@@ -162,20 +162,20 @@ textarea {
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #45443f;
+  color: #45454a;
   font-family: inherit;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
 .chip--active {
-  border-color: var(--platform-primary, #3d4fd6);
-  background: #e6e8fb;
-  color: #2b37a0;
+  border-color: var(--platform-primary, #111113);
+  background: #eeeeea;
+  color: #111113;
 }
 
 // ---- table ----
@@ -184,7 +184,7 @@ textarea {
   display: flex;
   flex-direction: column;
   background: #fff;
-  border: 1px solid #e4e2dc;
+  border: 1px solid #e2e2dc;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -202,7 +202,7 @@ textarea {
   grid-template-columns: 1fr 1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 44px;
   gap: 10px;
   padding: 8px 14px;
-  border-bottom: 1px solid #eeede8;
+  border-bottom: 1px solid #eeeeea;
 }
 
 .t-head__cell {
@@ -213,7 +213,7 @@ textarea {
   padding: 0;
   background: transparent;
   font-size: 11px;
-  color: #8a8983;
+  color: #8a8a90;
   cursor: pointer;
   text-align: start;
   white-space: nowrap;
@@ -233,7 +233,7 @@ textarea {
 }
 
 .sort-arrow--on {
-  color: var(--platform-primary, #3d4fd6);
+  color: var(--platform-primary, #111113);
 }
 
 .t-row {
@@ -242,12 +242,12 @@ textarea {
   gap: 10px;
   align-items: center;
   padding: 8px 14px;
-  border-bottom: 1px solid #f2f1ed;
+  border-bottom: 1px solid #f1f1ed;
   cursor: pointer;
 }
 
 .t-row:hover {
-  background: #f7f6f2;
+  background: #f6f6f3;
 }
 
 .t-cell {
@@ -287,7 +287,7 @@ textarea {
 
 .t-cell__sub {
   font-size: 11px;
-  color: #8a8983;
+  color: #8a8a90;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -329,13 +329,13 @@ textarea {
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #17181a;
+  color: #111113;
   font-family: inherit;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
@@ -350,7 +350,7 @@ textarea {
   z-index: 40;
   min-width: 150px;
   background: #fff;
-  border: 1px solid #e4e2dc;
+  border: 1px solid #e2e2dc;
   border-radius: 8px;
   box-shadow: 0 12px 32px rgba(22, 24, 42, 0.14);
   padding: 6px;
@@ -369,16 +369,16 @@ textarea {
   border-radius: 5px;
   font-size: 13px;
   font-family: inherit;
-  color: #17181a;
+  color: #111113;
   cursor: pointer;
 
   &:hover {
-    background: #f4f3ef;
+    background: #f4f4f1;
   }
 }
 
 .dropdown__item--danger {
-  color: #b4442f;
+  color: #e2553b;
 }
 
 .t-empty {
@@ -387,13 +387,13 @@ textarea {
   align-items: center;
   gap: 4px;
   padding: 32px 14px;
-  color: #8a8983;
+  color: #8a8a90;
   text-align: center;
 }
 
 .t-empty__title {
   font-weight: 500;
-  color: #45443f;
+  color: #45454a;
 }
 
 .t-empty__sub {
@@ -406,8 +406,8 @@ textarea {
   gap: 8px;
   padding: 10px 14px;
   font-size: 12px;
-  color: #6b6a65;
-  border-top: 1px solid #eeede8;
+  color: #6e6e73;
+  border-top: 1px solid #eeeeea;
 
   .btn {
     margin-inline-start: auto;
@@ -445,7 +445,7 @@ textarea {
   align-items: center;
   gap: 12px;
   padding: 16px 18px;
-  border-bottom: 1px solid #eeede8;
+  border-bottom: 1px solid #eeeeea;
 }
 
 .drawer__headerText {
@@ -471,12 +471,12 @@ textarea {
   border: 0;
   background: transparent;
   font-size: 18px;
-  color: #6b6a65;
+  color: #6e6e73;
   cursor: pointer;
   border-radius: 6px;
 
   &:hover {
-    background: #f4f3ef;
+    background: #f4f4f1;
   }
 }
 
@@ -498,12 +498,12 @@ textarea {
 
 .drawer__divider {
   height: 1px;
-  background: #eeede8;
+  background: #eeeeea;
   margin: 2px 0;
 }
 
 .drawer__k {
-  color: #8a8983;
+  color: #8a8a90;
 }
 
 .drawer__v {
@@ -515,7 +515,7 @@ textarea {
   flex-wrap: wrap;
   gap: 6px;
   padding: 12px 18px;
-  border-top: 1px solid #eeede8;
+  border-top: 1px solid #eeeeea;
 }
 
 .dialog {
@@ -539,7 +539,7 @@ textarea {
   align-items: center;
   gap: 10px;
   padding: 16px 18px;
-  border-bottom: 1px solid #eeede8;
+  border-bottom: 1px solid #eeeeea;
 }
 
 .dialog__title {
@@ -549,7 +549,7 @@ textarea {
 
 .dialog__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .dialog__body {
@@ -564,7 +564,7 @@ textarea {
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 18px;
-  border-top: 1px solid #eeede8;
+  border-top: 1px solid #eeeeea;
 }
 
 // ---- fields ----
@@ -577,45 +577,45 @@ textarea {
 
 .field__label {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .field__error {
   font-size: 12px;
-  color: #b4442f;
+  color: #e2553b;
 }
 
 .input {
   height: 34px;
   padding: 0 10px;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   border-radius: 6px;
   font-size: 13px;
   outline: none;
   background: #fff;
 
   &:focus {
-    border-color: var(--platform-primary, #3d4fd6);
-    box-shadow: 0 0 0 3px #e6e8fb;
+    border-color: var(--platform-primary, #111113);
+    box-shadow: 0 0 0 3px #eeeeea;
   }
 
   &:disabled {
-    background: #f4f3ef;
-    color: #8a8983;
+    background: #f4f4f1;
+    color: #8a8a90;
   }
 }
 
 .textarea {
   padding: 8px 10px;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   border-radius: 6px;
   font-size: 13px;
   outline: none;
   resize: vertical;
 
   &:focus {
-    border-color: var(--platform-primary, #3d4fd6);
-    box-shadow: 0 0 0 3px #e6e8fb;
+    border-color: var(--platform-primary, #111113);
+    box-shadow: 0 0 0 3px #eeeeea;
   }
 }
 
@@ -630,7 +630,7 @@ textarea {
   max-width: min(420px, calc(100vw - 32px));
   padding: 10px 16px;
   border-radius: 8px;
-  background: #16182a;
+  background: #111113;
   color: #fff;
   font-size: 13px;
   text-align: center;

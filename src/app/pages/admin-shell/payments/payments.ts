@@ -49,11 +49,11 @@ const STATUS_LABEL: Record<Lang, Record<PaymentStatus, string>> = {
 };
 
 const STATUS_COLOR: Record<PaymentStatus, { bg: string; fg: string }> = {
-  pending: { bg: '#E6E8FB', fg: '#2B37A0' },
-  completed: { bg: '#DCEEE1', fg: '#2F7A4F' },
-  failed: { bg: '#F8E1DC', fg: '#9A3422' },
-  refunded: { bg: '#EEEDE8', fg: '#6B6A65' },
-  partial_refund: { bg: '#F6E6CB', fg: '#9A6B1E' },
+  pending: { bg: '#eeeeea', fg: '#111113' },
+  completed: { bg: '#e7f5ec', fg: '#1e6b3e' },
+  failed: { bg: '#fbe7e3', fg: '#a23624' },
+  refunded: { bg: '#eeeeea', fg: '#6e6e73' },
+  partial_refund: { bg: '#fcf2de', fg: '#83570c' },
 };
 
 const RECON_LABEL: Record<Lang, Record<Reconciliation, string>> = {
@@ -62,9 +62,9 @@ const RECON_LABEL: Record<Lang, Record<Reconciliation, string>> = {
 };
 
 const RECON_COLOR: Record<Reconciliation, { bg: string; fg: string }> = {
-  matched: { bg: '#DCEEE1', fg: '#2F7A4F' },
-  unmatched: { bg: '#F8E1DC', fg: '#9A3422' },
-  pending: { bg: '#EEEDE8', fg: '#6B6A65' },
+  matched: { bg: '#e7f5ec', fg: '#1e6b3e' },
+  unmatched: { bg: '#fbe7e3', fg: '#a23624' },
+  pending: { bg: '#eeeeea', fg: '#6e6e73' },
 };
 
 interface Copy {
@@ -423,7 +423,7 @@ export class Payments {
     return p.status === 'completed' || p.status === 'partial_refund';
   }
 
-  private readonly logoPalette = ['#3D4FD6', '#7E89E6', '#16182A', '#9A6B1E', '#2F7A4F', '#B4442F'];
+  private readonly logoPalette = ['#111113', '#8BB33A', '#111113', '#83570c', '#1e6b3e', '#e2553b'];
 
   logoBg(p: Payment): string {
     const code = p.companyId.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);

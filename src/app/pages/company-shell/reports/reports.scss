@@ -26,7 +26,7 @@ button {
 
 .page-head__eyebrow {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .page-head__title {
@@ -38,7 +38,7 @@ button {
 
 .page-head__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .page-head__actions {
@@ -57,12 +57,12 @@ button {
 }
 
 .btn--ghost {
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #17181a;
+  color: #111113;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
@@ -79,23 +79,23 @@ button {
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #45443f;
+  color: #45454a;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
 .chip--active {
-  border-color: var(--platform-primary, #3d4fd6);
-  background: #e6e8fb;
-  color: #2b37a0;
+  border-color: var(--platform-primary, #111113);
+  background: #eeeeea;
+  color: #111113;
 }
 
 .mono {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Geist Mono', monospace;
 }
 
 .grid-2 {
@@ -114,7 +114,7 @@ button {
   display: flex;
   flex-direction: column;
   background: #fff;
-  border: 1px solid #e4e2dc;
+  border: 1px solid #e2e2dc;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -126,7 +126,7 @@ button {
 
 .card__head {
   padding: 10px 14px;
-  border-bottom: 1px solid #eeede8;
+  border-bottom: 1px solid #eeeeea;
 }
 
 .card__title {
@@ -155,14 +155,14 @@ button {
 
 .bar-col__bar {
   width: 70%;
-  background: var(--platform-primary, #3d4fd6);
+  background: var(--platform-primary, #111113);
   border-radius: 3px 3px 0 0;
   min-height: 2px;
 }
 
 .bar-col__label {
   font-size: 11px;
-  color: #8a8983;
+  color: #8a8a90;
 }
 
 // ---- funnel ----
@@ -182,19 +182,19 @@ button {
 
 .funnel-row__label {
   font-size: 11.5px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .funnel-row__track {
   height: 10px;
   border-radius: 5px;
-  background: #eeede8;
+  background: #eeeeea;
   overflow: hidden;
 }
 
 .funnel-row__fill {
   height: 100%;
-  background: var(--platform-primary, #3d4fd6);
+  background: var(--platform-primary, #111113);
   border-radius: 5px;
 }
 
@@ -230,15 +230,15 @@ button {
 .s-head,
 .a-head {
   padding: 8px 14px;
-  border-bottom: 1px solid #eeede8;
+  border-bottom: 1px solid #eeeeea;
   font-size: 11px;
-  color: #8a8983;
+  color: #8a8a90;
 }
 
 .s-row,
 .a-row {
   padding: 9px 14px;
-  border-bottom: 1px solid #f2f1ed;
+  border-bottom: 1px solid #f1f1ed;
   font-size: 13px;
 
   &:last-child {
@@ -257,7 +257,7 @@ button {
   max-width: min(420px, calc(100vw - 32px));
   padding: 10px 16px;
   border-radius: 8px;
-  background: #16182a;
+  background: #111113;
   color: #fff;
   font-size: 13px;
   text-align: center;

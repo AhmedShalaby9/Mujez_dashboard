@@ -205,7 +205,7 @@ export class Onboarding {
     return 'pending';
   }
 
-  private readonly logoPalette = ['#3D4FD6', '#7E89E6', '#16182A', '#9A6B1E', '#2F7A4F', '#B4442F'];
+  private readonly logoPalette = ['#111113', '#8BB33A', '#111113', '#83570c', '#1e6b3e', '#e2553b'];
 
   logoBg(c: OnboardingCompany): string {
     const code = c.id.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);

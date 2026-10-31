@@ -1,0 +1,26 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
+    <h1 class="page-head__title">{{ L().title }}</h1>
+    <span class="page-head__sub">{{ L().sub }}</span>
+  </div>
+</div>
+
+@if (overview.alertError()) {
+  <p role="alert">{{ overview.alertError() }}</p>
+}
+
+<div class="card">
+  <div class="n-list">
+    @for (n of items(); track n.id) {
+      <a class="n-row" [routerLink]="n.path">
+        <span class="n-row__dot" [class]="'n-row__dot--' + n.severity"></span>
+        <span class="n-row__title">{{ n.title }}</span>
+        <span class="pill" [class]="'pill--' + n.severity">{{ L().severity[n.severity] }}</span>
+      </a>
+    }
+    @if (!items().length && !overview.alertError()) {
+      <div class="t-empty">{{ L().empty }}</div>
+    }
+  </div>
+</div>

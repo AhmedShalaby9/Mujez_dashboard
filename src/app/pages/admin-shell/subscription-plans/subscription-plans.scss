@@ -12,7 +12,7 @@ button {
 
 .mono {
   font:
-    500 12px 'IBM Plex Mono',
+    500 12px 'Geist Mono',
     monospace;
 }
 
@@ -34,7 +34,7 @@ button {
 
 .page-head__eyebrow {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .page-head__title {
@@ -72,42 +72,42 @@ button {
 }
 
 .btn--ghost {
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #17181a;
+  color: #111113;
 
   &:hover:not(:disabled) {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
 .btn--primary {
   border: 0;
-  background: var(--platform-primary, #3d4fd6);
+  background: var(--platform-primary, #111113);
   color: #fff;
 
   &:hover:not(:disabled) {
-    background: #2f3fb8;
+    background: #2a2b30;
   }
 }
 
 .btn--danger {
   border: 0;
-  background: #b4442f;
+  background: #e2553b;
   color: #fff;
 
   &:hover {
-    background: #9a3422;
+    background: #a23624;
   }
 }
 
 .btn--danger-outline {
-  border: 1px solid #e5b3a8;
+  border: 1px solid #fbe7e3;
   background: #fff;
-  color: #b4442f;
+  color: #e2553b;
 
   &:hover {
-    background: #f8e1dc;
+    background: #fbe7e3;
   }
 }
 
@@ -126,7 +126,7 @@ button {
   gap: 10px;
   padding: 16px;
   background: #fff;
-  border: 1px solid #e4e2dc;
+  border: 1px solid #e2e2dc;
   border-radius: 8px;
 }
 
@@ -142,8 +142,8 @@ button {
   font-weight: 500;
   padding: 1px 8px;
   border-radius: 10px;
-  background: #eeede8;
-  color: #6b6a65;
+  background: #eeeeea;
+  color: #6e6e73;
 }
 
 .plan-card__head {
@@ -174,7 +174,7 @@ button {
 
 .plan-card__desc {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .plan-card__price {
@@ -184,7 +184,7 @@ button {
 
 .plan-card__priceValue {
   font:
-    500 20px 'IBM Plex Mono',
+    500 20px 'Geist Mono',
     'IBM Plex Sans Arabic',
     monospace;
   letter-spacing: -0.02em;
@@ -192,7 +192,7 @@ button {
 
 .plan-card__pricePer {
   font-size: 11px;
-  color: #8a8983;
+  color: #8a8a90;
 }
 
 .plan-card__limits {
@@ -200,12 +200,12 @@ button {
   grid-template-columns: 1fr auto;
   gap: 5px 10px;
   padding: 10px 0;
-  border-top: 1px solid #f2f1ed;
-  border-bottom: 1px solid #f2f1ed;
+  border-top: 1px solid #f1f1ed;
+  border-bottom: 1px solid #f1f1ed;
 }
 
 .plan-card__limitK {
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .plan-card__limitV {
@@ -214,7 +214,7 @@ button {
 
 .plan-card__feats {
   font-size: 12px;
-  color: #45443f;
+  color: #45454a;
   text-wrap: pretty;
 }
 
@@ -224,7 +224,7 @@ button {
   padding: 0;
   background: transparent;
   font-size: 12px;
-  color: var(--platform-primary, #3d4fd6);
+  color: var(--platform-primary, #111113);
   cursor: pointer;
   font-family: inherit;
 
@@ -273,7 +273,7 @@ button {
   align-items: center;
   gap: 10px;
   padding: 16px 18px;
-  border-bottom: 1px solid #eeede8;
+  border-bottom: 1px solid #eeeeea;
 }
 
 .drawer__headerText {
@@ -291,7 +291,7 @@ button {
 
 .dialog__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .dialog__body {
@@ -308,7 +308,7 @@ button {
 .dialog__text {
   margin: 0;
   font-size: 13px;
-  color: #45443f;
+  color: #45454a;
   text-wrap: pretty;
 }
 
@@ -317,7 +317,7 @@ button {
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 18px;
-  border-top: 1px solid #eeede8;
+  border-top: 1px solid #eeeeea;
 }
 
 .ws-mode {
@@ -326,7 +326,7 @@ button {
   gap: 10px;
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
   text-align: start;
   cursor: pointer;
@@ -335,8 +335,8 @@ button {
 }
 
 .ws-mode--active {
-  border-color: var(--platform-primary, #3d4fd6);
-  background: #f1f2fd;
+  border-color: var(--platform-primary, #111113);
+  background: #eeeeea;
 }
 
 .ws-mode__radio {
@@ -345,12 +345,12 @@ button {
   height: 14px;
   margin-top: 2px;
   border-radius: 50%;
-  border: 4px solid #dddbd4;
+  border: 4px solid #c4c4be;
   background: #fff;
 }
 
 .ws-mode__radio--active {
-  border-color: var(--platform-primary, #3d4fd6);
+  border-color: var(--platform-primary, #111113);
 }
 
 .ws-mode__text {
@@ -365,7 +365,7 @@ button {
 
 .ws-mode__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
   text-wrap: pretty;
 }
 
@@ -380,7 +380,7 @@ button {
   max-width: min(420px, calc(100vw - 32px));
   padding: 10px 16px;
   border-radius: 8px;
-  background: #16182a;
+  background: #111113;
   color: #fff;
   font-size: 13px;
   text-align: center;

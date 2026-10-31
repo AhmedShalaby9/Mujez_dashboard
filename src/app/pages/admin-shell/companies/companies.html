@@ -1,5 +1,5 @@
 @if (success()) {
-  <p role="status" style="padding: 12px; background: #e9f6ef; color: #235f3e; border-radius: 8px">
+  <p role="status" style="padding: 12px; background: #e7f5ec; color: #1e6b3e; border-radius: 8px">
     {{ success() }}
   </p>
 }
@@ -7,7 +7,7 @@
   <p role="status">{{ lang() === 'ar' ? 'جارٍ تحميل الشركات…' : 'Loading companies…' }}</p>
 }
 @if (error()) {
-  <p role="alert" style="color: #9a3422">
+  <p role="alert" style="color: #a23624">
     {{ error() }}
     <button class="btn" (click)="reload()">{{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}</button>
   </p>
@@ -50,7 +50,7 @@
       (click)="filterByKpiStatus('active')"
     >
       <span class="kpi__label">{{ L().kpis.active }}</span>
-      <span class="kpi__value" style="color: #2f7a4f">{{ kpis().active }}</span>
+      <span class="kpi__value" style="color: #1e6b3e">{{ kpis().active }}</span>
     </button>
     <button
       type="button"
@@ -59,7 +59,7 @@
       (click)="filterByKpiStatus('trial')"
     >
       <span class="kpi__label">{{ L().kpis.trial }}</span>
-      <span class="kpi__value" style="color: #2b37a0">{{ kpis().trial }}</span>
+      <span class="kpi__value" style="color: #111113">{{ kpis().trial }}</span>
     </button>
     <button
       type="button"
@@ -68,7 +68,7 @@
       (click)="filterByKpiStatus('suspended')"
     >
       <span class="kpi__label">{{ L().kpis.suspended }}</span>
-      <span class="kpi__value" style="color: #b4442f">{{ kpis().suspended }}</span>
+      <span class="kpi__value" style="color: #e2553b">{{ kpis().suspended }}</span>
     </button>
   </section>
 

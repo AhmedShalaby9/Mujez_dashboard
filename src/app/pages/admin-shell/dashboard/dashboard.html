@@ -103,9 +103,9 @@
               [attr.y1]="bars()[0]?.zero ?? 165"
               x2="600"
               [attr.y2]="bars()[0]?.zero ?? 165"
-              stroke="#E4E2DC"
+              stroke="#e2e2dc"
             />
-            <line x1="0" y1="120" x2="600" y2="120" stroke="#F2F1ED" />
+            <line x1="0" y1="120" x2="600" y2="120" stroke="#f1f1ed" />
             @for (b of bars(); track b.x) {
               <rect
                 [attr.x]="b.x"
@@ -123,7 +123,7 @@
             <polyline
               [attr.points]="linePoints()"
               fill="none"
-              stroke="#16182A"
+              stroke="#111113"
               stroke-width="2.5"
               stroke-linejoin="round"
             />
@@ -133,7 +133,7 @@
                 [attr.cy]="d.cy"
                 r="3"
                 fill="#fff"
-                stroke="#16182A"
+                stroke="#111113"
                 stroke-width="2"
               />
             }
@@ -143,7 +143,7 @@
                 y="204"
                 [attr.text-anchor]="t.a"
                 font-size="11"
-                fill="#8A8983"
+                fill="#8a8a90"
                 font-family="IBM Plex Sans, IBM Plex Sans Arabic, sans-serif"
               >
                 {{ t.t }}
@@ -163,7 +163,7 @@
         </div>
         <div class="donut-wrap">
           <svg viewBox="0 0 100 100" class="donut">
-            <circle cx="50" cy="50" r="40" fill="none" stroke="#F2F1ED" stroke-width="14" />
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#f1f1ed" stroke-width="14" />
             @for (d of donut(); track d.key) {
               <circle
                 cx="50"

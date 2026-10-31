@@ -26,7 +26,7 @@ button {
 
 .page-head__eyebrow {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .page-head__title {
@@ -38,7 +38,7 @@ button {
 
 .page-head__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .chip-row {
@@ -54,31 +54,31 @@ button {
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #45443f;
+  color: #45454a;
   font-family: inherit;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
 .chip--active {
-  border-color: var(--platform-primary, #3d4fd6);
-  background: #e6e8fb;
-  color: #2b37a0;
+  border-color: var(--platform-primary, #111113);
+  background: #eeeeea;
+  color: #111113;
 }
 
 .mono {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Geist Mono', monospace;
 }
 
 .card {
   display: flex;
   flex-direction: column;
   background: #fff;
-  border: 1px solid #e4e2dc;
+  border: 1px solid #e2e2dc;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -101,14 +101,14 @@ button {
 
 .r-head {
   padding: 8px 14px;
-  border-bottom: 1px solid #eeede8;
+  border-bottom: 1px solid #eeeeea;
   font-size: 11px;
-  color: #8a8983;
+  color: #8a8a90;
 }
 
 .r-row {
   padding: 10px 14px;
-  border-bottom: 1px solid #f2f1ed;
+  border-bottom: 1px solid #f1f1ed;
   font-size: 13px;
 
   &:last-child {
@@ -118,7 +118,7 @@ button {
 
 .r-cell__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .r-actions {
@@ -134,17 +134,17 @@ button {
   font-size: 11.5px;
   cursor: pointer;
   white-space: nowrap;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #17181a;
+  color: #111113;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
 .row-btn--danger {
-  color: #9a3422;
+  color: #a23624;
 }
 
 .pill {
@@ -157,34 +157,34 @@ button {
 }
 
 .pill--hold {
-  background: #fdf3dc;
-  color: #8a5a14;
+  background: #fcf2de;
+  color: #83570c;
 }
 
 .pill--reserved {
-  background: #dde0fa;
-  color: #2b37a0;
+  background: #eef5d6;
+  color: #111113;
 }
 
 .pill--converted {
-  background: #dceee1;
-  color: #1f7a4d;
+  background: #e7f5ec;
+  color: #1e6b3e;
 }
 
 .pill--expired {
-  background: #eeede8;
-  color: #6b6a65;
+  background: #eeeeea;
+  color: #6e6e73;
 }
 
 .pill--canceled {
-  background: #f8e1dc;
-  color: #9a3422;
+  background: #fbe7e3;
+  color: #a23624;
 }
 
 .t-empty {
   padding: 32px 14px;
   text-align: center;
-  color: #8a8983;
+  color: #8a8a90;
   font-size: 13px;
 }
 
@@ -232,7 +232,7 @@ button {
 .dialog__text {
   margin: 0;
   font-size: 13px;
-  color: #45443f;
+  color: #45454a;
 }
 
 .dialog__footer {
@@ -240,7 +240,7 @@ button {
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 18px;
-  border-top: 1px solid #eeede8;
+  border-top: 1px solid #eeeeea;
 }
 
 .field {
@@ -251,27 +251,27 @@ button {
 
 .field__label {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .textbox {
   height: 32px;
   padding: 0 10px;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
   outline: none;
 
   &:focus {
-    border-color: var(--platform-primary, #3d4fd6);
-    box-shadow: 0 0 0 3px #e6e8fb;
+    border-color: var(--platform-primary, #111113);
+    box-shadow: 0 0 0 3px #eeeeea;
   }
 }
 
 .textarea {
   padding: 8px 10px;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   border-radius: 6px;
   font-size: 13px;
   outline: none;
@@ -279,8 +279,8 @@ button {
   font-family: inherit;
 
   &:focus {
-    border-color: var(--platform-primary, #3d4fd6);
-    box-shadow: 0 0 0 3px #e6e8fb;
+    border-color: var(--platform-primary, #111113);
+    box-shadow: 0 0 0 3px #eeeeea;
   }
 }
 
@@ -302,21 +302,21 @@ button {
 }
 
 .btn--ghost {
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #17181a;
+  color: #111113;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
 .btn--primary {
-  background: var(--platform-primary, #3d4fd6);
+  background: var(--platform-primary, #111113);
   color: #fff;
 
   &:hover {
-    background: #2f3fb8;
+    background: #2a2b30;
   }
 }
 
@@ -336,7 +336,7 @@ button {
   max-width: min(420px, calc(100vw - 32px));
   padding: 10px 16px;
   border-radius: 8px;
-  background: #16182a;
+  background: #111113;
   color: #fff;
   font-size: 13px;
   text-align: center;
@@ -349,7 +349,7 @@ button {
   }
 }
 .res-error {
-  color: #b3261e;
+  color: #a23624;
 }
 .r-row small {
   display: block;

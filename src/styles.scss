@@ -1,8 +1,75 @@
 /* You can add global styles to this file, and also import other style files */
 
+:root {
+  /* ink */
+  --ink: #111113;
+  --ink-secondary: #45454a;
+  --ink-muted: #6e6e73;
+  --ink-faint: #8a8a90;
+  --ink-disabled: #a1a1a6;
+
+  /* surfaces */
+  --bg: #f4f4f1;
+  --surface: #fff;
+  --surface-alt: #fafaf8;
+  --surface-alt-2: #f6f6f3;
+
+  /* borders */
+  --border-card: #e2e2dc;
+  --border-card-alt: #e7e7e2;
+  --border-row: #f1f1ed;
+  --border-subtle: #eeeeea;
+  --border-input: #c4c4be;
+
+  /* sidebar (dark) */
+  --sidebar-bg: #111113;
+  --sidebar-item-active-bg: #1f2023;
+  --sidebar-text: #a1a1a6;
+  --sidebar-text-active: #fff;
+  --sidebar-icon: #8a8a90;
+  --sidebar-group-label: #77777d;
+  --sidebar-border: #26272b;
+  --sidebar-border-hover: #3a3b40;
+  --sidebar-input-bg: #18191c;
+
+  /* brand */
+  --primary: #111113;
+  --primary-hover: #2a2b30;
+  --accent: #c8f169;
+  --accent-tint: #d6f78a;
+  --accent-wash: #eef5d6;
+  --accent-wash-ink: #3f5a0e;
+
+  /* status */
+  --success-bg: #e7f5ec;
+  --success-text: #1e6b3e;
+  --success-solid: #2fa35f;
+  --success-dot: #7bd88f;
+  --warning-bg: #fcf2de;
+  --warning-text: #83570c;
+  --warning-line: #d99a28;
+  --danger-bg: #fbe7e3;
+  --danger-text: #a23624;
+  --danger-solid: #e2553b;
+  --neutral-chip-bg: #eeeeea;
+  --neutral-chip-text: #45454a;
+
+  /* radii */
+  --r-control: 9px;
+  --r-card: 12px;
+  --r-modal: 16px;
+  --r-pill: 20px;
+
+  /* fonts */
+  --font-ui: 'Geist', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'IBM Plex Sans Arabic', monospace;
+
+  /* legacy alias kept for any remaining --platform-primary reads */
+  --platform-primary: var(--primary);
+}
+
 html,
 body {
   margin: 0;
-  background: #f4f3ef;
+  background: var(--bg);
 }
-

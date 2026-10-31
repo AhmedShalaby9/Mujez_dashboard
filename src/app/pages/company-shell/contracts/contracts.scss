@@ -26,7 +26,7 @@ button {
 
 .page-head__eyebrow {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .page-head__title {
@@ -38,7 +38,7 @@ button {
 
 .page-head__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .chip-row {
@@ -54,31 +54,31 @@ button {
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #45443f;
+  color: #45454a;
   font-family: inherit;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
 .chip--active {
-  border-color: var(--platform-primary, #3d4fd6);
-  background: #e6e8fb;
-  color: #2b37a0;
+  border-color: var(--platform-primary, #111113);
+  background: #eeeeea;
+  color: #111113;
 }
 
 .mono {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Geist Mono', monospace;
 }
 
 .card {
   display: flex;
   flex-direction: column;
   background: #fff;
-  border: 1px solid #e4e2dc;
+  border: 1px solid #e2e2dc;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -101,16 +101,16 @@ button {
 
 .c-head {
   padding: 8px 14px;
-  border-bottom: 1px solid #eeede8;
+  border-bottom: 1px solid #eeeeea;
   font-size: 11px;
-  color: #8a8983;
+  color: #8a8a90;
 }
 
 .c-row {
   width: 100%;
   padding: 10px 14px;
   border: 0;
-  border-bottom: 1px solid #f2f1ed;
+  border-bottom: 1px solid #f1f1ed;
   background: #fff;
   text-align: start;
   font-size: 13px;
@@ -118,7 +118,7 @@ button {
   font-family: inherit;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 
   &:last-child {
@@ -135,7 +135,7 @@ button {
 
 .c-cell__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -143,7 +143,7 @@ button {
 
 .c-action {
   font-size: 12px;
-  color: #2b37a0;
+  color: #111113;
 }
 
 .pill {
@@ -153,44 +153,44 @@ button {
   padding: 1px 8px;
   border-radius: 10px;
   white-space: nowrap;
-  background: #eeede8;
-  color: #45443f;
+  background: #eeeeea;
+  color: #45454a;
 }
 
 .pill--draft {
-  background: #eeede8;
-  color: #45443f;
+  background: #eeeeea;
+  color: #45454a;
 }
 
 .pill--sent {
-  background: #fdf3dc;
-  color: #8a5a14;
+  background: #fcf2de;
+  color: #83570c;
 }
 
 .pill--signed {
-  background: #dceee1;
-  color: #1f7a4d;
+  background: #e7f5ec;
+  color: #1e6b3e;
 }
 
 .pill--expiring {
-  background: #f8e1dc;
-  color: #9a3422;
+  background: #fbe7e3;
+  color: #a23624;
 }
 
 .pill--void {
-  background: #eeede8;
-  color: #8a8983;
+  background: #eeeeea;
+  color: #8a8a90;
 }
 
 .pill--pending {
-  background: #fdf3dc;
-  color: #8a5a14;
+  background: #fcf2de;
+  color: #83570c;
 }
 
 .t-empty {
   padding: 32px 14px;
   text-align: center;
-  color: #8a8983;
+  color: #8a8a90;
   font-size: 13px;
 }
 
@@ -221,7 +221,7 @@ button {
   align-items: center;
   gap: 12px;
   padding: 16px 18px;
-  border-bottom: 1px solid #eeede8;
+  border-bottom: 1px solid #eeeeea;
 }
 
 .drawer__headerText {
@@ -239,7 +239,7 @@ button {
 
 .drawer__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .drawer__close {
@@ -249,12 +249,12 @@ button {
   border: 0;
   background: transparent;
   font-size: 18px;
-  color: #6b6a65;
+  color: #6e6e73;
   cursor: pointer;
   border-radius: 6px;
 
   &:hover {
-    background: #f4f3ef;
+    background: #f4f4f1;
   }
 }
 
@@ -281,14 +281,14 @@ button {
 }
 
 .drawer__k {
-  color: #8a8983;
+  color: #8a8a90;
 }
 
 .section-title {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: #8a8983;
+  color: #8a8a90;
   margin-top: 8px;
 }
 
@@ -309,7 +309,7 @@ button {
   flex: none;
   width: 70px;
   font-size: 11px;
-  color: #8a8983;
+  color: #8a8a90;
 }
 
 .signer-row__name {
@@ -340,7 +340,7 @@ button {
   width: 16px;
   height: 16px;
   border-radius: 4px;
-  border: 1.5px solid #dddbd4;
+  border: 1.5px solid #c4c4be;
   background: #fff;
   color: #fff;
   display: grid;
@@ -349,8 +349,8 @@ button {
 }
 
 .doc-row__box--on {
-  border-color: #2f7a4f;
-  background: #2f7a4f;
+  border-color: #1e6b3e;
+  background: #1e6b3e;
 }
 
 .doc-row__label {
@@ -360,7 +360,7 @@ button {
 
 .tag {
   font-size: 10.5px;
-  color: #8a8983;
+  color: #8a8a90;
 }
 
 .drawer__footer {
@@ -368,7 +368,7 @@ button {
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 18px;
-  border-top: 1px solid #eeede8;
+  border-top: 1px solid #eeeeea;
 }
 
 .btn {
@@ -383,21 +383,21 @@ button {
 }
 
 .btn--ghost {
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #17181a;
+  color: #111113;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
 .btn--primary {
-  background: var(--platform-primary, #3d4fd6);
+  background: var(--platform-primary, #111113);
   color: #fff;
 
   &:hover {
-    background: #2f3fb8;
+    background: #2a2b30;
   }
 }
 
@@ -463,7 +463,7 @@ textarea {
   flex-wrap: wrap;
 }
 p[role='alert'] {
-  color: #b3261e;
+  color: #a23624;
 }
 .doc-row {
   flex-wrap: wrap;

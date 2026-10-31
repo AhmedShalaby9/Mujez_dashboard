@@ -10,7 +10,7 @@ import {
   type OverviewAlert,
 } from '../../../overview-api.service';
 type Range = '30d' | '90d' | '12m' | 'custom';
-const COLORS = ['#C3C5D6', '#3D4FD6', '#7E89E6', '#F5B841', '#2F7A4F', '#C8862E'];
+const COLORS = ['#a1a1a6', '#111113', '#8BB33A', '#c8f169', '#1e6b3e', '#d99a28'];
 const COPY = {
   en: {
     eyebrow: 'Overview',
@@ -122,10 +122,10 @@ export class Dashboard {
   }
   color(a: OverviewAlert) {
     return a.severity === 'high'
-      ? '#B4442F'
+      ? '#e2553b'
       : a.severity === 'med'
-        ? '#C8862E'
-        : 'var(--platform-primary, #3D4FD6)';
+        ? '#d99a28'
+        : 'var(--platform-primary, #111113)';
   }
   readonly kpis = computed(() => {
     const d = this.data();
@@ -209,7 +209,7 @@ export class Dashboard {
       gross: r.grossMinor,
       refund: r.refundMinor,
       net: r.netMinor,
-      c: 'var(--platform-primary, #3D4FD6)',
+      c: 'var(--platform-primary, #111113)',
     }));
   });
   readonly linePoints = computed(() =>
@@ -237,17 +237,17 @@ export class Dashboard {
       {
         label: ar ? 'مدفوعات مسجلة' : 'Recorded payments',
         value: this.money(f.grossMinor),
-        color: 'var(--platform-primary, #3D4FD6)',
+        color: 'var(--platform-primary, #111113)',
       },
       {
         label: ar ? 'مبالغ مستردة مسجلة' : 'Recorded refunds',
         value: this.money(f.refundMinor),
-        color: '#C8862E',
+        color: '#d99a28',
       },
       {
         label: ar ? 'صافي السجلات' : 'Recorded net',
         value: this.money(f.netMinor),
-        color: '#16182A',
+        color: '#111113',
       },
     ];
   });

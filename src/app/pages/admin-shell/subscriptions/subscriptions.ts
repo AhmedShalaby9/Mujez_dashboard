@@ -35,10 +35,10 @@ const PLAN_LABEL: Record<Lang, Record<Plan, string>> = {
 };
 
 const PLAN_DOT: Record<Plan, string> = {
-  starter: '#C3C5D6',
-  pro: '#3D4FD6',
-  business: '#7E89E6',
-  enterprise: '#F5B841',
+  starter: '#a1a1a6',
+  pro: '#111113',
+  business: '#8BB33A',
+  enterprise: '#c8f169',
 };
 
 const STATUS_LABEL: Record<Lang, Record<SubStatus, string>> = {
@@ -61,12 +61,12 @@ const STATUS_LABEL: Record<Lang, Record<SubStatus, string>> = {
 };
 
 const STATUS_COLOR: Record<SubStatus, { bg: string; fg: string }> = {
-  trialing: { bg: '#E6E8FB', fg: '#2B37A0' },
-  active: { bg: '#DCEEE1', fg: '#2F7A4F' },
-  past_due: { bg: '#F6E6CB', fg: '#9A6B1E' },
-  canceled: { bg: '#EEEDE8', fg: '#6B6A65' },
-  expired: { bg: '#F6E6CB', fg: '#9A6B1E' },
-  suspended: { bg: '#F8E1DC', fg: '#9A3422' },
+  trialing: { bg: '#eeeeea', fg: '#111113' },
+  active: { bg: '#e7f5ec', fg: '#1e6b3e' },
+  past_due: { bg: '#fcf2de', fg: '#83570c' },
+  canceled: { bg: '#eeeeea', fg: '#6e6e73' },
+  expired: { bg: '#fcf2de', fg: '#83570c' },
+  suspended: { bg: '#fbe7e3', fg: '#a23624' },
 };
 
 const PAYMENT_LABEL: Record<Lang, Record<PaymentMethod, string>> = {
@@ -442,7 +442,7 @@ export class Subscriptions {
   }
 
   planDot(p: Plan): string {
-    return PLAN_DOT[p] ?? '#3D4FD6';
+    return PLAN_DOT[p] ?? '#111113';
   }
 
   statusLabel(s: SubStatus): string {
@@ -472,7 +472,7 @@ export class Subscriptions {
       : `EGP ${v.toLocaleString('en-US')}`;
   }
 
-  private readonly logoPalette = ['#3D4FD6', '#7E89E6', '#16182A', '#9A6B1E', '#2F7A4F', '#B4442F'];
+  private readonly logoPalette = ['#111113', '#8BB33A', '#111113', '#83570c', '#1e6b3e', '#e2553b'];
 
   logoBg(s: Subscription): string {
     const code = s.companyId.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);

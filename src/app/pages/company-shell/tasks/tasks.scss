@@ -26,7 +26,7 @@ button {
 
 .page-head__eyebrow {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .page-head__title {
@@ -38,7 +38,7 @@ button {
 
 .page-head__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .search {
@@ -47,15 +47,15 @@ button {
   max-width: 480px;
   height: 32px;
   padding: 0 12px;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
   outline: none;
 
   &:focus {
-    border-color: var(--platform-primary, #3d4fd6);
-    box-shadow: 0 0 0 3px #e6e8fb;
+    border-color: var(--platform-primary, #111113);
+    box-shadow: 0 0 0 3px #eeeeea;
   }
 }
 
@@ -76,13 +76,13 @@ button {
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #45443f;
+  color: #45454a;
   font-family: inherit;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
@@ -92,16 +92,16 @@ button {
 }
 
 .chip--active {
-  border-color: var(--platform-primary, #3d4fd6);
-  background: #e6e8fb;
-  color: #2b37a0;
+  border-color: var(--platform-primary, #111113);
+  background: #eeeeea;
+  color: #111113;
 }
 
 .card {
   display: flex;
   flex-direction: column;
   background: #fff;
-  border: 1px solid #e4e2dc;
+  border: 1px solid #e2e2dc;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -111,7 +111,7 @@ button {
   justify-content: space-between;
   align-items: baseline;
   padding: 10px 14px;
-  border-bottom: 1px solid #eeede8;
+  border-bottom: 1px solid #eeeeea;
 }
 
 .card__title {
@@ -121,11 +121,11 @@ button {
 
 .card__count {
   font-size: 11px;
-  color: #8a8983;
+  color: #8a8a90;
 }
 
 .mono {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Geist Mono', monospace;
 }
 
 .task-list {
@@ -139,7 +139,7 @@ button {
   align-items: center;
   gap: 10px;
   padding: 9px 14px;
-  border-bottom: 1px solid #f2f1ed;
+  border-bottom: 1px solid #f1f1ed;
   font-size: 13px;
 
   &:last-child {
@@ -152,7 +152,7 @@ button {
   width: 18px;
   height: 18px;
   border-radius: 5px;
-  border: 1.5px solid #dddbd4;
+  border: 1.5px solid #c4c4be;
   background: #fff;
   color: #fff;
   display: grid;
@@ -162,8 +162,8 @@ button {
 }
 
 .task-row__check--on {
-  border-color: var(--platform-primary, #3d4fd6);
-  background: var(--platform-primary, #3d4fd6);
+  border-color: var(--platform-primary, #111113);
+  background: var(--platform-primary, #111113);
 }
 
 .task-row__title {
@@ -174,7 +174,7 @@ button {
 
 .task-row__owner {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -182,7 +182,7 @@ button {
 
 .task-row__due {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
   text-align: end;
 }
 
@@ -196,24 +196,24 @@ button {
 }
 
 .pill--high {
-  background: #f8e1dc;
-  color: #9a3422;
+  background: #fbe7e3;
+  color: #a23624;
 }
 
 .pill--med {
-  background: #fdf3dc;
-  color: #8a5a14;
+  background: #fcf2de;
+  color: #83570c;
 }
 
 .pill--low {
-  background: #eeede8;
-  color: #45443f;
+  background: #eeeeea;
+  color: #45454a;
 }
 
 .t-empty {
   padding: 32px 14px;
   text-align: center;
-  color: #8a8983;
+  color: #8a8a90;
   font-size: 13px;
 }
 
@@ -236,10 +236,10 @@ button {
 }
 .task-row__main small {
   font-size: 11px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 .overdue {
-  color: #9a3422;
+  color: #a23624;
 }
 .task-scrim {
   position: fixed;

@@ -100,6 +100,11 @@ export const routes: Routes = [
           import('./pages/admin-shell/announcements/announcements').then((m) => m.Announcements),
       },
       {
+        path: 'notifications',
+        loadComponent: () =>
+          import('./pages/admin-shell/notifications/notifications').then((m) => m.Notifications),
+      },
+      {
         path: 'platform-users',
         data: { permission: 'admins' },
         loadComponent: () =>

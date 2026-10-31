@@ -26,7 +26,7 @@ button {
 
 .page-head__eyebrow {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .page-head__title {
@@ -38,7 +38,7 @@ button {
 
 .page-head__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
 }
 
 .chip-row {
@@ -54,31 +54,31 @@ button {
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #45443f;
+  color: #45454a;
   font-family: inherit;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
 .chip--active {
-  border-color: var(--platform-primary, #3d4fd6);
-  background: #e6e8fb;
-  color: #2b37a0;
+  border-color: var(--platform-primary, #111113);
+  background: #eeeeea;
+  color: #111113;
 }
 
 .mono {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Geist Mono', monospace;
 }
 
 .card {
   display: flex;
   flex-direction: column;
   background: #fff;
-  border: 1px solid #e4e2dc;
+  border: 1px solid #e2e2dc;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -101,14 +101,14 @@ button {
 
 .k-head {
   padding: 8px 14px;
-  border-bottom: 1px solid #eeede8;
+  border-bottom: 1px solid #eeeeea;
   font-size: 11px;
-  color: #8a8983;
+  color: #8a8a90;
 }
 
 .k-row {
   padding: 6px 14px;
-  border-bottom: 1px solid #f2f1ed;
+  border-bottom: 1px solid #f1f1ed;
   font-size: 13px;
 
   &:last-child {
@@ -131,7 +131,7 @@ button {
 
 .k-cell__sub {
   font-size: 12px;
-  color: #6b6a65;
+  color: #6e6e73;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -144,12 +144,12 @@ button {
   font-size: 11.5px;
   cursor: pointer;
   white-space: nowrap;
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #17181a;
+  color: #111113;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
@@ -163,29 +163,29 @@ button {
 }
 
 .pill--calculated {
-  background: #eeede8;
-  color: #45443f;
+  background: #eeeeea;
+  color: #45454a;
 }
 
 .pill--approved {
-  background: #e6e8fb;
-  color: #2b37a0;
+  background: #eeeeea;
+  color: #111113;
 }
 
 .pill--payable {
-  background: #fdf3dc;
-  color: #8a5a14;
+  background: #fcf2de;
+  color: #83570c;
 }
 
 .pill--paid {
-  background: #dceee1;
-  color: #1f7a4d;
+  background: #e7f5ec;
+  color: #1e6b3e;
 }
 
 .t-empty {
   padding: 32px 14px;
   text-align: center;
-  color: #8a8983;
+  color: #8a8a90;
   font-size: 13px;
 }
 
@@ -233,14 +233,14 @@ button {
 .dialog__text {
   margin: 0;
   font-size: 13px;
-  color: #45443f;
+  color: #45454a;
 }
 
 .section-title {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: #8a8983;
+  color: #8a8a90;
   margin-top: 4px;
 }
 
@@ -265,7 +265,7 @@ button {
 }
 
 .line-row__pct {
-  color: #6b6a65;
+  color: #6e6e73;
   text-align: end;
 }
 
@@ -279,7 +279,7 @@ button {
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 18px;
-  border-top: 1px solid #eeede8;
+  border-top: 1px solid #eeeeea;
 }
 
 .btn {
@@ -294,21 +294,21 @@ button {
 }
 
 .btn--ghost {
-  border: 1px solid #dddbd4;
+  border: 1px solid #c4c4be;
   background: #fff;
-  color: #17181a;
+  color: #111113;
 
   &:hover {
-    background: #f7f6f2;
+    background: #f6f6f3;
   }
 }
 
 .btn--primary {
-  background: var(--platform-primary, #3d4fd6);
+  background: var(--platform-primary, #111113);
   color: #fff;
 
   &:hover {
-    background: #2f3fb8;
+    background: #2a2b30;
   }
 }
 
@@ -375,7 +375,7 @@ textarea {
   flex-wrap: wrap;
 }
 p[role='alert'] {
-  color: #b3261e;
+  color: #a23624;
 }
 .dialog {
   max-height: 90vh;

@@ -52,12 +52,12 @@ const STATUS_LABEL: Record<Lang, Record<InvoiceStatus, string>> = {
 };
 
 const STATUS_COLOR: Record<InvoiceStatus, { bg: string; fg: string }> = {
-  draft: { bg: '#EEEDE8', fg: '#6B6A65' },
-  open: { bg: '#E6E8FB', fg: '#2B37A0' },
-  paid: { bg: '#DCEEE1', fg: '#2F7A4F' },
-  partial: { bg: '#F6E6CB', fg: '#9A6B1E' },
-  overdue: { bg: '#F8E1DC', fg: '#9A3422' },
-  void: { bg: '#EEEDE8', fg: '#8A8983' },
+  draft: { bg: '#eeeeea', fg: '#6e6e73' },
+  open: { bg: '#eeeeea', fg: '#111113' },
+  paid: { bg: '#e7f5ec', fg: '#1e6b3e' },
+  partial: { bg: '#fcf2de', fg: '#83570c' },
+  overdue: { bg: '#fbe7e3', fg: '#a23624' },
+  void: { bg: '#eeeeea', fg: '#8a8a90' },
 };
 
 interface Copy {
@@ -529,7 +529,7 @@ export class Billing {
       : `EGP ${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
-  private readonly logoPalette = ['#3D4FD6', '#7E89E6', '#16182A', '#9A6B1E', '#2F7A4F', '#B4442F'];
+  private readonly logoPalette = ['#111113', '#8BB33A', '#111113', '#83570c', '#1e6b3e', '#e2553b'];
 
   logoBg(i: Invoice): string {
     const code = i.companyId.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);

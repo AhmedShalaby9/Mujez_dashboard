@@ -4,6 +4,25 @@ import { Component, computed, signal } from '@angular/core';
 import { inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { CompanyUiState, type Lang } from './company-ui-state';
+import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
+
+const ICONS: Record<string, string> = {
+  dashboard: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>',
+  pipeline: '<path d="M3 4h18l-7 9v6l-4 2v-8z"/>',
+  leads: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
+  tasks: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+  projects: '<path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-7h6v7"/>',
+  units: '<rect x="3" y="7" width="7" height="14"/><rect x="14" y="3" width="7" height="18"/><path d="M6 11h1M6 15h1M17 7h1M17 11h1M17 15h1"/>',
+  reservations: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  contracts: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/>',
+  commissions: '<circle cx="12" cy="12" r="10"/><path d="M12 6v12M15.5 9a3.5 3.5 0 0 0-3.5-1.5 3 3 0 0 0 0 6c2 0 3.5 1 3.5 3a3.5 3.5 0 0 1-3.5 1.5 3.5 3.5 0 0 1-3.5-2" />',
+  documents: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h2"/>',
+  marketing: '<path d="M3 11v3a1 1 0 0 0 1 1h2l3.5 5V5L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 8a4 4 0 0 1 0 8"/><path d="M18 5a8 8 0 0 1 0 14"/>',
+  reports: '<path d="M12 20V10M18 20V4M6 20v-4"/>',
+  'lead-routing':
+    '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M9 6h4a4 4 0 0 1 4 4v4a4 4 0 0 0 4 4"/><path d="M21 16l-3 2 3 2"/>',
+  'audit-log': '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 3v2h6V3M8 11h8M8 15h5"/>',
+};
 
 interface NavHead {
   kind: 'head';
@@ -36,6 +55,8 @@ interface Copy {
   notifTitle: string;
   notifEmpty: string;
   nav: NavEntry[];
+  collapse: string;
+  expand: string;
 }
 
 const EN_NAV: NavEntry[] = [
@@ -92,6 +113,8 @@ const COPY: Record<Lang, Copy> = {
     notifTitle: 'Current alerts',
     notifEmpty: 'View current alerts on the dashboard',
     nav: EN_NAV,
+    collapse: 'Collapse sidebar',
+    expand: 'Expand sidebar',
   },
   ar: {
     brand: 'موچز',
@@ -102,6 +125,8 @@ const COPY: Record<Lang, Copy> = {
     notifTitle: 'التنبيهات الحالية',
     notifEmpty: 'عرض التنبيهات الحالية في لوحة التحكم',
     nav: AR_NAV,
+    collapse: 'طي القائمة',
+    expand: 'توسيع القائمة',
   },
 };
 
@@ -148,6 +173,22 @@ export class CompanyShell {
   readonly notifOpen = signal(false);
   readonly profileOpen = signal(false);
   readonly search = signal('');
+  readonly collapsed = signal(false);
+
+  toggleCollapsed(): void {
+    this.collapsed.set(!this.collapsed());
+  }
+
+  private readonly sanitizer = inject(DomSanitizer);
+  private readonly iconCache = new Map<string, SafeHtml>();
+  navIcon(path: string): SafeHtml {
+    let html = this.iconCache.get(path);
+    if (!html) {
+      html = this.sanitizer.bypassSecurityTrustHtml(ICONS[path] ?? ICONS['dashboard']);
+      this.iconCache.set(path, html);
+    }
+    return html;
+  }
 
   readonly unreadCount = computed(() => this.notifications().filter((n) => n.attention).length);
 

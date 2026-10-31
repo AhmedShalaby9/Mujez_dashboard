@@ -7,259 +7,304 @@ import { majorAmount, minorAmount } from './sales-api.service';
 @Component({
   selector: 'app-inventory-editor',
   imports: [FormsModule],
-  template: ` <div class="scrim"></div>
+  template: `<div class="scrim scrim--top"></div>
     <section
-      class="edit"
+      class="dialog dialog--wide"
       role="dialog"
       aria-modal="true"
       [attr.aria-label]="t('Inventory form', 'نموذج المخزون')"
     >
-      <h2>{{ record() ? t('Edit', 'تعديل') : t('Create', 'إضافة') }} · {{ kind() }}</h2>
-      @if (error()) {
-        <p role="alert">{{ error() }}</p>
-      }
       <form (ngSubmit)="save()">
-        <label
-          >{{ t('Code', 'الرمز')
-          }}<input
-            name="code"
-            [(ngModel)]="form.code"
-            required
-            maxlength="50"
-            (ngModelChange)="changed()" /></label
-        ><label
-          >{{ t('Name / location', 'الاسم / الموقع')
-          }}<input
-            name="name"
-            [(ngModel)]="form.name"
-            required
-            maxlength="200"
-            (ngModelChange)="changed()" /></label
-        ><label
-          >{{ t('Arabic name / location', 'الاسم / الموقع بالعربية')
-          }}<input
-            name="nameAr"
-            [(ngModel)]="form.nameAr"
-            maxlength="200"
-            (ngModelChange)="changed()"
-        /></label>
-        @if (kind() === 'project') {
-          <label
-            >{{ t('Developer', 'المطور')
-            }}<input
-              name="developer"
-              [(ngModel)]="form.developer"
-              required
-              (ngModelChange)="changed()" /></label
-          ><label
-            >{{ t('Developer in Arabic', 'المطور بالعربية')
-            }}<input
-              name="developerAr"
-              [(ngModel)]="form.developerAr"
-              (ngModelChange)="changed()" /></label
-          ><label
-            >{{ t('Location', 'الموقع')
-            }}<input
-              name="location"
-              [(ngModel)]="form.location"
-              required
-              (ngModelChange)="changed()" /></label
-          ><label
-            >{{ t('Location in Arabic', 'الموقع بالعربية')
-            }}<input
-              name="locationAr"
-              [(ngModel)]="form.locationAr"
-              (ngModelChange)="changed()" /></label
-          ><label
-            >{{ t('Segment', 'القطاع')
-            }}<select name="segment" [(ngModel)]="form.segment" (ngModelChange)="changed()">
-              <option value="res">{{ t('Residential', 'سكني') }}</option>
-              <option value="com">{{ t('Commercial', 'تجاري') }}</option>
-            </select></label
-          >
-        }
-        @if (kind() === 'phase') {
-          <label
-            >{{ t('Delivery year', 'سنة التسليم')
-            }}<input
-              name="year"
-              type="number"
-              min="1900"
-              max="2200"
-              [(ngModel)]="form.deliveryYear"
-              required
-              (ngModelChange)="changed()"
-          /></label>
-        }
-        @if (kind() === 'building') {
-          <label
-            >{{ t('Floors above ground', 'الأدوار فوق الأرض')
-            }}<input
-              name="floors"
-              type="number"
-              min="0"
-              max="300"
-              [(ngModel)]="form.floors"
-              required
-              (ngModelChange)="changed()"
-          /></label>
-        }
-        @if (kind() === 'unit') {
-          <label
-            >{{ t('Listing', 'نوع الإدراج')
-            }}<select name="listing" [(ngModel)]="form.listing" (ngModelChange)="changed()">
-              <option value="primary">{{ t('Primary', 'أساسي') }}</option>
-              <option value="resale">{{ t('Resale', 'إعادة بيع') }}</option>
-              <option value="rental">{{ t('Rental', 'إيجار') }}</option>
-            </select></label
-          >
-          @if (canProjects()) {
-            <label
-              >{{ t('Search projects', 'بحث المشروعات')
-              }}<input name="projectSearch" [(ngModel)]="projectSearch" /></label
-            ><button type="button" (click)="loadProjects(true)">{{ t('Search', 'بحث') }}</button
-            ><label
-              >{{
-                t('Project (optional for standalone units)', 'المشروع (اختياري للوحدات المستقلة)')
-              }}<select name="project" [(ngModel)]="projectId" (ngModelChange)="chooseProject()">
-                <option value="">{{ t('Standalone', 'مستقلة') }}</option>
-                @for (p of projects(); track p.id) {
-                  <option [value]="p.id">{{ p.code }} · {{ name(p.name) }}</option>
-                }
-              </select></label
-            >
-            @if (projectPage * 50 < projectTotal()) {
-              <button type="button" (click)="loadProjects(false)">
-                {{ t('More projects', 'مشروعات إضافية') }}
-              </button>
-            }
-            <label
-              >{{ t('Building', 'المبنى')
-              }}<select name="building" [(ngModel)]="form.buildingId" (ngModelChange)="changed()">
-                <option value="">{{ t('No building', 'بدون مبنى') }}</option>
-                @for (b of buildings(); track b.id) {
-                  <option [value]="b.id">{{ b.code }} · {{ name(b.name) }}</option>
-                }
-              </select></label
-            >
+        <div class="dialog__head">
+          <span class="dialog__title">{{ title() }}</span>
+        </div>
+        <div class="dialog__main">
+          @if (error()) {
+            <p class="note note--bad" role="alert">{{ error() }}</p>
           }
-          <label
-            >{{ t('Type', 'النوع')
-            }}<select name="type" [(ngModel)]="form.type" (ngModelChange)="changed()">
-              <option value="apt">{{ t('Apartment', 'شقة') }}</option>
-              <option value="villa">{{ t('Villa', 'فيلا') }}</option>
-              <option value="office">{{ t('Office', 'مكتب') }}</option>
-              <option value="retail">{{ t('Retail', 'تجاري') }}</option>
-            </select></label
-          ><label
-            >{{ t('Bedrooms', 'غرف النوم')
-            }}<input
-              name="bedrooms"
-              type="number"
-              min="0"
-              max="100"
-              [(ngModel)]="form.bedrooms"
-              (ngModelChange)="changed()" /></label
-          ><label
-            >{{ t('Area (sqm)', 'المساحة (م²)')
-            }}<input
-              name="area"
-              type="number"
-              min="0.01"
-              step="0.01"
-              [(ngModel)]="form.area"
-              required
-              (ngModelChange)="changed()" /></label
-          ><label
-            >{{ t('View', 'الإطلالة')
-            }}<input name="view" [(ngModel)]="form.view" (ngModelChange)="changed()" /></label
-          ><label
-            >{{ t('View in Arabic', 'الإطلالة بالعربية')
-            }}<input name="viewAr" [(ngModel)]="form.viewAr" (ngModelChange)="changed()" /></label
-          ><label
-            >{{ t('Floor', 'الدور')
-            }}<input
-              name="floor"
-              type="number"
-              min="-20"
-              max="300"
-              [(ngModel)]="form.floor"
-              (ngModelChange)="changed()" /></label
-          ><label
-            >{{ t('Price (EGP; monthly for rentals)', 'السعر (جنيه؛ شهري للإيجار)')
-            }}<input
-              name="price"
-              inputmode="decimal"
-              [(ngModel)]="form.price"
-              required
-              (ngModelChange)="changed()"
-          /></label>
-        }
-        <footer>
-          <button type="button" [disabled]="busy()" (click)="closed.emit()">
-            {{ t('Cancel', 'إلغاء') }}</button
-          ><button type="submit" [disabled]="busy()">
+          <div class="grid">
+            <label class="field">
+              <span>{{ t('Code', 'الرمز') }}</span>
+              <input
+                class="mono"
+                name="code"
+                [(ngModel)]="form.code"
+                required
+                maxlength="50"
+                (ngModelChange)="changed()"
+              />
+            </label>
+            @if (kind() === 'project') {
+              <label class="field">
+                <span>{{ t('Segment', 'القطاع') }}</span>
+                <select name="segment" [(ngModel)]="form.segment" (ngModelChange)="changed()">
+                  <option value="res">{{ t('Residential', 'سكني') }}</option>
+                  <option value="com">{{ t('Commercial', 'تجاري') }}</option>
+                </select>
+              </label>
+            }
+            @if (kind() === 'phase') {
+              <label class="field">
+                <span>{{ t('Delivery year', 'سنة التسليم') }}</span>
+                <input
+                  class="mono"
+                  name="year"
+                  type="number"
+                  min="1900"
+                  max="2200"
+                  [(ngModel)]="form.deliveryYear"
+                  required
+                  (ngModelChange)="changed()"
+                />
+              </label>
+            }
+            @if (kind() === 'building') {
+              <label class="field">
+                <span>{{ t('Floors above ground', 'الأدوار فوق الأرض') }}</span>
+                <input
+                  class="mono"
+                  name="floors"
+                  type="number"
+                  min="0"
+                  max="300"
+                  [(ngModel)]="form.floors"
+                  required
+                  (ngModelChange)="changed()"
+                />
+              </label>
+            }
+            @if (kind() === 'unit') {
+              <label class="field">
+                <span>{{ t('Listing', 'نوع الإدراج') }}</span>
+                <select name="listing" [(ngModel)]="form.listing" (ngModelChange)="changed()">
+                  <option value="primary">{{ t('Primary', 'أساسي') }}</option>
+                  <option value="resale">{{ t('Resale', 'إعادة بيع') }}</option>
+                  <option value="rental">{{ t('Rental', 'إيجار') }}</option>
+                </select>
+              </label>
+            }
+            <label class="field">
+              <span>{{ kind() === 'unit' ? t('Location', 'الموقع') : t('Name', 'الاسم') }}</span>
+              <input
+                name="name"
+                [(ngModel)]="form.name"
+                required
+                maxlength="200"
+                (ngModelChange)="changed()"
+              />
+            </label>
+            <label class="field">
+              <span>{{
+                kind() === 'unit'
+                  ? t('Location in Arabic', 'الموقع بالعربية')
+                  : t('Arabic name', 'الاسم بالعربية')
+              }}</span>
+              <input
+                name="nameAr"
+                dir="rtl"
+                [(ngModel)]="form.nameAr"
+                maxlength="200"
+                (ngModelChange)="changed()"
+              />
+            </label>
+            @if (kind() === 'project') {
+              <label class="field">
+                <span>{{ t('Developer', 'المطور') }}</span>
+                <input
+                  name="developer"
+                  [(ngModel)]="form.developer"
+                  required
+                  (ngModelChange)="changed()"
+                />
+              </label>
+              <label class="field">
+                <span>{{ t('Developer in Arabic', 'المطور بالعربية') }}</span>
+                <input
+                  name="developerAr"
+                  dir="rtl"
+                  [(ngModel)]="form.developerAr"
+                  (ngModelChange)="changed()"
+                />
+              </label>
+              <label class="field">
+                <span>{{ t('Location', 'الموقع') }}</span>
+                <input
+                  name="location"
+                  [(ngModel)]="form.location"
+                  required
+                  (ngModelChange)="changed()"
+                />
+              </label>
+              <label class="field">
+                <span>{{ t('Location in Arabic', 'الموقع بالعربية') }}</span>
+                <input
+                  name="locationAr"
+                  dir="rtl"
+                  [(ngModel)]="form.locationAr"
+                  (ngModelChange)="changed()"
+                />
+              </label>
+            }
+          </div>
+          @if (kind() === 'unit') {
+            @if (canProjects()) {
+              <span class="p-label">{{ t('PLACEMENT', 'الموضع') }}</span>
+              <div class="field">
+                <span>{{
+                  t('Project (optional for standalone units)', 'المشروع (اختياري للوحدات المستقلة)')
+                }}</span>
+                <div class="pick">
+                  <input
+                    type="search"
+                    name="projectSearch"
+                    [(ngModel)]="projectSearch"
+                    [placeholder]="t('Search projects', 'بحث المشروعات')"
+                    (keydown.enter)="$event.preventDefault(); loadProjects(true)"
+                  />
+                  <button type="button" class="btn btn--sm" (click)="loadProjects(true)">
+                    {{ t('Search', 'بحث') }}
+                  </button>
+                </div>
+                <select name="project" [(ngModel)]="projectId" (ngModelChange)="chooseProject()">
+                  <option value="">{{ t('Standalone', 'مستقلة') }}</option>
+                  @for (p of projects(); track p.id) {
+                    <option [value]="p.id">{{ p.code }} · {{ name(p.name) }}</option>
+                  }
+                </select>
+                @if (projectPage * 50 < projectTotal()) {
+                  <button type="button" class="link small" (click)="loadProjects(false)">
+                    {{ t('More projects', 'مشروعات إضافية') }}
+                  </button>
+                }
+              </div>
+              <label class="field">
+                <span>{{ t('Building', 'المبنى') }}</span>
+                <select name="building" [(ngModel)]="form.buildingId" (ngModelChange)="changed()">
+                  <option value="">{{ t('No building', 'بدون مبنى') }}</option>
+                  @for (b of buildings(); track b.id) {
+                    <option [value]="b.id">{{ b.code }} · {{ name(b.name) }}</option>
+                  }
+                </select>
+              </label>
+            }
+            <span class="p-label">{{ t('UNIT DETAILS', 'تفاصيل الوحدة') }}</span>
+            <div class="grid grid--3">
+              <label class="field">
+                <span>{{ t('Type', 'النوع') }}</span>
+                <select name="type" [(ngModel)]="form.type" (ngModelChange)="changed()">
+                  <option value="apt">{{ t('Apartment', 'شقة') }}</option>
+                  <option value="villa">{{ t('Villa', 'فيلا') }}</option>
+                  <option value="office">{{ t('Office', 'مكتب') }}</option>
+                  <option value="retail">{{ t('Retail', 'تجاري') }}</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>{{ t('Bedrooms', 'غرف النوم') }}</span>
+                <input
+                  class="mono"
+                  name="bedrooms"
+                  type="number"
+                  min="0"
+                  max="100"
+                  [(ngModel)]="form.bedrooms"
+                  (ngModelChange)="changed()"
+                />
+              </label>
+              <label class="field">
+                <span>{{ t('Area (sqm)', 'المساحة (م²)') }}</span>
+                <input
+                  class="mono"
+                  name="area"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  [(ngModel)]="form.area"
+                  required
+                  (ngModelChange)="changed()"
+                />
+              </label>
+              <label class="field">
+                <span>{{ t('Floor', 'الدور') }}</span>
+                <input
+                  class="mono"
+                  name="floor"
+                  type="number"
+                  min="-20"
+                  max="300"
+                  [(ngModel)]="form.floor"
+                  (ngModelChange)="changed()"
+                />
+              </label>
+              <label class="field">
+                <span>{{ t('View', 'الإطلالة') }}</span>
+                <input name="view" [(ngModel)]="form.view" (ngModelChange)="changed()" />
+              </label>
+              <label class="field">
+                <span>{{ t('View in Arabic', 'الإطلالة بالعربية') }}</span>
+                <input
+                  name="viewAr"
+                  dir="rtl"
+                  [(ngModel)]="form.viewAr"
+                  (ngModelChange)="changed()"
+                />
+              </label>
+            </div>
+            <label class="field">
+              <span>{{
+                form.listing === 'rental'
+                  ? t('Monthly rent (EGP)', 'الإيجار الشهري (جنيه)')
+                  : t('Price (EGP)', 'السعر (جنيه)')
+              }}</span>
+              <input
+                class="mono"
+                name="price"
+                inputmode="decimal"
+                [(ngModel)]="form.price"
+                required
+                (ngModelChange)="changed()"
+              />
+            </label>
+          }
+        </div>
+        <div class="dialog__foot">
+          <button type="button" class="btn" [disabled]="busy()" (click)="closed.emit()">
+            {{ t('Cancel', 'إلغاء') }}
+          </button>
+          <button type="submit" class="btn btn--dark" [disabled]="busy()">
             {{ busy() ? t('Saving…', 'جارٍ الحفظ…') : t('Save', 'حفظ') }}
           </button>
-        </footer>
+        </div>
       </form>
     </section>`,
+  styleUrls: ['./pages/admin-shell/admin-ui.scss', './pages/company-shell/company-ui.scss'],
   styles: [
     `
-      .scrim {
-        position: fixed;
-        inset: 0;
-        background: #0008;
-        z-index: 120;
+      .p-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: #8a8a90;
+        letter-spacing: 0.04em;
       }
-      .edit {
-        position: fixed;
-        inset: 4vh auto auto 50%;
-        transform: translateX(-50%);
-        width: min(92vw, 650px);
-        max-height: 92vh;
-        overflow: auto;
-        padding: 24px;
-        background: var(--surface, #fff);
-        color: var(--text, #222);
-        border-radius: 16px;
-        z-index: 121;
-        box-shadow: 0 20px 80px #0003;
+      .grid--3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
-      form {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 14px;
-      }
-      label {
-        display: grid;
-        gap: 6px;
-        font-size: 13px;
-      }
-      input,
-      select,
-      button {
-        font: inherit;
-        padding: 10px;
-        border: 1px solid #9997;
-        border-radius: 8px;
-        background: transparent;
-        color: inherit;
-      }
-      footer {
-        grid-column: 1/-1;
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-        margin-top: 14px;
-      }
-      p[role='alert'] {
-        color: #b3261e;
-      }
-      @media (max-width: 540px) {
-        form {
-          grid-template-columns: 1fr;
+      @media (max-width: 640px) {
+        .grid--3 {
+          grid-template-columns: minmax(0, 1fr);
         }
+      }
+      .pick {
+        display: flex;
+        gap: 6px;
+        input {
+          min-height: 32px;
+        }
+      }
+      .field .link {
+        align-self: flex-start;
+      }
+      .small {
+        font-size: 12px;
       }
     `,
   ],
@@ -276,6 +321,16 @@ export class InventoryEditor implements OnInit {
   closed = output<void>();
   busy = signal(false);
   error = signal('');
+  title() {
+    const k = this.kind();
+    const what = {
+      project: this.t('project', 'مشروع'),
+      phase: this.t('phase', 'مرحلة'),
+      building: this.t('building', 'مبنى'),
+      unit: this.t('unit', 'وحدة'),
+    }[k];
+    return (this.record() ? this.t('Edit ', 'تعديل ') : this.t('New ', 'إضافة ')) + what;
+  }
   projects = signal<Project[]>([]);
   projectTotal = signal(0);
   buildings = signal<Building[]>([]);

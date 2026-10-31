@@ -234,6 +234,33 @@ draft).
 | A4 | Banner visible inside company CRM | Feed endpoint exists. Tenant UI banner isn't built. | Company-side banner component consuming `GET /api/v1/announcements` (frontend work in the company shell, plus company auth readiness per docs). |
 | A5 | Audience counts ("Published to 148 companies") | Not shown. | Return the number of companies matching `target` with a current subscription. |
 
+## Notifications (`/admin/notifications`)
+
+Already real: the notification list is the current alert set from `GET /overview/alerts` (overdue invoices, trials ending,
+support SLA, user limits, new companies) filtered by your permissions. Each row opens its related screen. Severity is real.
+Read/unread and "Mark all read" work, but are stored **in this browser only** (per signed-in user).
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| N1 | Server-side **read / unread** state (sync across devices), notification history | Kept in `localStorage` per user. Alerts are current conditions, not a stored feed. | Persisted notifications per platform user (`GET /notifications`, `POST /notifications/:id/read`, `POST /notifications/read-all`). |
+| N2 | **Delivery rules** matrix (event × In-app / Email / SMS) | Shown with a "Not saved yet" tag. Toggles are local preview only. SMS locked to critical events as in the design. | `GET/POST /me/notification-preferences` + delivery workers for email/SMS. |
+| N3 | **Received** time per notification | Not shown (alerts have no timestamp). | `createdAt` on each notification/alert. |
+| N4 | Events not covered by current alerts: payment failed, system incident, ticket assigned to me, subscription expiry reminder | Only the five alert kinds above appear. | Emit these events into the notification feed (depends on Y1 payments gateway, H7 incidents, support assignment events). |
+
+## Platform users (`/admin/platform-users`)
+
+Already real: account list with role, status, last login (measured), active session count, status tabs, search, KPIs
+(administrators + active sessions, pending invites, Super Admin count), invite administrator (returns a one-time
+24-hour activation link shown for manual sharing), change role, reissue invitation, revoke sessions, disable / re-enable.
+All mutations are password + reason confirmed. Own account and Super Admins are protected, and only a Super Admin sees actions.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| U-1 | **MFA** column, **MFA enabled** KPI, **Reset MFA…** | Column `—` + "Soon". Dashed KPI. Menu item shows "not supported" toast. | Second-factor enrollment/verification, `mfaEnabled` on users, reset flow (docs: MFA is explicitly unsupported). |
+| U-2 | **Invitation email** ("Invitation re-sent to …") | Activation link is displayed for manual sharing. | Email delivery of activation links. |
+| U-3 | **Created** date column | Not shown. | Return `createdAt` on platform users. |
+| U-4 | Invitation **expires in** countdown for invited users | Generic "links expire after 24 h" text. | Return `invitationExpiresAt` for invited accounts. |
+
 ---
 
 ## Dashboard (from the earlier redesign, `/admin/dashboard`)

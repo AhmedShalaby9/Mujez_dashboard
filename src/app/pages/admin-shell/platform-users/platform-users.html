@@ -1,195 +1,297 @@
-@if (error()) {
-  <p role="alert">{{ error() }} <button class="row-btn" (click)="load()">Refresh</button></p>
-}
-@if (loading()) {
-  <p role="status">Loading...</p>
-}
-<p>
-  {{
-    lang() === 'ar'
-      ? 'MFA غير مهيأ. الدعوات بروابط تفعيل يدوية، دون إرسال بريد.'
-      : 'MFA is not configured. Invitations use manual activation links; no email is sent.'
-  }}
-</p>
-@if (activationLink()) {
-  <div class="card">
-    <p>Activation link (single use, expires in 24 hours). Share securely:</p>
-    <textarea class="textarea" readonly [value]="activationLink()"></textarea
-    ><button class="btn btn--ghost" (click)="activationLink.set('')">
-      {{ lang() === 'ar' ? 'إغلاق' : 'Dismiss' }}
-    </button>
-  </div>
-}
-<div class="page-head" (click)="closeKebab()">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
-  </div>
-  <div class="page-head__actions">
-    <button type="button" class="btn btn--primary" [disabled]="!canManage()" (click)="openInvite()">
-      {{ L().inviteBtn }}
-    </button>
-  </div>
-</div>
-
-<div class="kpis">
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.total }}</span>
-    <span class="kpi__value">{{ kpis().total }}</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.active }}</span>
-    <span class="kpi__value">{{ kpis().active }}</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.invited }}</span>
-    <span class="kpi__value">{{ kpis().invited }}</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.mfaOff }}</span>
-    <span class="kpi__value kpi__value--warn">{{ kpis().mfaOff }}</span>
-  </div>
-</div>
-
-<div class="card">
-  <div class="table-scroll">
-    <div class="u-table">
-      <div class="u-head">
-        <span>{{ L().colUser }}</span>
-        <span>{{ L().colRole }}</span>
-        <span>{{ L().colStatus }}</span>
-        <span>{{ L().colMfa }}</span>
-        <span>{{ L().colLastLogin }}</span>
-        <span></span>
-      </div>
-      @for (u of users(); track u.id) {
-        <div class="u-row">
-          <span class="u-cell__text">
-            <span class="u-cell__name"
-              >{{ u.name }}
-              @if (isMe(u)) {
-                <span class="you-badge">{{ L().you }}</span>
-              }
-            </span>
-            <span class="u-cell__email mono" dir="ltr">{{ u.email }}</span>
-          </span>
-          <span>{{ roleName(u.role) }}</span>
-          <span
-            ><span class="pill" [class]="'pill--' + u.status">{{
-              statusName(u.status)
-            }}</span></span
-          >
-          <span>
-            <span title="MFA not configured">---</span>
-          </span>
-          <span>{{ u.lastLogin || '---' }}</span>
-          <span class="kebab-wrap" (click)="$event.stopPropagation()">
-            @if (canManage() && !isMe(u) && u.role !== 'super_admin') {
-              <button type="button" class="row-btn row-btn--icon" (click)="toggleKebab(u)">
-                ⋯
-              </button>
-              @if (kebabFor() === u.id) {
-                <div class="dropdown">
-                  <button type="button" class="dropdown__item" (click)="askChangeRole(u)">
-                    {{ L().changeRole }}
-                  </button>
-                  <button type="button" class="dropdown__item" (click)="askRevoke(u)">
-                    {{ L().revokeSessions }}
-                  </button>
-                  @if (u.status === 'invited') {
-                    <button type="button" class="dropdown__item" (click)="reissue(u)">
-                      {{ lang() === 'ar' ? 'تجديد رابط التفعيل' : 'Reissue activation link' }}
-                    </button>
-                  }
-                  <button
-                    type="button"
-                    class="dropdown__item dropdown__item--danger"
-                    (click)="askToggleStatus(u)"
-                  >
-                    {{ u.status === 'disabled' ? L().enable : L().disable }}
-                  </button>
-                </div>
-              }
-            }
-          </span>
-        </div>
-      }
+<div class="pg" (click)="closeKebab()">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ L().title }}</h1>
+      <span>{{ L().sub }}</span>
+    </div>
+    <div class="head__actions">
+      <button type="button" class="btn btn--dark" [disabled]="!canManage()" (click)="openInvite()">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#C8F169"
+          stroke-width="2.2"
+          stroke-linecap="round"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        {{ lang() === 'ar' ? 'دعوة مدير' : 'Invite administrator' }}
+      </button>
     </div>
   </div>
+
+  @if (activationLink()) {
+    <div class="note note--ok link-box" role="status">
+      <b>{{
+        lang() === 'ar'
+          ? 'رابط تفعيل لمرة واحدة — صالح 24 ساعة. شاركه بأمان؛ لن يظهر مرة أخرى.'
+          : 'One-time activation link — valid 24 h. Share it securely; it will not be shown again.'
+      }}</b>
+      <input
+        readonly
+        dir="ltr"
+        class="mono"
+        [value]="activationLink()"
+        (click)="$any($event.target).select()"
+      />
+      <button type="button" class="btn btn--sm" (click)="activationLink.set('')">
+        {{ lang() === 'ar' ? 'تم' : 'Done' }}
+      </button>
+    </div>
+  }
+  @if (error() && !inviting() && !roleChanging() && !revoking() && !togglingStatus()) {
+    <p class="note note--bad" role="alert">
+      {{ error() }}
+      <button type="button" class="link" (click)="load()">
+        {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+      </button>
+    </p>
+  }
+  @if (loading()) {
+    <p class="muted" role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading users…' }}</p>
+  }
+  @if (!canManage()) {
+    <p class="note">
+      {{
+        lang() === 'ar'
+          ? 'عرض فقط — تعديل الحسابات يتطلب مديرًا عامًا.'
+          : 'View only — changing accounts requires a Super Admin.'
+      }}
+    </p>
+  }
+
+  <div class="kpis kpis--4">
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'المديرون' : 'Administrators' }}</span
+      ><b>{{ kpis().total }}</b>
+      <small
+        >{{ kpis().active }} {{ lang() === 'ar' ? 'نشط' : 'active' }} · {{ kpis().mfaOff }}
+        {{ lang() === 'ar' ? 'جلسة نشطة' : 'active sessions' }}</small
+      >
+    </div>
+    <div class="kpi kpi--static">
+      <span
+        >{{ lang() === 'ar' ? 'التحقق الثنائي' : 'MFA enabled'
+        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+      ><b>—</b>
+      <small>{{ lang() === 'ar' ? 'غير مدعوم بعد' : 'not supported yet' }}</small>
+    </div>
+    <button type="button" class="kpi" (click)="statusFilter.set('invited')">
+      <span>{{ lang() === 'ar' ? 'دعوات معلقة' : 'Pending invites' }}</span
+      ><b>{{ kpis().invited }}</b>
+      <small>{{
+        lang() === 'ar' ? 'الروابط تنتهي خلال 24 ساعة' : 'links expire after 24 h'
+      }}</small>
+    </button>
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'المديرون العامون' : 'Super Admins' }}</span
+      ><b [class.warnTxt]="superCount() < 2">{{ superCount() }}</b>
+      <small>{{ lang() === 'ar' ? 'يُفضل 2 على الأقل' : 'keep at least 2' }}</small>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    @for (t of tabs(); track t.k) {
+      <button
+        type="button"
+        class="tab"
+        role="tab"
+        [class.tab--on]="statusFilter() === t.k"
+        (click)="statusFilter.set(t.k)"
+      >
+        {{ t.label }}<span class="tab__n">{{ t.n }}</span>
+      </button>
+    }
+  </div>
+  <div class="filters">
+    <div class="search">
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#8A8A90"
+        stroke-width="1.8"
+        stroke-linecap="round"
+      >
+        <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" />
+      </svg>
+      <input
+        type="text"
+        [placeholder]="lang() === 'ar' ? 'الاسم أو البريد' : 'Name or email'"
+        [value]="search()"
+        (input)="search.set($any($event.target).value)"
+      />
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ L().colUser }}</th>
+            <th>{{ L().colRole }}</th>
+            <th>{{ L().colStatus }}</th>
+            <th>{{ L().colLastLogin }}</th>
+            <th class="end">{{ lang() === 'ar' ? 'الجلسات' : 'Sessions' }}</th>
+            <th>
+              {{ L().colMfa }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+            </th>
+            <th class="act"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (u of filtered(); track u.id) {
+            <tr class="still">
+              <td>
+                <div class="co">
+                  <span class="logo">{{ initials(u) }}</span>
+                  <span class="co__text">
+                    <span class="co__name"
+                      >{{ u.name }}
+                      @if (isMe(u)) {
+                        <i class="me">{{ L().you }}</i>
+                      }
+                    </span>
+                    <span class="co__sub" dir="ltr">{{ u.email }}</span>
+                  </span>
+                </div>
+              </td>
+              <td class="strong">{{ roleName(u.role) }}</td>
+              <td>
+                <span
+                  class="pill"
+                  [style.background]="statusPill(u.status).bg"
+                  [style.color]="statusPill(u.status).fg"
+                  ><span class="dot" [style.background]="statusPill(u.status).dot"></span
+                  >{{ statusName(u.status) }}</span
+                >
+              </td>
+              <td class="muted">{{ lastLogin(u) }}</td>
+              <td class="end mono">{{ u.activeSessions }}</td>
+              <td class="dim">—</td>
+              <td class="act" (click)="$event.stopPropagation()">
+                @if (canManage() && !protectedUser(u)) {
+                  <button type="button" class="kebab" aria-label="Actions" (click)="toggleKebab(u)">
+                    ⋯
+                  </button>
+                  @if (kebabFor() === u.id) {
+                    <div class="menu">
+                      <button type="button" (click)="askChangeRole(u)">
+                        {{ L().changeRole }}…
+                      </button>
+                      @if (u.status === 'invited') {
+                        <button type="button" (click)="closeKebab(); reissue(u)">
+                          {{
+                            lang() === 'ar' ? 'إصدار رابط دعوة جديد…' : 'Reissue invitation link…'
+                          }}
+                        </button>
+                      }
+                      @if (u.activeSessions > 0) {
+                        <button type="button" (click)="askRevoke(u)">
+                          {{ L().revokeSessions }}…
+                        </button>
+                      }
+                      <button type="button" (click)="mfaSoon()">
+                        {{ L().resetMfa
+                        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+                      </button>
+                      <button
+                        type="button"
+                        [class.bad]="u.status !== 'disabled'"
+                        (click)="askToggleStatus(u)"
+                      >
+                        {{ u.status === 'disabled' ? L().enable : L().disable }}…
+                      </button>
+                    </div>
+                  }
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (!loading() && !filtered().length) {
+      <div class="empty">
+        <strong>{{ lang() === 'ar' ? 'لا يوجد مستخدمون مطابقون' : 'No users match' }}</strong>
+      </div>
+    }
+  </section>
+  <span class="muted">{{
+    lang() === 'ar'
+      ? 'لا يظهر مستخدمو المنصة داخل CRM الشركات إلا عبر وصول مُدقق. حسابك والمديرون العامون محميون من التعديل هنا.'
+      : 'Platform users never appear inside company CRMs except through audited workspace access. Your own account and Super Admins are protected here.'
+  }}</span>
 </div>
 
 @if (inviting()) {
-  <div class="scrim" (click)="closeInvite()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
+  <div class="scrim scrim--top" (click)="closeInvite()"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
       <span class="dialog__title">{{ L().inviteTitle }}</span>
+      <span class="dialog__body">{{
+        lang() === 'ar'
+          ? 'يُنشأ حساب مدعو ورابط تفعيل لمدة 24 ساعة. إرسال البريد غير مهيأ؛ انسخ الرابط وشاركه.'
+          : 'Creates an invited account and a 24-hour activation link. Email is not configured — copy and share the link.'
+      }}</span>
+    </div>
+    <div class="dialog__main">
       <label class="field"
-        ><span class="field__label">{{ lang() === 'ar' ? 'الاسم' : 'Name' }}</span
-        ><input class="textbox" [(ngModel)]="inviteName" name="inviteName" maxlength="100"
+        ><span>{{ lang() === 'ar' ? 'الاسم' : 'Name' }}</span
+        ><input [value]="inviteName()" (input)="inviteName.set($any($event.target).value)"
       /></label>
       <label class="field">
-        <span class="field__label">{{ L().inviteEmailLabel }}</span>
+        <span>{{ L().inviteEmailLabel }}</span>
         <input
-          class="textbox"
-          type="text"
+          type="email"
           dir="ltr"
-          [ngModel]="inviteEmail()"
-          (ngModelChange)="inviteEmail.set($event)"
-          name="inviteEmail"
+          [class.invalid]="inviteError()"
+          [value]="inviteEmail()"
+          (input)="inviteEmail.set($any($event.target).value)"
         />
         @if (inviteError()) {
-          <span class="field__error">{{ L().inviteEmailError }}</span>
+          <span class="err">{{ L().inviteEmailError }}</span>
         }
       </label>
-      <div class="field">
-        <span class="field__label">{{ L().inviteRoleLabel }}</span>
-        <div class="chip-row">
-          @for (r of roleOrder(); track r) {
-            @if (r !== 'super_admin') {
-              <button
-                type="button"
-                class="chip"
-                [class.chip--active]="inviteRole() === r"
-                (click)="inviteRole.set(r)"
-              >
-                {{ roleName(r) }}
-              </button>
-            }
-          }
-        </div>
-      </div>
-    </div>
-    <div class="dialog__body dialog__body--pad">
       <label class="field"
-        ><span class="field__label">{{
-          lang() === 'ar' ? 'كلمة المرور الحالية' : 'Current password'
-        }}</span
-        ><input
-          class="textbox"
-          type="password"
-          autocomplete="current-password"
-          [(ngModel)]="password"
-          name="adminPassword" /></label
-      ><label class="field"
-        ><span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
+        ><span>{{ L().inviteRoleLabel }}</span
+        ><select [value]="inviteRole()" (change)="inviteRole.set($any($event.target).value)">
+          @for (r of roleOrder(); track r) {
+            <option [value]="r">{{ roleName(r) }}</option>
+          }
+        </select></label
+      >
+      <label class="field"
+        ><span>{{ L().reasonLabel }}</span
         ><textarea
-          class="textarea"
-          [(ngModel)]="reason"
-          name="adminReason"
-          maxlength="500"
+          rows="2"
+          [value]="reason()"
+          (input)="reason.set($any($event.target).value)"
         ></textarea>
       </label>
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'كلمة مرورك للتأكيد' : 'Your password to confirm' }}</span
+        ><input
+          type="password"
+          autocomplete="current-password"
+          dir="ltr"
+          [value]="password()"
+          (input)="password.set($any($event.target).value)"
+      /></label>
       @if (error()) {
-        <p role="alert">{{ error() }}</p>
+        <p class="note note--bad" role="alert">{{ error() }}</p>
       }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeInvite()">{{ L().cancel }}</button>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="closeInvite()">{{ L().cancel }}</button>
       <button
         type="button"
-        class="btn btn--primary"
-        [disabled]="saving()"
+        class="btn btn--dark"
+        [disabled]="saving() || !password() || reason().trim().length < 5"
         (click)="confirmInvite()"
       >
         {{ L().send }}
@@ -198,58 +300,60 @@
   </div>
 }
 
-@if (roleChanging(); as ru) {
-  <div class="scrim" (click)="cancelChangeRole()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ L().changeRoleTitle(ru.name) }}</span>
-      <div class="chip-row">
+@if (roleChanging(); as u) {
+  <div class="scrim scrim--top" (click)="cancelChangeRole()"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
+      <span class="dialog__title">{{ L().changeRoleTitle(u.name) }}</span>
+      <span class="dialog__body">{{
+        lang() === 'ar'
+          ? 'تغيير الدور ينهي كل جلسات هذا المستخدم.'
+          : 'Changing the role signs this user out of every session.'
+      }}</span>
+    </div>
+    <div class="dialog__main">
+      <div class="roles">
         @for (r of roleOrder(); track r) {
-          @if (r !== 'super_admin') {
-            <button
-              type="button"
-              class="chip"
-              [class.chip--active]="roleDraft() === r"
-              (click)="roleDraft.set(r)"
+          <button
+            type="button"
+            class="mode"
+            [class.mode--on]="roleDraft() === r"
+            (click)="roleDraft.set(r)"
+          >
+            <span class="radio"></span
+            ><span class="mode__text"
+              ><b>{{ roleName(r) }}</b></span
             >
-              {{ roleName(r) }}
-            </button>
-          }
+          </button>
         }
       </div>
-    </div>
-    <div class="dialog__body dialog__body--pad">
       <label class="field"
-        ><span class="field__label">{{
-          lang() === 'ar' ? 'كلمة المرور الحالية' : 'Current password'
-        }}</span
-        ><input
-          class="textbox"
-          type="password"
-          autocomplete="current-password"
-          [(ngModel)]="password"
-          name="adminPassword" /></label
-      ><label class="field"
-        ><span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
+        ><span>{{ L().reasonLabel }}</span
         ><textarea
-          class="textarea"
-          [(ngModel)]="reason"
-          name="adminReason"
-          maxlength="500"
+          rows="2"
+          [value]="reason()"
+          (input)="reason.set($any($event.target).value)"
         ></textarea>
       </label>
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'كلمة مرورك للتأكيد' : 'Your password to confirm' }}</span
+        ><input
+          type="password"
+          autocomplete="current-password"
+          dir="ltr"
+          [value]="password()"
+          (input)="password.set($any($event.target).value)"
+      /></label>
       @if (error()) {
-        <p role="alert">{{ error() }}</p>
+        <p class="note note--bad" role="alert">{{ error() }}</p>
       }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelChangeRole()">
-        {{ L().cancel }}
-      </button>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="cancelChangeRole()">{{ L().cancel }}</button>
       <button
         type="button"
-        class="btn btn--primary"
-        [disabled]="saving()"
+        class="btn btn--dark"
+        [disabled]="saving() || roleDraft() === u.role || !password() || reason().trim().length < 5"
         (click)="confirmChangeRole()"
       >
         {{ L().confirm }}
@@ -258,96 +362,105 @@
   </div>
 }
 
-@if (revoking(); as rv) {
-  <div class="scrim" (click)="cancelRevoke()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
+@if (revoking(); as u) {
+  <div class="scrim scrim--top" (click)="cancelRevoke()"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
       <span class="dialog__title">{{
-        reissuing() ? 'Reissue activation link' : L().revokeTitle(rv.name)
+        reissuing()
+          ? (lang() === 'ar' ? 'إصدار رابط دعوة جديد · ' : 'Reissue invitation · ') + u.name
+          : L().revokeTitle(u.name)
       }}</span>
-      <p class="dialog__text">
-        {{ reissuing() ? 'The previous activation link will stop working.' : L().revokeBody }}
-      </p>
+      <span class="dialog__body">{{
+        reissuing()
+          ? lang() === 'ar'
+            ? 'يلغي الروابط السابقة غير المستخدمة وينشئ رابطًا جديدًا لمدة 24 ساعة.'
+            : 'Revokes previous unused links and creates a new 24-hour link.'
+          : L().revokeBody
+      }}</span>
     </div>
-    <div class="dialog__body dialog__body--pad">
+    <div class="dialog__main">
       <label class="field"
-        ><span class="field__label">{{
-          lang() === 'ar' ? 'كلمة المرور الحالية' : 'Current password'
-        }}</span
-        ><input
-          class="textbox"
-          type="password"
-          autocomplete="current-password"
-          [(ngModel)]="password"
-          name="adminPassword" /></label
-      ><label class="field"
-        ><span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
+        ><span>{{ L().reasonLabel }}</span
         ><textarea
-          class="textarea"
-          [(ngModel)]="reason"
-          name="adminReason"
-          maxlength="500"
+          rows="2"
+          [value]="reason()"
+          (input)="reason.set($any($event.target).value)"
         ></textarea>
       </label>
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'كلمة مرورك للتأكيد' : 'Your password to confirm' }}</span
+        ><input
+          type="password"
+          autocomplete="current-password"
+          dir="ltr"
+          [value]="password()"
+          (input)="password.set($any($event.target).value)"
+      /></label>
       @if (error()) {
-        <p role="alert">{{ error() }}</p>
+        <p class="note note--bad" role="alert">{{ error() }}</p>
       }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelRevoke()">
-        {{ L().cancel }}
-      </button>
-      <button type="button" class="btn btn--danger" [disabled]="saving()" (click)="confirmRevoke()">
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="cancelRevoke()">{{ L().cancel }}</button>
+      <button
+        type="button"
+        class="btn"
+        [class.btn--danger]="!reissuing()"
+        [class.btn--dark]="reissuing()"
+        [disabled]="saving()"
+        (click)="confirmRevoke()"
+      >
         {{ L().confirm }}
       </button>
     </div>
   </div>
 }
 
-@if (togglingStatus(); as su) {
-  <div class="scrim" (click)="cancelToggleStatus()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">
-        {{ su.status !== 'disabled' ? L().disableTitle(su.name) : L().enableTitle(su.name) }}
-      </span>
-      <p class="dialog__text">
-        {{ su.status !== 'disabled' ? L().disableBody : L().enableBody }}
-      </p>
+@if (togglingStatus(); as u) {
+  <div class="scrim scrim--top" (click)="cancelToggleStatus()"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
+      <span class="dialog__title">{{
+        u.status === 'disabled' ? L().enableTitle(u.name) : L().disableTitle(u.name)
+      }}</span>
+      <span class="dialog__body">{{
+        u.status === 'disabled' ? L().enableBody : L().disableBody
+      }}</span>
     </div>
-    <div class="dialog__body dialog__body--pad">
+    <div class="dialog__main">
+      <label class="field">
+        <span>{{ L().reasonLabel }}</span>
+        <textarea
+          rows="2"
+          [class.invalid]="statusError()"
+          [value]="reason()"
+          (input)="reason.set($any($event.target).value)"
+        ></textarea>
+        @if (statusError()) {
+          <span class="err">{{ L().reasonError }}</span>
+        }
+      </label>
       <label class="field"
-        ><span class="field__label">{{
-          lang() === 'ar' ? 'كلمة المرور الحالية' : 'Current password'
-        }}</span
+        ><span>{{ lang() === 'ar' ? 'كلمة مرورك للتأكيد' : 'Your password to confirm' }}</span
         ><input
-          class="textbox"
           type="password"
           autocomplete="current-password"
-          [(ngModel)]="password"
-          name="adminPassword" /></label
-      ><label class="field"
-        ><span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
-        ><textarea
-          class="textarea"
-          [(ngModel)]="reason"
-          name="adminReason"
-          maxlength="500"
-        ></textarea>
-      </label>
+          dir="ltr"
+          [value]="password()"
+          (input)="password.set($any($event.target).value)"
+      /></label>
       @if (error()) {
-        <p role="alert">{{ error() }}</p>
+        <p class="note note--bad" role="alert">{{ error() }}</p>
       }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelToggleStatus()">
-        {{ L().cancel }}
-      </button>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="cancelToggleStatus()">{{ L().cancel }}</button>
       <button
         type="button"
         class="btn"
-        [class.btn--danger]="su.status !== 'disabled'"
-        [class.btn--primary]="su.status === 'disabled'"
+        [class.btn--danger]="u.status !== 'disabled'"
+        [class.btn--dark]="u.status === 'disabled'"
         [disabled]="saving()"
         (click)="confirmToggleStatus()"
       >
@@ -358,5 +471,5 @@
 }
 
 @if (toast(); as msg) {
-  <div class="toast">{{ msg }}</div>
+  <div class="toast"><span></span>{{ msg }}</div>
 }

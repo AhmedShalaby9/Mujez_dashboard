@@ -1,26 +1,159 @@
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ L().title }}</h1>
+      <span>{{ L().sub }}</span>
+    </div>
+    <div class="head__actions">
+      <button type="button" class="btn" [disabled]="!unread()" (click)="markAll()">
+        {{ lang() === 'ar' ? 'تعليم الكل كمقروء' : 'Mark all read' }}
+      </button>
+    </div>
   </div>
+
+  @if (overview.alertError()) {
+    <p class="note note--bad" role="alert">{{ overview.alertError() }}</p>
+  }
+
+  <section class="card">
+    <div class="cardHead">
+      <div>
+        <h2>
+          {{ lang() === 'ar' ? 'قواعد التسليم' : 'Delivery rules'
+          }}<i class="soon">{{ lang() === 'ar' ? 'لا تُحفظ بعد' : 'Not saved yet' }}</i>
+        </h2>
+        <span>{{
+          lang() === 'ar'
+            ? 'اختر طريقة التنبيه. الرسائل النصية للأحداث الحرجة فقط.'
+            : 'Choose how you are notified. SMS is limited to critical events.'
+        }}</span>
+      </div>
+    </div>
+    <div class="scroll">
+      <table class="rules">
+        <thead>
+          <tr>
+            <th>{{ lang() === 'ar' ? 'الحدث' : 'Event' }}</th>
+            @for (c of channels; track c) {
+              <th>{{ channelName(c) }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (e of events; track e[0]) {
+            <tr class="still">
+              <td class="strong">{{ lang() === 'ar' ? e[2] : e[1] }}</td>
+              @for (c of channels; track c) {
+                <td>
+                  <button
+                    type="button"
+                    class="tog"
+                    [class.on]="ruleOn(e[0], c)"
+                    [class.lock]="locked(e[0], c)"
+                    [disabled]="locked(e[0], c)"
+                    [title]="(lang() === 'ar' ? e[2] : e[1]) + ' · ' + channelName(c)"
+                    (click)="toggleRule(e[0], c)"
+                  >
+                    <span></span>
+                  </button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button
+      type="button"
+      class="tab"
+      role="tab"
+      [class.tab--on]="tab() === 'all'"
+      (click)="tab.set('all')"
+    >
+      {{ lang() === 'ar' ? 'الكل' : 'All' }}<span class="tab__n">{{ items().length }}</span>
+    </button>
+    <button
+      type="button"
+      class="tab"
+      role="tab"
+      [class.tab--on]="tab() === 'unread'"
+      (click)="tab.set('unread')"
+    >
+      {{ lang() === 'ar' ? 'غير مقروءة' : 'Unread' }}<span class="tab__n">{{ unread() }}</span>
+    </button>
+  </div>
+
+  <section class="card">
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ lang() === 'ar' ? 'الإشعار' : 'Notification' }}</th>
+            <th>{{ lang() === 'ar' ? 'النوع' : 'Type' }}</th>
+            <th>{{ lang() === 'ar' ? 'الخطورة' : 'Severity' }}</th>
+            <th>{{ lang() === 'ar' ? 'الحالة' : 'State' }}</th>
+            <th class="end"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (n of shown(); track n.id) {
+            <tr (click)="open(n)">
+              <td [class.strong]="!n.read">{{ n.title }}</td>
+              <td class="soft">{{ n.kind }}</td>
+              <td>
+                <span
+                  class="pill"
+                  [style.background]="sevPill(n.severity).bg"
+                  [style.color]="sevPill(n.severity).fg"
+                  ><span class="dot" [style.background]="sevPill(n.severity).dot"></span
+                  >{{ L().severity[n.severity] }}</span
+                >
+              </td>
+              <td>
+                <span class="pill" [class.pill--unread]="!n.read">{{
+                  n.read
+                    ? lang() === 'ar'
+                      ? 'مقروء'
+                      : 'Read'
+                    : lang() === 'ar'
+                      ? 'غير مقروء'
+                      : 'Unread'
+                }}</span>
+              </td>
+              <td class="end" (click)="$event.stopPropagation()">
+                <button type="button" class="btn btn--sm" (click)="setRead(n.id, !n.read)">
+                  {{
+                    n.read
+                      ? lang() === 'ar'
+                        ? 'غير مقروء'
+                        : 'Mark unread'
+                      : lang() === 'ar'
+                        ? 'مقروء'
+                        : 'Mark read'
+                  }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (!shown().length && !overview.alertError()) {
+      <div class="empty">
+        <strong>{{ L().empty }}</strong>
+      </div>
+    }
+  </section>
+  <span class="muted">{{
+    lang() === 'ar'
+      ? 'الإشعارات هي الحالات الحالية في الوحدات المتاحة لك. الضغط يفتح الشاشة المرتبطة. حالة القراءة محفوظة على هذا الجهاز فقط.'
+      : 'Notifications are current conditions in your permitted modules. Clicking one opens the related screen. Read state is kept on this device only.'
+  }}</span>
 </div>
 
-@if (overview.alertError()) {
-  <p role="alert">{{ overview.alertError() }}</p>
+@if (toast()) {
+  <div class="toast"><span></span>{{ toast() }}</div>
 }
-
-<div class="card">
-  <div class="n-list">
-    @for (n of items(); track n.id) {
-      <a class="n-row" [routerLink]="n.path">
-        <span class="n-row__dot" [class]="'n-row__dot--' + n.severity"></span>
-        <span class="n-row__title">{{ n.title }}</span>
-        <span class="pill" [class]="'pill--' + n.severity">{{ L().severity[n.severity] }}</span>
-      </a>
-    }
-    @if (!items().length && !overview.alertError()) {
-      <div class="t-empty">{{ L().empty }}</div>
-    }
-  </div>
-</div>

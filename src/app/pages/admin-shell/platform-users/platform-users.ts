@@ -183,7 +183,7 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-platform-users',
   imports: [FormsModule],
   templateUrl: './platform-users.html',
-  styleUrl: './platform-users.scss',
+  styleUrls: ['../admin-ui.scss', '../admin-table.scss', './platform-users.scss'],
 })
 export class PlatformUsers {
   private readonly ui = inject(AdminUiState);
@@ -310,6 +310,63 @@ export class PlatformUsers {
     };
   });
 
+  readonly statusFilter = signal<UserStatus | 'all'>('all');
+  readonly search = signal('');
+  readonly filtered = computed(() => {
+    const st = this.statusFilter(),
+      q = this.search().trim().toLowerCase();
+    return this.users().filter(
+      (u) =>
+        (st === 'all' || u.status === st) &&
+        (!q || (u.name + ' ' + u.email).toLowerCase().includes(q)),
+    );
+  });
+  readonly tabs = computed(() =>
+    (['all', 'active', 'invited', 'disabled'] as Array<UserStatus | 'all'>).map((k) => ({
+      k,
+      label: k === 'all' ? (this.lang() === 'ar' ? 'الكل' : 'All') : this.statusName(k),
+      n: k === 'all' ? this.users().length : this.users().filter((u) => u.status === k).length,
+    })),
+  );
+  readonly superCount = computed(() => this.users().filter((u) => u.role === 'super_admin').length);
+  /** Own account and Super Admins are protected from UI role/status changes (backend rule). */
+  protectedUser(u: PlatformUser) {
+    return this.isMe(u) || u.role === 'super_admin';
+  }
+  statusPill(s: UserStatus) {
+    return (
+      {
+        active: { bg: '#E7F5EC', fg: '#1E6B3E', dot: '#2FA35F' },
+        invited: { bg: '#EAEFFD', fg: '#2E47A8', dot: '#5B78E5' },
+        disabled: { bg: '#F1F1ED', fg: '#6E6E73', dot: '#B4B4AE' },
+      } as Record<UserStatus, { bg: string; fg: string; dot: string }>
+    )[s];
+  }
+  initials(u: PlatformUser) {
+    return u.name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join('');
+  }
+  lastLogin(u: PlatformUser) {
+    const ar = this.lang() === 'ar';
+    if (!u.lastLogin) return u.status === 'invited' ? '—' : ar ? 'غير معروف' : 'Unknown';
+    const m = Math.max(0, Math.round((Date.now() - new Date(u.lastLogin).getTime()) / 60000));
+    if (m < 2) return ar ? 'الآن' : 'Now';
+    if (m < 60) return ar ? `منذ ${m} دقيقة` : `${m} min ago`;
+    if (m < 1440) return ar ? `منذ ${Math.round(m / 60)} ساعة` : `${Math.round(m / 60)} h ago`;
+    return ar ? `منذ ${Math.round(m / 1440)} يوم` : `${Math.round(m / 1440)} d ago`;
+  }
+  mfaSoon() {
+    this.closeKebab();
+    this.showToast(
+      this.lang() === 'ar'
+        ? 'التحقق الثنائي غير مدعوم بعد في الخادم.'
+        : "Two-factor authentication isn't supported by the backend yet.",
+    );
+  }
   toggleKebab(u: PlatformUser): void {
     this.kebabFor.set(this.kebabFor() === u.id ? null : u.id);
   }

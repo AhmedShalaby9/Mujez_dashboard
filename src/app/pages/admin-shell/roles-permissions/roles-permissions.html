@@ -1,119 +1,203 @@
-@if (error()) {
-  <p role="alert">{{ error() }} <button class="row-btn" (click)="load()">Refresh</button></p>
-}
-@if (loading()) {
-  <p role="status">Loading...</p>
-}
-<p>
-  Changes require an active Super Admin, current password and a reason. Built-in roles cannot be
-  archived.
-</p>
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
-  </div>
-  <div class="page-head__actions">
-    <button
-      type="button"
-      class="btn btn--primary"
-      [disabled]="!canManage()"
-      (click)="openCreateRole()"
-    >
-      {{ L().newRoleBtn }}
-    </button>
-  </div>
-</div>
-
-<div class="card">
-  <div class="table-scroll">
-    <div
-      class="matrix"
-      [style.grid-template-columns]="'minmax(220px, 1.6fr) repeat(' + roles().length + ', 150px)'"
-    >
-      <div class="matrix__row matrix__row--head">
-        <span class="matrix__cell matrix__cell--feature">{{ L().colPermission }}</span>
-        @for (r of roles(); track r.key) {
-          <span class="matrix__cell matrix__cell--roleHead">
-            <span class="role-name">{{ name(r) }}</span>
-            @if (r.locked) {
-              <span class="role-sub">{{ L().locked }}</span>
-            } @else {
-              <span class="role-sub">{{ L().membersLabel(r.members) }}</span>
-            }
-            @if (!r.system && canManage()) {
-              <button type="button" class="role-delete" (click)="askDelete(r)">
-                {{ L().deleteRole }}
-              </button>
-            }
-          </span>
-        }
-      </div>
-
-      @for (p of permissions(); track p.key) {
-        <div class="matrix__row">
-          <span class="matrix__cell matrix__cell--feature">
-            {{ permName(p) }}
-            @if (isSensitive(p)) {
-              <span class="sensitive-dot" title="Sensitive"></span>
-            }
-          </span>
-          @for (r of roles(); track r.key) {
-            <span class="matrix__cell matrix__cell--center">
-              <button
-                type="button"
-                class="toggle"
-                [class.toggle--on]="has(r, p)"
-                [class.toggle--locked]="r.locked"
-                [disabled]="saving() || r.locked || !canManage()"
-                [attr.aria-label]="name(r) + ': ' + permName(p)"
-                [attr.aria-pressed]="has(r, p)"
-                (click)="toggle(r, p)"
-              >
-                <span class="toggle__knob"></span>
-              </button>
-            </span>
-          }
-        </div>
-      }
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ L().title }}</h1>
+      <span>{{
+        lang() === 'ar'
+          ? 'أدوار المنصة فقط. أدوار الشركات (موظف، قائد فريق…) تُدار داخل كل CRM.'
+          : 'Platform roles only. Company roles (agent, team lead…) are managed inside each company CRM.'
+      }}</span>
+    </div>
+    <div class="head__actions">
+      <button
+        type="button"
+        class="btn btn--dark"
+        [disabled]="!canManage()"
+        (click)="openCreateRole()"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#C8F169"
+          stroke-width="2.2"
+          stroke-linecap="round"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        {{ lang() === 'ar' ? 'دور مخصص' : 'Custom role' }}
+      </button>
     </div>
   </div>
+
+  @if (error() && !grantConfirm() && !deleteConfirm() && !creatingRole()) {
+    <p class="note note--bad" role="alert">
+      {{ error() }}
+      <button type="button" class="link" (click)="load()">
+        {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+      </button>
+    </p>
+  }
+  @if (loading()) {
+    <p class="muted" role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading roles…' }}</p>
+  }
+  @if (!canManage()) {
+    <p class="note">
+      {{
+        lang() === 'ar'
+          ? 'عرض فقط — تعديل الصلاحيات يتطلب مديرًا عامًا.'
+          : 'View only — changing permissions requires a Super Admin.'
+      }}
+    </p>
+  }
+
+  <div class="roleCards">
+    @for (r of roles(); track r.key) {
+      <div class="kpi" [class.kpi--dark]="r.locked">
+        <span>{{ name(r) }}</span>
+        <b>{{ L().membersLabel(r.members) }}</b>
+        <small>{{ roleSub(r) }} · {{ grantedCount(r) }}/{{ permissions().length }}</small>
+      </div>
+    }
+  </div>
+
+  <section class="card">
+    <div class="cardHead">
+      <div>
+        <h2>{{ lang() === 'ar' ? 'مصفوفة الصلاحيات' : 'Permission matrix' }}</h2>
+        <span>{{
+          lang() === 'ar'
+            ? 'المدير العام مقفل. التغييرات تسري على الجلسات الحالية في الطلب التالي.'
+            : 'Super Admin is locked. Changes apply to existing sessions on their next request.'
+        }}</span>
+      </div>
+      <div class="cardHead__btns">
+        @for (r of roles(); track r.key) {
+          @if (!r.system && !r.locked && canManage()) {
+            <button type="button" class="btn btn--sm btn--badText" (click)="askDelete(r)">
+              {{ lang() === 'ar' ? 'حذف «' + name(r) + '»…' : 'Delete “' + name(r) + '”…' }}
+            </button>
+          }
+        }
+      </div>
+    </div>
+    <div class="scroll">
+      <table [style.min-width.px]="260 + roles().length * 150">
+        <thead>
+          <tr>
+            <th>{{ L().colPermission }}</th>
+            @for (r of roles(); track r.key) {
+              <th>{{ name(r) }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of sortedPerms(); track p.key) {
+            <tr class="still">
+              <td>
+                <span class="strong">{{ permName(p) }}</span>
+                <span class="sub"
+                  >{{ group(p) }} · <span class="mono">{{ p.key }}</span>
+                  @if (isSensitive(p)) {
+                    · <em class="warnTxt">{{ lang() === 'ar' ? 'حساسة' : 'sensitive' }}</em>
+                  }
+                </span>
+              </td>
+              @for (r of roles(); track r.key) {
+                <td>
+                  @if (r.locked) {
+                    <span class="okTxt strong">{{ lang() === 'ar' ? 'نعم' : 'Yes' }}</span
+                    ><span class="sub">{{ L().locked }}</span>
+                  } @else {
+                    <button
+                      type="button"
+                      class="tog"
+                      [class.on]="has(r, p)"
+                      [disabled]="!canManage() || saving()"
+                      [title]="permName(p) + ' · ' + name(r)"
+                      (click)="toggle(r, p)"
+                    >
+                      <span></span
+                      ><em>{{
+                        has(r, p)
+                          ? lang() === 'ar'
+                            ? 'نعم'
+                            : 'Yes'
+                          : lang() === 'ar'
+                            ? 'لا'
+                            : 'No'
+                      }}</em>
+                    </button>
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <span class="muted">{{
+    lang() === 'ar'
+      ? 'كل تغيير يتطلب كلمة مرورك وسببًا، ويُسجل في سجل التدقيق.'
+      : 'Every change needs your password and a reason, and is recorded in the audit log.'
+  }}</span>
 </div>
 
 @if (grantConfirm(); as gc) {
-  <div class="scrim" (click)="cancelGrant()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title"
-        >{{ gc.on ? 'Grant permission' : 'Remove permission' }}: {{ permName(gc.perm) }}</span
-      >
-      <p class="dialog__text">
-        {{ name(gc.role) }}: this change applies to every member on their next request.
-      </p>
+  <div class="scrim scrim--top" (click)="cancelGrant()"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
+      <span class="dialog__title">{{ L().grantTitle(permName(gc.perm), name(gc.role)) }}</span>
+      <span class="dialog__body">{{ L().grantBody(name(gc.role)) }}</span>
     </div>
-    <div class="dialog__body dialog__body--pad">
+    <div class="dialog__main">
+      @if (isSensitive(gc.perm) && gc.on) {
+        <p class="note note--warn">
+          {{
+            lang() === 'ar'
+              ? 'صلاحية حساسة — تمنح تحكمًا واسعًا.'
+              : 'Sensitive permission — grants broad control.'
+          }}
+        </p>
+      }
       <label class="field"
-        ><span class="field__label">{{
-          lang() === 'ar' ? 'كلمة المرور الحالية' : 'Current password'
-        }}</span
-        ><input
-          class="textbox"
+        ><span>{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
+        ><textarea
+          rows="2"
+          [value]="reason()"
+          (input)="reason.set($any($event.target).value)"
+        ></textarea>
+      </label>
+      <label class="field">
+        <span>{{ L().codeLabel }}</span>
+        <input
           type="password"
           autocomplete="current-password"
-          [(ngModel)]="grantCode"
-          name="reauth" /></label
-      ><label class="field"
-        ><span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
-        ><textarea class="textarea" [(ngModel)]="reason" name="reason" maxlength="500"></textarea>
+          dir="ltr"
+          [class.invalid]="grantError()"
+          [value]="grantCode()"
+          (input)="grantCode.set($any($event.target).value)"
+        />
+        @if (grantError()) {
+          <span class="err">{{ L().codeError }}</span>
+        }
       </label>
       @if (error()) {
-        <p role="alert">{{ error() }}</p>
+        <p class="note note--bad" role="alert">{{ error() }}</p>
       }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelGrant()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="confirmGrant()">
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="cancelGrant()">{{ L().cancel }}</button>
+      <button
+        type="button"
+        class="btn"
+        [class.btn--danger]="!gc.on"
+        [class.btn--dark]="gc.on"
+        [disabled]="saving() || !grantCode() || reason().trim().length < 5"
+        (click)="confirmGrant()"
+      >
         {{ L().confirm }}
       </button>
     </div>
@@ -121,14 +205,14 @@
 }
 
 @if (deleteBlocked(); as db) {
-  <div class="scrim" (click)="closeDeleteBlocked()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
+  <div class="scrim scrim--top" (click)="closeDeleteBlocked()"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
       <span class="dialog__title">{{ L().deleteBlockedTitle(name(db)) }}</span>
-      <p class="dialog__text">{{ L().deleteBlockedBody(name(db), db.members) }}</p>
+      <span class="dialog__body">{{ L().deleteBlockedBody(name(db), db.members) }}</span>
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--primary" (click)="closeDeleteBlocked()">
+    <div class="dialog__foot">
+      <button type="button" class="btn btn--dark" (click)="closeDeleteBlocked()">
         {{ L().ok }}
       </button>
     </div>
@@ -136,99 +220,120 @@
 }
 
 @if (deleteConfirm(); as dc) {
-  <div class="scrim" (click)="cancelDelete()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
+  <div class="scrim scrim--top" (click)="cancelDelete()"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
       <span class="dialog__title">{{ L().deleteTitle(name(dc)) }}</span>
-      <p class="dialog__text">{{ L().deleteBody }}</p>
+      <span class="dialog__body">{{ L().deleteBody }}</span>
     </div>
-    <div class="dialog__body dialog__body--pad">
+    <div class="dialog__main">
       <label class="field"
-        ><span class="field__label">{{
-          lang() === 'ar' ? 'كلمة المرور الحالية' : 'Current password'
-        }}</span
+        ><span>{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
+        ><textarea
+          rows="2"
+          [value]="reason()"
+          (input)="reason.set($any($event.target).value)"
+        ></textarea>
+      </label>
+      <label class="field"
+        ><span>{{ L().codeLabel }}</span
         ><input
-          class="textbox"
           type="password"
           autocomplete="current-password"
-          [(ngModel)]="grantCode"
-          name="reauth" /></label
-      ><label class="field"
-        ><span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
-        ><textarea class="textarea" [(ngModel)]="reason" name="reason" maxlength="500"></textarea>
-      </label>
+          dir="ltr"
+          [value]="grantCode()"
+          (input)="grantCode.set($any($event.target).value)"
+      /></label>
       @if (error()) {
-        <p role="alert">{{ error() }}</p>
+        <p class="note note--bad" role="alert">{{ error() }}</p>
       }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelDelete()">
-        {{ L().cancel }}
-      </button>
-      <button type="button" class="btn btn--danger" [disabled]="saving()" (click)="confirmDelete()">
-        {{ L().confirm }}
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="cancelDelete()">{{ L().cancel }}</button>
+      <button
+        type="button"
+        class="btn btn--danger"
+        [disabled]="saving() || !grantCode() || reason().trim().length < 5"
+        (click)="confirmDelete()"
+      >
+        {{ L().deleteRole }}
       </button>
     </div>
   </div>
 }
 
 @if (creatingRole()) {
-  <div class="scrim" (click)="closeCreateRole()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
+  <div class="scrim scrim--top" (click)="closeCreateRole()"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
       <span class="dialog__title">{{ L().newRoleTitle }}</span>
-      <label class="field">
-        <span class="field__label">{{ L().roleNameEn }}</span>
-        <input
-          class="textbox"
-          type="text"
-          [ngModel]="newRoleNameEn()"
-          (ngModelChange)="newRoleNameEn.set($event)"
-          name="newRoleNameEn"
-        />
-      </label>
-      <label class="field">
-        <span class="field__label">{{ L().roleNameAr }}</span>
-        <input
-          class="textbox"
-          type="text"
-          dir="rtl"
-          [ngModel]="newRoleNameAr()"
-          (ngModelChange)="newRoleNameAr.set($event)"
-          name="newRoleNameAr"
-        />
-      </label>
-      @if (newRoleError()) {
-        <span class="field__error">{{ L().roleNameError }}</span>
-      }
+      <span class="dialog__body">{{
+        lang() === 'ar'
+          ? 'يبدأ الدور الجديد بصلاحية عرض الشركات فقط، ثم فعّل ما تحتاجه من المصفوفة.'
+          : 'A new role starts with “View companies” only — then switch on what it needs in the matrix.'
+      }}</span>
     </div>
-    <div class="dialog__body dialog__body--pad">
+    <div class="dialog__main">
+      <div class="grid">
+        <label class="field"
+          ><span>{{ L().roleNameEn }}</span
+          ><input
+            dir="ltr"
+            [class.invalid]="newRoleError()"
+            [value]="newRoleNameEn()"
+            (input)="newRoleNameEn.set($any($event.target).value)"
+        /></label>
+        <label class="field"
+          ><span>{{ L().roleNameAr }}</span
+          ><input
+            dir="rtl"
+            [class.invalid]="newRoleError()"
+            [value]="newRoleNameAr()"
+            (input)="newRoleNameAr.set($any($event.target).value)"
+        /></label>
+      </div>
+      <label class="field">
+        <span
+          >{{ lang() === 'ar' ? 'مبني على دور' : 'Based on role'
+          }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+        >
+        <select disabled>
+          <option>{{ lang() === 'ar' ? 'عرض الشركات فقط' : 'View companies only' }}</option>
+        </select>
+      </label>
       <label class="field"
-        ><span class="field__label">{{
-          lang() === 'ar' ? 'كلمة المرور الحالية' : 'Current password'
-        }}</span
+        ><span>{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
+        ><textarea
+          rows="2"
+          [value]="reason()"
+          (input)="reason.set($any($event.target).value)"
+        ></textarea>
+      </label>
+      <label class="field"
+        ><span>{{ L().codeLabel }}</span
         ><input
-          class="textbox"
           type="password"
           autocomplete="current-password"
-          [(ngModel)]="grantCode"
-          name="reauth" /></label
-      ><label class="field"
-        ><span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
-        ><textarea class="textarea" [(ngModel)]="reason" name="reason" maxlength="500"></textarea>
-      </label>
+          dir="ltr"
+          [value]="grantCode()"
+          (input)="grantCode.set($any($event.target).value)"
+      /></label>
       @if (error()) {
-        <p role="alert">{{ error() }}</p>
+        <p class="note note--bad" role="alert">{{ error() }}</p>
       }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeCreateRole()">
-        {{ L().cancel }}
-      </button>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="closeCreateRole()">{{ L().cancel }}</button>
       <button
         type="button"
-        class="btn btn--primary"
-        [disabled]="saving()"
+        class="btn btn--dark"
+        [disabled]="
+          saving() ||
+          !newRoleNameEn().trim() ||
+          !newRoleNameAr().trim() ||
+          !grantCode() ||
+          reason().trim().length < 5
+        "
         (click)="confirmCreateRole()"
       >
         {{ L().create }}
@@ -238,5 +343,5 @@
 }
 
 @if (toast(); as msg) {
-  <div class="toast">{{ msg }}</div>
+  <div class="toast"><span></span>{{ msg }}</div>
 }

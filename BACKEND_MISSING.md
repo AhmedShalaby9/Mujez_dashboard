@@ -261,6 +261,33 @@ All mutations are password + reason confirmed. Own account and Super Admins are 
 | U-3 | **Created** date column | Not shown. | Return `createdAt` on platform users. |
 | U-4 | Invitation **expires in** countdown for invited users | Generic "links expire after 24 h" text. | Return `invitationExpiresAt` for invited accounts. |
 
+## Roles & permissions (`/admin/roles-permissions`)
+
+Already real: role cards with live member counts and granted/total permissions, permission matrix (grouped client-side by
+key prefix), per-role on/off toggle (`/roles/:key/permission`), create custom role, archive unused custom role (blocked
+while it has members). All writes need password + reason. Super Admin is locked. Only a Super Admin sees enabled controls.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| R1 | Permission levels **Limited** / **Optional · on/off** (e.g. Support "limited" company view) | Binary Yes/No per role. | Scoped permissions (e.g. `co.view:assigned`) or a level enum per grant. |
+| R2 | Custom role **based on** an existing role (inherit, then only remove access) | "Based on role" field shown disabled with "Soon". New roles start with `co.view` only. | Accept `baseRole` on `POST /roles` and copy its grants. Optional "can only remove" constraint. |
+| R3 | Permission **group** labels (Companies, Revenue, …) | Derived on the client from key prefixes. | Return `group` (and order) with each permission in `GET /roles`. |
+| R4 | Role **description** ("tickets & access", "invoices & payments") | Shows built-in / custom / locked instead. | `descriptionEn/Ar` on roles. |
+
+## Audit logs (`/admin/audit-logs`)
+
+Already real: immutable event list with server-side search, severity / workspace filters (tabs), from/until datetime
+filters, keyset "Load more", KPIs (matching total, high severity, workspace access), detail drawer with actual before/after
+JSON, result and IP, password-confirmed CSV export (redacted, max 5,000 rows).
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| L1 | **Denied** KPI (blocked attempts) | Counts denied rows among the results loaded so far (labelled as such). | `denied` count in the list `kpis`, plus auditing of denied/failed attempts (docs: not all denied requests are audited). |
+| L2 | **Retention "7 years"** | Shows "Immutable" + "retention period: soon". | A configured retention policy (and archival job) exposed in settings. |
+| L3 | **Company** column (company name for company-scoped events) | Not shown. Resource column only. | Return `companyId` / company name on audit summaries. |
+| L4 | **Administrator** dropdown filter | Covered by free-text search. | Optional `actorId` filter + `GET /audit-logs/actors` list. |
+| L5 | **Failed sign-in** events | Not present unless the backend records them. | Audit failed logins / lockouts (security events). |
+
 ---
 
 ## Dashboard (from the earlier redesign, `/admin/dashboard`)

@@ -118,7 +118,7 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-audit-logs',
   imports: [FormsModule],
   templateUrl: './audit-logs.html',
-  styleUrl: './audit-logs.scss',
+  styleUrls: ['../admin-ui.scss', '../admin-table.scss', './audit-logs.scss'],
 })
 export class AuditLogs {
   private readonly ui = inject(AdminUiState);
@@ -209,6 +209,32 @@ export class AuditLogs {
   readonly kpis = this.stats;
   readonly filtered = this.entries;
 
+  readonly filterKeys: FilterKey[] = ['all', 'high', 'med', 'low', 'ws'];
+  filterName(f: FilterKey) {
+    return f === 'all' ? this.L().filterAll : f === 'ws' ? this.L().filterWs : this.sevName(f);
+  }
+  sevPill(s: Severity) {
+    return s === 'high'
+      ? { bg: '#FBE7E3', fg: '#A23624', dot: '#E2553B' }
+      : s === 'med'
+        ? { bg: '#FCF2DE', fg: '#83570C', dot: '#D99A28' }
+        : { bg: '#F1F1ED', fg: '#45454A', dot: '#8A8A90' };
+  }
+  ok(e: AuditEntry) {
+    return !e.result || e.result === 'success';
+  }
+  /** Denied/failed among the rows loaded so far (the API's counts don't split by result). */
+  readonly deniedLoaded = computed(() => this.entries().filter((e) => !this.ok(e)).length);
+  applyDates() {
+    void this.load();
+  }
+  clearFilters() {
+    this.search.set('');
+    this.from.set('');
+    this.untilInput.set('');
+    this.filter.set('all');
+    void this.load();
+  }
   setFilter(f: FilterKey): void {
     this.filter.set(f);
     void this.load();

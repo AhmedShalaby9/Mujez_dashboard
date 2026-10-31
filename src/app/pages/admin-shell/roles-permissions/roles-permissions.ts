@@ -123,7 +123,7 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-roles-permissions',
   imports: [FormsModule],
   templateUrl: './roles-permissions.html',
-  styleUrl: './roles-permissions.scss',
+  styleUrls: ['../admin-ui.scss', '../admin-table.scss', './roles-permissions.scss'],
 })
 export class RolesPermissions {
   private readonly ui = inject(AdminUiState);
@@ -197,6 +197,39 @@ export class RolesPermissions {
   readonly toast = signal<string | null>(null);
   private toastTimer?: ReturnType<typeof setTimeout>;
 
+  /** Section for a permission key, derived from its prefix (the API has no group field). */
+  private groupIndex(p: Permission): number {
+    const k = p.key;
+    if (k.startsWith('co.')) return 0;
+    if (['plans', 'sub.manage', 'billing'].includes(k)) return 1;
+    if (['features', 'usage', 'integrations', 'health'].includes(k)) return 2;
+    if (['support', 'ann'].includes(k)) return 3;
+    if (k.startsWith('ws.')) return 4;
+    return 5;
+  }
+  group(p: Permission): string {
+    const names: Array<[string, string]> = [
+      ['Companies', 'الشركات'],
+      ['Revenue', 'الإيرادات'],
+      ['Platform', 'المنصة'],
+      ['Operations', 'العمليات'],
+      ['Workspace access', 'الوصول لمساحات العمل'],
+      ['Administration', 'الإدارة'],
+    ];
+    return names[this.groupIndex(p)][this.lang() === 'ar' ? 1 : 0];
+  }
+  readonly sortedPerms = computed(() =>
+    [...this.permissions()].sort((a, b) => this.groupIndex(a) - this.groupIndex(b)),
+  );
+  roleSub(r: RoleDef): string {
+    const ar = this.lang() === 'ar';
+    if (r.locked) return ar ? 'تحكم كامل · مقفل' : 'full control · locked';
+    if (r.system) return ar ? 'دور مدمج' : 'built-in role';
+    return ar ? 'دور مخصص' : 'custom role';
+  }
+  grantedCount(r: RoleDef) {
+    return r.locked ? this.permissions().length : r.permissions.size;
+  }
   name(r: RoleDef): string {
     return this.lang() === 'ar' ? r.nameAr : r.nameEn;
   }

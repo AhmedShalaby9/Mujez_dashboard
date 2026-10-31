@@ -1,187 +1,391 @@
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ t('Sales', 'المبيعات') }}</span>
-    <h1 class="page-head__title">{{ t('Calendar', 'التقويم') }}</h1>
-    <span class="page-head__sub">{{ weekLabel() }}</span>
-  </div>
-  <div class="page-head__actions">
-    @if (canManage()) {
-      <button type="button" class="btn btn--primary" (click)="openNew()">{{ t('+ New event', '+ حدث جديد') }}</button>
-    }
-  </div>
-</div>
-
-<div class="toolbar">
-  <div class="chip-row">
-    <button type="button" class="chip" (click)="prevWeek()">←</button>
-    <button type="button" class="chip" (click)="thisWeek()">{{ t('This week', 'هذا الأسبوع') }}</button>
-    <button type="button" class="chip" (click)="nextWeek()">→</button>
-  </div>
-  <div class="chip-row">
-    <button type="button" class="chip" [class.chip--active]="typeFilter() === 'all'" (click)="typeFilter.set('all')">
-      {{ t('All types', 'كل الأنواع') }}
-    </button>
-    @for (ty of types; track ty) {
-      <button type="button" class="chip" [class.chip--active]="typeFilter() === ty" (click)="typeFilter.set(ty)">
-        {{ typeNames()[ty] }}
-      </button>
-    }
-  </div>
-</div>
-
-@if (error()) {
-  <p role="alert">{{ error() }}</p>
-}
-
-<div class="week">
-  @for (d of days(); track dayKey(d); let i = $index) {
-    <div class="week__day">
-      <div class="week__dayHead">{{ dayNames()[i] }}</div>
-      <div class="week__dayBody">
-        @for (e of eventsByDay().get(dayKey(d)); track e.id) {
-          <button
-            type="button"
-            class="event-chip"
-            [class]="'event-chip--' + e.type"
-            [class.event-chip--done]="e.status !== 'scheduled'"
-            (click)="open(e)"
-          >
-            <span class="event-chip__time mono">{{ time(e.startsAt) }}</span>
-            <span class="event-chip__title">{{ title(e) }}</span>
-          </button>
-        }
-        @if (canManage()) {
-          <button type="button" class="week__add" (click)="openNew(d)">+</button>
-        }
-      </div>
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <span
+        >{{ weekCount() }} {{ t('events this week', 'حدث هذا الأسبوع') }} ·
+        {{ t('Sales', 'المبيعات') }}</span
+      >
+      <h1>{{ t('Calendar', 'التقويم') }}</h1>
     </div>
+  </div>
+
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
   }
-</div>
 
-@if (selected(); as e) {
-  <div class="scrim" (click)="closeDrawer()"></div>
-  <div class="drawer" (click)="$event.stopPropagation()">
-    <div class="drawer__header">
-      <div class="drawer__headerText">
-        <span class="drawer__name">{{ title(e) }}</span>
-        <span class="drawer__sub">{{ e.reference }} · {{ typeNames()[e.type] }}</span>
-      </div>
-      <button type="button" class="drawer__close" (click)="closeDrawer()">✕</button>
-    </div>
-    <div class="drawer__body">
-      <span class="pill" [class]="'pill--status-' + e.status">{{ e.status }}</span>
-      <div class="drawer__row"><span class="drawer__k">{{ t('When', 'الوقت') }}</span><span>{{ time(e.startsAt) }} – {{ time(e.endsAt) }}</span></div>
-      @if (e.place) {
-        <div class="drawer__row"><span class="drawer__k">{{ t('Place', 'المكان') }}</span><span>{{ e.place }}</span></div>
-      }
-      @if (e.contact) {
-        <div class="drawer__row"><span class="drawer__k">{{ t('Contact', 'جهة الاتصال') }}</span><span>{{ e.contact.name[lang()] }}</span></div>
-      }
-      @if (e.lead) {
-        <div class="drawer__row"><span class="drawer__k">{{ t('Lead', 'العميل') }}</span><span>{{ e.lead.name[lang()] }}</span></div>
-      }
-      <div class="drawer__row"><span class="drawer__k">{{ t('Owner', 'المسؤول') }}</span><span>{{ e.owner?.name || '—' }}</span></div>
-      @if (e.notes) {
-        <div class="drawer__row"><span class="drawer__k">{{ t('Notes', 'ملاحظات') }}</span><span>{{ e.notes }}</span></div>
-      }
-      @if (e.outcome) {
-        <div class="drawer__row"><span class="drawer__k">{{ t('Outcome', 'النتيجة') }}</span><span>{{ e.outcome }}</span></div>
-      }
-    </div>
-    <div class="drawer__footer">
+  <div class="bar">
+    <div class="nav">
+      <button
+        type="button"
+        class="iconBtn"
+        [attr.aria-label]="t('Previous week', 'الأسبوع السابق')"
+        (click)="prevWeek()"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          class="flip"
+        >
+          <path d="M15 6l-6 6 6 6" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="iconBtn"
+        [attr.aria-label]="t('Next week', 'الأسبوع التالي')"
+        (click)="nextWeek()"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          class="flip"
+        >
+          <path d="M9 6l6 6-6 6" />
+        </svg>
+      </button>
+      <button type="button" class="btn btn--sm" (click)="thisWeek()">
+        {{ t('Today', 'اليوم') }}
+      </button>
+      <b class="range">{{ weekLabel() }}</b>
       @if (canManage()) {
-        @if (e.status === 'scheduled') {
-          <button type="button" class="btn btn--ghost" (click)="openNew(undefined, e)">{{ t('Edit', 'تعديل') }}</button>
-          <button type="button" class="btn btn--ghost" [disabled]="saving()" (click)="setStatus(e, 'done')">{{ t('Mark done', 'تمّ') }}</button>
-          <button type="button" class="btn btn--ghost" [disabled]="saving()" (click)="setStatus(e, 'canceled')">{{ t('Cancel', 'إلغاء') }}</button>
-        } @else {
-          <button type="button" class="btn btn--ghost" [disabled]="saving()" (click)="setStatus(e, 'reopen')">{{ t('Reopen', 'إعادة فتح') }}</button>
-        }
+        <button type="button" class="btn btn--sm btn--dark" (click)="openNew()">
+          {{ t('+ New event', '+ حدث جديد') }}
+        </button>
+        <span class="muted hint">{{ t('or click an empty slot', 'أو اضغط على خانة فارغة') }}</span>
       }
-      <button type="button" class="btn btn--ghost" (click)="closeDrawer()">{{ t('Close', 'إغلاق') }}</button>
+    </div>
+    <div class="chips">
+      <button
+        type="button"
+        class="chip"
+        [class.on]="typeFilter() === 'all'"
+        (click)="typeFilter.set('all')"
+      >
+        {{ t('All', 'الكل') }}
+      </button>
+      @for (ty of types; track ty) {
+        <button
+          type="button"
+          class="chip"
+          [class.on]="typeFilter() === ty"
+          (click)="typeFilter.set(ty)"
+        >
+          <span class="stage-dot" [style.background]="typeColor[ty]"></span>{{ typeNames()[ty] }}
+        </button>
+      }
     </div>
   </div>
-}
+
+  <div class="layout">
+    <section class="card grid-wrap">
+      <div class="week">
+        <div class="week__head">
+          <span></span>
+          @for (d of days(); track dayKey(d)) {
+            <div class="dh" [class.dh--today]="isToday(d)">
+              <span>{{ dayName(d) }}</span>
+              <b>{{ d.getDate() }}</b>
+              @if (dayCount(d)) {
+                <span class="dh__n">{{ dayCount(d) }}</span>
+              }
+            </div>
+          }
+        </div>
+        <div class="week__body" [style.height.px]="hours().length * HOUR_PX">
+          <div class="hours">
+            @for (h of hours(); track h) {
+              <span [style.height.px]="HOUR_PX">{{ hourLabel(h) }}</span>
+            }
+          </div>
+          @for (d of days(); track dayKey(d)) {
+            <div
+              class="day"
+              [class.day--today]="isToday(d)"
+              [class.day--click]="canManage()"
+              (click)="slot($event, d)"
+            >
+              @for (h of hours(); track h) {
+                <span class="line" [style.top.px]="($index + 1) * HOUR_PX"></span>
+              }
+              @for (e of eventsByDay().get(dayKey(d)) ?? []; track e.id) {
+                <button
+                  type="button"
+                  class="ev"
+                  [class.ev--on]="selected()?.id === e.id"
+                  [class.ev--done]="e.status !== 'scheduled'"
+                  [style.top]="box(e).top"
+                  [style.height]="box(e).height"
+                  [style.--c]="typeColor[e.type]"
+                  (click)="$event.stopPropagation(); open(e)"
+                >
+                  <span class="ev__time mono">{{ time(e.startsAt) }}</span>
+                  <span class="ev__title">{{ title(e) }}</span>
+                  @if (!box(e).short && e.place) {
+                    <span class="ev__place">{{ e.place }}</span>
+                  }
+                </button>
+              }
+              @if (isToday(d) && nowTop(); as top) {
+                <div class="now" [style.top]="top"><span></span></div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+      @if (loading()) {
+        <p class="muted pad" role="status">{{ t('Loading…', 'جار التحميل…') }}</p>
+      }
+    </section>
+
+    <div class="side">
+      @if (selected(); as e) {
+        <section class="card evcard">
+          <div class="evcard__head">
+            <span class="tag" [style.background]="typeColor[e.type]">{{
+              typeNames()[e.type]
+            }}</span>
+            @if (e.sample) {
+              <i class="soon">{{ t('Sample', 'تجريبي') }}</i>
+            }
+            <button
+              type="button"
+              class="x"
+              (click)="closeDrawer()"
+              [attr.aria-label]="t('Close', 'إغلاق')"
+            >
+              ×
+            </button>
+          </div>
+          <b class="evcard__title">{{ title(e) }}</b>
+          <span class="muted">{{ when(e) }}</span>
+          <div class="facts">
+            <span>{{ t('Place', 'المكان') }}</span
+            ><b>{{ e.place || '—' }}</b>
+            <span>{{ t('Client', 'العميل') }}</span>
+            <b>
+              @if (e.contact) {
+                <button type="button" class="link" (click)="openContact(e)">
+                  {{ e.contact.name[lang()] }}
+                </button>
+              } @else if (e.lead) {
+                <button type="button" class="link" (click)="openLead(e)">
+                  {{ e.lead.name[lang()] }}
+                </button>
+              } @else {
+                —
+              }
+            </b>
+            <span>{{ t('Owner', 'المسؤول') }}</span
+            ><b>{{ e.owner?.name || t('Unassigned', 'دون مسؤول') }}</b>
+            <span>{{ t('Status', 'الحالة') }}</span
+            ><b
+              >{{ statusName(e.status) }}
+              @if (e.outcome) {
+                · {{ e.outcome }}
+              }
+            </b>
+          </div>
+          @if (e.notes) {
+            <div class="prep">
+              <span class="sect__label">{{ t('PREP NOTES', 'ملاحظات التحضير') }}</span>
+              <span>{{ e.notes }}</span>
+            </div>
+          }
+          @if (canManage()) {
+            @if (e.status === 'scheduled') {
+              <input
+                class="outcome"
+                maxlength="1000"
+                [placeholder]="
+                  t(
+                    'Outcome (optional) — e.g. interested, second viewing',
+                    'النتيجة (اختياري) — مثل: مهتم، معاينة ثانية'
+                  )
+                "
+                [value]="outcome()"
+                (input)="outcome.set($any($event.target).value)"
+              />
+            }
+            <div class="evcard__acts">
+              @if (e.status === 'scheduled') {
+                <button
+                  type="button"
+                  class="btn btn--sm btn--dark"
+                  [disabled]="saving()"
+                  (click)="setStatus(e, 'done')"
+                >
+                  {{ t('Mark done', 'تم') }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--sm"
+                  [disabled]="saving()"
+                  (click)="openNew(undefined, e)"
+                >
+                  {{ t('Reschedule', 'إعادة جدولة') }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--sm btn--badText"
+                  [disabled]="saving()"
+                  (click)="setStatus(e, 'canceled')"
+                >
+                  {{ t('Cancel', 'إلغاء') }}
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  class="btn btn--sm"
+                  [disabled]="saving()"
+                  (click)="setStatus(e, 'reopen')"
+                >
+                  {{ t('Reopen', 'إعادة فتح') }}
+                </button>
+              }
+            </div>
+          }
+        </section>
+      }
+      <section class="card upnext">
+        <h2>{{ t('Up next', 'القادم') }}</h2>
+        @for (u of upNext(); track u.id) {
+          <button type="button" class="un" (click)="open(u)">
+            <span class="un__when"
+              ><b class="mono">{{ time(u.startsAt) }}</b
+              ><span>{{ dayShort(u.startsAt) }}</span></span
+            >
+            <span class="un__bar" [style.background]="typeColor[u.type]"></span>
+            <span class="un__text"
+              ><b>{{ title(u) }}</b
+              ><span>{{ u.place || typeNames()[u.type] }}</span></span
+            >
+          </button>
+        } @empty {
+          <p class="muted">
+            {{ t('Nothing else scheduled this week.', 'لا شيء آخر مجدول هذا الأسبوع.') }}
+          </p>
+        }
+      </section>
+    </div>
+  </div>
+</div>
 
 @if (newOpen()) {
-  <div class="scrim" (click)="closeNew()"></div>
-  <div class="dialog" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ editing() ? t('Edit event', 'تعديل الحدث') : t('New event', 'حدث جديد') }}</span>
+  <div class="scrim scrim--top" (click)="closeNew()"></div>
+  <div class="dialog dialog--wide" role="dialog">
+    <div class="dialog__head">
+      <span class="dialog__title">{{
+        editing() ? t('Edit event', 'تعديل الحدث') : t('New event', 'حدث جديد')
+      }}</span>
+    </div>
+    <form id="event-form" class="dialog__main" (ngSubmit)="submit()">
       @if (formError()) {
-        <p role="alert">{{ formError() }}</p>
+        <p class="note note--bad" role="alert">{{ formError() }}</p>
       }
-      <label class="field">
-        <span class="field__label">{{ t('Type', 'النوع') }}</span>
-        <select class="search" [(ngModel)]="draft.type" name="type">
-          @for (ty of types; track ty) {
-            <option [value]="ty">{{ typeNames()[ty] }}</option>
-          }
-        </select>
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('Title', 'العنوان') }}</span>
-        <input class="search" [(ngModel)]="draft.title" name="title" />
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('Date', 'التاريخ') }}</span>
-        <input class="search" type="date" [(ngModel)]="draft.date" name="date" />
-      </label>
-      <div class="dur-row">
-        <label class="field">
-          <span class="field__label">{{ t('Start', 'البداية') }}</span>
-          <input class="search" type="time" [(ngModel)]="draft.startTime" name="startTime" />
-        </label>
-        <label class="field">
-          <span class="field__label">{{ t('End', 'النهاية') }}</span>
-          <input class="search" type="time" [(ngModel)]="draft.endTime" name="endTime" />
+      <div class="segs">
+        @for (ty of types; track ty) {
+          <button
+            type="button"
+            class="seg"
+            [class.seg--on]="draft.type === ty"
+            (click)="draft.type = ty"
+          >
+            <span class="stage-dot" [style.background]="typeColor[ty]"></span>{{ typeNames()[ty] }}
+          </button>
+        }
+      </div>
+      <div class="grid">
+        <label class="field"
+          ><span>{{ t('Title', 'العنوان') }}</span
+          ><input
+            name="title"
+            [(ngModel)]="draft.title"
+            required
+            maxlength="200"
+            [placeholder]="t('Viewing — Villa 12, Zayed', 'معاينة — فيلا 12، زايد')"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Arabic title (optional)', 'العنوان بالعربية (اختياري)') }}</span
+          ><input dir="rtl" name="titleAr" [(ngModel)]="draft.titleAr" maxlength="200"
+        /></label>
+      </div>
+      <div class="grid3">
+        <label class="field"
+          ><span>{{ t('Day', 'اليوم') }}</span
+          ><input type="date" dir="ltr" name="date" [(ngModel)]="draft.date" required
+        /></label>
+        <label class="field"
+          ><span>{{ t('Start', 'البداية') }}</span
+          ><input type="time" dir="ltr" name="startTime" [(ngModel)]="draft.startTime" required
+        /></label>
+        <label class="field"
+          ><span>{{ t('End', 'النهاية') }}</span
+          ><input type="time" dir="ltr" name="endTime" [(ngModel)]="draft.endTime" required
+        /></label>
+      </div>
+      <div class="grid">
+        <label class="field"
+          ><span>{{ t('Contact', 'جهة الاتصال') }}</span
+          ><select name="contactId" [(ngModel)]="draft.contactId">
+            <option value="">—</option>
+            @for (c of contactOptions(); track c.id) {
+              <option [value]="c.id">{{ c.name[lang()] }} · {{ c.reference }}</option>
+            }
+          </select></label
+        >
+        <label class="field"
+          ><span>{{ t('Lead', 'العميل') }}</span
+          ><select name="leadId" [(ngModel)]="draft.leadId">
+            <option value="">—</option>
+            @for (l of leadOptions(); track l.id) {
+              <option [value]="l.id">{{ l.name[lang()] }} · {{ l.reference }}</option>
+            }
+          </select></label
+        >
+        <label class="field"
+          ><span>{{ t('Place', 'المكان') }}</span
+          ><input
+            name="place"
+            [(ngModel)]="draft.place"
+            maxlength="300"
+            [placeholder]="t('Address or meeting link', 'العنوان أو رابط الاجتماع')"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Owner', 'المسؤول') }}</span
+          ><select name="ownerId" [(ngModel)]="draft.ownerId">
+            <option value="">{{ t('Me / unassigned', 'أنا / دون مسؤول') }}</option>
+            @for (o of owners(); track o.id) {
+              <option [value]="o.id">{{ o.name }}</option>
+            }
+          </select></label
+        >
+        <label class="field full"
+          ><span>{{ t('Prep notes', 'ملاحظات التحضير') }}</span
+          ><textarea rows="2" name="notes" [(ngModel)]="draft.notes" maxlength="2000"></textarea>
         </label>
       </div>
-      <label class="field">
-        <span class="field__label">{{ t('Place', 'المكان') }}</span>
-        <input class="search" [(ngModel)]="draft.place" name="place" />
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('Contact', 'جهة الاتصال') }}</span>
-        <select class="search" [(ngModel)]="draft.contactId" name="contactId">
-          <option value="">—</option>
-          @for (c of contactOptions(); track c.id) {
-            <option [value]="c.id">{{ c.name[lang()] }}</option>
-          }
-        </select>
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('Lead', 'العميل') }}</span>
-        <select class="search" [(ngModel)]="draft.leadId" name="leadId">
-          <option value="">—</option>
-          @for (l of leadOptions(); track l.id) {
-            <option [value]="l.id">{{ l.name[lang()] }}</option>
-          }
-        </select>
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('Owner', 'المسؤول') }}</span>
-        <select class="search" [(ngModel)]="draft.ownerId" name="ownerId">
-          <option value="">{{ t('Me', 'أنا') }}</option>
-          @for (o of owners(); track o.id) {
-            <option [value]="o.id">{{ o.name }}</option>
-          }
-        </select>
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('Notes', 'ملاحظات') }}</span>
-        <textarea class="textarea" rows="2" [(ngModel)]="draft.notes" name="notes"></textarea>
-      </label>
-    </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeNew()">{{ t('Cancel', 'إلغاء') }}</button>
-      <button type="button" class="btn btn--primary" [disabled]="saving() || !draft.title.trim()" (click)="submit()">
-        {{ t('Save', 'حفظ') }}
+    </form>
+    <div class="dialog__foot">
+      <button type="button" class="btn" [disabled]="saving()" (click)="closeNew()">
+        {{ t('Cancel', 'إلغاء') }}
+      </button>
+      <button class="btn btn--dark" type="submit" form="event-form" [disabled]="saving()">
+        {{ t('Save event', 'حفظ الحدث') }}
       </button>
     </div>
   </div>
 }
 
 @if (toast()) {
-  <div class="toast">{{ toast() }}</div>
+  <div class="toast"><span></span>{{ toast() }}</div>
 }

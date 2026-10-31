@@ -362,3 +362,36 @@ mark lost / reopen with reason, rollback on a rejected write, search, load more,
 | CP1 | **Days in stage** on each card ("12 d") | Not shown. | `stageChangedAt` on deals. |
 | CP2 | Residential / Commercial segment tag + switch | Cards show Sale / Lease (real) instead. No segment switch. | Deal `segment` (from its lead) + filter (see CL1). |
 | CP3 | Drag a card **across several stages** in one move | Only next stage, Lost, or reopen are accepted (the backend moves one stage at a time). | Allow direct jumps if the business wants them (with audit). |
+
+## Contacts (`/company/contacts`)
+
+Already real: server-paged list with search, type chips, include archived; two-pane layout (list + profile) with type-colored
+avatars, last update and owner; profile header with type pill and company; quick actions (**Call** `tel:`, **WhatsApp**
+`wa.me`, **Email** `mailto:`, Edit); Overview (client since, all phones/emails, area, owner, tags, notes, archive/restore with
+reason); Activity tab (note composer + paged timeline); create/edit. `/company/contacts?contactId=…` opens a contact (used by
+Calendar).
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| CC1 | **AI summary** + suggested next step | Dashed "Soon" card. | Summary generation endpoint (`POST /contacts/:id/summary`) built on activity, deals and events. |
+| CC2 | **Closed deals** value / **Open deals** count | Dashed `—` stats. | Link contacts to leads/deals (`contactId` on leads or a contact↔lead relation) + aggregates on the contact. |
+| CC3 | **Properties** tab (units shared / of interest) | Placeholder, "Soon". | Contact↔unit relation (interest / shared / owned). |
+| CC4 | **Deals** tab (opportunities + contracts) | Placeholder, "Soon". | Same relation as CC2, plus contracts by contact. |
+| CC5 | **Documents** tab | Placeholder, "Soon". | Documents linked to a contact (`contactId` on documents). |
+| CC6 | Contact **source** | Facts row `—`, "Soon". | `source` on contacts (like leads). |
+| CC7 | Activity filters/kinds (calls, viewings, messages) and the contact's **calendar events** in the timeline | Notes and record changes only. | `contactId` filter on `GET /events` and typed activities (see CL4). |
+| CC8 | Residential / Commercial segment switch | Not shown on Contacts. | `segment` on contacts + filter (see CL1). |
+
+## Calendar (`/company/calendar`)
+
+Already real: week view (Sat–Fri) with hourly grid, events positioned by start/end time, today highlight + "now" line,
+per-day counts, previous/next/today, type filter chips with type colors, click an empty slot to create at that hour, event
+panel (type, title, when, place, linked contact/lead with deep links, owner, status/outcome, prep notes) with Mark done /
+Reschedule / Cancel / Reopen, **Up next** list, create/edit dialog (type, title, day, start/end, contact, lead, place, owner,
+notes), outcome captured when marking an event done.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| CA1 | **WhatsApp** reminder to the client from the event | Not shown (events don't carry a phone). | Return the linked contact's/lead's phone on events, or a reminder-send endpoint (see CL5). |
+| CA2 | Residential / Commercial segment switch | Not shown. | Segment on events (from lead/contact) + filter (see CL1). |
+| CA3 | Drag to move / resize events on the grid | Reschedule opens the form. | Nothing required (frontend). Listed for completeness, uses the existing update endpoint. |

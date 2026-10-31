@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CompanyUiState } from '../company-ui-state';
 import { AuthService } from '../../../auth.service';
@@ -23,7 +24,11 @@ function startOfWeek(d: Date): Date {
 }
 function dateKey(d: Date): string {
   return (
-    d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+    d.getFullYear() +
+    '-' +
+    String(d.getMonth() + 1).padStart(2, '0') +
+    '-' +
+    String(d.getDate()).padStart(2, '0')
   );
 }
 
@@ -31,13 +36,19 @@ function dateKey(d: Date): string {
   selector: 'app-calendar',
   imports: [FormsModule],
   templateUrl: './calendar.html',
-  styleUrl: './calendar.scss',
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './calendar.scss',
+  ],
 })
 export class Calendar {
   private readonly ui = inject(CompanyUiState);
   readonly auth = inject(AuthService);
   readonly api = inject(CalendarApi);
   private readonly destroy = inject(DestroyRef);
+  private readonly router = inject(Router);
   readonly lang = this.ui.lang;
   readonly ar = computed(() => this.lang() === 'ar');
   t(en: string, ar: string) {
@@ -67,8 +78,12 @@ export class Calendar {
     () => this.auth.user()?.permissions.includes('calendar.manage') ?? false,
   );
   readonly owners = signal<Array<{ id: string; name: string }>>([]);
-  readonly contactOptions = signal<Array<{ id: string; reference: string; name: { en: string; ar: string } }>>([]);
-  readonly leadOptions = signal<Array<{ id: string; reference: string; name: { en: string; ar: string } }>>([]);
+  readonly contactOptions = signal<
+    Array<{ id: string; reference: string; name: { en: string; ar: string } }>
+  >([]);
+  readonly leadOptions = signal<
+    Array<{ id: string; reference: string; name: { en: string; ar: string } }>
+  >([]);
 
   readonly weekStart = signal(startOfWeek(new Date()));
   readonly days = computed(() => {
@@ -206,7 +221,121 @@ export class Calendar {
     }).format(new Date(s));
   }
 
+  // ---- week grid (design) ----
+  readonly HOUR_PX = 48;
+  readonly typeColor: Record<string, string> = {
+    viewing: '#8BB33A',
+    call: '#5B78E5',
+    meeting: '#111113',
+    inspection: '#D99A28',
+    signing: '#C2412D',
+  };
+  /** Visible hours: 8:00–20:00, widened to fit any event outside that range this week. */
+  readonly hourRange = computed(() => {
+    let lo = 8,
+      hi = 20;
+    for (const e of this.events()) {
+      const s = new Date(e.startsAt),
+        en = new Date(e.endsAt);
+      lo = Math.min(lo, s.getHours());
+      hi = Math.max(hi, en.getHours() + (en.getMinutes() ? 1 : 0));
+    }
+    return { lo, hi: Math.min(24, Math.max(hi, lo + 1)) };
+  });
+  readonly hours = computed(() => {
+    const { lo, hi } = this.hourRange();
+    return Array.from({ length: hi - lo }, (_, i) => lo + i);
+  });
+  hourLabel(h: number) {
+    return String(h).padStart(2, '0') + ':00';
+  }
+  /** Position of an event inside its day column (local time). */
+  box(e: CalendarEvent) {
+    const s = new Date(e.startsAt),
+      en = new Date(e.endsAt);
+    const lo = this.hourRange().lo;
+    const top = (s.getHours() + s.getMinutes() / 60 - lo) * this.HOUR_PX;
+    const mins = Math.max(20, (en.getTime() - s.getTime()) / 60000);
+    return {
+      top: Math.max(0, top) + 'px',
+      height: Math.max(22, (mins / 60) * this.HOUR_PX - 2) + 'px',
+      short: mins < 50,
+    };
+  }
+  isToday(d: Date) {
+    return dateKey(d) === dateKey(new Date());
+  }
+  nowTop() {
+    const n = new Date();
+    const v = (n.getHours() + n.getMinutes() / 60 - this.hourRange().lo) * this.HOUR_PX;
+    return v >= 0 && v <= this.hours().length * this.HOUR_PX ? v + 'px' : null;
+  }
+  dayCount(d: Date) {
+    return this.eventsByDay().get(dateKey(d))?.length ?? 0;
+  }
+  dayName(d: Date) {
+    return new Intl.DateTimeFormat(this.ar() ? 'ar-EG' : 'en-GB', { weekday: 'short' }).format(d);
+  }
+  /** Click an empty slot: new event on that day at that hour. */
+  slot(ev: MouseEvent, d: Date) {
+    if (!this.canManage()) return;
+    const y = (ev.target as HTMLElement).getBoundingClientRect();
+    const h = Math.floor((ev.clientY - y.top) / this.HOUR_PX) + this.hourRange().lo;
+    this.openNew(d);
+    const hh = String(Math.min(23, h)).padStart(2, '0');
+    this.draft.startTime = hh + ':00';
+    this.draft.endTime = String(Math.min(23, h + 1)).padStart(2, '0') + ':00';
+  }
+  readonly upNext = computed(() => {
+    const now = Date.now();
+    return this.events()
+      .filter((e) => e.status === 'scheduled' && new Date(e.endsAt).getTime() >= now)
+      .filter((e) => this.typeFilter() === 'all' || e.type === this.typeFilter())
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+      .slice(0, 5);
+  });
+  dayShort(s: string) {
+    const d = new Date(s);
+    if (dateKey(d) === dateKey(new Date())) return this.t('Today', 'اليوم');
+    return new Intl.DateTimeFormat(this.ar() ? 'ar-EG-u-nu-latn' : 'en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+    }).format(d);
+  }
+  when(e: CalendarEvent) {
+    return (
+      new Intl.DateTimeFormat(this.ar() ? 'ar-EG-u-nu-latn' : 'en-GB', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'short',
+      }).format(new Date(e.startsAt)) +
+      ' · ' +
+      this.time(e.startsAt) +
+      '–' +
+      this.time(e.endsAt)
+    );
+  }
+  statusName(s: CalendarEvent['status']) {
+    return s === 'done'
+      ? this.t('Done', 'تم')
+      : s === 'canceled'
+        ? this.t('Canceled', 'ملغى')
+        : this.t('Scheduled', 'مجدول');
+  }
+  openContact(e: CalendarEvent) {
+    if (e.contact)
+      void this.router.navigate(['/company/contacts'], {
+        queryParams: { contactId: e.contact.id },
+      });
+  }
+  openLead(e: CalendarEvent) {
+    if (e.lead)
+      void this.router.navigate(['/company/leads'], { queryParams: { leadId: e.lead.id } });
+  }
+  readonly weekCount = computed(() => this.events().length);
+
   open(e: CalendarEvent) {
+    this.outcome.set('');
     this.selected.set(e);
   }
   closeDrawer() {
@@ -291,6 +420,7 @@ export class Calendar {
     }
   }
 
+  readonly outcome = signal('');
   async setStatus(e: CalendarEvent, action: 'done' | 'canceled' | 'reopen') {
     if (this.saving()) return;
     this.saving.set(true);
@@ -300,7 +430,9 @@ export class Calendar {
         requestId: crypto.randomUUID(),
         version: e.version,
         action,
+        ...(action === 'done' && this.outcome().trim() ? { outcome: this.outcome().trim() } : {}),
       });
+      this.outcome.set('');
       this.selected.set(null);
       await this.reload();
     } catch (err) {

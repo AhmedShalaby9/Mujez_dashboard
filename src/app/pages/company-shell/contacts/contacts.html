@@ -1,251 +1,459 @@
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ t('Sales', 'المبيعات') }}</span>
-    <h1 class="page-head__title">{{ t('Contacts', 'جهات الاتصال') }}</h1>
-    <span class="page-head__sub">{{ t('Buyers, sellers, landlords and investors.', 'المشترون والبائعون والملاك والمستثمرون.') }}</span>
-  </div>
-  @if (canManage()) {
-    <div class="page-head__actions">
-      <button type="button" class="btn btn--primary" (click)="openNew()">{{ t('+ New contact', '+ جهة اتصال جديدة') }}</button>
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <span>{{ total() }} {{ t('contacts', 'جهة اتصال') }} · {{ t('Sales', 'المبيعات') }}</span>
+      <h1>{{ t('Contacts', 'جهات الاتصال') }}</h1>
     </div>
+    <div class="head__actions">
+      @if (canManage()) {
+        <button type="button" class="btn btn--dark" (click)="openNew()">
+          {{ t('+ New contact', '+ جهة اتصال جديدة') }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
   }
-</div>
 
-<input
-  type="text"
-  class="search"
-  [placeholder]="t('Search name, phone, email…', 'ابحث بالاسم أو الهاتف أو البريد…')"
-  [value]="search()"
-  (input)="searchChanged($any($event.target).value)"
-/>
+  <div class="filters">
+    <div class="search">
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#8A8A90"
+        stroke-width="1.8"
+        stroke-linecap="round"
+      >
+        <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" />
+      </svg>
+      <input
+        [placeholder]="t('Name, phone, company, area…', 'الاسم أو الهاتف أو الشركة أو المنطقة…')"
+        [value]="search()"
+        (input)="searchChanged($any($event.target).value)"
+      />
+    </div>
+    <div class="chips">
+      <button
+        type="button"
+        class="chip"
+        [class.on]="typeFilter() === 'all'"
+        (click)="setType('all')"
+      >
+        {{ t('All', 'الكل') }}
+      </button>
+      @for (ty of types; track ty) {
+        <button type="button" class="chip" [class.on]="typeFilter() === ty" (click)="setType(ty)">
+          {{ typeNames()[ty] }}
+        </button>
+      }
+    </div>
+    <label class="check"
+      ><input type="checkbox" [checked]="archived()" (change)="toggleArchived()" />{{
+        t('Include archived', 'يشمل المؤرشف')
+      }}</label
+    >
+  </div>
 
-<div class="chip-row">
-  <button type="button" class="chip" [class.chip--active]="typeFilter() === 'all'" (click)="setType('all')">
-    {{ t('All types', 'كل الأنواع') }}
-  </button>
-  @for (ty of types; track ty) {
-    <button type="button" class="chip" [class.chip--active]="typeFilter() === ty" (click)="setType(ty)">
-      {{ typeNames()[ty] }}
-    </button>
-  }
-  <button type="button" class="chip" [class.chip--active]="archived()" (click)="toggleArchived()">
-    {{ t('Archived', 'مؤرشفة') }}
-  </button>
-</div>
-
-@if (error()) {
-  <p role="alert">{{ error() }}</p>
-}
-
-<div class="card">
-  <div class="table-scroll">
-    <div class="ct-table">
-      <div class="l-head">
-        <span>{{ t('Contact', 'جهة الاتصال') }}</span>
-        <span>{{ t('Type', 'النوع') }}</span>
-        <span>{{ t('Phone', 'الهاتف') }}</span>
-        <span>{{ t('Area', 'المنطقة') }}</span>
-        <span>{{ t('Owner', 'المسؤول') }}</span>
-      </div>
+  <div class="split" [class.split--open]="!!selected() || detailLoading()">
+    <section class="card list">
       @for (c of contacts(); track c.id) {
-        <button type="button" class="l-row" (click)="open(c.id)">
-          <span class="l-cell__main">
-            <span class="l-cell__name">{{ name(c) }}</span>
-            @if (c.companyName) {
-              <span class="l-cell__sub">{{ c.companyName }}</span>
-            }
+        <button
+          type="button"
+          class="row"
+          [class.row--on]="selected()?.id === c.id"
+          (click)="open(c.id)"
+        >
+          <span
+            class="avatar"
+            [style.background]="typeColor(c.type)[0]"
+            [style.color]="typeColor(c.type)[1]"
+            >{{ initials(c) }}</span
+          >
+          <span class="row__main">
+            <span class="strong"
+              >{{ name(c) }}
+              @if (c.sample) {
+                <i class="soon">{{ t('Sample', 'تجريبي') }}</i>
+              }
+              @if (c.archivedAt) {
+                <i class="soon">{{ t('Archived', 'مؤرشف') }}</i>
+              }
+            </span>
+            <span class="sub">{{ sub(c) }}</span>
           </span>
-          <span class="pill">{{ typeNames()[c.type] }}</span>
-          <span class="l-cell__sub mono" dir="ltr">{{ c.phones[0] || '—' }}</span>
-          <span class="l-cell__sub">{{ c.area || '—' }}</span>
-          <span class="l-cell__sub">{{ c.owner?.name || '—' }}</span>
+          <span class="row__meta">
+            <span class="sub">{{ ago(c.updatedAt) }}</span>
+            <span class="sub">{{ c.owner?.name || '—' }}</span>
+          </span>
         </button>
       }
       @if (!loading() && !contacts().length) {
-        <div class="t-empty">{{ t('No contacts match these filters.', 'لا توجد جهات اتصال مطابقة.') }}</div>
+        <div class="empty">
+          <strong>{{ t('No contacts match.', 'لا توجد جهات اتصال مطابقة.') }}</strong>
+        </div>
       }
-    </div>
+      @if (loading()) {
+        <p class="muted pad" role="status">{{ t('Loading…', 'جار التحميل…') }}</p>
+      }
+      <div class="pager">
+        <span>{{ contacts().length }} / {{ total() }}</span>
+        <button
+          type="button"
+          class="btn btn--sm"
+          [disabled]="loading() || page() === 1"
+          (click)="reload(page() - 1)"
+        >
+          {{ t('Previous', 'السابق') }}
+        </button>
+        <button
+          type="button"
+          class="btn btn--sm"
+          [disabled]="loading() || page() * 50 >= total()"
+          (click)="reload(page() + 1)"
+        >
+          {{ t('Next', 'التالي') }}
+        </button>
+      </div>
+    </section>
+
+    <section class="card profile">
+      @if (selected(); as c) {
+        <div class="p-head">
+          <span
+            class="avatar avatar--lg"
+            [style.background]="typeColor(c.type)[0]"
+            [style.color]="typeColor(c.type)[1]"
+            >{{ initials(c) }}</span
+          >
+          <div class="p-head__text">
+            <div class="p-head__name">
+              <b>{{ name(c) }}</b>
+              <span
+                class="pill"
+                [style.background]="typeColor(c.type)[0]"
+                [style.color]="typeColor(c.type)[1]"
+                >{{ typeNames()[c.type] }}</span
+              >
+            </div>
+            <span class="muted"
+              >{{ c.companyName || '—' }} · <span class="mono">{{ c.reference }}</span></span
+            >
+          </div>
+          <button
+            type="button"
+            class="x close-m"
+            (click)="closeDrawer()"
+            [attr.aria-label]="t('Close', 'إغلاق')"
+          >
+            ×
+          </button>
+        </div>
+        <div class="quick">
+          @if (c.phones[0]; as ph) {
+            <a class="btn btn--dark btn--sm" [href]="telHref(ph)">{{ t('Call', 'اتصال') }}</a>
+            <a class="btn btn--sm" [href]="waHref(ph)" target="_blank" rel="noopener">WhatsApp</a>
+          }
+          @if (c.emails[0]; as em) {
+            <a class="btn btn--sm" [href]="mailHref(em)">{{ t('Email', 'بريد') }}</a>
+          }
+          @if (canManage() && !c.archivedAt) {
+            <button type="button" class="btn btn--sm" (click)="openNew(c)">
+              {{ t('Edit', 'تعديل') }}
+            </button>
+          }
+        </div>
+        <div class="tabs">
+          <button
+            type="button"
+            class="tab"
+            [class.tab--on]="tab() === 'overview'"
+            (click)="tab.set('overview')"
+          >
+            {{ t('Overview', 'نظرة عامة') }}
+          </button>
+          <button
+            type="button"
+            class="tab"
+            [class.tab--on]="tab() === 'activity'"
+            (click)="tab.set('activity')"
+          >
+            {{ t('Activity', 'النشاط') }}<span class="tab__n">{{ activityTotal() }}</span>
+          </button>
+          <button
+            type="button"
+            class="tab"
+            [class.tab--on]="tab() === 'props'"
+            (click)="tab.set('props')"
+          >
+            {{ t('Properties', 'العقارات') }}<i class="soon">{{ t('Soon', 'قريبًا') }}</i>
+          </button>
+          <button
+            type="button"
+            class="tab"
+            [class.tab--on]="tab() === 'deals'"
+            (click)="tab.set('deals')"
+          >
+            {{ t('Deals', 'الصفقات') }}<i class="soon">{{ t('Soon', 'قريبًا') }}</i>
+          </button>
+          <button
+            type="button"
+            class="tab"
+            [class.tab--on]="tab() === 'docs'"
+            (click)="tab.set('docs')"
+          >
+            {{ t('Documents', 'المستندات') }}<i class="soon">{{ t('Soon', 'قريبًا') }}</i>
+          </button>
+        </div>
+        @if (detailError()) {
+          <p class="note note--bad" role="alert">{{ detailError() }}</p>
+        }
+
+        @switch (tab()) {
+          @case ('overview') {
+            <div class="ai">
+              <div class="ai__head">
+                <b>{{ t('AI summary', 'ملخص ذكي') }}</b
+                ><i class="soon">{{ t('Soon', 'قريبًا') }}</i>
+              </div>
+              <span class="muted">{{
+                t(
+                  'A one-paragraph summary and suggested next step will appear here once AI summaries are available.',
+                  'سيظهر هنا ملخص من فقرة وخطوة تالية مقترحة عند توفر الملخص الذكي.'
+                )
+              }}</span>
+            </div>
+            <div class="stats">
+              <div class="stat stat--static">
+                <span>{{ t('Closed deals', 'صفقات مغلقة') }}</span
+                ><b>—</b>
+              </div>
+              <div class="stat stat--static">
+                <span>{{ t('Open deals', 'صفقات مفتوحة') }}</span
+                ><b>—</b>
+              </div>
+              <div class="stat">
+                <span>{{ t('Client since', 'عميل منذ') }}</span
+                ><b>{{ since(c) }}</b>
+              </div>
+            </div>
+            <div class="facts">
+              <span>{{ t('Phone', 'الهاتف') }}</span
+              ><b class="mono" dir="ltr">{{ c.phones.join(', ') || '—' }}</b>
+              <span>{{ t('Email', 'البريد') }}</span
+              ><b dir="ltr">{{ c.emails.join(', ') || '—' }}</b>
+              <span>{{ t('Area', 'المنطقة') }}</span
+              ><b>{{ c.area || '—' }}</b>
+              <span
+                >{{ t('Source', 'المصدر') }}<i class="soon">{{ t('Soon', 'قريبًا') }}</i></span
+              ><b>—</b> <span>{{ t('Owner', 'المسؤول') }}</span
+              ><b>{{ c.owner?.name || t('Unassigned', 'دون مسؤول') }}</b>
+              <span>{{ t('Tags', 'الوسوم') }}</span>
+              <div class="tags">
+                @for (tg of c.tags; track tg) {
+                  <span>{{ tg }}</span>
+                } @empty {
+                  <b>—</b>
+                }
+              </div>
+              @if (c.notes) {
+                <span>{{ t('Notes', 'ملاحظات') }}</span
+                ><b class="pre">{{ c.notes }}</b>
+              }
+            </div>
+            @if (canManage()) {
+              <div class="manage">
+                @if (!c.archivedAt) {
+                  <textarea
+                    rows="2"
+                    maxlength="500"
+                    [placeholder]="
+                      t('Reason to archive (10+ characters)', 'سبب الأرشفة (10 أحرف على الأقل)')
+                    "
+                    [(ngModel)]="reason"
+                  ></textarea>
+                  <button
+                    type="button"
+                    class="btn btn--sm btn--badText"
+                    [disabled]="saving() || reason().trim().length < 10"
+                    (click)="toggleArchive('archive')"
+                  >
+                    {{ t('Archive contact', 'أرشفة جهة الاتصال') }}
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn btn--sm"
+                    [disabled]="saving()"
+                    (click)="toggleArchive('restore')"
+                  >
+                    {{ t('Restore contact', 'استعادة جهة الاتصال') }}
+                  </button>
+                }
+              </div>
+            }
+          }
+          @case ('activity') {
+            @if (canManage() && !c.archivedAt) {
+              <div class="composer">
+                <input
+                  [placeholder]="t('Add a note…', 'أضف ملاحظة…')"
+                  [(ngModel)]="note"
+                  maxlength="2000"
+                  (keydown.enter)="addNote()"
+                />
+                <button
+                  type="button"
+                  class="btn btn--sm"
+                  [disabled]="saving() || !note().trim()"
+                  (click)="addNote()"
+                >
+                  {{ t('Log', 'تسجيل') }}
+                </button>
+              </div>
+            }
+            <div class="tl">
+              @for (a of timeline(); track a.id) {
+                <div class="tl__row">
+                  <span class="tl__time mono">{{ date(a.at) }}</span>
+                  <span class="tl__dot"></span>
+                  <div>
+                    <span>{{ activityText(a) }}</span
+                    ><span class="sub">{{ a.actor || t('System', 'النظام') }}</span>
+                  </div>
+                </div>
+              } @empty {
+                <p class="muted">{{ t('No recorded activity', 'لا توجد أنشطة مسجلة') }}</p>
+              }
+            </div>
+            @if (timeline().length < activityTotal()) {
+              <button
+                type="button"
+                class="link"
+                [disabled]="detailLoading()"
+                (click)="moreActivity()"
+              >
+                {{ t('Load more', 'تحميل المزيد') }}
+              </button>
+            }
+          }
+          @default {
+            <div class="placeholder">
+              <b>{{
+                tab() === 'props'
+                  ? t('Properties', 'العقارات')
+                  : tab() === 'deals'
+                    ? t('Deals', 'الصفقات')
+                    : t('Documents', 'المستندات')
+              }}</b>
+              <span class="muted">{{
+                t(
+                  'Contacts are not linked to units, deals or documents yet, so this tab stays empty.',
+                  'جهات الاتصال غير مرتبطة بالوحدات أو الصفقات أو المستندات بعد، لذا يبقى هذا التبويب فارغًا.'
+                )
+              }}</span>
+            </div>
+          }
+        }
+      } @else if (detailLoading()) {
+        <p class="muted pad" role="status">{{ t('Loading contact…', 'جار تحميل جهة الاتصال…') }}</p>
+      } @else {
+        <div class="placeholder">
+          <b>{{ t('Select a contact', 'اختر جهة اتصال') }}</b>
+          <span class="muted">{{
+            t('Their profile, activity and links appear here.', 'يظهر هنا الملف والنشاط والروابط.')
+          }}</span>
+        </div>
+      }
+    </section>
   </div>
 </div>
 
-@if (selected(); as c) {
-  <div class="scrim" (click)="closeDrawer()"></div>
-  <div class="drawer" (click)="$event.stopPropagation()">
-    <div class="drawer__header">
-      <div class="drawer__headerText">
-        <span class="drawer__name">{{ name(c) }}</span>
-        <span class="drawer__sub">{{ c.reference }} · {{ typeNames()[c.type] }}</span>
-      </div>
-      <button type="button" class="drawer__close" (click)="closeDrawer()">✕</button>
-    </div>
-
-    <div class="chip-row" style="padding: 0 18px">
-      <button type="button" class="chip" [class.chip--active]="tab() === 'overview'" (click)="tab.set('overview')">
-        {{ t('Overview', 'نظرة عامة') }}
-      </button>
-      <button type="button" class="chip" [class.chip--active]="tab() === 'activity'" (click)="tab.set('activity')">
-        {{ t('Activity', 'النشاط') }}
-      </button>
-    </div>
-
-    <div class="drawer__body">
-      @if (detailError()) {
-        <p role="alert">{{ detailError() }}</p>
-      }
-      @if (c.archivedAt) {
-        <span class="pill pill--lost">{{ t('Archived', 'مؤرشفة') }}</span>
-      }
-
-      @if (tab() === 'overview') {
-        <div class="meta-row">
-          @for (ph of c.phones; track ph) {
-            <a class="pill" [href]="telHref(ph)" dir="ltr">☎ {{ ph }}</a>
-            <a class="pill" [href]="waHref(ph)" target="_blank" rel="noopener" dir="ltr">WhatsApp</a>
-          }
-          @for (em of c.emails; track em) {
-            <a class="pill" [href]="mailHref(em)" dir="ltr">✉ {{ em }}</a>
-          }
-        </div>
-        <div class="drawer__row"><span class="drawer__k">{{ t('Company', 'الشركة') }}</span><span>{{ c.companyName || '—' }}</span></div>
-        <div class="drawer__row"><span class="drawer__k">{{ t('Area', 'المنطقة') }}</span><span>{{ c.area || '—' }}</span></div>
-        <div class="drawer__row"><span class="drawer__k">{{ t('Owner', 'المسؤول') }}</span><span>{{ c.owner?.name || '—' }}</span></div>
-        @if (c.tags.length) {
-          <div class="drawer__row">
-            <span class="drawer__k">{{ t('Tags', 'الوسوم') }}</span>
-            <span class="meta-row">
-              @for (tag of c.tags; track tag) {
-                <span class="pill">{{ tag }}</span>
-              }
-            </span>
-          </div>
-        }
-        <div class="drawer__row"><span class="drawer__k">{{ t('Notes', 'ملاحظات') }}</span><span>{{ c.notes || '—' }}</span></div>
-        <div class="drawer__row"><span class="drawer__k">{{ t('Added', 'أُضيف') }}</span><span>{{ date(c.createdAt) }}</span></div>
-
-        @if (canManage()) {
-          <span class="section-title">{{ t('Add note', 'إضافة ملاحظة') }}</span>
-          <textarea class="textarea" rows="2" [(ngModel)]="note" name="note"></textarea>
-          <button type="button" class="btn btn--ghost" [disabled]="saving() || !note().trim()" (click)="addNote()">
-            {{ t('Save note', 'حفظ الملاحظة') }}
-          </button>
-
-          <span class="section-title">{{ t('Manage', 'إدارة') }}</span>
-          @if (!c.archivedAt) {
-            <textarea
-              class="textarea"
-              rows="2"
-              [(ngModel)]="reason"
-              name="archiveReason"
-              [placeholder]="t('Reason to archive (min. 10 characters)', 'سبب الأرشفة (10 أحرف على الأقل)')"
-            ></textarea>
-            <button type="button" class="btn btn--ghost" [disabled]="saving()" (click)="toggleArchive('archive')">
-              {{ t('Archive contact', 'أرشفة جهة الاتصال') }}
-            </button>
-          } @else {
-            <button type="button" class="btn btn--ghost" [disabled]="saving()" (click)="toggleArchive('restore')">
-              {{ t('Restore contact', 'استعادة جهة الاتصال') }}
-            </button>
-          }
-        }
-      } @else {
-        <div class="thread">
-          @for (a of timeline(); track a.id) {
-            <div class="activity-row">
-              <span class="activity-row__dot"></span>
-              <div class="activity-row__text">
-                <span class="activity-row__title">{{ activityText(a) }}</span>
-                <span class="activity-row__time">{{ a.actor || t('System', 'النظام') }} · {{ date(a.at) }}</span>
-              </div>
-            </div>
-          }
-          @if (!timeline().length) {
-            <div class="t-empty">{{ t('No activity yet.', 'لا يوجد نشاط بعد.') }}</div>
-          }
-        </div>
-        @if (timeline().length < activityTotal()) {
-          <button type="button" class="btn btn--ghost" [disabled]="detailLoading()" (click)="moreActivity()">
-            {{ t('Load more', 'تحميل المزيد') }}
-          </button>
-        }
-      }
-    </div>
-
-    <div class="drawer__footer">
-      @if (canManage()) {
-        <button type="button" class="btn btn--ghost" (click)="openNew(c)">{{ t('Edit', 'تعديل') }}</button>
-      }
-      <button type="button" class="btn btn--ghost" (click)="closeDrawer()">{{ t('Close', 'إغلاق') }}</button>
-    </div>
-  </div>
-}
-
 @if (newOpen()) {
-  <div class="scrim" (click)="closeNew()"></div>
-  <div class="dialog" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ editing() ? t('Edit contact', 'تعديل جهة الاتصال') : t('New contact', 'جهة اتصال جديدة') }}</span>
-      @if (formError()) {
-        <p role="alert">{{ formError() }}</p>
-      }
-      <label class="field">
-        <span class="field__label">{{ t('Type', 'النوع') }}</span>
-        <select class="search" [(ngModel)]="draft.type" name="type">
-          @for (ty of types; track ty) {
-            <option [value]="ty">{{ typeNames()[ty] }}</option>
-          }
-        </select>
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('Name', 'الاسم') }}</span>
-        <input class="search" [(ngModel)]="draft.name" name="name" />
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('Name (Arabic)', 'الاسم بالعربية') }}</span>
-        <input class="search" [(ngModel)]="draft.nameAr" name="nameAr" dir="rtl" />
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('Company', 'الشركة') }}</span>
-        <input class="search" [(ngModel)]="draft.companyName" name="companyName" />
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('Phone', 'الهاتف') }}</span>
-        <input class="search" [(ngModel)]="draft.phone" name="phone" dir="ltr" />
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('Email', 'البريد الإلكتروني') }}</span>
-        <input class="search" [(ngModel)]="draft.email" name="email" dir="ltr" />
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('Area', 'المنطقة') }}</span>
-        <input class="search" [(ngModel)]="draft.area" name="area" />
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('Tags (comma separated)', 'الوسوم (مفصولة بفاصلة)') }}</span>
-        <input class="search" [(ngModel)]="draft.tags" name="tags" />
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('Owner', 'المسؤول') }}</span>
-        <select class="search" [(ngModel)]="draft.ownerId" name="ownerId">
-          <option value="">{{ t('Unassigned', 'دون مسؤول') }}</option>
-          @for (o of owners(); track o.id) {
-            <option [value]="o.id">{{ o.name }}</option>
-          }
-        </select>
-      </label>
-      <label class="field">
-        <span class="field__label">{{ t('Notes', 'ملاحظات') }}</span>
-        <textarea class="textarea" rows="2" [(ngModel)]="draft.notes" name="notes"></textarea>
-      </label>
+  <div class="scrim scrim--top" (click)="closeNew()"></div>
+  <div class="dialog dialog--wide" role="dialog">
+    <div class="dialog__head">
+      <span class="dialog__title">{{
+        editing() ? t('Edit contact', 'تعديل جهة الاتصال') : t('New contact', 'جهة اتصال جديدة')
+      }}</span>
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeNew()">{{ t('Cancel', 'إلغاء') }}</button>
-      <button type="button" class="btn btn--primary" [disabled]="saving() || !draft.name.trim()" (click)="submit()">
-        {{ t('Save', 'حفظ') }}
+    <form id="contact-form" class="dialog__main" (ngSubmit)="submit()">
+      @if (formError()) {
+        <p class="note note--bad" role="alert">{{ formError() }}</p>
+      }
+      <div class="field">
+        <span>{{ t('Type', 'النوع') }}</span>
+        <div class="segs">
+          @for (ty of types; track ty) {
+            <button
+              type="button"
+              class="seg"
+              [class.seg--on]="draft.type === ty"
+              (click)="draft.type = ty"
+            >
+              {{ typeNames()[ty] }}
+            </button>
+          }
+        </div>
+      </div>
+      <div class="grid">
+        <label class="field"
+          ><span>{{ t('Full name', 'الاسم الكامل') }}</span
+          ><input name="name" [(ngModel)]="draft.name" required minlength="2" maxlength="160"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Arabic name (optional)', 'الاسم بالعربية (اختياري)') }}</span
+          ><input dir="rtl" name="nameAr" [(ngModel)]="draft.nameAr" maxlength="160"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Company / role', 'الشركة / الصفة') }}</span
+          ><input name="companyName" [(ngModel)]="draft.companyName" maxlength="200"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Area', 'المنطقة') }}</span
+          ><input name="area" [(ngModel)]="draft.area" maxlength="200"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Phone', 'الهاتف') }}</span
+          ><input dir="ltr" name="phone" [(ngModel)]="draft.phone" maxlength="40"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Email', 'البريد') }}</span
+          ><input dir="ltr" type="email" name="email" [(ngModel)]="draft.email" maxlength="254"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Tags (comma-separated)', 'الوسوم (مفصولة بفاصلة)') }}</span
+          ><input name="tags" [(ngModel)]="draft.tags"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Owner', 'المسؤول') }}</span
+          ><select name="owner" [(ngModel)]="draft.ownerId">
+            <option value="">{{ t('Unassigned', 'دون مسؤول') }}</option>
+            @for (o of owners(); track o.id) {
+              <option [value]="o.id">{{ o.name }}</option>
+            }
+          </select></label
+        >
+        <label class="field full"
+          ><span>{{ t('Notes', 'ملاحظات') }}</span
+          ><textarea rows="2" name="notes" [(ngModel)]="draft.notes" maxlength="2000"></textarea>
+        </label>
+      </div>
+    </form>
+    <div class="dialog__foot">
+      <button type="button" class="btn" [disabled]="saving()" (click)="closeNew()">
+        {{ t('Cancel', 'إلغاء') }}
+      </button>
+      <button class="btn btn--dark" type="submit" form="contact-form" [disabled]="saving()">
+        {{ t('Save contact', 'حفظ جهة الاتصال') }}
       </button>
     </div>
   </div>
 }
 
 @if (toast()) {
-  <div class="toast">{{ toast() }}</div>
+  <div class="toast"><span></span>{{ toast() }}</div>
 }

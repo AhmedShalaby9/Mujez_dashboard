@@ -1,8 +1,14 @@
 import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CompanyUiState } from '../company-ui-state';
 import { AuthService } from '../../../auth.service';
-import { ContactsApi, CONTACT_TYPES, type Contact, type ContactType } from '../../../contacts-api.service';
+import {
+  ContactsApi,
+  CONTACT_TYPES,
+  type Contact,
+  type ContactType,
+} from '../../../contacts-api.service';
 
 interface Activity {
   id: string;
@@ -17,7 +23,12 @@ interface Activity {
   selector: 'app-contacts',
   imports: [FormsModule],
   templateUrl: './contacts.html',
-  styleUrl: './contacts.scss',
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './contacts.scss',
+  ],
 })
 export class Contacts {
   private readonly ui = inject(CompanyUiState);
@@ -73,7 +84,8 @@ export class Contacts {
   readonly activityPage = signal(1);
   readonly detailLoading = signal(false);
   readonly detailError = signal('');
-  readonly tab = signal<'overview' | 'activity'>('overview');
+  readonly tab = signal<'overview' | 'activity' | 'props' | 'deals' | 'docs'>('overview');
+  private readonly route = inject(ActivatedRoute, { optional: true });
 
   readonly newOpen = signal(false);
   readonly editing = signal<Contact | null>(null);
@@ -103,6 +115,9 @@ export class Contacts {
   constructor() {
     void this.reload();
     void this.loadOptions();
+    // `/company/contacts?contactId=…` opens that contact (used from Calendar).
+    const linked = this.route?.snapshot.queryParamMap.get('contactId');
+    if (linked) void this.open(linked);
     this.destroy.onDestroy(() => {
       this.serial++;
       this.detailSerial++;
@@ -182,6 +197,43 @@ export class Contacts {
     return 'mailto:' + e;
   }
 
+  initials(c: Contact) {
+    return this.name(c)
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join('');
+  }
+  ago(iso: string) {
+    const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if (m < 60) return this.t(`${m} min ago`, `منذ ${m} د`);
+    if (m < 1440) return this.t(`${Math.round(m / 60)} h ago`, `منذ ${Math.round(m / 60)} س`);
+    return this.t(`${Math.round(m / 1440)} d ago`, `منذ ${Math.round(m / 1440)} يوم`);
+  }
+  sub(c: Contact) {
+    return [this.typeNames()[c.type], c.companyName, c.area].filter(Boolean).join(' · ');
+  }
+  since(c: Contact) {
+    const v = c.clientSince ?? c.createdAt;
+    return new Intl.DateTimeFormat(this.ar() ? 'ar-EG-u-nu-latn' : 'en-GB', {
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(v));
+  }
+  typeColor(t: ContactType) {
+    return (
+      {
+        buyer: ['#EEF6DA', '#3F5A0E'],
+        seller: ['#F6E8DE', '#8A4A1E'],
+        landlord: ['#EDE7F8', '#55349A'],
+        tenant: ['#E6EEFB', '#274A93'],
+        investor: ['#E3F2EF', '#1D6458'],
+        developer: ['#F7E4E7', '#933045'],
+      } as Record<ContactType, [string, string]>
+    )[t];
+  }
+
   async open(id: string) {
     const serial = ++this.detailSerial;
     this.selected.set(null);
@@ -192,10 +244,7 @@ export class Contacts {
     this.tab.set('overview');
     this.noteRequest = crypto.randomUUID();
     try {
-      const [contact, activity] = await Promise.all([
-        this.api.get(id),
-        this.api.activity(id),
-      ]);
+      const [contact, activity] = await Promise.all([this.api.get(id), this.api.activity(id)]);
       if (serial === this.detailSerial) {
         this.selected.set(contact);
         this.timeline.set(activity.items);
@@ -350,7 +399,9 @@ export class Contacts {
     const c = this.selected();
     if (!c || this.saving()) return;
     if (action === 'archive' && this.reason().trim().length < 10) {
-      this.detailError.set(this.t('Reason must be at least 10 characters.', 'يجب ألا يقل السبب عن 10 أحرف.'));
+      this.detailError.set(
+        this.t('Reason must be at least 10 characters.', 'يجب ألا يقل السبب عن 10 أحرف.'),
+      );
       return;
     }
     this.saving.set(true);

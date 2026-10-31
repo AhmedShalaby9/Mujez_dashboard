@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { Dashboard } from './dashboard';
 import { OverviewApi, overviewMoney } from '../../../overview-api.service';
+import { AuthService } from '../../../auth.service';
 const snapshot = (finance = true) => ({
   asOf: '2026-10-29T12:00:00Z',
   window: { range: '12m', from: '2025-11-01', to: '2026-10-29', bucket: 'month' },
@@ -67,7 +68,11 @@ describe('Live overview', () => {
     };
     await TestBed.configureTestingModule({
       imports: [Dashboard],
-      providers: [provideRouter([]), { provide: OverviewApi, useValue: api }],
+      providers: [
+        provideRouter([]),
+        { provide: OverviewApi, useValue: api },
+        { provide: AuthService, useValue: { user: signal({ name: 'Omar Mansour' }) } },
+      ],
     }).compileComponents();
     const f = TestBed.createComponent(Dashboard);
     await f.whenStable();
@@ -96,7 +101,11 @@ describe('Live overview', () => {
     };
     await TestBed.configureTestingModule({
       imports: [Dashboard],
-      providers: [provideRouter([]), { provide: OverviewApi, useValue: api }],
+      providers: [
+        provideRouter([]),
+        { provide: OverviewApi, useValue: api },
+        { provide: AuthService, useValue: { user: signal({ name: 'Omar Mansour' }) } },
+      ],
     }).compileComponents();
     const f = TestBed.createComponent(Dashboard);
     await f.whenStable();

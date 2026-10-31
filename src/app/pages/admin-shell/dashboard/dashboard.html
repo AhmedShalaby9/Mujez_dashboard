@@ -1,242 +1,423 @@
 @if (error()) {
-  <p role="alert">
+  <p class="notice notice--error" role="alert">
     {{ error() }} —
     {{ lang() === 'ar' ? 'قد تكون البيانات السابقة قديمة' : 'Previous data may be stale' }}
   </p>
 }
-@if (loading()) {
-  <p role="status">{{ lang() === 'ar' ? 'جار تحميل البيانات…' : 'Loading overview...' }}</p>
-}
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-  </div>
-  <div class="page-head__actions">
-    <button type="button" class="btn btn--ghost" [disabled]="loading()" (click)="reload()">
-      {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
-    </button>
-    <button
-      type="button"
-      class="btn btn--ghost"
-      [disabled]="!data() || loading() || !!error()"
-      (click)="exportReport()"
-    >
-      {{ L().exportBtn }}
-    </button>
-  </div>
-</div>
 
-@if (range() === 'custom') {
-  <div class="chip-row">
-    <label
-      >{{ lang() === 'ar' ? 'من' : 'From' }}
-      <input type="date" [(ngModel)]="from" name="from" /></label
-    ><label
-      >{{ lang() === 'ar' ? 'إلى' : 'To' }} <input type="date" [(ngModel)]="to" name="to" /></label
-    ><button class="btn btn--ghost" (click)="reload()" [disabled]="loading()">
-      {{ lang() === 'ar' ? 'تطبيق الفترة' : 'Apply dates' }}
-    </button>
+<div class="dash">
+  <div class="dash__head">
+    <div class="dash__hello">
+      <span class="dash__date">{{ today() }}</span>
+      <h1 class="dash__title">{{ greeting() }}</h1>
+    </div>
+    <div class="dash__tools">
+      @if (loading()) {
+        <span class="dash__status" role="status">{{
+          lang() === 'ar' ? 'جار تحميل البيانات…' : 'Loading overview...'
+        }}</span>
+      }
+      <div class="seg" role="group">
+        @for (r of ranges; track r) {
+          <button
+            type="button"
+            class="seg__btn"
+            [class.seg__btn--on]="range() === r"
+            (click)="setRange(r)"
+          >
+            {{ L().ranges[r] }}
+          </button>
+        }
+      </div>
+      <button
+        type="button"
+        class="iconBtn"
+        [title]="L().refresh"
+        [attr.aria-label]="L().refresh"
+        [disabled]="loading()"
+        (click)="reload()"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.9"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="ghostBtn"
+        [disabled]="!data() || loading() || !!error()"
+        (click)="exportReport()"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.9"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+        </svg>
+        {{ L().exportBtn }}
+      </button>
+    </div>
   </div>
-}
-@if (data(); as d) {
-  <p>
-    {{ lang() === 'ar' ? 'وقت التقرير:' : 'As of:' }} {{ d.asOf }} · {{ d.window.from }} —
-    {{ d.window.to }} (Africa/Cairo)
-  </p>
-  @if (d.sampleDataIncluded) {
-    <p role="note">{{ L().sample }}</p>
+
+  @if (range() === 'custom') {
+    <div class="custom">
+      <label
+        >{{ lang() === 'ar' ? 'من' : 'From' }} <input type="date" [(ngModel)]="from" name="from"
+      /></label>
+      <label
+        >{{ lang() === 'ar' ? 'إلى' : 'To' }} <input type="date" [(ngModel)]="to" name="to"
+      /></label>
+      <button type="button" class="ghostBtn" (click)="reload()" [disabled]="loading()">
+        {{ lang() === 'ar' ? 'تطبيق الفترة' : 'Apply dates' }}
+      </button>
+    </div>
   }
 
-  <section class="kpis">
-    @for (k of kpis(); track k.label) {
-      <div class="kpi">
-        <span class="kpi__label">{{ k.label }}</span>
-        <span class="kpi__value">{{ k.value }}</span>
-        <span class="kpi__sub">{{ k.sub }}</span>
-      </div>
+  @if (data(); as d) {
+    @if (d.sampleDataIncluded) {
+      <p class="notice" role="note">{{ L().sample }}</p>
     }
-  </section>
 
-  <div class="dash-grid">
-    <section class="card card--wide">
-      <div class="card__header">
-        <h2 class="card__title">{{ L().revenueTitle }}</h2>
-        <div class="chip-row chip-row--end">
-          @for (r of ranges; track r) {
-            <button
-              type="button"
-              class="chip"
-              [class.chip--active]="range() === r"
-              (click)="setRange(r)"
-            >
-              {{ L().ranges[r] }}
-            </button>
-          }
-        </div>
-      </div>
-
-      @if (d.finance) {
-        <p>{{ L().method }}</p>
-        <div class="legend">
-          @for (item of revenueLegend(); track item.label) {
-            <span class="legend__item">
-              <span class="legend__dot" [style.background]="item.color"></span>
-              {{ item.label }}
-              <span class="legend__value">{{ item.value }}</span>
-            </span>
-          }
-        </div>
-
-        @if (noPayments()) {
-          <p>{{ L().emptyFinance }}</p>
-        }
-        <div class="chart" dir="ltr">
-          <svg
-            viewBox="-10 0 620 210"
-            class="chart__svg"
-            role="img"
-            [attr.aria-label]="L().revenueTitle"
-          >
-            <line
-              x1="0"
-              [attr.y1]="bars()[0]?.zero ?? 165"
-              x2="600"
-              [attr.y2]="bars()[0]?.zero ?? 165"
-              stroke="#e2e2dc"
-            />
-            <line x1="0" y1="120" x2="600" y2="120" stroke="#f1f1ed" />
-            @for (b of bars(); track b.x) {
-              <rect
-                [attr.x]="b.x"
-                [attr.y]="b.y"
-                [attr.width]="b.w"
-                [attr.height]="b.h"
-                [attr.fill]="b.c"
-                rx="1"
-              >
-                <title>
-                  {{ b.label }} · {{ money(b.gross) }} / {{ money(b.refund) }} / {{ money(b.net) }}
-                </title>
-              </rect>
-            }
-            <polyline
-              [attr.points]="linePoints()"
-              fill="none"
-              stroke="#111113"
-              stroke-width="2.5"
-              stroke-linejoin="round"
-            />
-            @for (d of dots(); track d.cx) {
-              <circle
-                [attr.cx]="d.cx"
-                [attr.cy]="d.cy"
-                r="3"
-                fill="#fff"
-                stroke="#111113"
-                stroke-width="2"
-              />
-            }
-            @for (t of axisLabels(); track t.x) {
-              <text
-                [attr.x]="t.x"
-                y="204"
-                [attr.text-anchor]="t.a"
-                font-size="11"
-                fill="#8a8a90"
-                font-family="Geist, IBM Plex Sans Arabic, sans-serif"
-              >
-                {{ t.t }}
-              </text>
-            }
-          </svg>
-        </div>
-      } @else {
-        <p>{{ L().noFinance }}</p>
-      }
-    </section>
-
-    @if (d.companies) {
-      <section class="card">
-        <div class="card__header">
-          <h2 class="card__title">{{ L().planTitle }}</h2>
-        </div>
-        <div class="donut-wrap">
-          <svg viewBox="0 0 100 100" class="donut">
-            <circle cx="50" cy="50" r="40" fill="none" stroke="#f1f1ed" stroke-width="14" />
-            @for (d of donut(); track d.key) {
-              <circle
-                cx="50"
-                cy="50"
-                r="40"
-                fill="none"
-                [attr.stroke]="d.color"
-                stroke-width="14"
-                [attr.stroke-dasharray]="d.dash"
-                [attr.stroke-dashoffset]="d.off"
-              />
-            }
-          </svg>
-          <div class="donut-legend">
-            @for (d of donut(); track d.key) {
-              <div class="donut-legend__row">
-                <span class="donut-legend__dot" [style.background]="d.color"></span>
-                <span class="donut-legend__label">{{ d.label }}</span>
-                <span class="donut-legend__count">{{ d.count }}</span>
-                <span class="donut-legend__pct">{{ d.pct }}%</span>
-              </div>
+    <!-- Row 1: MRR hero + company stats -->
+    <div class="row">
+      @if (d.finance; as f) {
+        <a class="hero" routerLink="/admin/subscriptions">
+          <div class="hero__top">
+            <span class="hero__label">{{ L().mrr }}</span>
+          </div>
+          <div class="hero__value" [title]="money(f.mrrMinor)">
+            <span class="hero__cur">{{ f.currency }}</span>
+            <span class="hero__num">{{ compact(f.mrrMinor) }}</span>
+          </div>
+          <div class="hero__bars" [title]="L().heroBars">
+            @for (b of heroBars(); track $index) {
+              <span
+                class="hero__bar"
+                [class.hero__bar--last]="b.last"
+                [style.height]="b.h"
+                [title]="b.tip"
+              ></span>
             }
           </div>
+          <div class="hero__foot">
+            <span
+              >{{ L().arr }} <b>{{ f.currency }} {{ compact(f.arrMinor) }}</b></span
+            >
+            @if (arpc(); as a) {
+              <span
+                >{{ L().arpc }} <b>{{ a }}</b></span
+              >
+            }
+          </div>
+        </a>
+      } @else {
+        <div class="hero hero--empty">
+          <span class="hero__label">{{ L().mrr }}</span>
+          <p class="hero__note">{{ L().noFinance }}</p>
         </div>
-        <p>{{ L().planNote }}</p>
-      </section>
-    }
+      }
 
-    <section class="card">
-      <div class="card__header">
-        <h2 class="card__title">{{ L().alertsTitle }}</h2>
-      </div>
-      <p>
-        {{
-          lang() === 'ar'
-            ? 'حتى 5 حالات لكل نوع من الوحدات المسموح بها'
-            : 'Up to five conditions per permitted alert category'
-        }}
-      </p>
-      <div class="alert-list">
-        @for (a of d.alerts; track a.id) {
-          <a class="alert-row" [routerLink]="a.path" style="text-decoration: none; color: inherit">
-            <span class="alert-row__dot" [style.background]="color(a)"></span>
-            <span class="alert-row__text">{{ alert(a) }}</span>
-            <span class="alert-row__arrow">›</span>
+      <div class="stats">
+        @if (d.companies; as c) {
+          <a class="stat" routerLink="/admin/companies">
+            <div class="stat__top">
+              <span class="stat__label">{{
+                lang() === 'ar' ? 'إجمالي الشركات' : 'Companies'
+              }}</span>
+              <svg
+                class="stat__arrow"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M7 17L17 7M9 7h8v8" />
+              </svg>
+            </div>
+            <span class="stat__value">{{ c.total }}</span>
+            @if (companySplit().length) {
+              <div class="split">
+                @for (p of companySplit(); track $index) {
+                  <span [style.width]="p.w" [style.background]="p.color"></span>
+                }
+              </div>
+            }
+            <span class="stat__sub">
+              {{ c.active }} {{ lang() === 'ar' ? 'نشطة' : 'active' }} · {{ c.trial }}
+              {{ lang() === 'ar' ? 'تجريبية' : 'trial' }} · {{ c.suspended }}
+              {{ lang() === 'ar' ? 'معلقة' : 'suspended' }}
+            </span>
+          </a>
+          <a class="stat" routerLink="/admin/usage-limits">
+            <div class="stat__top">
+              <span class="stat__label">{{ lang() === 'ar' ? 'حسابات CRM' : 'CRM accounts' }}</span>
+              <svg
+                class="stat__arrow"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M7 17L17 7M9 7h8v8" />
+              </svg>
+            </div>
+            <span class="stat__value">{{ c.crmUsers }}</span>
+            <span class="stat__sub">{{
+              lang() === 'ar'
+                ? 'دون المحذوفة والمعطلة والشركات المؤرشفة'
+                : 'Excludes deleted, disabled and archived'
+            }}</span>
+          </a>
+          <a class="stat" routerLink="/admin/companies">
+            <div class="stat__top">
+              <span class="stat__label">{{
+                lang() === 'ar' ? 'شركات جديدة' : 'New companies'
+              }}</span>
+              <svg
+                class="stat__arrow"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M7 17L17 7M9 7h8v8" />
+              </svg>
+            </div>
+            <span class="stat__value">{{ c.added }}</span>
+            <span class="stat__sub" [class.stat__sub--good]="c.added > 0">
+              {{ d.window.from }} — {{ d.window.to }}
+            </span>
+          </a>
+          <a class="stat" routerLink="/admin/onboarding">
+            <div class="stat__top">
+              <span class="stat__label">{{
+                lang() === 'ar' ? 'قيد الإعداد' : 'Pending onboarding'
+              }}</span>
+              <svg
+                class="stat__arrow"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M7 17L17 7M9 7h8v8" />
+              </svg>
+            </div>
+            <span class="stat__value">{{ c.pending }}</span>
+            <span class="stat__sub">{{
+              lang() === 'ar' ? 'شركات لم تكمل الإعداد' : 'Companies still setting up'
+            }}</span>
           </a>
         }
-        @if (!d.alerts.length) {
-          <p>{{ L().emptyAlerts }}</p>
-        }
       </div>
-    </section>
+    </div>
 
-    @if (d.companies) {
-      <section class="card">
-        <div class="card__header">
-          <h2 class="card__title">{{ L().growthTitle }}</h2>
-        </div>
-        <div class="growth-list">
-          @for (g of d.growth; track g.id) {
-            <div class="growth-row">
-              <span class="growth-row__label">{{ g.name[lang()] }}</span>
-              <span class="growth-row__value"
-                >{{ g.users }} {{ lang() === 'ar' ? 'حساب CRM' : 'CRM accounts' }}</span
-              >
-              <span class="growth-row__delta">{{ date(g.createdAt) }}</span>
+    <!-- Row 2: revenue chart + needs attention -->
+    <div class="row">
+      <section class="card card--main chartCard">
+        <div class="chartCard__head">
+          <div class="cardTitle">
+            <h2>{{ L().revenueTitle }}</h2>
+            <span>{{ L().revSub }}</span>
+          </div>
+          @if (d.finance) {
+            <div class="moves">
+              @for (m of revenueLegend(); track m.label) {
+                <div class="move">
+                  <span class="move__label"
+                    ><span class="move__dot" [style.background]="m.color"></span>{{ m.label }}</span
+                  >
+                  <span class="move__value" [style.color]="m.fg">{{ m.value }}</span>
+                </div>
+              }
             </div>
           }
         </div>
-        @if (!d.growth.length) {
-          <p>{{ L().emptyGrowth }}</p>
+
+        @if (d.finance) {
+          @if (noPayments()) {
+            <p class="muted">{{ L().emptyFinance }}</p>
+          }
+          <div class="chart" dir="ltr" role="img" [attr.aria-label]="L().revenueTitle">
+            @for (g of gridLines(); track g.b) {
+              <div class="chart__grid" [style.bottom]="g.b">
+                <span>{{ g.v }}</span>
+              </div>
+            }
+            @for (b of bars(); track b.i) {
+              <div
+                class="chart__col"
+                (mouseenter)="hoverBar.set(b.i)"
+                (mouseleave)="hoverBar.set(null)"
+              >
+                @if (hoverBar() === b.i) {
+                  <div class="chart__tip" [style.bottom]="'calc(' + b.h + ' + 8px)'">
+                    <span class="chart__tipLabel">{{ b.label }}</span>
+                    <span>{{ money(b.gross) }}</span>
+                    @if (b.refund !== '0') {
+                      <span class="chart__tipRefund">−{{ money(b.refund) }}</span>
+                    }
+                  </div>
+                }
+                <div
+                  class="chart__bar"
+                  [class.chart__bar--last]="b.last"
+                  [class.chart__bar--hover]="hoverBar() === b.i && !b.last"
+                  [style.height]="b.h"
+                ></div>
+              </div>
+            }
+          </div>
+          <div class="chart__axis" dir="ltr">
+            @for (b of bars(); track b.i) {
+              <span [class.chart__axisLast]="b.last">{{
+                b.i % labelEvery() === 0 || b.last ? b.short : ''
+              }}</span>
+            }
+          </div>
+          <p class="fine">{{ L().method }}</p>
+        } @else {
+          <p class="muted">{{ L().noFinance }}</p>
         }
       </section>
+
+      <section class="card card--side attention">
+        <div class="attention__head">
+          <h2>{{ L().alertsTitle }}</h2>
+          @if (d.alerts.length) {
+            <span class="countPill">{{ d.alerts.length }}</span>
+          }
+        </div>
+        @for (a of d.alerts; track a.id) {
+          <div class="attention__row">
+            <span class="attention__icon" [style.background]="alertTone(a)[0]">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                [attr.stroke]="alertTone(a)[1]"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path [attr.d]="alertIcon(a)" />
+              </svg>
+            </span>
+            <div class="attention__text">
+              <span class="attention__title">{{ alertTitle(a) }}</span>
+              <span class="attention__sub">{{ alertSub(a) }}</span>
+            </div>
+            <a class="smallBtn" [routerLink]="a.path">{{ L().review }}</a>
+          </div>
+        } @empty {
+          <p class="muted attention__empty">{{ L().emptyAlerts }}</p>
+        }
+      </section>
+    </div>
+
+    <!-- Row 3: recent companies + plan mix -->
+    @if (d.companies) {
+      <div class="row">
+        <section class="card card--main tableCard">
+          <div class="tableCard__head">
+            <h2>{{ L().recent }}</h2>
+            <a class="linkBtn" routerLink="/admin/companies">{{ L().viewAll }}</a>
+          </div>
+          @if (d.growth.length) {
+            <div class="tableWrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{{ L().colCompany }}</th>
+                    <th>{{ L().colUsers }}</th>
+                    <th>{{ L().colCreated }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (g of d.growth; track g.id; let i = $index) {
+                    <tr>
+                      <td>
+                        <div class="co">
+                          <span class="co__logo" [attr.data-tone]="i % 6">{{
+                            (g.name.en || g.name[lang()]).slice(0, 2).toUpperCase()
+                          }}</span>
+                          <span class="co__text">
+                            <span class="co__name">{{ g.name[lang()] }}</span>
+                            <span class="co__id">{{ g.id }}</span>
+                          </span>
+                        </div>
+                      </td>
+                      <td class="mono">{{ g.users }}</td>
+                      <td class="muted">{{ date(g.createdAt) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p class="muted tableCard__empty">{{ L().emptyGrowth }}</p>
+          }
+        </section>
+
+        <div class="card--side sideStack">
+          <section class="card planMix">
+            <div class="planMix__head">
+              <h2>{{ L().planTitle }}</h2>
+              <span>{{ planTotal() }} {{ L().companiesLc }}</span>
+            </div>
+            @if (donut().length) {
+              <div class="planMix__bar">
+                @for (p of donut(); track p.key) {
+                  @if (p.count) {
+                    <span [style.width]="p.w" [style.background]="p.color"></span>
+                  }
+                }
+              </div>
+              <div class="planMix__legend">
+                @for (p of donut(); track p.key) {
+                  <a class="planMix__item" routerLink="/admin/subscription-plans">
+                    <span class="planMix__dot" [style.background]="p.color"></span>
+                    <span class="planMix__label">{{ p.label }}</span>
+                    <span class="planMix__n">{{ p.count }}</span>
+                  </a>
+                }
+              </div>
+            }
+            <p class="fine">{{ L().planNote }}</p>
+          </section>
+          <p class="fine asOf">
+            {{ lang() === 'ar' ? 'وقت التقرير:' : 'As of' }} {{ d.asOf }} · {{ d.window.from }} —
+            {{ d.window.to }} (Africa/Cairo)
+          </p>
+        </div>
+      </div>
     }
-  </div>
-}
+  }
+</div>

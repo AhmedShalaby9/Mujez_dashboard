@@ -1,17 +1,21 @@
 <div class="shell" [attr.dir]="dir()" [class.shell--collapsed]="collapsed()" (click)="closeMenus()">
-  <aside class="sidebar" [class.sidebar--open]="mobileNavOpen()" [class.sidebar--collapsed]="collapsed()">
+  <aside
+    class="sidebar"
+    [class.sidebar--open]="mobileNavOpen()"
+    [class.sidebar--collapsed]="collapsed()"
+  >
     <div class="sidebar__brand">
-      <svg width="26" height="26" viewBox="0 0 64 64" class="sidebar__logo">
-        <rect width="64" height="64" rx="15" fill="#111113" />
+      <svg width="30" height="30" viewBox="0 0 64 64" class="sidebar__logo" aria-hidden="true">
+        <rect width="64" height="64" rx="16" fill="#C8F169" />
         <path
           d="M14 46V27L23.5 18.5L32 26L40.5 18.5L50 27V46"
           fill="none"
-          stroke="#fff"
+          stroke="#111113"
           stroke-width="5.5"
           stroke-linecap="round"
           stroke-linejoin="round"
         />
-        <rect x="28.5" y="35" width="7" height="11" rx="1.5" fill="#c8f169" />
+        <rect x="28.5" y="35" width="7" height="11" rx="1.5" fill="#111113" />
       </svg>
       @if (!collapsed()) {
         <div class="sidebar__brandText">
@@ -19,73 +23,194 @@
           <span class="sidebar__brandTag">{{ L().platformTag }}</span>
         </div>
       }
+    </div>
+
+    <div class="sidebar__searchWrap">
       <button
         type="button"
-        class="sidebar__collapseBtn"
-        [attr.aria-label]="collapsed() ? L().expand : L().collapse"
-        [title]="collapsed() ? L().expand : L().collapse"
-        (click)="$event.stopPropagation(); toggleCollapsed()"
+        class="sidebar__search"
+        [title]="L().searchPh"
+        (click)="$event.stopPropagation(); focusSearch()"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="collapsed() ? 'rotate(180deg)' : 'none'">
-          <path d="M15 18l-6-6 6-6" />
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+        >
+          <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" />
         </svg>
+        @if (!collapsed()) {
+          <span>{{ L().searchShort }}</span>
+          <kbd class="sidebar__kbd">⌘K</kbd>
+        }
       </button>
     </div>
 
     <nav class="sidebar__nav">
-      @for (entry of L().nav; track $index) {
-        @if (entry.kind === 'head') {
+      @for (g of groups(); track g.key; let first = $first) {
+        <div class="sidebar__group">
           @if (!collapsed()) {
-            <div class="sidebar__groupLabel">{{ entry.label }}</div>
-          } @else {
-            <div class="sidebar__groupDivider"></div>
-          }
-        } @else {
-          @if (entry.enabled && canView(entry.path)) {
-            <a
-              class="sidebar__item"
-              [routerLink]="entry.path ? ['/admin', entry.path] : null"
-              routerLinkActive="sidebar__item--active"
-              [title]="collapsed() ? entry.label : null"
-              (click)="closeMobileNav()"
-            >
-              <svg class="sidebar__itemIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [innerHTML]="navIcon(entry.path)"></svg>
-              @if (!collapsed()) {
-                <span class="sidebar__itemLabel">{{ entry.label }}</span>
-                @if (entry.count) {
-                  <span class="sidebar__itemCount">{{ entry.count }}</span>
-                }
-              }
-            </a>
-          } @else {
             <button
               type="button"
-              class="sidebar__item sidebar__item--disabled"
-              title="Coming soon"
-              disabled
+              class="sidebar__groupLabel"
+              [attr.aria-expanded]="isGroupOpen(g.key)"
+              (click)="$event.stopPropagation(); toggleGroup(g.key)"
             >
-              <svg class="sidebar__itemIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [innerHTML]="navIcon(entry.path)"></svg>
-              @if (!collapsed()) {
-                <span class="sidebar__itemLabel">{{ entry.label }}</span>
-                @if (entry.count) {
-                  <span class="sidebar__itemCount">{{ entry.count }}</span>
-                }
-              }
+              <span>{{ g.label }}</span>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                class="sidebar__groupCaret"
+                [class.sidebar__groupCaret--closed]="!isGroupOpen(g.key)"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
             </button>
+          } @else if (!first) {
+            <div class="sidebar__groupDivider"></div>
           }
-        }
+          @if (collapsed() || isGroupOpen(g.key)) {
+            @for (item of g.items; track item.path) {
+              <a
+                class="sidebar__item"
+                [routerLink]="['/admin', item.path]"
+                routerLinkActive="sidebar__item--active"
+                [title]="item.label"
+                (click)="closeMobileNav()"
+              >
+                <span class="sidebar__itemBar"></span>
+                <svg
+                  class="sidebar__itemIcon"
+                  width="17"
+                  height="17"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path [attr.d]="item.icon" />
+                </svg>
+                @if (!collapsed()) {
+                  <span class="sidebar__itemLabel">{{ item.label }}</span>
+                  @if (item.count) {
+                    <span class="sidebar__itemCount">{{ item.count }}</span>
+                  }
+                }
+              </a>
+            }
+          }
+        </div>
       }
     </nav>
 
-    <div class="sidebar__me">
-      <span class="sidebar__avatar">{{ me.initials }}</span>
-      @if (!collapsed()) {
-        <div class="sidebar__meText">
-          <span class="sidebar__meName">{{ me.name }}</span>
-          <span class="sidebar__meRole">{{ me.role }}</span>
-        </div>
+    <div class="sidebar__foot">
+      @if (!collapsed() && canView('system-health')) {
+        <a class="sidebar__health" routerLink="/admin/system-health" (click)="closeMobileNav()">
+          <span class="sidebar__healthDot" [attr.data-state]="health().state"></span>
+          <span class="sidebar__healthText">
+            <span class="sidebar__healthTitle">{{ health().title }}</span>
+            <span class="sidebar__healthSub">{{ health().sub }}</span>
+          </span>
+        </a>
+      }
+      <div class="sidebar__me">
+        <button
+          type="button"
+          class="sidebar__avatar"
+          [title]="me.name"
+          (click)="$event.stopPropagation(); toggleProfile()"
+        >
+          {{ me.initials }}
+        </button>
+        @if (!collapsed()) {
+          <div class="sidebar__meText">
+            <span class="sidebar__meName">{{ me.name }}</span>
+            <span class="sidebar__meRole">{{ me.role }}</span>
+          </div>
+          <button
+            type="button"
+            class="sidebar__collapseBtn"
+            [attr.aria-label]="L().collapse"
+            [title]="L().collapse"
+            (click)="$event.stopPropagation(); toggleCollapsed()"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              class="sidebar__flip"
+            >
+              <path d="M15 6l-6 6 6 6" />
+            </svg>
+          </button>
+        }
+      </div>
+      @if (collapsed()) {
+        <button
+          type="button"
+          class="sidebar__collapseBtn sidebar__collapseBtn--solo"
+          [attr.aria-label]="L().expand"
+          [title]="L().expand"
+          (click)="$event.stopPropagation(); toggleCollapsed()"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            class="sidebar__flip sidebar__flip--expand"
+          >
+            <path d="M15 6l-6 6 6 6" />
+          </svg>
+        </button>
       }
     </div>
+
+    @if (sideProfileOpen()) {
+      <div class="sidebar__profileMenu" (click)="$event.stopPropagation()">
+        <div class="sidebar__profileHead">
+          <span class="sidebar__profileName">{{ me.name }}</span>
+          <span class="sidebar__profileSub"
+            >{{ me.email }}{{ me.email ? ' · ' : '' }}{{ me.role }}</span
+          >
+        </div>
+        @if (canView('settings')) {
+          <a class="sidebar__profileItem" routerLink="/admin/settings" (click)="closeMenus()">{{
+            L().profileMenu.security
+          }}</a>
+        }
+        @if (canView('audit-logs')) {
+          <a class="sidebar__profileItem" routerLink="/admin/audit-logs" (click)="closeMenus()">{{
+            L().profileMenu.activity
+          }}</a>
+        }
+        <button
+          type="button"
+          class="sidebar__profileItem sidebar__profileItem--danger"
+          (click)="signOut()"
+        >
+          {{ L().profileMenu.signOut }}
+        </button>
+      </div>
+    }
   </aside>
 
   @if (mobileNavOpen()) {
@@ -111,6 +236,7 @@
 
       <div class="topbar__search">
         <input
+          #searchInput
           type="text"
           class="topbar__searchInput"
           [placeholder]="L().searchPh"
@@ -182,7 +308,7 @@
           <button
             type="button"
             class="topbar__profileBtn"
-            (click)="$event.stopPropagation(); toggleProfile()"
+            (click)="$event.stopPropagation(); toggleTopProfile()"
           >
             <span class="topbar__profileAvatar">{{ me.initials }}</span>
             <span class="topbar__profileRole">{{ me.role }}</span>

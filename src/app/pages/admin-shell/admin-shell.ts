@@ -6,37 +6,41 @@ import { SubscriptionsApi } from '../../subscriptions-api.service';
 import { CompaniesApi } from '../../companies-api.service';
 import { AuthService } from '../../auth.service';
 import { Router } from '@angular/router';
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AdminUiState, type Lang } from './admin-ui-state';
-import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 
+// Single-path stroke icons from the Mujez design (24×24, stroke 1.7).
 const ICONS: Record<string, string> = {
-  dashboard: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>',
-  companies:
-    '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 7h1M15 7h1M8 11h1M15 11h1M8 15h1M15 15h1"/>',
-  onboarding: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
-  'subscription-plans':
-    '<path d="M20.59 13.41 13.42 20.59a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.4" fill="currentColor" stroke="none"/>',
-  subscriptions:
-    '<path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
-  billing: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h2"/>',
-  payments: '<rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/>',
-  'feature-management': '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/>',
-  'usage-limits': '<path d="M12 20V10M18 20V4M6 20v-4"/>',
-  integrations:
-    '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
-  'system-health': '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
-  'support-tickets':
-    '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="M4.93 4.93l4.24 4.24M14.83 14.83l4.24 4.24M14.83 9.17l4.24-4.24M4.93 19.07l4.24-4.24"/>',
-  announcements: '<path d="M3 11v3a1 1 0 0 0 1 1h2l3.5 5V5L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 8a4 4 0 0 1 0 8"/><path d="M18 5a8 8 0 0 1 0 14"/>',
-  notifications: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  dashboard: 'M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z',
+  companies: 'M3 21h18M5 21V5l7-2v18M12 9h7v12M8 8h1M8 12h1M8 16h1M15 13h1M15 17h1',
+  onboarding:
+    'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6',
+  'subscription-plans': 'M12 3l9 5-9 5-9-5zM3 13l9 5 9-5',
+  subscriptions: 'M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4',
+  billing: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6',
+  payments: 'M3 6h18v12H3zM3 10h18M7 15h3',
+  'feature-management': 'M4 7h10M18 7h2M4 17h2M10 17h10M16 4v6M8 14v6',
+  'usage-limits': 'M5 20V11M12 20V5M19 20v-6',
+  integrations: 'M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4',
+  'system-health': 'M3 12h4l3-7 4 14 3-7h4',
+  'support-tickets': 'M4 5h16v11H9l-5 4z',
+  announcements: 'M4 10v4h3l7 4V6l-7 4zM18 9a4 4 0 0 1 0 6',
+  notifications: 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4',
   'platform-users':
-    '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
-  'roles-permissions': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
-  'audit-logs': '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 3v2h6V3M8 11h8M8 15h5"/>',
+    'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 0 0 0-6M22 21a6 6 0 0 0-4-5.6',
+  'roles-permissions': 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+  'audit-logs': 'M5 3h10l4 4v14H5zM9 12h6M9 16h6M9 8h3',
   settings:
-    '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+    'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12h2M3 12h2M12 3v2M12 19v2M17 7l1.4-1.4M5.6 18.4 7 17M17 17l1.4 1.4M5.6 5.6 7 7',
 };
 
 interface NavHead {
@@ -60,7 +64,15 @@ interface Copy {
   platformAdmin: string;
   searchPh: string;
   otherLang: string;
-  profileMenu: { profile: string; settings: string; signOut: string };
+  searchShort: string;
+  profileMenu: {
+    profile: string;
+    settings: string;
+    security: string;
+    activity: string;
+    signOut: string;
+  };
+  health: { ok: string; degraded: string; unknown: string; open: string };
   notifTitle: string;
   notifEmpty: string;
   nav: NavEntry[];
@@ -123,11 +135,24 @@ const AR_NAV: NavEntry[] = [
 const COPY: Record<Lang, Copy> = {
   en: {
     brand: 'Mujez',
-    platformTag: 'Platform Admin',
+    platformTag: 'Platform admin',
     platformAdmin: 'Platform Admin',
     searchPh: 'Search companies, invoices, tickets…',
     otherLang: 'العربية',
-    profileMenu: { profile: 'Profile', settings: 'Settings', signOut: 'Sign out' },
+    searchShort: 'Search',
+    profileMenu: {
+      profile: 'Profile',
+      settings: 'Settings',
+      security: 'Profile & security',
+      activity: 'My activity',
+      signOut: 'Sign out',
+    },
+    health: {
+      ok: 'All systems operational',
+      degraded: 'Service degraded',
+      unknown: 'System health',
+      open: 'Open status page',
+    },
     notifTitle: 'Current alerts',
     notifEmpty: 'No current alerts in your permitted modules',
     nav: EN_NAV,
@@ -140,7 +165,20 @@ const COPY: Record<Lang, Copy> = {
     platformAdmin: 'إدارة المنصة',
     searchPh: 'ابحث عن شركات أو فواتير أو تذاكر…',
     otherLang: 'English',
-    profileMenu: { profile: 'الملف الشخصي', settings: 'الإعدادات', signOut: 'تسجيل الخروج' },
+    searchShort: 'بحث',
+    profileMenu: {
+      profile: 'الملف الشخصي',
+      settings: 'الإعدادات',
+      security: 'الملف الشخصي والأمان',
+      activity: 'سجل نشاطي',
+      signOut: 'تسجيل الخروج',
+    },
+    health: {
+      ok: 'جميع الأنظمة تعمل',
+      degraded: 'أداء الخدمة متراجع',
+      unknown: 'صحة النظام',
+      open: 'فتح صفحة الحالة',
+    },
     notifTitle: 'التنبيهات الحالية',
     notifEmpty: 'لا توجد إشعارات جديدة.',
     nav: AR_NAV,
@@ -171,6 +209,7 @@ export class AdminShell {
   constructor() {
     void this.overview.refreshAlerts();
     if (this.auth.user()?.permissions.includes('support')) void this.supportApi.summary();
+    void this.loadHealth();
   }
   readonly billingApi = inject(BillingApi);
   readonly subscriptionsApi = inject(SubscriptionsApi);
@@ -237,6 +276,7 @@ export class AdminShell {
     const user = this.auth.user();
     return {
       name: user?.name ?? '',
+      email: user?.email ?? '',
       role:
         user?.roleName?.[this.ui.lang()] ??
         (user?.role === 'super_admin' ? 'Super Admin' : 'Administrator'),
@@ -279,17 +319,76 @@ export class AdminShell {
     this.collapsed.set(!this.collapsed());
   }
 
-  private readonly sanitizer = inject(DomSanitizer);
-  private readonly iconCache = new Map<string, SafeHtml>();
-  navIcon(path?: string): SafeHtml {
-    const key = path ?? '';
-    let html = this.iconCache.get(key);
-    if (!html) {
-      html = this.sanitizer.bypassSecurityTrustHtml(ICONS[key] ?? ICONS['settings']);
-      this.iconCache.set(key, html);
+  /** Nav entries folded into collapsible groups; items the user can't open are hidden. */
+  readonly groups = computed(() => {
+    const out: {
+      key: string;
+      label: string;
+      items: { path: string; label: string; count?: string; icon: string }[];
+    }[] = [];
+    for (const entry of this.L().nav) {
+      if (entry.kind === 'head') out.push({ key: 'g' + out.length, label: entry.label, items: [] });
+      else if (entry.path && entry.enabled && this.canView(entry.path) && out.length)
+        out[out.length - 1].items.push({
+          path: entry.path,
+          label: entry.label,
+          count: entry.count,
+          icon: ICONS[entry.path] ?? ICONS['settings'],
+        });
     }
-    return html;
+    return out.filter((g) => g.items.length);
+  });
+  private readonly closedGroups = signal<Record<string, boolean>>({});
+  isGroupOpen(key: string) {
+    return !this.closedGroups()[key];
   }
+  toggleGroup(key: string) {
+    this.closedGroups.update((g) => ({ ...g, [key]: !g[key] }));
+  }
+
+  private readonly healthData = signal<{
+    redis?: { status?: string };
+    metrics?: { errorRate?: number };
+  } | null>(null);
+  private readonly healthFailed = signal(false);
+  private async loadHealth() {
+    if (!this.canView('system-health')) return;
+    try {
+      this.healthData.set(await this.auth.request('/admin/api/v1/system-health'));
+      this.healthFailed.set(false);
+    } catch {
+      this.healthFailed.set(true);
+    }
+  }
+  /** Sidebar status card — only claims "operational" when the health endpoint says so. */
+  readonly health = computed(() => {
+    const h = this.L().health,
+      d = this.healthData();
+    if (!d || this.healthFailed()) return { state: 'unknown', title: h.unknown, sub: h.open };
+    const err = Number(d.metrics?.errorRate ?? 0);
+    const ok = d.redis?.status === 'healthy' && err < 5;
+    const ar = this.ui.lang() === 'ar';
+    return {
+      state: ok ? 'ok' : 'warn',
+      title: ok ? h.ok : h.degraded,
+      sub: (ar ? 'معدل الأخطاء ' : 'Error rate ') + err + '%',
+    };
+  });
+
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+  focusSearch(): void {
+    this.closeMobileNav();
+    this.searchInput()?.nativeElement.focus();
+  }
+  @HostListener('document:keydown', ['$event'])
+  onKey(e: KeyboardEvent): void {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      this.focusSearch();
+    }
+  }
+
+  readonly sideProfileOpen = signal(false);
 
   readonly unreadCount = computed(() => this.notifications().length);
 
@@ -309,15 +408,24 @@ export class AdminShell {
     if (!this.notifOpen()) void this.overview.refreshAlerts();
     this.notifOpen.set(!this.notifOpen());
     this.profileOpen.set(false);
+    this.sideProfileOpen.set(false);
   }
 
   toggleProfile(): void {
+    this.sideProfileOpen.set(!this.sideProfileOpen());
+    this.profileOpen.set(false);
+    this.notifOpen.set(false);
+  }
+
+  toggleTopProfile(): void {
     this.profileOpen.set(!this.profileOpen());
+    this.sideProfileOpen.set(false);
     this.notifOpen.set(false);
   }
 
   closeMenus(): void {
     this.notifOpen.set(false);
     this.profileOpen.set(false);
+    this.sideProfileOpen.set(false);
   }
 }

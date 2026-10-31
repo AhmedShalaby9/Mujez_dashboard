@@ -2,6 +2,7 @@ import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AdminUiState, type Lang } from '../admin-ui-state';
+import { AuthService } from '../../../auth.service';
 import {
   OverviewApi,
   overviewMoney,
@@ -10,16 +11,46 @@ import {
   type OverviewAlert,
 } from '../../../overview-api.service';
 type Range = '30d' | '90d' | '12m' | 'custom';
-const COLORS = ['#a1a1a6', '#111113', '#8BB33A', '#c8f169', '#1e6b3e', '#d99a28'];
+const COLORS = ['#111113', '#8BB33A', '#C8F169', '#D9D9D2', '#5B78E5', '#D99A28'];
+const ALERT_ICONS: Record<string, string> = {
+  invoice_overdue: 'M3 6h18v12H3zM3 10h18',
+  trial_ending: 'M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z',
+  support_overdue: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
+  user_limit:
+    'M4 7c0-2 3.6-3 8-3s8 1 8 3-3.6 3-8 3-8-1-8-3zM4 7v10c0 2 3.6 3 8 3s8-1 8-3V7M4 12c0 2 3.6 3 8 3s8-1 8-3',
+  company_created: 'M3 21h18M5 21V5l7-2v18M12 9h7v12M8 8h1M8 12h1M8 16h1M15 13h1M15 17h1',
+};
+const SEVERITY: Record<string, [string, string]> = {
+  high: ['#FBE7E3', '#A23624'],
+  med: ['#FCF2DE', '#83570C'],
+  low: ['#EAEFFD', '#2E47A8'],
+};
 const COPY = {
   en: {
     eyebrow: 'Overview',
     title: 'Dashboard',
-    exportBtn: 'Export report',
-    revenueTitle: 'Recorded payments and refunds',
+    exportBtn: 'Export',
+    refresh: 'Refresh',
+    morning: 'Good morning',
+    afternoon: 'Good afternoon',
+    evening: 'Good evening',
+    mrr: 'Monthly recurring revenue',
+    arr: 'ARR',
+    arpc: 'Avg / active company',
+    heroBars: 'Recorded net per period',
+    revSub: 'Recorded payments per period, EGP',
+    attention: 'Needs attention',
+    review: 'Review',
+    recent: 'Recent companies',
+    viewAll: 'View all',
+    colCompany: 'Company',
+    colUsers: 'CRM accounts',
+    colCreated: 'Registered',
+    companiesLc: 'companies',
+    revenueTitle: 'Recorded payments',
     ranges: { '30d': '30 days', '90d': '90 days', '12m': '12 months', custom: 'Custom' },
-    planTitle: 'Current subscriptions by plan',
-    alertsTitle: 'Current alerts',
+    planTitle: 'Plan mix',
+    alertsTitle: 'Needs attention',
     growthTitle: 'Recently registered companies in selected range',
     emptyAlerts: 'No current alerts in your permitted modules',
     emptyGrowth: 'No companies registered in this range',
@@ -35,11 +66,28 @@ const COPY = {
   ar: {
     eyebrow: 'نظرة عامة',
     title: 'لوحة التحكم',
-    exportBtn: 'تصدير التقرير',
-    revenueTitle: 'المدفوعات والمبالغ المستردة المسجلة',
+    exportBtn: 'تصدير',
+    refresh: 'تحديث',
+    morning: 'صباح الخير',
+    afternoon: 'مساء الخير',
+    evening: 'مساء الخير',
+    mrr: 'الإيراد الشهري المتكرر',
+    arr: 'السنوي',
+    arpc: 'متوسط الشركة النشطة',
+    heroBars: 'صافي السجلات لكل فترة',
+    revSub: 'المدفوعات المسجلة لكل فترة، بالجنيه',
+    attention: 'تحتاج إلى متابعة',
+    review: 'مراجعة',
+    recent: 'أحدث الشركات',
+    viewAll: 'عرض الكل',
+    colCompany: 'الشركة',
+    colUsers: 'حسابات CRM',
+    colCreated: 'تاريخ التسجيل',
+    companiesLc: 'شركة',
+    revenueTitle: 'المدفوعات المسجلة',
     ranges: { '30d': '30 يومًا', '90d': '90 يومًا', '12m': '12 شهرًا', custom: 'مخصص' },
-    planTitle: 'الاشتراكات الحالية حسب الباقة',
-    alertsTitle: 'التنبيهات الحالية',
+    planTitle: 'توزيع الباقات',
+    alertsTitle: 'تحتاج إلى متابعة',
     growthTitle: 'الشركات المسجلة حديثًا خلال الفترة المحددة',
     emptyAlerts: 'لا توجد تنبيهات حالية في الوحدات المسموح بها',
     emptyGrowth: 'لا توجد شركات جديدة خلال الفترة',
@@ -61,6 +109,7 @@ const COPY = {
 export class Dashboard {
   readonly api = inject(OverviewApi);
   private readonly ui = inject(AdminUiState);
+  private readonly auth = inject(AuthService);
   private readonly destroy = inject(DestroyRef);
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
@@ -69,6 +118,9 @@ export class Dashboard {
   readonly error = signal('');
   readonly range = signal<Range>('12m');
   readonly ranges: Range[] = ['30d', '90d', '12m', 'custom'];
+  readonly planTotal = computed(() =>
+    (this.data()?.plans ?? []).reduce((n, p) => n + p.companies, 0),
+  );
   readonly from = signal('');
   readonly to = signal('');
   private serial = 0;
@@ -119,13 +171,6 @@ export class Dashboard {
   }
   alert(a: OverviewAlert) {
     return overviewAlertText(a, this.lang());
-  }
-  color(a: OverviewAlert) {
-    return a.severity === 'high'
-      ? '#e2553b'
-      : a.severity === 'med'
-        ? '#d99a28'
-        : 'var(--platform-primary, #111113)';
   }
   readonly kpis = computed(() => {
     const d = this.data();
@@ -191,44 +236,116 @@ export class Dashboard {
         : []),
     ];
   });
+  /** Revenue chart: one column per bucket, height = recorded payments (gross). */
+  readonly hoverBar = signal<number | null>(null);
   readonly bars = computed(() => {
     const rows = this.data()?.finance?.series ?? [];
-    const values = rows.flatMap((r) => [Number(r.grossMinor), Number(r.netMinor)]);
-    const low = Math.min(0, ...values),
-      high = Math.max(1, ...values);
-    const y = (v: number) => 165 - ((v - low) / (high - low)) * 145;
-    const step = 600 / Math.max(1, rows.length);
-    return rows.map((r, i) => ({
-      x: i * step + step * 0.14,
-      w: step * 0.72,
-      y: y(Number(r.grossMinor)),
-      h: y(0) - y(Number(r.grossMinor)),
-      netY: y(Number(r.netMinor)),
-      zero: y(0),
-      label: this.date(r.date + 'T12:00:00Z'),
-      gross: r.grossMinor,
-      refund: r.refundMinor,
-      net: r.netMinor,
-      c: 'var(--platform-primary, #111113)',
+    const max = Math.max(1, ...rows.map((r) => Number(r.grossMinor)));
+    const monthly = this.data()?.window.bucket === 'month';
+    return rows.map((r, i) => {
+      const d = new Date(r.date + 'T12:00:00Z');
+      return {
+        i,
+        h: Math.max(0, (Number(r.grossMinor) / max) * 100).toFixed(1) + '%',
+        last: i === rows.length - 1,
+        label: this.date(r.date + 'T12:00:00Z'),
+        short: new Intl.DateTimeFormat(this.lang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', {
+          timeZone: 'Africa/Cairo',
+          ...(monthly ? { month: 'short' } : { day: 'numeric', month: 'short' }),
+        }).format(d),
+        gross: r.grossMinor,
+        refund: r.refundMinor,
+        net: r.netMinor,
+      };
+    });
+  });
+  /** Label every bucket when there are few, otherwise thin the axis to ~8 labels. */
+  readonly labelEvery = computed(() => Math.max(1, Math.ceil(this.bars().length / 8)));
+  readonly gridLines = computed(() => {
+    const rows = this.data()?.finance?.series ?? [];
+    const max = Math.max(1, ...rows.map((r) => Number(r.grossMinor)));
+    if (max <= 1) return [];
+    return [0.25, 0.5, 0.75].map((f) => ({
+      b: f * 100 + '%',
+      v: this.compact(String(Math.round(max * f))),
     }));
   });
-  readonly linePoints = computed(() =>
-    this.bars()
-      .map((b) => `${b.x + b.w / 2},${b.netY}`)
-      .join(' '),
-  );
-  readonly dots = computed(() => this.bars().map((b) => ({ cx: b.x + b.w / 2, cy: b.netY })));
-  readonly axisLabels = computed(() => {
-    const bars = this.bars(),
-      interval = Math.max(1, Math.ceil(bars.length / 6));
-    return bars
-      .filter((_, i) => i % interval === 0 || i === bars.length - 1)
-      .map((b, i, a) => ({
-        x: b.x + b.w / 2,
-        t: b.label,
-        a: i === 0 ? 'start' : i === a.length - 1 ? 'end' : 'middle',
-      }));
+  /** Dark hero mini-chart: recorded net per bucket. */
+  readonly heroBars = computed(() => {
+    const rows = this.data()?.finance?.series ?? [];
+    const nets = rows.map((r) => Number(r.netMinor));
+    const max = Math.max(1, ...nets);
+    return rows.map((r, i) => ({
+      h: Math.max(4, (Math.max(0, Number(r.netMinor)) / max) * 100).toFixed(0) + '%',
+      last: i === rows.length - 1,
+      tip: this.date(r.date + 'T12:00:00Z') + ' · ' + this.money(r.netMinor),
+    }));
   });
+  readonly greeting = computed(() => {
+    const L = this.L();
+    const hour = Number(
+      new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Africa/Cairo',
+        hour: 'numeric',
+        hour12: false,
+      }).format(new Date()),
+    );
+    const first = (this.auth.user()?.name ?? '').split(' ')[0];
+    const hello = hour < 12 ? L.morning : hour < 18 ? L.afternoon : L.evening;
+    return first ? hello + (this.lang() === 'ar' ? ' يا ' : ', ') + first : hello;
+  });
+  readonly today = computed(() =>
+    new Intl.DateTimeFormat(this.lang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-US', {
+      timeZone: 'Africa/Cairo',
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(new Date()),
+  );
+  /** Companies split bar: active / trial / suspended / pending as shares of total. */
+  readonly companySplit = computed(() => {
+    const c = this.data()?.companies;
+    if (!c || !c.total) return [];
+    return [
+      [c.active, '#2FA35F'],
+      [c.trial, '#5B78E5'],
+      [c.pending, '#D99A28'],
+      [c.suspended, '#E2553B'],
+    ]
+      .filter(([v]) => Number(v) > 0)
+      .map(([v, color]) => ({ w: ((Number(v) / c.total) * 100).toFixed(1) + '%', color }));
+  });
+  readonly arpc = computed(() => {
+    const d = this.data();
+    if (!d?.finance || !d.companies?.active) return null;
+    return this.money(String(BigInt(d.finance.mrrMinor) / BigInt(d.companies.active)));
+  });
+  compact(minor: string) {
+    const v = Number(BigInt(minor)) / 100,
+      a = Math.abs(v);
+    const s =
+      a >= 1e6
+        ? (a / 1e6).toFixed(2) + 'M'
+        : a >= 1e4
+          ? (a / 1e3).toFixed(1) + 'K'
+          : a.toLocaleString('en-GB', { maximumFractionDigits: 0 });
+    return (v < 0 ? '−' : '') + s;
+  }
+  alertIcon(a: OverviewAlert) {
+    return ALERT_ICONS[a.kind] ?? ALERT_ICONS['company_created'];
+  }
+  alertTone(a: OverviewAlert) {
+    return SEVERITY[a.severity] ?? SEVERITY['low'];
+  }
+  alertTitle(a: OverviewAlert) {
+    return this.lang() === 'ar' ? a.nameAr : a.nameEn;
+  }
+  alertSub(a: OverviewAlert) {
+    const full = this.alert(a),
+      name = this.alertTitle(a);
+    return full.startsWith(name + ' — ') ? full.slice(name.length + 3) : full;
+  }
   readonly revenueLegend = computed(() => {
     const f = this.data()?.finance;
     if (!f) return [];
@@ -237,17 +354,20 @@ export class Dashboard {
       {
         label: ar ? 'مدفوعات مسجلة' : 'Recorded payments',
         value: this.money(f.grossMinor),
-        color: 'var(--platform-primary, #111113)',
+        color: '#111113',
+        fg: '#111113',
       },
       {
         label: ar ? 'مبالغ مستردة مسجلة' : 'Recorded refunds',
         value: this.money(f.refundMinor),
-        color: '#d99a28',
+        color: '#E2553B',
+        fg: '#A23624',
       },
       {
         label: ar ? 'صافي السجلات' : 'Recorded net',
         value: this.money(f.netMinor),
-        color: '#111113',
+        color: '#2FA35F',
+        fg: '#1E6B3E',
       },
     ];
   });
@@ -263,6 +383,7 @@ export class Dashboard {
         label: p.name[this.lang()],
         count: p.companies,
         pct: Math.round(fraction * 100),
+        w: (fraction * 100).toFixed(1) + '%',
         color: COLORS[i % COLORS.length],
         dash: `${fraction * circumference} ${circumference * (1 - fraction)}`,
         off: -offset,

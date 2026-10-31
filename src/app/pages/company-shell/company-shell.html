@@ -122,93 +122,41 @@
   </div>
 }
 
-<div
-  class="shell"
-  [attr.dir]="dir()"
-  [class.shell--collapsed]="collapsed()"
-  [class.shell--ws]="!!workspace()"
-  (click)="closeMenus()"
->
-  <aside
-    class="sidebar"
-    [class.sidebar--open]="mobileNavOpen()"
-    [class.sidebar--collapsed]="collapsed()"
-  >
+<div class="shell" [attr.dir]="dir()" [class.shell--ws]="!!workspace()" (click)="closeMenus()">
+  <aside class="sidebar" [class.sidebar--open]="mobileNavOpen()">
     <div class="sidebar__brand">
-      <svg width="26" height="26" viewBox="0 0 64 64" class="sidebar__logo">
-        <rect width="64" height="64" rx="15" fill="#111113" />
+      <svg width="26" height="26" viewBox="0 0 64 64" class="sidebar__logo" aria-hidden="true">
+        <rect width="64" height="64" rx="16" fill="#C8F169" />
         <path
           d="M14 46V27L23.5 18.5L32 26L40.5 18.5L50 27V46"
           fill="none"
-          stroke="#fff"
+          stroke="#111113"
           stroke-width="5.5"
           stroke-linecap="round"
           stroke-linejoin="round"
         />
-        <rect x="28.5" y="35" width="7" height="11" rx="1.5" fill="#c8f169" />
+        <rect x="28.5" y="35" width="7" height="11" rx="1.5" fill="#111113" />
       </svg>
-      @if (!collapsed()) {
-        <div class="sidebar__brandText">
-          <span class="sidebar__brandName">{{ L().brand }}</span>
-          <span class="sidebar__brandTag">{{ L().platformTag }}</span>
-        </div>
+      <span class="sidebar__brandName">{{ L().brand }}</span>
+      @if (companyName()) {
+        <span class="sidebar__company" [title]="companyName()">{{ companyName() }}</span>
       }
-      <button
-        type="button"
-        class="sidebar__collapseBtn"
-        [attr.aria-label]="collapsed() ? L().expand : L().collapse"
-        [title]="collapsed() ? L().expand : L().collapse"
-        (click)="$event.stopPropagation(); toggleCollapsed()"
-      >
-        <svg
-          width="13"
-          height="13"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          [style.transform]="collapsed() ? 'rotate(180deg)' : 'none'"
-        >
-          <path d="M15 18l-6-6 6-6" />
-        </svg>
-      </button>
     </div>
 
     <nav class="sidebar__nav">
       @for (entry of visibleNav(); track $index) {
         @if (entry.kind === 'head') {
-          @if (!collapsed()) {
-            <div class="sidebar__groupLabel">{{ entry.label }}</div>
-          } @else {
-            <div class="sidebar__groupDivider"></div>
-          }
+          <div class="sidebar__groupLabel">{{ entry.label }}</div>
         } @else {
           <a
             class="sidebar__item"
             [routerLink]="['/company', entry.path]"
             routerLinkActive="sidebar__item--active"
-            [title]="collapsed() ? entry.label : null"
             (click)="closeMobileNav()"
           >
-            <svg
-              class="sidebar__itemIcon"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              [innerHTML]="navIcon(entry.path)"
-            ></svg>
-            @if (!collapsed()) {
-              <span class="sidebar__itemLabel">{{ entry.label }}</span>
-              @if (entry.count) {
-                <span class="sidebar__itemCount">{{ entry.count }}</span>
-              }
+            <span class="sidebar__itemLabel">{{ entry.label }}</span>
+            @if (entry.count) {
+              <span class="sidebar__itemCount">{{ entry.count }}</span>
             }
           </a>
         }
@@ -217,12 +165,10 @@
 
     <div class="sidebar__me">
       <span class="sidebar__avatar">{{ me.initials }}</span>
-      @if (!collapsed()) {
-        <div class="sidebar__meText">
-          <span class="sidebar__meName">{{ me.name }}</span>
-          <span class="sidebar__meRole">{{ me.role }}</span>
-        </div>
-      }
+      <div class="sidebar__meText">
+        <span class="sidebar__meName">{{ me.name }}</span>
+        <span class="sidebar__meRole">{{ me.role }}</span>
+      </div>
     </div>
   </aside>
 

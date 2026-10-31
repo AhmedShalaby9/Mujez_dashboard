@@ -150,7 +150,7 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-feature-management',
   imports: [FormsModule],
   templateUrl: './feature-management.html',
-  styleUrl: './feature-management.scss',
+  styleUrls: ['../admin-ui.scss', '../admin-table.scss', './feature-management.scss'],
 })
 export class FeatureManagement {
   private readonly ui = inject(AdminUiState);
@@ -168,7 +168,10 @@ export class FeatureManagement {
   get planOrder() {
     return this.catalogPlans().map((p) => p.key);
   }
-  readonly companies = signal<Array<{ id: string; nameEn: string }>>([]);
+  readonly companies = signal<
+    Array<{ id: string; nameEn: string; nameAr?: string; plan?: string }>
+  >([]);
+  readonly duration = signal<'7' | '30' | '90' | '365'>('30');
   readonly effective = signal<any>(null);
   readonly adding = signal(false);
   draft = {
@@ -196,6 +199,22 @@ export class FeatureManagement {
       this.loading.set(false);
     }
   }
+  openAdd() {
+    this.error.set('');
+    this.draft = {
+      companyId: '',
+      featureKey: this.features()[0]?.key ?? '',
+      enabled: true,
+      expiresAt: '',
+      reason: '',
+    };
+    this.setDuration('30');
+    this.adding.set(true);
+  }
+  setDuration(d: '7' | '30' | '90' | '365') {
+    this.duration.set(d);
+    this.draft.expiresAt = new Date(Date.now() + Number(d) * 86400000).toISOString().slice(0, 10);
+  }
   async saveOverride() {
     if (this.saving()) return;
     this.saving.set(true);
@@ -212,6 +231,7 @@ export class FeatureManagement {
       });
       this.adding.set(false);
       await this.reload();
+      this.showToast(this.lang() === 'ar' ? 'تم حفظ الاستثناء.' : 'Override saved.');
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to save override');
     } finally {
@@ -266,6 +286,74 @@ export class FeatureManagement {
     return f ? this.name(f) : o.featureKey;
   }
 
+  readonly stats = computed(() => {
+    const f = this.features();
+    return {
+      total: f.length,
+      overrides: this.overrides().length,
+      rolling: f.filter((x) => x.platformOn && x.rollout < 100),
+      off: f.filter((x) => !x.platformOn).length,
+    };
+  });
+  /** "from Pro" = lowest plan (catalog order) that includes the feature. */
+  fromPlan(f: FeatureDef): string {
+    const first = this.planOrder.find((p) => f.plans[p]);
+    const ar = this.lang() === 'ar';
+    if (!first) return ar ? 'غير مضمنة في أي باقة' : 'not in any plan';
+    return first === this.planOrder[0]
+      ? ar
+        ? 'أساسية'
+        : 'core'
+      : (ar ? 'من ' : 'from ') + this.planName(first);
+  }
+  private company(o: Override) {
+    return this.companies().find((c) => c.id === o.companyId);
+  }
+  overridePlan(o: Override): string {
+    const p = this.company(o)?.plan;
+    return p ? this.planName(p) : '—';
+  }
+  /** Effective = platform flag AND override value (override beats plan + rollout). */
+  effectiveOf(o: Override): { on: boolean; why: string } {
+    const f = this.features().find((x) => x.key === o.featureKey);
+    const ar = this.lang() === 'ar';
+    if (f && !f.platformOn)
+      return { on: false, why: ar ? 'مفتاح المنصة معطل' : 'platform flag is off' };
+    const plan = this.company(o)?.plan;
+    const inPlan = !!(f && plan && f.plans[plan]);
+    if (!o.value)
+      return {
+        on: false,
+        why: ar ? 'الاستثناء يلغي ميزة الباقة' : 'override removes plan feature',
+      };
+    return {
+      on: true,
+      why: inPlan
+        ? ar
+          ? 'ضمن الباقة'
+          : 'already in plan'
+        : ar
+          ? 'الاستثناء يتجاوز الباقة'
+          : 'override beats plan',
+    };
+  }
+  date(iso: string) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return new Intl.DateTimeFormat(this.lang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(d);
+  }
+  deprecatedSoon() {
+    this.showToast(
+      this.lang() === 'ar'
+        ? 'حالة الإيقاف غير مدعومة بعد — لم يتغير شيء.'
+        : "Deprecation isn't supported yet — nothing was changed.",
+    );
+  }
+
   askPlanToggle(f: FeatureDef, plan: PlanKey): void {
     this.planConfirm.set({ feature: f, plan, next: !f.plans[plan] });
   }
@@ -288,6 +376,7 @@ export class FeatureManagement {
       });
       this.planConfirm.set(null);
       await this.reload();
+      this.showToast(this.L().planToast(this.name(t.feature), this.planName(t.plan), t.next));
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to save entitlement');
     } finally {
@@ -322,6 +411,7 @@ export class FeatureManagement {
       });
       this.flagConfirm.set(null);
       await this.reload();
+      this.showToast(this.L().flagToast(this.name(t.feature), t.next));
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to save flag');
     } finally {
@@ -357,6 +447,7 @@ export class FeatureManagement {
       });
       this.rolloutEditing.set(null);
       await this.reload();
+      this.showToast(this.L().rolloutToast(this.name(f), Number(this.rolloutDraft())));
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to save rollout');
     } finally {
@@ -383,6 +474,7 @@ export class FeatureManagement {
       });
       this.removeConfirm.set(null);
       await this.reload();
+      this.showToast(this.L().removeToast);
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to remove override');
     } finally {

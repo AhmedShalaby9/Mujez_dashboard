@@ -1,194 +1,295 @@
-@if (loading()) {
-  <p role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading measured usage…' }}</p>
-}
-@if (error()) {
-  <p role="alert">
-    {{ error() }}
-    <button class="btn" (click)="reload()">{{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}</button>
-  </p>
-}
-<p>
-  {{
-    lang() === 'ar'
-      ? 'تُقاس أعداد المستخدمين من قاعدة البيانات. قياسات الوحدات والتخزين غير متاحة حتى تنفيذ مصادرها.'
-      : 'User counts come from the database. Listings and storage are not measured until their modules supply readings.'
-  }}
-</p>
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-  </div>
-</div>
-
-<div class="kpis">
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.total }}</span>
-    <span class="kpi__value">{{ kpis().total }}</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.atRisk }}</span>
-    <span class="kpi__value kpi__value--warn">{{ kpis().atRisk }}</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.atLimit }}</span>
-    <span class="kpi__value kpi__value--danger">{{ kpis().atLimit }}</span>
-  </div>
-  <div class="kpi">
-    <span class="kpi__label">{{ L().kpis.avg }}</span>
-    <span class="kpi__value">{{ kpis().avg }}</span>
-  </div>
-</div>
-
-<div class="chip-row">
-  <button
-    type="button"
-    class="chip"
-    [class.chip--active]="filter() === 'all'"
-    (click)="setFilter('all')"
-  >
-    {{ L().filterAll }}
-  </button>
-  <button type="button" class="chip" [class.chip--active]="filter() === 80" (click)="setFilter(80)">
-    {{ L().filter80 }}
-  </button>
-  <button type="button" class="chip" [class.chip--active]="filter() === 90" (click)="setFilter(90)">
-    {{ L().filter90 }}
-  </button>
-  <button
-    type="button"
-    class="chip"
-    [class.chip--active]="filter() === 100"
-    (click)="setFilter(100)"
-  >
-    {{ L().filter100 }}
-  </button>
-</div>
-
-<div class="card">
-  <div class="table-scroll">
-    <div class="u-table">
-      <div class="u-head">
-        <span>{{ L().colCompany }}</span>
-        <span>{{ L().colPlan }}</span>
-        <span>{{ L().colUsers }}</span>
-        <span>{{ L().colListings }}</span>
-        <span>{{ L().colStorage }}</span>
-        <span></span>
-      </div>
-      @for (r of filtered(); track r.id) {
-        <div class="u-row">
-          <span class="u-cell__main">
-            {{ name(r) }}
-            <span class="u-cell__sub mono">{{ r.id }}</span>
-          </span>
-          <span class="pill"
-            >{{ planName(r.plan) }}
-            @if (!r.accessible) {
-              · {{ lang() === 'ar' ? 'المساحة غير متاحة' : 'Workspace unavailable' }}
-            }
-          </span>
-
-          <span class="bar-cell">
-            <span class="bar"
-              ><span
-                class="bar__fill"
-                [class]="barClass(pct(r.users))"
-                [style.width.%]="pct(r.users)"
-              ></span
-            ></span>
-            <span class="bar-cell__text mono"
-              >{{ format(r.users.used) }}/{{ limitLabel(r.users.limit) }}</span
-            >
-          </span>
-
-          <span class="bar-cell">
-            <span class="bar"
-              ><span
-                class="bar__fill"
-                [class]="barClass(pct(r.listings))"
-                [style.width.%]="pct(r.listings)"
-              ></span
-            ></span>
-            <span class="bar-cell__text mono"
-              >{{ format(r.listings.used) }}/{{ limitLabel(r.listings.limit) }}</span
-            >
-          </span>
-
-          <span class="bar-cell">
-            <span class="bar"
-              ><span
-                class="bar__fill"
-                [class]="barClass(pct(r.storage))"
-                [style.width.%]="pct(r.storage)"
-              ></span
-            ></span>
-            <span class="bar-cell__text mono"
-              >{{ format(r.storage.used) }}/{{ limitLabel(r.storage.limit) }} GB</span
-            >
-          </span>
-
-          <span class="u-actions">
-            @for (resource of resourceKeys; track resource) {
-              @if (r[resource].overrideExpires) {
-                <span>{{ r[resource].overrideExpires }}</span
-                ><button
-                  class="row-btn"
-                  [disabled]="saving()"
-                  (click)="removeOverride(r, resource)"
-                >
-                  {{ lang() === 'ar' ? 'إزالة الاستثناء' : 'Remove override' }} ·
-                  {{ L().resourceLabel[resource] }}
-                </button>
-              } @else if (
-                r.plan !== 'none' && r[resource].limit !== null && (r[resource].limit ?? 0) > 0
-              ) {
-                <button class="row-btn" (click)="askOverride(r, resource)">
-                  {{ L().override }} · {{ L().resourceLabel[resource] }}
-                </button>
-              }
-            }
-          </span>
-        </div>
-      }
-      @if (!filtered().length) {
-        <div class="t-empty">{{ L().emptyTitle }}</div>
-      }
-    </div>
-  </div>
-</div>
-
-@if (overriding(); as ov) {
-  <div class="scrim" (click)="cancelOverride()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{
-        L().overrideTitle(name(ov.row), L().resourceLabel[ov.resource])
+<div class="pg" (click)="kebabFor.set(null)">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ L().title }}</h1>
+      <span>{{
+        lang() === 'ar'
+          ? 'استهلاك الموارد لكل الشركات'
+          : 'Resource consumption across all companies'
       }}</span>
-      <p class="dialog__text">
-        {{ L().overrideBody(ov.row[ov.resource].limit ?? 0, nextLimit()) }}
-      </p>
-      <label class="field">
-        <span class="field__label">{{ L().reasonLabel }}</span>
-        <textarea
-          class="textarea"
-          rows="2"
-          [(ngModel)]="overrideReason"
-          name="overrideReason"
-        ></textarea>
-        @if (overrideError()) {
-          <span class="field__error">{{ L().reasonError }}</span>
-        }
-      </label>
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelOverride()">
-        {{ L().cancel }}
+    <div class="head__actions">
+      <button type="button" class="btn" (click)="exportCsv()">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.9"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+        </svg>
+        {{ lang() === 'ar' ? 'تصدير تقرير الاستخدام' : 'Export usage report' }}
       </button>
+    </div>
+  </div>
+
+  @if (error() && !overriding()) {
+    <p class="note note--bad" role="alert">
+      {{ error() }}
+      <button type="button" class="link" (click)="reload()">
+        {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+      </button>
+    </p>
+  }
+  @if (loading()) {
+    <p class="muted" role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading usage…' }}</p>
+  }
+
+  <div class="kpis kpis--4">
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'المستخدمون' : 'Users' }}</span>
+      <b>{{ totals().users.toLocaleString('en-US') }}</b>
+      <small
+        >{{ lang() === 'ar' ? 'من ' : 'of ' }}{{ totals().seats.toLocaleString('en-US')
+        }}{{ totals().unlimitedSeats ? '+' : '' }} {{ lang() === 'ar' ? 'مقعدًا' : 'seats' }}</small
+      >
+    </div>
+    <div class="kpi kpi--static">
+      <span
+        >{{ lang() === 'ar' ? 'العملاء المحتملون' : 'Leads'
+        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+      ><b>—</b>
+      <small>{{ lang() === 'ar' ? 'غير مقاس بعد' : 'not measured yet' }}</small>
+    </div>
+    <div class="kpi kpi--static">
+      <span
+        >{{ lang() === 'ar' ? 'جهات الاتصال' : 'Contacts'
+        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+      ><b>—</b>
+      <small>{{ lang() === 'ar' ? 'غير مقاس بعد' : 'not measured yet' }}</small>
+    </div>
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'الوحدات' : 'Listings' }}</span>
+      <b>{{ totals().listings === null ? '—' : totals().listings!.toLocaleString('en-US') }}</b>
+      <small>{{
+        totals().listings === null
+          ? lang() === 'ar'
+            ? 'لا توجد قراءات بعد'
+            : 'no readings yet'
+          : lang() === 'ar'
+            ? 'سجلات المخزون'
+            : 'inventory records'
+      }}</small>
+    </div>
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'التخزين' : 'Storage' }}</span>
+      <b>{{ totals().storage === null ? '—' : format(totals().storage) + ' GB' }}</b>
+      <small>
+        @if (totals().storage !== null && totals().storageCap) {
+          {{ ((totals().storage! / totals().storageCap) * 100).toFixed(0) }}%
+          {{ lang() === 'ar' ? 'من المتاح' : 'of provisioned' }}
+        } @else {
+          {{ lang() === 'ar' ? 'لا توجد قراءات بعد' : 'no readings yet' }}
+        }
+      </small>
+    </div>
+    <div class="kpi kpi--static">
+      <span
+        >{{ lang() === 'ar' ? 'طلبات API' : 'API requests'
+        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+      ><b>—</b>
+      <small>{{ lang() === 'ar' ? 'غير مقاس بعد' : 'not measured yet' }}</small>
+    </div>
+    <button type="button" class="kpi" (click)="setFilter(80)">
+      <span>{{ lang() === 'ar' ? 'فوق 80%' : 'Over 80%' }}</span>
+      <b class="warnTxt">{{ kpis().atRisk }}</b>
+      <small>{{ lang() === 'ar' ? 'شركات قرب الحد' : 'companies near a limit' }}</small>
+    </button>
+    <button type="button" class="kpi" (click)="setFilter(100)">
+      <span>{{ lang() === 'ar' ? 'تجاوزت الحد' : 'Over limit' }}</span>
+      <b class="bad">{{ kpis().atLimit }}</b>
+      <small>{{ lang() === 'ar' ? 'عند الحد أو فوقه' : 'at or above a limit' }}</small>
+    </button>
+  </div>
+
+  <div class="tabs" role="tablist">
+    @for (t of tabs(); track t.k) {
       <button
         type="button"
-        class="btn btn--primary"
-        [disabled]="saving()"
+        class="tab"
+        role="tab"
+        [class.tab--on]="filter() === t.k"
+        (click)="setFilter(t.k)"
+      >
+        {{ t.label }}<span class="tab__n">{{ t.n }}</span>
+      </button>
+    }
+  </div>
+
+  <section class="card">
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ L().colCompany }}</th>
+            <th>{{ L().colPlan }}</th>
+            <th>{{ L().colUsers }}</th>
+            <th>
+              {{ lang() === 'ar' ? 'العملاء' : 'Leads'
+              }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+            </th>
+            <th>{{ L().colListings }}</th>
+            <th>{{ L().colStorage }}</th>
+            <th>
+              {{ lang() === 'ar' ? 'API يوميًا' : 'API / day'
+              }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+            </th>
+            <th>{{ lang() === 'ar' ? 'حالة الحد' : 'Limit status' }}</th>
+            <th class="act"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of filtered(); track r.id) {
+            <tr (click)="openCompany(r)">
+              <td>
+                <span class="strong">{{ name(r) }}</span
+                ><span class="sub mono">{{ r.id }}</span>
+              </td>
+              <td>{{ planName(r.plan) }}</td>
+              <td [class]="cell(r.users).cls">
+                <span class="mono">{{ cell(r.users).t }}</span
+                ><span class="sub">{{ cell(r.users).sub }}</span>
+              </td>
+              <td class="dim">—</td>
+              <td [class]="cell(r.listings).cls">
+                <span class="mono">{{ cell(r.listings).t }}</span
+                ><span class="sub">{{ cell(r.listings).sub }}</span>
+              </td>
+              <td [class]="cell(r.storage, ' GB').cls">
+                <span class="mono">{{ cell(r.storage, ' GB').t }}</span
+                ><span class="sub">{{ cell(r.storage, ' GB').sub }}</span>
+              </td>
+              <td class="dim">—</td>
+              <td>
+                <span class="pill" [style.background]="status(r).bg" [style.color]="status(r).fg"
+                  ><span class="dot" [style.background]="status(r).dot"></span
+                  >{{ status(r).t }}</span
+                >
+                @if (activeOverrides(r).length) {
+                  <span class="sub warnTxt">{{
+                    lang() === 'ar' ? 'استثناء مفعّل' : 'override active'
+                  }}</span>
+                }
+              </td>
+              <td class="act" (click)="$event.stopPropagation()">
+                <button
+                  type="button"
+                  class="kebab"
+                  aria-label="Actions"
+                  (click)="kebabFor.set(kebabFor() === r.id ? null : r.id)"
+                >
+                  ⋯
+                </button>
+                @if (kebabFor() === r.id) {
+                  <div class="menu">
+                    @for (k of resourceKeys; track k) {
+                      @if (canOverride(r, k)) {
+                        <button type="button" (click)="askOverride(r, k)">
+                          {{ lang() === 'ar' ? 'رفع مؤقت · ' : 'Temporary +20% · '
+                          }}{{ L().resourceLabel[k] }}…
+                        </button>
+                      }
+                    }
+                    @for (k of activeOverrides(r); track k) {
+                      <button type="button" class="bad" (click)="removeOverride(r, k)">
+                        {{ lang() === 'ar' ? 'إزالة استثناء ' : 'Remove override · '
+                        }}{{ L().resourceLabel[k] }}
+                      </button>
+                    }
+                    <button type="button" (click)="openCompany(r)">
+                      {{ lang() === 'ar' ? 'فتح الشركة' : 'Open company' }}
+                    </button>
+                    <button type="button" (click)="notifySoon()">
+                      {{ lang() === 'ar' ? 'تنبيه مدير الشركة' : 'Notify company admin'
+                      }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+                    </button>
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (!loading() && !filtered().length) {
+      <div class="empty">
+        <strong>{{ L().emptyTitle }}</strong>
+      </div>
+    }
+  </section>
+  <span class="muted">{{
+    lang() === 'ar'
+      ? 'القراءات الناقصة تظهر "غير مقاس" ولا تُحتسب صفرًا. الحد الفارغ يعني بلا حد.'
+      : 'Missing readings show as "Not measured" and never count as zero. An empty limit means unlimited.'
+  }}</span>
+</div>
+
+@if (overriding(); as t) {
+  <div class="scrim scrim--top" (click)="cancelOverride()"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
+      <span class="dialog__title"
+        >{{ lang() === 'ar' ? 'رفع مؤقت للحد' : 'Temporary limit override' }} ·
+        {{ name(t.row) }}</span
+      >
+      <span class="dialog__body">{{
+        L().overrideBody(t.row[t.resource].limit ?? 0, nextLimit())
+      }}</span>
+    </div>
+    <div class="dialog__main">
+      <div class="field">
+        <span>{{ lang() === 'ar' ? 'المورد' : 'Resource' }}</span>
+        <div class="segs">
+          @for (k of resourceKeys; track k) {
+            <button
+              type="button"
+              class="seg"
+              [class.seg--on]="t.resource === k"
+              [disabled]="!canOverride(t.row, k)"
+              (click)="setOverrideResource(k)"
+            >
+              {{ L().resourceLabel[k] }}
+            </button>
+          }
+        </div>
+      </div>
+      <div class="grid">
+        <label class="field"
+          ><span
+            >{{ lang() === 'ar' ? 'الحد الجديد' : 'New limit'
+            }}<i class="soon">{{ lang() === 'ar' ? '+20% فقط' : '+20% only' }}</i></span
+          ><input class="mono" disabled [value]="nextLimit()"
+        /></label>
+        <label class="field"
+          ><span
+            >{{ lang() === 'ar' ? 'المدة' : 'Duration'
+            }}<i class="soon">{{ lang() === 'ar' ? '30 يومًا فقط' : '30 days only' }}</i></span
+          ><input disabled [value]="lang() === 'ar' ? '30 يومًا' : '30 days'"
+        /></label>
+      </div>
+      <label class="field"
+        ><span>{{ L().reasonLabel }}</span
+        ><textarea
+          rows="2"
+          [class.invalid]="overrideError()"
+          [value]="overrideReason()"
+          (input)="overrideReason.set($any($event.target).value)"
+        ></textarea>
+      </label>
+      @if (error()) {
+        <p class="note note--bad" role="alert">{{ error() }}</p>
+      }
+    </div>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="cancelOverride()">{{ L().cancel }}</button>
+      <button
+        type="button"
+        class="btn btn--dark"
+        [disabled]="saving() || !overrideReason().trim()"
         (click)="confirmOverride()"
       >
         {{ L().confirm }}
@@ -198,5 +299,5 @@
 }
 
 @if (toast(); as msg) {
-  <div class="toast">{{ msg }}</div>
+  <div class="toast"><span></span>{{ msg }}</div>
 }

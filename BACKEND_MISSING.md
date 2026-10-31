@@ -4,7 +4,7 @@ Things the new Platform Admin design shows that the backend doesn't support yet.
 The frontend renders each one statically. In the UI, these are marked with an amber **Not saved yet / Soon / Sample** tag or a dashed card, and the data is never sent.
 When an item is implemented, remove its tag in the listed file and wire it to the new field or endpoint.
 
-Checked against `mujez_backend` @ `af51c30` (`src/modules/platform/companies`, `src/modules/platform/subscriptions`, `src/modules/platform/billing`, `docs/*.md`).
+Checked against `mujez_backend` @ `af51c30` (`src/modules/platform/companies`, `src/modules/platform/subscriptions`, `src/modules/platform/billing`, `src/modules/platform/features`, `docs/*.md`).
 
 ---
 
@@ -137,6 +137,38 @@ amount/refunded/net, refund history, **Mark as reconciled / unmatched** (`/recon
 | Y4 | Card **•••• last 4** in the drawer | Not shown. | Store a masked card suffix/brand from the gateway (never the full PAN). |
 | Y5 | "Customer was emailed a payment link" (failed note) | Not shown. | Payment-link generation + email (depends on Y1/B2). |
 | Y6 | Server-side search/filter/totals | Client-side over all pages. | `GET /payments?status=&reconciliation=&method=&q=&from=&to=` + summary block. |
+
+## Feature management (`/admin/feature-management`)
+
+Already real: feature catalog + plan matrix (`GET /features`), plan entitlement toggles, global platform flag (kill switch,
+reason + acknowledgement), rollout % (stable hash bucket), company overrides list / add (7/30/90/365 days) / remove,
+effective-state column (computed from flag + override + company plan), "Check a company" (`/features/effective/:id`).
+KPIs for features, overrides, gradual rollout and globally disabled are computed from the catalog.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| F1 | **Deprecated** KPI + "Deprecated (hidden for new plans)" switch in the rollout dialog | Dashed static KPI. The switch shows a "not supported" toast. | `deprecated` boolean on feature definitions + `action: 'deprecate'` on `/features/:key/update`. Hide deprecated features from new plan versions. |
+| F2 | **Permanent** company override | Disabled option with "Soon" tag. Max duration is 365 days. | Allow `expiresAt: null` (permanent) on `/feature-overrides` (today it must be in the future and within one year). |
+| F3 | Override **By** column (who created it) | Shows the reason instead. | Return `createdBy: { id, name }` and `createdAt` on each override. |
+| F4 | Feature **category** ("12 modules · 6 advanced") and "from {plan}" tier label | "from {plan}" is derived from the lowest enabled plan. No module/advanced split. | `category` (`module`/`advanced`) on feature definitions. |
+| F5 | Plan-toggle **reason** | The UI sends a fixed reason string (the API requires one). | Optional: collect a reason in the dialog (frontend), no backend change needed. |
+
+## Usage & limits (`/admin/usage-limits`)
+
+Already real: per-company users / listings / storage readings and effective limits (`GET /usage`), threshold tabs
+(≥80/90/100%), limit status, totals KPIs (users vs seats, listings, storage vs provisioned, over 80%, over limit),
+temporary **+20% / 30-day** override per resource and remove, CSV export (client-side), open company. Missing readings
+show "Not measured" (never zero), as the backend requires.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| U1 | **Leads** KPI + column | Dashed static KPI. Column shows `—` with "Soon". | Lead counts in `platform.resource_usage` + a leads limit on plans (see P1). |
+| U2 | **Contacts** KPI | Dashed static KPI. | Contact counts in `resource_usage` (and an optional limit). |
+| U3 | **API requests / day** KPI + column | Dashed static KPI. Column shows `—` with "Soon". | Gateway request metering per company + limit (see P2). |
+| U4 | **Projects** count (design: "Projects · Units") | Only listings shown. | Projects reading in `resource_usage` (plan already stores a `projects` limit). |
+| U5 | Override with **custom value** and **custom duration** | Fields shown disabled ("+20% only", "30 days only"). | Accept `limit` and `days` on `POST /usage/:id/override` (today fixed `ceil(base×1.2)` for 30 days, non-stacking). |
+| U6 | **Notify company admin** (usage alert email) | "Soon" tag, toast only. | `POST /usage/:id/notify` queued through outbox/email, plus automatic 80/90/100% alerts. |
+| U7 | "Soft-blocked creates" when over limit | Not claimed in the UI. | Quota enforcement in the CRM create paths (docs: modules must call the resolver; not done yet). |
 
 ---
 

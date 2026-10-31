@@ -1,4 +1,5 @@
 import { FeaturesApi } from '../../../features-api.service';
+import { Router } from '@angular/router';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminUiState, type Lang } from '../admin-ui-state';
@@ -116,10 +117,13 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-usage-limits',
   imports: [FormsModule],
   templateUrl: './usage-limits.html',
-  styleUrl: './usage-limits.scss',
+  styleUrls: ['../admin-ui.scss', '../admin-table.scss', './usage-limits.scss'],
 })
 export class UsageLimits {
   private readonly api = inject(FeaturesApi);
+  private readonly router = inject(Router);
+  readonly kebabFor = signal<string | null>(null);
+  readonly overrideResource = signal<ResourceKey>('users');
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly error = signal('');
@@ -138,6 +142,7 @@ export class UsageLimits {
     }
   }
   async removeOverride(r: UsageRow, resource: ResourceKey) {
+    this.kebabFor.set(null);
     if (this.saving()) return;
     this.saving.set(true);
     try {
@@ -147,6 +152,7 @@ export class UsageLimits {
         reason: 'Temporary quota override removed by administrator',
       });
       await this.reload();
+      this.showToast(this.lang() === 'ar' ? 'تمت إزالة الاستثناء.' : 'Override removed.');
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to remove override');
     } finally {
@@ -223,11 +229,168 @@ export class UsageLimits {
   }
 
   askOverride(row: UsageRow, resource: ResourceKey): void {
+    this.kebabFor.set(null);
+    this.overrideResource.set(resource);
     this.overriding.set({ row, resource });
     this.overrideReason.set('');
     this.overrideError.set(false);
   }
 
+  setOverrideResource(r: ResourceKey) {
+    const t = this.overriding();
+    if (t) this.overriding.set({ ...t, resource: r });
+    this.overrideResource.set(r);
+  }
+  /** A +20% override needs a current subscription and a positive finite base limit. */
+  canOverride(r: UsageRow, k: ResourceKey) {
+    const res = r[k];
+    return r.plan !== 'none' && res.limit !== null && res.limit > 0 && !res.overrideExpires;
+  }
+  activeOverrides(r: UsageRow) {
+    return this.resourceKeys.filter((k) => !!r[k].overrideExpires);
+  }
+  readonly tabs = computed(() => {
+    const ar = this.lang() === 'ar';
+    const list: Array<[Threshold, string]> = [
+      ['all', ar ? 'الكل' : 'All'],
+      [80, '≥ 80%'],
+      [90, '≥ 90%'],
+      [100, '≥ 100%'],
+    ];
+    return list.map(([k, label]) => ({
+      k,
+      label,
+      n:
+        k === 'all'
+          ? this.rows().length
+          : this.rows().filter((r) => this.highestPct(r) >= k).length,
+    }));
+  });
+  readonly totals = computed(() => {
+    const rows = this.rows();
+    const sum = (k: ResourceKey, f: 'used' | 'limit') =>
+      rows.reduce((n, r) => n + (r[k].measured && r[k][f] !== null ? Number(r[k][f]) : 0), 0);
+    const anyMeasured = (k: ResourceKey) => rows.some((r) => r[k].measured && r[k].used !== null);
+    return {
+      users: sum('users', 'used'),
+      seats: rows.reduce((n, r) => n + (r.users.limit ?? 0), 0),
+      unlimitedSeats: rows.some((r) => r.users.limit === null && r.plan !== 'none'),
+      listings: anyMeasured('listings') ? sum('listings', 'used') : null,
+      storage: anyMeasured('storage') ? sum('storage', 'used') : null,
+      storageCap: sum('storage', 'limit'),
+    };
+  });
+  cell(res: Resource, unit = '') {
+    const ar = this.lang() === 'ar';
+    if (!res.measured || res.used === null)
+      return {
+        t: ar ? 'غير مقاس' : 'Not measured',
+        sub:
+          res.limit === null
+            ? ar
+              ? 'بلا حد'
+              : 'unlimited'
+            : (ar ? 'الحد ' : 'limit ') + this.format(res.limit) + unit,
+        cls: 'dim',
+      };
+    const p = this.pct(res);
+    return {
+      t:
+        this.format(res.used) +
+        unit +
+        ' / ' +
+        (res.limit === null ? '∞' : this.format(res.limit) + unit),
+      sub: res.limit === null ? (ar ? 'بلا حد' : 'unlimited') : p + '%',
+      cls: p >= 90 ? 'bad' : p >= 80 ? 'warn' : '',
+    };
+  }
+  status(r: UsageRow) {
+    const ar = this.lang() === 'ar';
+    const p = this.highestPct(r);
+    if (r.plan === 'none')
+      return {
+        t: ar ? 'بدون اشتراك' : 'No subscription',
+        bg: '#F1F1ED',
+        fg: '#6E6E73',
+        dot: '#B4B4AE',
+      };
+    if (p >= 100)
+      return { t: ar ? 'تجاوز الحد' : 'Over limit', bg: '#FBE7E3', fg: '#A23624', dot: '#E2553B' };
+    if (p >= 90)
+      return {
+        t: (ar ? 'حرج · ' : 'Critical · ') + p + '%',
+        bg: '#FBE7E3',
+        fg: '#A23624',
+        dot: '#E2553B',
+      };
+    if (p >= 80)
+      return {
+        t: (ar ? 'تحذير · ' : 'Warning · ') + p + '%',
+        bg: '#FCF2DE',
+        fg: '#83570C',
+        dot: '#D99A28',
+      };
+    return { t: ar ? 'سليم' : 'OK', bg: '#E7F5EC', fg: '#1E6B3E', dot: '#2FA35F' };
+  }
+  openCompany(r: UsageRow) {
+    void this.router.navigateByUrl('/admin/companies?company=' + encodeURIComponent(r.id));
+  }
+  notifySoon() {
+    this.kebabFor.set(null);
+    this.showToast(
+      this.lang() === 'ar'
+        ? 'تنبيهات الاستخدام بالبريد غير متصلة بعد — لم يُرسل شيء.'
+        : "Usage alert emails aren't connected yet — nothing was sent.",
+    );
+  }
+  exportCsv() {
+    const head = [
+      'Company ID',
+      'Company',
+      'Plan',
+      'Users used',
+      'Users limit',
+      'Listings used',
+      'Listings limit',
+      'Storage GB used',
+      'Storage GB limit',
+      'Highest %',
+    ];
+    const v = (n: number | null) => (n === null ? '' : String(n));
+    const rows = this.filtered().map((r) =>
+      [
+        r.id,
+        r.nameEn,
+        r.plan,
+        v(r.users.used),
+        v(r.users.limit),
+        v(r.listings.used),
+        v(r.listings.limit),
+        v(r.storage.used),
+        v(r.storage.limit),
+        String(this.highestPct(r)),
+      ]
+        .map(
+          (x) =>
+            '"' +
+            String(x)
+              .replace(/^[=+@-]/, "'$&")
+              .replace(/"/g, '""') +
+            '"',
+        )
+        .join(','),
+    );
+    const url = URL.createObjectURL(
+      new Blob(['\uFEFF' + [head.join(','), ...rows].join('\r\n')], {
+        type: 'text/csv;charset=utf-8',
+      }),
+    );
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mujez-usage.csv';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
   cancelOverride(): void {
     this.overriding.set(null);
   }
@@ -251,6 +414,7 @@ export class UsageLimits {
       });
       this.overriding.set(null);
       await this.reload();
+      this.showToast(this.L().overrideToast(this.name(t.row), this.L().resourceLabel[t.resource]));
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to override limit');
     } finally {

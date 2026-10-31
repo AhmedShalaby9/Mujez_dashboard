@@ -1,160 +1,275 @@
-@if (loading()) {
-  <p role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading features…' }}</p>
-}
-@if (error()) {
-  <p role="alert">
-    {{ error() }}
-    <button class="btn" (click)="reload()">{{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}</button>
-  </p>
-}
-<button class="btn btn--primary" (click)="adding.set(true)">
-  {{ lang() === 'ar' ? 'إضافة استثناء للشركة' : 'Add company override' }}
-</button>
-<label
-  >{{ lang() === 'ar' ? 'فحص صلاحيات الشركة' : 'Evaluate company access'
-  }}<select (change)="previewCompany($any($event.target).value)">
-    <option value="">—</option>
-    @for (c of companies(); track c.id) {
-      <option [value]="c.id">{{ c.nameEn }}</option>
-    }
-  </select></label
->
-@if (effective(); as e) {
-  <p>
-    {{ e.companyId }} · {{ lang() === 'ar' ? 'المساحة متاحة' : 'Workspace available' }}:
-    {{ e.accessible }}
-  </p>
-  @for (f of features(); track f.key) {
-    <span style="display: inline-block; margin: 8px"
-      >{{ name(f) }}: {{ e.features[f.key] ? L().valueOn : L().valueOff }}</span
-    >
-  }
-}
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
-  </div>
-</div>
-
-<div class="card">
-  <div class="table-scroll">
-    <div class="matrix">
-      <div
-        class="matrix__head"
-        [style.grid-template-columns]="
-          'minmax(200px,2fr) 100px repeat(' + planOrder.length + ',100px) 100px'
-        "
-      >
-        <span class="matrix__headCell matrix__headCell--feature">{{ L().colFeature }}</span>
-        <span class="matrix__headCell matrix__headCell--center">{{ L().colPlatform }}</span>
-        @for (p of planOrder; track p) {
-          <span class="matrix__headCell matrix__headCell--center">{{ planName(p) }}</span>
-        }
-        <span class="matrix__headCell matrix__headCell--center">{{ L().colRollout }}</span>
-      </div>
-
-      @for (f of features(); track f.key) {
-        <div
-          [style.grid-template-columns]="
-            'minmax(200px,2fr) 100px repeat(' + planOrder.length + ',100px) 100px'
-          "
-          class="matrix__row"
-          [class.matrix__row--off]="!f.platformOn"
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ L().title }}</h1>
+      <span>{{ L().sub }}</span>
+    </div>
+    <div class="head__actions">
+      <button type="button" class="btn btn--dark" (click)="openAdd()">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#C8F169"
+          stroke-width="2.2"
+          stroke-linecap="round"
         >
-          <span class="matrix__cell matrix__cell--feature">{{ name(f) }}</span>
-          <span class="matrix__cell matrix__cell--center">
-            <button
-              type="button"
-              class="toggle"
-              [class.toggle--on]="f.platformOn"
-              (click)="askFlagToggle(f)"
-            >
-              <span class="toggle__knob"></span>
-            </button>
-          </span>
-          @for (p of planOrder; track p) {
-            <span class="matrix__cell matrix__cell--center">
-              <button
-                type="button"
-                class="toggle toggle--sm"
-                [class.toggle--on]="f.plans[p]"
-                [disabled]="saving()"
-                (click)="askPlanToggle(f, p)"
-              >
-                <span class="toggle__knob"></span>
-              </button>
-            </span>
-          }
-          <span class="matrix__cell matrix__cell--center">
-            <button type="button" class="rollout-btn" (click)="openRollout(f)">
-              {{ f.rollout }}%
-            </button>
-          </span>
-        </div>
-      }
-    </div>
-  </div>
-</div>
-
-<div class="section-head">
-  <div class="page-head__text">
-    <h2 class="section-head__title">{{ L().overridesTitle }}</h2>
-    <span class="page-head__sub">{{ L().overridesSub }}</span>
-  </div>
-</div>
-
-<div class="card">
-  <div class="table-scroll">
-    <div class="ov-table">
-      <div class="ov-head">
-        <span>{{ L().colCompany }}</span>
-        <span>{{ L().colFeatureOv }}</span>
-        <span>{{ L().colValue }}</span>
-        <span>{{ L().colExpires }}</span>
-        <span>{{ L().colReason }}</span>
-        <span></span>
-      </div>
-      @for (o of overrides(); track o.id) {
-        <div class="ov-row">
-          <span class="ov-cell__main">{{ overrideCompany(o) }}</span>
-          <span>{{ overrideFeatureName(o) }}</span>
-          <span>
-            <span class="pill" [class.pill--on]="o.value" [class.pill--off]="!o.value">
-              {{ o.value ? L().valueOn : L().valueOff }}
-            </span>
-          </span>
-          <span class="mono">{{ o.expires }}</span>
-          <span class="ov-cell__sub">{{ overrideReason(o) }}</span>
-          <span>
-            <button type="button" class="row-btn" (click)="askRemove(o)">{{ L().remove }}</button>
-          </span>
-        </div>
-      }
-      @if (!overrides().length) {
-        <div class="t-empty">{{ L().remove }}</div>
-      }
-    </div>
-  </div>
-</div>
-
-@if (planConfirm(); as pc) {
-  <div class="scrim" (click)="cancelPlanConfirm()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{
-        L().confirmPlanTitle(name(pc.feature), planName(pc.plan), pc.next)
-      }}</span>
-      <p class="dialog__text">{{ L().confirmPlanBody(planCompanies(pc.plan), pc.next) }}</p>
-    </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelPlanConfirm()">
-        {{ L().cancel }}
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        {{ lang() === 'ar' ? 'استثناء لشركة' : 'Company override' }}
       </button>
+    </div>
+  </div>
+
+  @if (error() && !adding()) {
+    <p class="note note--bad" role="alert">
+      {{ error() }}
+      <button type="button" class="link" (click)="reload()">
+        {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+      </button>
+    </p>
+  }
+  @if (loading()) {
+    <p class="muted" role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading features…' }}</p>
+  }
+
+  <div class="kpis">
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'الميزات' : 'Features' }}</span
+      ><b>{{ stats().total }}</b>
+      <small>{{ catalogPlans().length }} {{ lang() === 'ar' ? 'باقات' : 'plans' }}</small>
+    </div>
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'استثناءات الشركات' : 'Company overrides' }}</span
+      ><b>{{ stats().overrides }}</b>
+      <small>{{ lang() === 'ar' ? 'مؤقتة حتى سنة' : 'temporary, up to 1 year' }}</small>
+    </div>
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'إطلاق تدريجي' : 'In gradual rollout' }}</span
+      ><b>{{ stats().rolling.length }}</b>
+      <small>
+        @if (stats().rolling[0]; as r) {
+          {{ name(r) }} {{ lang() === 'ar' ? 'عند' : 'at' }} {{ r.rollout }}%
+        } @else {
+          {{ lang() === 'ar' ? 'كلها 100%' : 'all at 100%' }}
+        }
+      </small>
+    </div>
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'معطلة عالميًا' : 'Globally disabled' }}</span
+      ><b [class.bad]="stats().off > 0">{{ stats().off }}</b>
+      <small>{{ lang() === 'ar' ? 'مفتاح الإيقاف' : 'kill switch' }}</small>
+    </div>
+    <div class="kpi kpi--static">
+      <span
+        >{{ lang() === 'ar' ? 'متوقفة' : 'Deprecated'
+        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+      ><b>—</b>
+      <small>{{ lang() === 'ar' ? 'مخفية للباقات الجديدة' : 'hidden for new plans' }}</small>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="cardHead">
+      <div>
+        <h2>{{ lang() === 'ar' ? 'استحقاقات الباقات' : 'Plan entitlements' }}</h2>
+        <span>{{
+          lang() === 'ar'
+            ? 'ما تتضمنه كل باقة. التغييرات تسري على كل مشتركي الباقة.'
+            : 'What each plan includes. Changes apply to all current subscribers of that plan.'
+        }}</span>
+      </div>
+    </div>
+    <div class="scroll">
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>{{ L().colFeature }}</th>
+            @for (p of planOrder; track p) {
+              <th>{{ planName(p) }}</th>
+            }
+            <th>{{ L().colPlatform }}</th>
+            <th class="end">{{ lang() === 'ar' ? 'الإطلاق' : 'Rollout' }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (f of features(); track f.key) {
+            <tr [class.off]="!f.platformOn">
+              <td>
+                <span class="strong">{{ name(f) }}</span
+                ><span class="sub">{{ fromPlan(f) }}</span>
+              </td>
+              @for (p of planOrder; track p) {
+                <td>
+                  <button
+                    type="button"
+                    class="tog"
+                    [class.on]="f.plans[p]"
+                    [title]="name(f) + ' · ' + planName(p)"
+                    (click)="askPlanToggle(f, p)"
+                  >
+                    <span></span>
+                  </button>
+                </td>
+              }
+              <td>
+                <button
+                  type="button"
+                  class="tog"
+                  [class.on]="f.platformOn"
+                  (click)="askFlagToggle(f)"
+                >
+                  <span></span
+                  ><em [class.okTxt]="f.platformOn" [class.badTxt]="!f.platformOn">{{
+                    f.platformOn
+                      ? lang() === 'ar'
+                        ? 'مفعّل'
+                        : 'On'
+                      : lang() === 'ar'
+                        ? 'معطّل'
+                        : 'Off'
+                  }}</em>
+                </button>
+              </td>
+              <td class="end">
+                <button type="button" class="btn btn--sm mono" (click)="openRollout(f)">
+                  {{ f.rollout }}%
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="cardHead">
+      <div>
+        <h2>{{ L().overridesTitle }}</h2>
+        <span>{{
+          lang() === 'ar'
+            ? 'تجاوز الباقة لشركة واحدة. الاستثناءات تنتهي تلقائيًا.'
+            : 'Override the plan for one company. Overrides end automatically.'
+        }}</span>
+      </div>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ L().colCompany }}</th>
+            <th>{{ L().colFeatureOv }}</th>
+            <th>{{ L().colValue }}</th>
+            <th>{{ lang() === 'ar' ? 'الحالة الفعلية' : 'Effective state' }}</th>
+            <th>{{ lang() === 'ar' ? 'حتى' : 'Until' }}</th>
+            <th>{{ L().colReason }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (o of overrides(); track o.id) {
+            <tr class="still">
+              <td>
+                <span class="strong">{{ overrideCompany(o) }}</span
+                ><span class="sub">{{ overridePlan(o) }}</span>
+              </td>
+              <td>{{ overrideFeatureName(o) }}</td>
+              <td>
+                <span class="pill" [class.pill--on]="o.value" [class.pill--off]="!o.value"
+                  ><span class="dot"></span>{{ o.value ? L().valueOn : L().valueOff }}</span
+                >
+              </td>
+              <td>
+                <span
+                  class="strong"
+                  [class.okTxt]="effectiveOf(o).on"
+                  [class.badTxt]="!effectiveOf(o).on"
+                  >{{ effectiveOf(o).on ? L().valueOn : L().valueOff }}</span
+                >
+                <span class="sub">{{ effectiveOf(o).why }}</span>
+              </td>
+              <td class="soft">{{ date(o.expires) }}</td>
+              <td class="soft clip">{{ overrideReason(o) }}</td>
+              <td class="end">
+                <button type="button" class="btn btn--sm btn--badText" (click)="askRemove(o)">
+                  {{ L().remove }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (!loading() && !overrides().length) {
+      <div class="empty">
+        <strong>{{ lang() === 'ar' ? 'لا توجد استثناءات' : 'No overrides' }}</strong
+        ><span>{{
+          lang() === 'ar' ? 'كل الشركات تتبع باقاتها.' : 'Every company follows its plan.'
+        }}</span>
+      </div>
+    }
+  </section>
+
+  <section class="card checker">
+    <div class="cardHead">
+      <div>
+        <h2>{{ lang() === 'ar' ? 'فحص شركة' : 'Check a company' }}</h2>
+        <span>{{
+          lang() === 'ar'
+            ? 'الحالة الفعلية لكل ميزة كما يراها النظام.'
+            : 'Resolved state of every feature, as the platform evaluates it.'
+        }}</span>
+      </div>
+      <select class="pick" (change)="previewCompany($any($event.target).value)">
+        <option value="">{{ lang() === 'ar' ? 'اختر شركة' : 'Choose a company' }}</option>
+        @for (c of companies(); track c.id) {
+          <option [value]="c.id">{{ c.nameEn }}</option>
+        }
+      </select>
+    </div>
+    @if (effective(); as e) {
+      <div class="chips">
+        <span class="pill" [class.pill--on]="e.accessible" [class.pill--off]="!e.accessible"
+          ><span class="dot"></span
+          >{{
+            e.accessible
+              ? lang() === 'ar'
+                ? 'المساحة متاحة'
+                : 'Workspace available'
+              : lang() === 'ar'
+                ? 'المساحة غير متاحة'
+                : 'Workspace unavailable'
+          }}</span
+        >
+        @for (f of features(); track f.key) {
+          <span
+            class="pill"
+            [class.pill--on]="e.features[f.key]"
+            [class.pill--off]="!e.features[f.key]"
+            ><span class="dot"></span>{{ name(f) }}</span
+          >
+        }
+      </div>
+    }
+  </section>
+</div>
+
+@if (planConfirm(); as t) {
+  <div class="scrim scrim--top" (click)="cancelPlanConfirm()"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
+      <span class="dialog__title">{{
+        L().confirmPlanTitle(name(t.feature), planName(t.plan), t.next)
+      }}</span>
+      <span class="dialog__body">{{ L().confirmPlanBody(planCompanies(t.plan), t.next) }}</span>
+    </div>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="cancelPlanConfirm()">{{ L().cancel }}</button>
       <button
         type="button"
-        class="btn btn--primary"
+        class="btn btn--dark"
         [disabled]="saving()"
         (click)="confirmPlanToggle()"
       >
@@ -164,36 +279,36 @@
   </div>
 }
 
-@if (flagConfirm(); as fc) {
-  <div class="scrim" (click)="cancelFlagConfirm()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ L().flagTitle(name(fc.feature), fc.next) }}</span>
-      <p class="dialog__text">{{ L().flagBody(fc.next) }}</p>
-      @if (!fc.next) {
-        <label class="field">
-          <span class="field__label">{{ L().reasonLabel }}</span>
-          <textarea class="textarea" rows="2" [(ngModel)]="flagReason" name="flagReason"></textarea>
-        </label>
-        <button type="button" class="ack-row" (click)="toggleAck()">
-          <span class="ack-box" [class.ack-box--on]="flagAck()">
-            @if (flagAck()) {
-              ✓
-            }
-          </span>
-          <span class="ack-text">{{ L().ackText }}</span>
+@if (flagConfirm(); as t) {
+  <div class="scrim scrim--top" (click)="cancelFlagConfirm()"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
+      <span class="dialog__title">{{ L().flagTitle(name(t.feature), t.next) }}</span>
+      <span class="dialog__body">{{ L().flagBody(t.next) }}</span>
+    </div>
+    <div class="dialog__main">
+      <label class="field"
+        ><span>{{ L().reasonLabel }}</span
+        ><textarea
+          rows="2"
+          [value]="flagReason()"
+          (input)="flagReason.set($any($event.target).value)"
+        ></textarea>
+      </label>
+      @if (!t.next) {
+        <button type="button" class="ack" (click)="toggleAck()">
+          <span class="box" [class.box--on]="flagAck()">{{ flagAck() ? '✓' : '' }}</span
+          >{{ L().ackText }}
         </button>
       }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelFlagConfirm()">
-        {{ L().cancel }}
-      </button>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="cancelFlagConfirm()">{{ L().cancel }}</button>
       <button
         type="button"
         class="btn"
-        [class.btn--danger]="!fc.next"
-        [class.btn--primary]="fc.next"
+        [class.btn--danger]="!t.next"
+        [class.btn--dark]="t.next"
         [disabled]="saving() || flagConfirmBlocked()"
         (click)="confirmFlagToggle()"
       >
@@ -203,103 +318,167 @@
   </div>
 }
 
-@if (rolloutEditing(); as rf) {
-  <div class="scrim" (click)="closeRollout()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ L().rolloutTitle(name(rf)) }}</span>
+@if (rolloutEditing(); as f) {
+  <div class="scrim scrim--top" (click)="closeRollout()"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
+      <span class="dialog__title">{{ L().rolloutTitle(name(f)) }}</span>
+      <span class="dialog__body">{{
+        lang() === 'ar'
+          ? 'تُختار الشركات بشكل ثابت حسب معرّفها، فلا تتبدل بين الطلبات.'
+          : 'Companies are bucketed by a stable hash of their ID, so the same companies stay in.'
+      }}</span>
+    </div>
+    <div class="dialog__main">
       <label class="field">
-        <span class="field__label">{{ L().rolloutLabel }}</span>
+        <span
+          >{{ L().rolloutLabel }} · <b class="mono">{{ rolloutDraft() }}%</b></span
+        >
         <input
-          class="textarea"
-          type="number"
+          type="range"
           min="0"
           max="100"
-          [ngModel]="rolloutDraft()"
-          (ngModelChange)="rolloutDraft.set($event)"
-          name="rolloutDraft"
+          step="5"
+          [value]="rolloutDraft()"
+          (input)="rolloutDraft.set(+$any($event.target).value)"
         />
       </label>
+      <div class="field">
+        <span
+          >{{
+            lang() === 'ar'
+              ? 'متوقفة (مخفية للباقات الجديدة)'
+              : 'Deprecated (hidden for new plans)'
+          }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+        >
+        <div class="segs">
+          <button type="button" class="seg seg--on">{{ lang() === 'ar' ? 'لا' : 'No' }}</button>
+          <button type="button" class="seg" (click)="deprecatedSoon()">
+            {{ lang() === 'ar' ? 'نعم' : 'Yes' }}
+          </button>
+        </div>
+      </div>
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeRollout()">
-        {{ L().cancel }}
-      </button>
-      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="saveRollout()">
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="closeRollout()">{{ L().cancel }}</button>
+      <button type="button" class="btn btn--dark" [disabled]="saving()" (click)="saveRollout()">
         {{ L().confirm }}
       </button>
     </div>
   </div>
 }
 
-@if (removeConfirm(); as rc) {
-  <div class="scrim" (click)="cancelRemove()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ L().removeTitle(overrideCompany(rc)) }}</span>
-      <p class="dialog__text">{{ L().removeBody }}</p>
+@if (removeConfirm(); as o) {
+  <div class="scrim scrim--top" (click)="cancelRemove()"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
+      <span class="dialog__title">{{ L().removeTitle(overrideCompany(o)) }}</span>
+      <span class="dialog__body">{{ L().removeBody }}</span>
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="cancelRemove()">
-        {{ L().cancel }}
-      </button>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="cancelRemove()">{{ L().cancel }}</button>
       <button type="button" class="btn btn--danger" [disabled]="saving()" (click)="confirmRemove()">
-        {{ L().confirm }}
+        {{ L().remove }}
       </button>
     </div>
   </div>
-}
-
-@if (toast(); as msg) {
-  <div class="toast">{{ msg }}</div>
 }
 
 @if (adding()) {
-  <div class="scrim" (click)="adding.set(false)"></div>
-  <div class="dialog">
-    <form
-      style="padding: 24px; display: grid; gap: 14px"
-      (submit)="$event.preventDefault(); saveOverride()"
-    >
-      <h2>{{ lang() === 'ar' ? 'استثناء الشركة' : 'Company override' }}</h2>
-      <label
-        >{{ L().colCompany
-        }}<select name="company" [(ngModel)]="draft.companyId" required>
+  <div class="scrim scrim--top" (click)="adding.set(false)"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
+      <span class="dialog__title">{{
+        lang() === 'ar' ? 'استثناء لشركة' : 'Company override'
+      }}</span>
+      <span class="dialog__body">{{
+        lang() === 'ar'
+          ? 'يتجاوز الباقة والإطلاق التدريجي لهذه الشركة فقط. مفتاح المنصة يظل له الأولوية.'
+          : 'Beats plan entitlement and rollout for this company only. The platform flag still wins.'
+      }}</span>
+    </div>
+    <form class="dialog__main" (submit)="$event.preventDefault(); saveOverride()">
+      <label class="field"
+        ><span>{{ L().colCompany }}</span
+        ><select name="company" [(ngModel)]="draft.companyId" required>
           <option value="">—</option>
           @for (c of companies(); track c.id) {
             <option [value]="c.id">{{ c.nameEn }}</option>
           }
         </select></label
-      ><label
-        >{{ L().colFeatureOv
-        }}<select name="feature" [(ngModel)]="draft.featureKey" required>
-          <option value="">—</option>
+      >
+      <label class="field"
+        ><span>{{ L().colFeatureOv }}</span
+        ><select name="feature" [(ngModel)]="draft.featureKey" required>
           @for (f of features(); track f.key) {
             <option [value]="f.key">{{ name(f) }}</option>
           }
         </select></label
-      ><label
-        ><input type="checkbox" name="enabled" [(ngModel)]="draft.enabled" />{{
-          L().valueOn
-        }}</label
-      ><label
-        >{{ L().colExpires
-        }}<input type="date" name="expires" [(ngModel)]="draft.expiresAt" required /></label
-      ><label
-        >{{ L().reasonLabel
-        }}<textarea
-          name="reason"
-          [(ngModel)]="draft.reason"
-          required
-          minlength="5"
-          maxlength="500"
-        ></textarea>
+      >
+      <div class="field">
+        <span>{{ L().colValue }}</span>
+        <div class="segs">
+          <button
+            type="button"
+            class="seg"
+            [class.seg--on]="draft.enabled"
+            (click)="draft.enabled = true"
+          >
+            {{ L().valueOn }}
+          </button>
+          <button
+            type="button"
+            class="seg"
+            [class.seg--on]="!draft.enabled"
+            (click)="draft.enabled = false"
+          >
+            {{ L().valueOff }}
+          </button>
+        </div>
+      </div>
+      <div class="field">
+        <span>{{ lang() === 'ar' ? 'المدة' : 'Duration' }}</span>
+        <div class="segs">
+          @for (d of ['7', '30', '90', '365']; track d) {
+            <button
+              type="button"
+              class="seg"
+              [class.seg--on]="duration() === d"
+              (click)="setDuration($any(d))"
+            >
+              {{ d }} {{ lang() === 'ar' ? 'يوم' : 'days' }}
+            </button>
+          }
+          <button type="button" class="seg" disabled>
+            {{ lang() === 'ar' ? 'دائم' : 'Permanent'
+            }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+          </button>
+        </div>
+        <span class="muted"
+          >{{ lang() === 'ar' ? 'ينتهي في ' : 'Ends on '
+          }}{{ date(draft.expiresAt + 'T12:00:00Z') }}</span
+        >
+      </div>
+      <label class="field"
+        ><span>{{ L().reasonLabel }}</span
+        ><textarea name="reason" rows="2" [(ngModel)]="draft.reason" required></textarea>
       </label>
       @if (error()) {
-        <p role="alert">{{ error() }}</p>
+        <p class="note note--bad" role="alert">{{ error() }}</p>
       }
-      <button class="btn btn--primary" [disabled]="saving()">{{ L().confirm }}</button
-      ><button type="button" class="btn" (click)="adding.set(false)">{{ L().cancel }}</button>
+      <div class="dialog__foot flush">
+        <button type="button" class="btn" (click)="adding.set(false)">{{ L().cancel }}</button>
+        <button
+          class="btn btn--dark"
+          [disabled]="saving() || !draft.companyId || !draft.featureKey"
+        >
+          {{ lang() === 'ar' ? 'حفظ الاستثناء' : 'Save override' }}
+        </button>
+      </div>
     </form>
   </div>
+}
+
+@if (toast(); as msg) {
+  <div class="toast"><span></span>{{ msg }}</div>
 }

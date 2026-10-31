@@ -90,7 +90,12 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-projects',
   imports: [FormsModule, RouterLink, InventoryEditor],
   templateUrl: './projects.html',
-  styleUrl: './projects.scss',
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './projects.scss',
+  ],
 })
 export class Projects implements OnDestroy {
   readonly ui = inject(CompanyUiState);
@@ -252,6 +257,54 @@ export class Projects implements OnDestroy {
     this.selectedUnit.set(this.selectedUnit()?.id === u.id ? null : u);
   }
   legendStatuses: UnitStatus[] = ['available', 'hold', 'reserved', 'under_contract', 'sold'];
+  readonly statusColor: Record<UnitStatus, string> = {
+    available: '#8BB33A',
+    hold: '#D99A28',
+    reserved: '#5B78E5',
+    under_contract: '#111113',
+    sold: '#C4C4BE',
+  };
+  /** Project unit mix from the saved counts (hold+reserved are combined by the API). */
+  mix(p: Project) {
+    const tot = Math.max(1, p.total);
+    return [
+      { k: this.L().available, n: p.available, c: '#8BB33A' },
+      { k: this.L().heldOrReserved, n: p.heldOrReserved, c: '#D99A28' },
+      { k: this.L().statusNames.under_contract, n: p.underContract, c: '#111113' },
+      { k: this.L().sold, n: p.sold, c: '#C4C4BE' },
+    ].map((x) => ({ ...x, w: (x.n / tot) * 100 + '%' }));
+  }
+  soldPct(p: Project) {
+    return p.total ? Math.round(((p.sold + p.underContract) / p.total) * 100) : 0;
+  }
+  phaseOf(b: Building | null) {
+    return (
+      this.openProject()?.phases.find((ph) => ph.buildings.some((x) => x.id === b?.id)) ?? null
+    );
+  }
+  isOpen(p: Project) {
+    return this.openProject()?.id === p.id;
+  }
+  segmentName(p: Project) {
+    return p.segment === 'com' ? this.t('Commercial', 'تجاري') : this.t('Residential', 'سكني');
+  }
+  unitType(u: InventoryUnit) {
+    return (
+      {
+        apt: this.t('Apartment', 'شقة'),
+        villa: this.t('Villa', 'فيلا'),
+        office: this.t('Office', 'مكتب'),
+        retail: this.t('Retail', 'تجاري'),
+      } as Record<string, string>
+    )[u.type];
+  }
+  importSoon() {
+    this.toast.set(
+      this.t('Bulk unit import is not available yet.', 'استيراد الوحدات المجمّع غير متاح بعد.'),
+    );
+    setTimeout(() => this.toast.set(''), 3500);
+  }
+  readonly toast = signal('');
   edit(kind: string, record: any = null, parent = '', initial: any = {}) {
     this.editor.set({ kind, record, parent, initial });
   }

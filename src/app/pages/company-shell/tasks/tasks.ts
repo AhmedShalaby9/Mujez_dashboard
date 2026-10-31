@@ -8,7 +8,12 @@ import { TasksApi, TASK_GROUPS, type CompanyTask } from '../../../tasks-api.serv
   selector: 'app-tasks',
   imports: [FormsModule, RouterLink],
   templateUrl: './tasks.html',
-  styleUrl: './tasks.scss',
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './tasks.scss',
+  ],
 })
 export class Tasks {
   private readonly ui = inject(CompanyUiState);
@@ -370,6 +375,136 @@ export class Tasks {
       this.saving.set(false);
     }
   }
+  // ---- design: board / list views ----
+  readonly view = signal<'board' | 'list'>('list');
+  setView(v: 'board' | 'list') {
+    if (this.view() === v) return;
+    this.view.set(v);
+    // The board shows open buckets plus a Done column, so it loads every status.
+    this.groupFilter.set('all');
+    this.statusFilter.set(v === 'board' ? 'all' : 'open');
+    void this.reload();
+  }
+  readonly prColor: Record<string, string> = { high: '#E2553B', med: '#D99A28', low: '#C4C4BE' };
+  readonly colColor: Record<string, string> = {
+    overdue: '#B4442F',
+    today: '#111113',
+    tomorrow: '#8BB33A',
+    week: '#C8F169',
+    later: '#C4C4BE',
+    done: '#1F7A4D',
+  };
+  readonly board = computed(() => {
+    const open = this.tasks().filter((t) => t.status === 'open');
+    return [
+      ...this.groups.map((g) => ({
+        key: g as string,
+        name: this.groupName(g),
+        items: open.filter((t) => t.group === g),
+      })),
+      {
+        key: 'done',
+        name: this.t('Done', 'منجزة'),
+        items: this.tasks().filter((t) => t.status === 'done'),
+      },
+    ];
+  });
+  initials(name?: string | null) {
+    return (name ?? '?')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join('');
+  }
+  dueLabel(t: CompanyTask) {
+    if (t.status === 'done' && t.completedAt)
+      return this.t('Done ', 'أُنجزت ') + this.date(t.completedAt);
+    if (t.dueDate === this.today()) return this.t('Today', 'اليوم');
+    return this.date(t.dueDate);
+  }
+  /** Assignee load among the loaded tasks (shown when the user can see others' tasks). */
+  readonly byAssignee = computed(() => {
+    const m = new Map<string, number>();
+    for (const t of this.tasks())
+      if (t.status === 'open')
+        m.set(
+          t.assignee?.name ?? this.t('Unassigned', 'دون مسؤول'),
+          (m.get(t.assignee?.name ?? this.t('Unassigned', 'دون مسؤول')) ?? 0) + 1,
+        );
+    const max = Math.max(1, ...m.values());
+    return [...m.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, n]) => ({ name, n, pct: (n / max) * 100 + '%' }));
+  });
+  async toggle(t: CompanyTask) {
+    if (!this.canManage() || t.status === 'cancelled') return;
+    await this.action(t, t.status === 'done' ? 'reopen' : 'complete');
+  }
+  // drag & drop: Done = complete, open buckets = reschedule, from Done = reopen
+  readonly dragging = signal<CompanyTask | null>(null);
+  readonly over = signal<string | null>(null);
+  canDrop(col: string) {
+    const t = this.dragging();
+    if (!t || !this.canManage() || col === 'overdue') return false;
+    if (col === 'done') return t.status === 'open';
+    return t.status === 'done' ? true : t.group !== col;
+  }
+  dragOver(e: DragEvent, col: string) {
+    if (!this.canDrop(col)) return;
+    e.preventDefault();
+    this.over.set(col);
+  }
+  private addDays(iso: string, n: number) {
+    const d = new Date(iso + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+  async drop(col: string) {
+    const t = this.dragging();
+    this.dragging.set(null);
+    this.over.set(null);
+    if (!t || !this.canDrop2(t, col)) return;
+    if (col === 'done') return this.action(t, 'complete');
+    if (t.status === 'done') await this.action(t, 'reopen');
+    const due =
+      col === 'today'
+        ? this.today()
+        : col === 'tomorrow'
+          ? this.addDays(this.today(), 1)
+          : col === 'week'
+            ? this.addDays(this.today(), 3)
+            : this.addDays(this.today(), 8);
+    if (due === t.dueDate) return;
+    const fresh = this.tasks().find((x) => x.id === t.id) ?? t;
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.error.set('');
+    try {
+      await this.api.write('/' + fresh.id + '/update', {
+        requestId: crypto.randomUUID(),
+        title: fresh.title.en,
+        ...(fresh.title.ar ? { titleAr: fresh.title.ar } : {}),
+        description: fresh.description,
+        leadId: fresh.lead?.id ?? null,
+        assigneeId: fresh.assignee?.id ?? null,
+        dueDate: due,
+        priority: fresh.priority,
+        version: fresh.version,
+      });
+      await this.reload(this.page());
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.saving.set(false);
+    }
+  }
+  private canDrop2(t: CompanyTask, col: string) {
+    if (!this.canManage() || col === 'overdue') return false;
+    if (col === 'done') return t.status === 'open';
+    return t.status === 'done' || t.group !== col;
+  }
+
   activityName(a: string) {
     return (
       (

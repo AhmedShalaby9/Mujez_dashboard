@@ -395,3 +395,32 @@ notes), outcome captured when marking an event done.
 | CA1 | **WhatsApp** reminder to the client from the event | Not shown (events don't carry a phone). | Return the linked contact's/lead's phone on events, or a reminder-send endpoint (see CL5). |
 | CA2 | Residential / Commercial segment switch | Not shown. | Segment on events (from lead/contact) + filter (see CL1). |
 | CA3 | Drag to move / resize events on the grid | Reschedule opens the form. | Nothing required (frontend). Listed for completeness, uses the existing update endpoint. |
+
+## Tasks (`/company/tasks`)
+
+Already real: **Board** view (Overdue / Today / Tomorrow / This week / Later / Done) and **List** view (grouped by the
+server's date buckets, with group chips and counts), header counts from the server summary, quick add, search, assignee
+filter, status filter (list), check-to-complete / reopen, **drag and drop** (onto Done = complete, onto a date column =
+reschedule via update, out of Done = reopen + reschedule), lead links, task drawer (details, mark done, edit, cancel with
+reason, history), create/edit with lead and assignee, `?leadId=` context, overview + by-assignee panels.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| CT1 | **By agent** workload across the team | Computed from the loaded page only (labelled "Open tasks on this page"). | Per-assignee open counts in the `summary` of `GET /tasks`. |
+| CT2 | Residential / Commercial tag on tasks | Not shown. | Segment from the linked lead (see CL1). |
+| CT3 | Board drop dates ("This week" = +3 days, "Later" = +8 days) | Chosen on the client. | Optional: accept `group` on update and let the server pick the date. |
+
+## Projects (`/company/projects`)
+
+Already real: project tree (project → phases → buildings, with available counts and floors), search, archived toggle,
+paging; project summary (developer, location, segment, from-price, code), unit-status stats + mix bar from saved counts,
+phases/buildings table (delivery year, buildings, floors), building **stacking plan** (floors × real units, status colors,
+legend), unit panel (price, type, bedrooms, area, floor, view, delivery; **Hold for client** → Reservations, View unit,
+Edit), create/edit project / phase / building / unit (shared editor), archive / restore.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| CJ1 | **Import units** (bulk spreadsheet import) | "Soon" button, toast only. | `POST /units/import` (CSV/XLSX) with validation report. |
+| CJ2 | Per-**phase / building** unit counts, sold %, from-price in the table and tree | Project-level counts only. Rows show delivery year and floors. | Counts and from-price aggregated per phase and per building. |
+| CJ3 | Separate **Hold** and **Reserved** counts | The API combines them (`heldOrReserved`). | Separate `held` and `reserved` counts. |
+| CJ4 | **Link to the developer contact** from a project | Developer shown as text. | `developerContactId` on projects. |

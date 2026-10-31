@@ -1,106 +1,201 @@
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <span
+        >{{ total() }} {{ t('events', 'حدث') }} ·
+        {{
+          t('every change by every employee is recorded', 'يتم تسجيل كل تعديل يقوم به الموظفون')
+        }}</span
+      >
+      <h1>{{ L().title }}</h1>
+    </div>
+    <div class="head__actions">
+      <button
+        type="button"
+        class="btn btn--sm"
+        (click)="
+          soon(
+            t(
+              'Audit export is not available for companies yet.',
+              'تصدير السجل غير متاح للشركات بعد.'
+            )
+          )
+        "
+      >
+        {{ t('Export CSV', 'تصدير CSV') }}<i class="soon">{{ t('Soon', 'قريبًا') }}</i>
+      </button>
+    </div>
   </div>
-</div>
 
-<form class="chip-row" (ngSubmit)="load()">
-  <input
-    class="search"
-    name="search"
-    [(ngModel)]="search"
-    [placeholder]="L().searchPh"
-    [attr.aria-label]="L().searchPh"
-  />
-  <select name="actor" [(ngModel)]="userFilter" [attr.aria-label]="L().thActor">
-    <option value="">{{ L().userAll }}</option>
-    @for (a of options().actors; track a.id) {
-      <option [value]="a.id ?? 'system'">{{ a.name ?? (ar() ? 'النظام' : 'System') }}</option>
-    }
-  </select>
-  <select name="action" [(ngModel)]="actionFilter" [attr.aria-label]="L().thAction">
-    <option value="">{{ ar() ? 'كل الإجراءات' : 'All actions' }}</option>
-    @for (a of options().actions; track a) {
-      <option [value]="a">{{ a }}</option>
-    }
-  </select>
-  <label>{{ ar() ? 'من' : 'From' }}<input type="date" name="from" [(ngModel)]="from" /></label
-  ><label>{{ ar() ? 'إلى' : 'To' }}<input type="date" name="to" [(ngModel)]="to" /></label>
-  <button class="btn btn--ghost" [disabled]="busy()">{{ ar() ? 'تطبيق' : 'Apply filters' }}</button>
-</form>
-@if (error()) {
-  <p role="alert">{{ error() }}</p>
-}
-@if (busy()) {
-  <p role="status">{{ ar() ? 'جار التحميل…' : 'Loading…' }}</p>
-}
-<p>{{ entries().length }} / {{ total() }} · Africa/Cairo · {{ asOf() }}</p>
-<div class="card">
-  <div class="table-scroll">
-    <div class="au-table">
-      <div class="au-head">
-        <span>{{ L().thAction }}</span>
-        <span>{{ L().thResource }}</span>
-        <span>{{ L().thActor }}</span>
-        <span>{{ L().thAt }}</span>
-      </div>
-      @for (e of entries(); track e.id) {
-        <button type="button" class="au-row" (click)="open(e)">
-          <span class="au-cell__main">
-            <span>{{ action(e) }}</span>
-            <span class="au-cell__sub mono">{{ e.id }}</span>
-          </span>
-          <span class="au-cell__sub">{{ e.resourceType }} · {{ e.resourceId }}</span>
-          <span class="au-cell__sub">{{ actor(e) }}</span>
-          <span class="au-cell__sub">{{ date(e.at) }}</span>
+  <div class="tools">
+    <div class="chips">
+      @for (c of categories; track c.key) {
+        <button
+          type="button"
+          class="chip"
+          [class.on]="category() === c.key"
+          (click)="category.set(c.key)"
+        >
+          {{ ar() ? c.ar : c.en }}
         </button>
       }
-      @if (!entries().length) {
-        <div class="t-empty">{{ L().emptyTitle }}</div>
+    </div>
+    <form class="search-form" (ngSubmit)="load()">
+      <input
+        class="search"
+        type="search"
+        name="search"
+        [(ngModel)]="search"
+        [placeholder]="L().searchPh"
+        [attr.aria-label]="L().searchPh"
+      />
+      <button
+        type="button"
+        class="btn btn--sm"
+        [class.btn--dark]="showFilters"
+        (click)="showFilters = !showFilters"
+      >
+        {{ t('Filters', 'تصفية') }}
+      </button>
+    </form>
+  </div>
+
+  @if (showFilters) {
+    <form class="card filters" (ngSubmit)="load()">
+      <label class="field">
+        <span>{{ L().thActor }}</span>
+        <select name="actor" [(ngModel)]="userFilter">
+          <option value="">{{ L().userAll }}</option>
+          @for (a of options().actors; track a.id) {
+            <option [value]="a.id ?? 'system'">{{ a.name ?? t('System', 'النظام') }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span>{{ L().thAction }}</span>
+        <select name="action" [(ngModel)]="actionFilter">
+          <option value="">{{ t('All actions', 'كل الإجراءات') }}</option>
+          @for (a of options().actions; track a) {
+            <option [value]="a">{{ a }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span>{{ t('From', 'من') }}</span>
+        <input type="date" name="from" [(ngModel)]="from" />
+      </label>
+      <label class="field">
+        <span>{{ t('To', 'إلى') }}</span>
+        <input type="date" name="to" [(ngModel)]="to" />
+      </label>
+      <button class="btn btn--dark" [disabled]="busy()">{{ t('Apply', 'تطبيق') }}</button>
+    </form>
+  }
+
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+
+  <section class="card list" [class.list--busy]="busy()">
+    <div class="agrid ahead">
+      <span>{{ L().thAt }}</span>
+      <span>{{ L().thActor }}</span>
+      <span>{{ L().thAction }}</span>
+      <span>{{ t('Record', 'السجل') }}</span>
+      <span>{{ t('Change', 'التغيير') }}</span>
+    </div>
+    @for (e of visible(); track e.id) {
+      <button type="button" class="agrid arow" [class.arow--sens]="sensitive(e)" (click)="open(e)">
+        <span class="small muted nowrap" [title]="date(e.at)">{{ when(e.at) }}</span>
+        <span class="who">
+          <span class="avatar avatar--sm" [class.avatar--sys]="!e.actor">{{ initials(e) }}</span>
+          <span class="ell">{{ actor(e) }}</span>
+        </span>
+        <span class="act">
+          <span class="sq" [style.background]="verbColor(e)"></span>
+          <span class="ell">{{ verb(e) }}</span>
+        </span>
+        <span class="cell">
+          <span class="strong ell">{{ e.resourceType.replace('_', ' ') }}</span>
+          <span class="sub mono ell">{{ e.resourceId }}</span>
+        </span>
+        <span class="small muted2 change">{{ change(e) }}</span>
+      </button>
+    }
+    @if (busy() && !entries().length) {
+      <p class="muted empty" role="status">{{ t('Loading…', 'جار التحميل…') }}</p>
+    }
+    @if (!busy() && !visible().length) {
+      <p class="muted empty">{{ L().emptyTitle }}</p>
+    }
+    <div class="pager">
+      <span class="muted"
+        >{{ entries().length }} / {{ total() }} {{ t('loaded', 'محمّل') }}
+        @if (category() !== 'all') {
+          · {{ t('category filters loaded events', 'التصنيف يصفّي الأحداث المحمّلة') }}
+        }
+        · Africa/Cairo</span
+      >
+      @if (nextCursor()) {
+        <button type="button" class="btn btn--sm" [disabled]="busy()" (click)="load(true)">
+          {{ t('Load more', 'المزيد') }}
+        </button>
       }
     </div>
-  </div>
+  </section>
 </div>
 
-@if (nextCursor()) {
-  <button class="btn btn--ghost" [disabled]="busy()" (click)="load(true)">
-    {{ ar() ? 'المزيد' : 'Load more' }}
-  </button>
-}
 @if (selected(); as e) {
   <div class="scrim" (click)="close()"></div>
-  <div class="drawer" (click)="$event.stopPropagation()">
-    <div class="drawer__header">
-      <div class="drawer__headerText">
-        <span class="drawer__name">{{ action(e) }}</span>
-        <span class="drawer__sub mono">{{ e.id }} · {{ date(e.at) }}</span>
+  <aside class="drawer" role="dialog" aria-modal="true" [attr.aria-label]="e.action">
+    <div class="drawer__head">
+      <div class="drawer__title">
+        <span class="drawer__name">{{ verb(e) }}</span>
+        <span class="muted small mono">{{ e.action }} · {{ date(e.at) }}</span>
       </div>
-      <button type="button" class="drawer__close" (click)="close()">✕</button>
+      <button type="button" class="x" (click)="close()" [attr.aria-label]="L().close">×</button>
     </div>
     <div class="drawer__body">
-      <div class="drawer__row">
-        <span class="drawer__k">Resource</span
-        ><span>{{ e.resourceType }} · {{ e.resourceId }}</span>
+      <div class="sect">
+        <div class="kv">
+          <span>{{ L().thActor }}</span
+          ><b>{{ actor(e) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ t('Record type', 'نوع السجل') }}</span
+          ><b>{{ e.resourceType }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ t('Record ID', 'معرف السجل') }}</span
+          ><b class="mono">{{ e.resourceId }}</b>
+        </div>
+        @if (e.ip) {
+          <div class="kv">
+            <span>IP</span><b class="mono">{{ e.ip }}</b>
+          </div>
+        }
+        <div class="kv">
+          <span>{{ t('Event ID', 'معرف الحدث') }}</span
+          ><b class="mono">{{ e.id }}</b>
+        </div>
       </div>
-      <div class="drawer__row">
-        <span class="drawer__k">User</span><span>{{ actor(e) }}</span>
+      @if (change(e)) {
+        <p class="note">{{ change(e) }}</p>
+      }
+      <div class="diff">
+        <div class="diff__box diff__box--before">
+          <span class="sect__label">{{ L().drawerBefore.toUpperCase() }}</span>
+          <pre class="mono">{{ json(e.before) }}</pre>
+        </div>
+        <div class="diff__box diff__box--after">
+          <span class="sect__label">{{ L().drawerAfter.toUpperCase() }}</span>
+          <pre class="mono">{{ json(e.after) }}</pre>
+        </div>
       </div>
+    </div>
+  </aside>
+}
 
-      <div class="diff-grid">
-        <div class="diff-box diff-box--before">
-          <span class="diff-box__title">{{ L().drawerBefore }}</span>
-          <pre class="mono diff-box__value">{{ json(e.before) }}</pre>
-        </div>
-        <div class="diff-box diff-box--after">
-          <span class="diff-box__title">{{ L().drawerAfter }}</span>
-          <pre class="mono diff-box__value">{{ json(e.after) }}</pre>
-        </div>
-      </div>
-    </div>
-    <div class="drawer__footer">
-      <button type="button" class="btn btn--ghost" (click)="close()">{{ L().close }}</button>
-    </div>
-  </div>
+@if (toast()) {
+  <div class="toast"><span></span>{{ toast() }}</div>
 }

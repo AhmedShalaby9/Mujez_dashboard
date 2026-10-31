@@ -1,151 +1,262 @@
-<div class="team">
-  <header class="team__head">
-    <div>
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <span
+        >{{ count().all }} {{ t('members', 'عضو') }} · {{ count().active }}
+        {{ t('active', 'نشط') }} · {{ count().invited }} {{ t('invited', 'مدعو') }}</span
+      >
       <h1>{{ t('Team', 'الفريق') }}</h1>
-      <p>
-        {{
-          t(
-            'Invite agents to work their own leads and deals.',
-            'ادعُ وكلاء للعمل على عملائهم وصفقاتهم الخاصة.'
-          )
-        }}
-      </p>
     </div>
-    <button type="button" class="btn btn--primary" (click)="openInvite()">
-      {{ t('+ Invite member', '+ دعوة عضو') }}
-    </button>
-  </header>
+    <div class="head__actions">
+      <button type="button" class="btn btn--dark" (click)="openInvite()">
+        {{ t('+ Invite member', '+ دعوة عضو') }}
+      </button>
+    </div>
+  </div>
+
+  <div class="tools">
+    <div class="chips">
+      <button
+        type="button"
+        class="chip"
+        [class.on]="statusFilter() === 'all'"
+        (click)="statusFilter.set('all')"
+      >
+        {{ t('All', 'الكل') }} · {{ count().all }}
+      </button>
+      @for (s of statuses; track s) {
+        <button
+          type="button"
+          class="chip"
+          [class.on]="statusFilter() === s"
+          (click)="statusFilter.set(s)"
+        >
+          {{ statusNames[s][lang()] }} · {{ count()[s] }}
+        </button>
+      }
+    </div>
+    <input
+      class="q"
+      type="search"
+      [placeholder]="t('Search name or email', 'ابحث بالاسم أو البريد')"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+    />
+  </div>
 
   @if (error()) {
-    <p class="team__error" role="alert">{{ error() }}</p>
+    <p class="note note--bad" role="alert">{{ error() }}</p>
   }
 
-  @if (loading()) {
-    <p class="team__muted">{{ t('Loading…', 'جارٍ التحميل…') }}</p>
-  } @else if (!items().length) {
-    <div class="team__empty">
-      <p>{{ t('No team members yet.', 'لا يوجد أعضاء في الفريق بعد.') }}</p>
-    </div>
-  } @else {
-    <table class="team__table">
-      <thead>
-        <tr>
-          <th>{{ t('Name', 'الاسم') }}</th>
-          <th>{{ t('Email', 'البريد الإلكتروني') }}</th>
-          <th>{{ t('Role', 'الدور') }}</th>
-          <th>{{ t('Status', 'الحالة') }}</th>
-          <th>{{ t('Last login', 'آخر دخول') }}</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (m of items(); track m.id) {
+  <section class="card">
+    <div class="scroll">
+      <table>
+        <thead>
           <tr>
-            <td>{{ m.name }}</td>
-            <td class="team__email">{{ m.email }}</td>
-            <td>{{ roleNames[m.role]?.[lang()] ?? m.roleName[lang()] }}</td>
-            <td>
-              <span
-                class="chip"
-                [class.chip--active]="m.status === 'active'"
-                [class.chip--muted]="m.status === 'disabled'"
-                >{{ statusNames[m.status][lang()] }}</span
-              >
-            </td>
-            <td>{{ m.lastLoginAt ? (m.lastLoginAt | date: 'medium') : '—' }}</td>
-            <td class="team__actions">
-              @if (m.status === 'invited') {
-                <button type="button" class="link" [disabled]="busy() === m.id" (click)="resend(m)">
-                  {{ t('Resend', 'إعادة الإرسال') }}
-                </button>
-                <button
-                  type="button"
-                  class="link link--danger"
-                  [disabled]="busy() === m.id"
-                  (click)="revoke(m)"
-                >
-                  {{ t('Revoke', 'إلغاء') }}
-                </button>
-              } @else {
-                <button
-                  type="button"
-                  class="link"
-                  [class.link--danger]="m.status === 'active'"
-                  [disabled]="busy() === m.id"
-                  (click)="toggle(m)"
-                >
-                  {{ m.status === 'active' ? t('Disable', 'تعطيل') : t('Enable', 'تفعيل') }}
-                </button>
-              }
-            </td>
+            <th>{{ t('Member', 'العضو') }}</th>
+            <th>{{ t('Role', 'الدور') }}</th>
+            <th>{{ t('Status', 'الحالة') }}</th>
+            <th>{{ t('Last login', 'آخر دخول') }}</th>
+            <th>{{ t('Added', 'تاريخ الإضافة') }}</th>
+            <th></th>
           </tr>
-        }
-      </tbody>
-    </table>
-  }
-
-  @if (inviteOpen()) {
-    <div class="modal" (click)="closeInvite()">
-      <div class="modal__panel" (click)="$event.stopPropagation()">
-        @if (inviteLink()) {
-          <h2>{{ t('Invitation ready', 'الدعوة جاهزة') }}</h2>
-          <p class="team__muted">
-            {{
-              t(
-                'Share this link with the new member. It works once and expires in 24 hours.',
-                'شارك هذا الرابط مع العضو الجديد. يعمل مرة واحدة وتنتهي صلاحيته خلال 24 ساعة.'
-              )
-            }}
-          </p>
-          <div class="team__linkRow">
-            <input type="text" readonly [value]="inviteLink()" />
-            <button type="button" class="btn" (click)="copyLink()">{{ t('Copy', 'نسخ') }}</button>
-          </div>
-          <div class="modal__actions">
-            <button type="button" class="btn btn--primary" (click)="closeInvite()">
-              {{ t('Done', 'تم') }}
-            </button>
-          </div>
-        } @else {
-          <h2>{{ t('Invite a team member', 'دعوة عضو فريق') }}</h2>
-          <form (ngSubmit)="submitInvite()">
-            @if (inviteError()) {
-              <p class="team__error" role="alert">{{ inviteError() }}</p>
-            }
-            <label>
-              {{ t('Name', 'الاسم') }}
-              <input
-                type="text"
-                name="name"
-                [(ngModel)]="inviteName"
-                required
-                minlength="2"
-                maxlength="120"
-              />
-            </label>
-            <label>
-              {{ t('Email', 'البريد الإلكتروني') }}
-              <input type="email" name="email" [(ngModel)]="inviteEmail" required maxlength="254" />
-            </label>
-            <label>
-              {{ t('Role', 'الدور') }}
-              <select name="role" [(ngModel)]="inviteRole">
-                @for (r of roles; track r) {
-                  <option [value]="r">{{ roleNames[r][lang()] }}</option>
+        </thead>
+        <tbody>
+          @for (m of visible(); track m.id) {
+            <tr [class.off]="m.status === 'disabled'">
+              <td>
+                <span class="who">
+                  <span class="avatar">{{ initials(m.name) }}</span>
+                  <span class="cell">
+                    <b class="name">{{ m.name }}</b>
+                    <span class="sub mono">{{ m.email }}</span>
+                  </span>
+                </span>
+              </td>
+              <td class="soft">{{ roleNames[m.role]?.[lang()] ?? m.roleName[lang()] }}</td>
+              <td>
+                <span
+                  class="st"
+                  [style.background]="statusTone[m.status][0]"
+                  [style.color]="statusTone[m.status][1]"
+                  >{{ statusNames[m.status][lang()] }}</span
+                >
+                @if (m.status === 'invited' && m.invitationExpiresAt) {
+                  <span class="sub" [class.late]="expired(m)"
+                    >{{ expired(m) ? t('Link expired', 'انتهى الرابط') : t('Expires', 'ينتهي') }}
+                    {{ m.invitationExpiresAt | date: 'MMM d, HH:mm' }}</span
+                  >
                 }
-              </select>
-            </label>
-            <div class="modal__actions">
-              <button type="button" class="btn" (click)="closeInvite()" [disabled]="inviting()">
-                {{ t('Cancel', 'إلغاء') }}
-              </button>
-              <button type="submit" class="btn btn--primary" [disabled]="inviting()">
-                {{ inviting() ? t('Sending…', 'جارٍ الإرسال…') : t('Send invite', 'إرسال الدعوة') }}
-              </button>
-            </div>
-          </form>
-        }
-      </div>
+              </td>
+              <td class="soft">
+                {{ m.lastLoginAt ? (m.lastLoginAt | date: 'MMM d, y, HH:mm') : '—' }}
+              </td>
+              <td class="soft">{{ m.createdAt | date: 'MMM d, y' }}</td>
+              <td class="end">
+                <span class="acts">
+                  @if (m.status === 'invited') {
+                    <button
+                      type="button"
+                      class="btn btn--sm"
+                      [disabled]="busy() === m.id"
+                      (click)="resend(m)"
+                    >
+                      {{ expired(m) ? t('New link', 'رابط جديد') : t('Resend', 'إعادة الإرسال') }}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn--sm btn--badText"
+                      [disabled]="busy() === m.id"
+                      (click)="revoke(m)"
+                    >
+                      {{ t('Revoke', 'إلغاء') }}
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="btn btn--sm"
+                      [class.btn--badText]="m.status === 'active'"
+                      [disabled]="busy() === m.id"
+                      (click)="toggle(m)"
+                    >
+                      {{ m.status === 'active' ? t('Disable', 'تعطيل') : t('Enable', 'تفعيل') }}
+                    </button>
+                  }
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
     </div>
-  }
+    @if (loading() && !items().length) {
+      <p class="muted pad" role="status">{{ t('Loading…', 'جارٍ التحميل…') }}</p>
+    } @else if (!items().length) {
+      <div class="empty">
+        <strong>{{ t('No team members yet', 'لا يوجد أعضاء بعد') }}</strong>
+        <span>{{
+          t(
+            'Invite agents to work their own leads and deals.',
+            'ادعُ وكلاء للعمل على عملائهم وصفقاتهم.'
+          )
+        }}</span>
+        <button type="button" class="btn btn--dark" (click)="openInvite()">
+          {{ t('+ Invite member', '+ دعوة عضو') }}
+        </button>
+      </div>
+    } @else if (!visible().length) {
+      <p class="muted pad">{{ t('No members match these filters.', 'لا يوجد أعضاء مطابقون.') }}</p>
+    }
+  </section>
+
+  <p class="muted small">
+    {{
+      t(
+        'Agents see and work only their own leads and deals. Disabling a member signs them out and keeps their records.',
+        'يرى الوكلاء عملاءهم وصفقاتهم فقط. تعطيل العضو يسجل خروجه ويحتفظ بسجلاته.'
+      )
+    }}
+  </p>
 </div>
+
+@if (inviteOpen()) {
+  <div class="scrim scrim--top" (click)="closeInvite()"></div>
+  <section
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="t('Invite a team member', 'دعوة عضو فريق')"
+  >
+    @if (inviteLink()) {
+      <div class="dialog__head">
+        <span class="dialog__title">{{ t('Invitation ready', 'الدعوة جاهزة') }}</span>
+        <span class="dialog__body">{{
+          t(
+            'Share this link with ' +
+              (inviteName() || 'the new member') +
+              '. It works once and expires in 24 hours.',
+            'شارك هذا الرابط مع ' +
+              (inviteName() || 'العضو الجديد') +
+              '. يعمل مرة واحدة وتنتهي صلاحيته خلال 24 ساعة.'
+          )
+        }}</span>
+      </div>
+      <div class="dialog__main">
+        <div class="link-row">
+          <input
+            class="mono"
+            type="text"
+            readonly
+            [value]="inviteLink()"
+            (focus)="$any($event.target).select()"
+          />
+          <button type="button" class="btn" (click)="copyLink()">{{ t('Copy', 'نسخ') }}</button>
+        </div>
+      </div>
+      <div class="dialog__foot">
+        <button type="button" class="btn btn--dark" (click)="closeInvite()">
+          {{ t('Done', 'تم') }}
+        </button>
+      </div>
+    } @else {
+      <form (ngSubmit)="submitInvite()">
+        <div class="dialog__head">
+          <span class="dialog__title">{{ t('Invite a team member', 'دعوة عضو فريق') }}</span>
+          <span class="dialog__body">{{
+            t(
+              'You get a one-time activation link to share.',
+              'ستحصل على رابط تفعيل لمرة واحدة لمشاركته.'
+            )
+          }}</span>
+        </div>
+        <div class="dialog__main">
+          @if (inviteError()) {
+            <p class="note note--bad" role="alert">{{ inviteError() }}</p>
+          }
+          <label class="field">
+            <span>{{ t('Full name', 'الاسم بالكامل') }}</span>
+            <input
+              type="text"
+              name="name"
+              [(ngModel)]="inviteName"
+              required
+              minlength="2"
+              maxlength="120"
+            />
+          </label>
+          <label class="field">
+            <span>{{ t('Email', 'البريد الإلكتروني') }}</span>
+            <input
+              type="email"
+              name="email"
+              [(ngModel)]="inviteEmail"
+              required
+              maxlength="254"
+              dir="ltr"
+            />
+          </label>
+          <label class="field">
+            <span>{{ t('Role', 'الدور') }}</span>
+            <select name="role" [(ngModel)]="inviteRole">
+              @for (r of roles; track r) {
+                <option [value]="r">{{ roleNames[r][lang()] }}</option>
+              }
+            </select>
+          </label>
+        </div>
+        <div class="dialog__foot">
+          <button type="button" class="btn" (click)="closeInvite()" [disabled]="inviting()">
+            {{ t('Cancel', 'إلغاء') }}
+          </button>
+          <button type="submit" class="btn btn--dark" [disabled]="inviting()">
+            {{ inviting() ? t('Sending…', 'جارٍ الإرسال…') : t('Create invite', 'إنشاء الدعوة') }}
+          </button>
+        </div>
+      </form>
+    }
+  </section>
+}
+
+@if (toast()) {
+  <div class="toast"><span></span>{{ toast() }}</div>
+}

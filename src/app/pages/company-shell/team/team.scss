@@ -1,190 +1,66 @@
-.team {
+// Team: no Web App design screen; built with the shared company list style. Shared blocks from admin-ui / admin-table / company-ui.
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  .q {
+    margin-inline-start: auto;
+    width: 240px;
+    min-height: 30px;
+  }
+}
+@media (max-width: 640px) {
+  .tools .q {
+    width: 100%;
+  }
+}
+tbody tr {
+  cursor: default;
+}
+tr.off td {
+  opacity: 0.6;
+}
+.who {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.cell {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 24px;
-  font-family: var(--font-ui);
-  color: var(--ink);
+  min-width: 0;
 }
-.team__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  h1 {
-    margin: 0 0 4px;
-    font-size: 20px;
-    font-weight: 600;
-  }
-  p {
-    margin: 0;
-    color: var(--ink-muted);
-    font-size: 13px;
-  }
+.name {
+  font-weight: 500;
 }
-.team__muted {
-  color: var(--ink-muted);
-  font-size: 13px;
+.st {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
 }
-.team__error {
-  padding: 10px 14px;
-  border-radius: var(--r-control);
-  background: var(--danger-bg);
-  color: var(--danger-text);
-  font-size: 13px;
+.acts {
+  display: inline-flex;
+  gap: 6px;
 }
-.team__empty {
-  padding: 32px;
+.pad {
+  margin: 0;
+  padding: 24px 16px;
   text-align: center;
-  border: 1px dashed var(--border-card);
-  border-radius: var(--r-card);
-  color: var(--ink-muted);
 }
-.team__table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--surface);
-  border: 1px solid var(--border-card);
-  border-radius: var(--r-card);
-  overflow: hidden;
-  font-size: 13px;
-  th,
-  td {
-    padding: 10px 14px;
-    text-align: start;
-    border-bottom: 1px solid var(--border-row);
-  }
-  th {
-    color: var(--ink-muted);
-    font-weight: 500;
-    background: var(--surface-alt);
-  }
-  tr:last-child td {
-    border-bottom: none;
-  }
+.small {
+  font-size: 12px;
 }
-.team__email {
-  color: var(--ink-secondary);
-}
-.team__actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-}
-.team__linkRow {
+.link-row {
   display: flex;
   gap: 8px;
   input {
     flex: 1;
-    padding: 8px 10px;
-    border-radius: var(--r-control);
-    border: 1px solid var(--border-input);
-    font: 12px var(--font-mono);
+    font-size: 12px;
   }
-}
-.chip {
-  display: inline-block;
-  padding: 2px 9px;
-  border-radius: var(--r-pill);
-  background: var(--neutral-chip-bg);
-  color: var(--neutral-chip-text);
-  font-size: 12px;
-}
-.chip--active {
-  background: var(--success-bg);
-  color: var(--success-text);
-}
-.chip--muted {
-  background: var(--border-row);
-  color: var(--ink-faint);
-}
-.link {
-  border: 0;
-  background: none;
-  padding: 0;
-  color: var(--primary);
-  font-size: 13px;
-  cursor: pointer;
-  &:hover {
-    text-decoration: underline;
-  }
-  &:disabled {
-    color: var(--ink-disabled);
-    cursor: default;
-  }
-}
-.link--danger {
-  color: var(--danger-text);
-}
-.btn {
-  padding: 8px 14px;
-  border-radius: var(--r-control);
-  border: 1px solid var(--border-input);
-  background: var(--surface);
-  color: var(--ink);
-  font: 13px var(--font-ui);
-  cursor: pointer;
-  &:hover {
-    background: var(--surface-alt-2);
-  }
-  &:disabled {
-    opacity: 0.6;
-    cursor: default;
-  }
-}
-.btn--primary {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-  &:hover {
-    background: var(--primary-hover);
-  }
-}
-.modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(17, 17, 19, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-.modal__panel {
-  width: 420px;
-  max-width: calc(100vw - 32px);
-  background: var(--surface);
-  border-radius: var(--r-modal);
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  h2 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-  }
-  form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-size: 13px;
-    color: var(--ink-secondary);
-  }
-  input,
-  select {
-    padding: 9px 10px;
-    border-radius: var(--r-control);
-    border: 1px solid var(--border-input);
-    font: 13px var(--font-ui);
-  }
-}
-.modal__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
 }

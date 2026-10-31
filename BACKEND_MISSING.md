@@ -563,3 +563,31 @@ logic as the server), agents roster built from active rule targets.
 | LR6 | Agent **specialties** (Residential, New Cairo, Commercial…) | Not shown. | Agent tags that rules can match on. |
 | LR7 | Company-wide **SLA** setting and "reassign when SLA is missed" toggle | SLA is per rule; reassignment is always on when SLA > 0. | Optional company default SLA + reassignment switch. |
 | LR8 | **Working hours** (queue leads outside hours) | Not shown. | Working-hours setting and queued routing. |
+
+## Audit Log (`/company/audit-log`)
+
+Already real: design event table (when, user with initials, action verb with color, record type + id, change summary
+built from before / after), sensitive rows (delete / export / void / archive) tinted, search, filters panel (user,
+action, from / to), cursor "Load more", total count, detail drawer (user, record type / id, IP, event id, change summary,
+before / after JSON).
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| AU1 | Category chips (Leads / Deals / Inventory / Documents / Settings) | Filter the **loaded** events on the client by resource type (labelled). | `resourceType` (or `category`) filter on `GET /company-audit`. |
+| AU2 | **Export CSV** | "Soon" button. | Company audit export (the platform has one: `audit_export`), audited itself. |
+| AU3 | **Record name** ("Ahmed Samir", "Unit B2-0402") instead of type + id | Shows resource type and id. | Resource display name / reference on audit entries (resolved at write time). |
+| AU4 | Human-readable change text ("Stage Qualified → Viewing") | Built on the client from before / after keys (raw field names). | Optional: server-side change summary with field labels (en / ar). |
+
+## Team (`/company/team`)
+
+No dedicated Web App design screen (the design's catch-all "not designed" page); rebuilt in the shared company list
+style. Already real: header counts (members / active / invited), status chips with counts, search (client side, the API
+returns the whole team), member table (avatar, name, email, role, status, invite expiry, last login, added), invite
+(name, email, role) with one-time activation link + copy, resend / new link, revoke invite, disable / enable.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| TM1 | Roles beyond **Sales Agent** (team lead, finance, admin…) | Only `agent` can be invited. | More company roles (or custom roles, as in Platform Admin) on `POST /team/invite`. |
+| TM2 | Invitation **email** | The link is shown to copy and share manually. | Send the activation email from the backend (outbox), with resend. |
+| TM3 | Per-member stats (open leads, deals this month) | Not shown. | Counts per member on `GET /team`, or link to Reports owners. |
+| TM4 | Edit member name / role, remove member | Not available. | `POST /team/:id/update` and remove (keeping records reassigned). |

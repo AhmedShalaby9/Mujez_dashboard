@@ -8,7 +8,12 @@ import { TeamApi, TEAM_ROLES, type TeamMember, type TeamRole } from '../../../te
   selector: 'app-team',
   imports: [FormsModule, DatePipe],
   templateUrl: './team.html',
-  styleUrl: './team.scss',
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './team.scss',
+  ],
 })
 export class Team {
   private readonly ui = inject(CompanyUiState);
@@ -30,6 +35,45 @@ export class Team {
   };
 
   readonly items = signal<TeamMember[]>([]);
+  /** The API returns the whole team (no paging), so search / status filter on the client. */
+  readonly search = signal('');
+  readonly statusFilter = signal<TeamMember['status'] | 'all'>('all');
+  readonly statuses: TeamMember['status'][] = ['active', 'invited', 'disabled'];
+  readonly count = computed(() => {
+    const c = { all: 0, active: 0, invited: 0, disabled: 0 };
+    for (const m of this.items()) {
+      c.all++;
+      c[m.status]++;
+    }
+    return c;
+  });
+  readonly visible = computed(() => {
+    const q = this.search().trim().toLowerCase(),
+      st = this.statusFilter();
+    return this.items().filter(
+      (m) =>
+        (st === 'all' || m.status === st) &&
+        (!q || (m.name + ' ' + m.email).toLowerCase().includes(q)),
+    );
+  });
+  readonly statusTone: Record<TeamMember['status'], [string, string]> = {
+    active: ['#EEF6DA', '#111113'],
+    invited: ['#FDF3DC', '#8A5A14'],
+    disabled: ['#F4F4F1', '#8A8A90'],
+  };
+  readonly toast = signal('');
+  initials(name: string) {
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase();
+  }
+  expired(m: TeamMember) {
+    return !!m.invitationExpiresAt && Date.parse(m.invitationExpiresAt) < Date.now();
+  }
   readonly loading = signal(false);
   readonly error = signal('');
   readonly busy = signal<string | null>(null);
@@ -140,6 +184,8 @@ export class Team {
   async copyLink() {
     try {
       await navigator.clipboard.writeText(this.inviteLink());
+      this.toast.set(this.t('Link copied', 'تم نسخ الرابط'));
+      setTimeout(() => this.toast.set(''), 2500);
     } catch {
       /* clipboard access can fail silently; the link stays visible to copy manually */
     }

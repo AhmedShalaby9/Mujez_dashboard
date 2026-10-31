@@ -12,6 +12,17 @@ export interface User {
   mustChangePassword?: boolean;
   companyId?: string;
   company?: { id: string; slug: string; name: { en: string; ar: string }; status: string };
+  /** Present only when this session is a platform admin inside a controlled workspace session. */
+  workspace?: {
+    sessionId: string;
+    mode: 'read' | 'manage';
+    reason: string | null;
+    startedAt: string;
+    manageExpiresAt: string | null;
+    platformUserName: string;
+    platformRoleName?: { en: string; ar: string };
+    company: { id: string; uuid: string; slug: string; name: { en: string; ar: string }; status: string };
+  };
 }
 export class ApiError extends Error {
   constructor(
@@ -90,11 +101,15 @@ export const companyGuard: CanActivateFn = async (route) => {
     router = inject(Router);
   if (!(await auth.restore())) return router.createUrlTree(['/']);
   if (auth.user()?.mustChangePassword) return router.createUrlTree(['/change-password']);
-  if (auth.user()?.pool === 'platform') return router.createUrlTree(['/admin/dashboard']);
-  return auth.user()?.pool === 'company_admin' &&
-    auth.user()?.role === 'company_owner' &&
-    auth.user()?.permissions.includes('workspace.view')
-    ? !route.data['permission'] || auth.user()?.permissions.includes(route.data['permission'])
+  const u = auth.user();
+  if (u?.pool === 'platform' && !u?.workspace) return router.createUrlTree(['/admin/dashboard']);
+  const isOwner =
+    u?.pool === 'company_admin' &&
+    u?.role === 'company_owner' &&
+    u?.permissions.includes('workspace.view');
+  const isWorkspace = u?.pool === 'company_admin' && !!u?.workspace;
+  return isOwner || isWorkspace
+    ? !route.data['permission'] || u?.permissions.includes(route.data['permission'])
       ? true
       : router.createUrlTree(['/company/dashboard'])
     : router.createUrlTree(['/']);

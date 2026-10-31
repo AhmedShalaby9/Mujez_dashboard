@@ -1,0 +1,187 @@
+<div class="page-head">
+  <div class="page-head__text">
+    <span class="page-head__eyebrow">{{ t('Sales', 'المبيعات') }}</span>
+    <h1 class="page-head__title">{{ t('Calendar', 'التقويم') }}</h1>
+    <span class="page-head__sub">{{ weekLabel() }}</span>
+  </div>
+  <div class="page-head__actions">
+    @if (canManage()) {
+      <button type="button" class="btn btn--primary" (click)="openNew()">{{ t('+ New event', '+ حدث جديد') }}</button>
+    }
+  </div>
+</div>
+
+<div class="toolbar">
+  <div class="chip-row">
+    <button type="button" class="chip" (click)="prevWeek()">←</button>
+    <button type="button" class="chip" (click)="thisWeek()">{{ t('This week', 'هذا الأسبوع') }}</button>
+    <button type="button" class="chip" (click)="nextWeek()">→</button>
+  </div>
+  <div class="chip-row">
+    <button type="button" class="chip" [class.chip--active]="typeFilter() === 'all'" (click)="typeFilter.set('all')">
+      {{ t('All types', 'كل الأنواع') }}
+    </button>
+    @for (ty of types; track ty) {
+      <button type="button" class="chip" [class.chip--active]="typeFilter() === ty" (click)="typeFilter.set(ty)">
+        {{ typeNames()[ty] }}
+      </button>
+    }
+  </div>
+</div>
+
+@if (error()) {
+  <p role="alert">{{ error() }}</p>
+}
+
+<div class="week">
+  @for (d of days(); track dayKey(d); let i = $index) {
+    <div class="week__day">
+      <div class="week__dayHead">{{ dayNames()[i] }}</div>
+      <div class="week__dayBody">
+        @for (e of eventsByDay().get(dayKey(d)); track e.id) {
+          <button
+            type="button"
+            class="event-chip"
+            [class]="'event-chip--' + e.type"
+            [class.event-chip--done]="e.status !== 'scheduled'"
+            (click)="open(e)"
+          >
+            <span class="event-chip__time mono">{{ time(e.startsAt) }}</span>
+            <span class="event-chip__title">{{ title(e) }}</span>
+          </button>
+        }
+        @if (canManage()) {
+          <button type="button" class="week__add" (click)="openNew(d)">+</button>
+        }
+      </div>
+    </div>
+  }
+</div>
+
+@if (selected(); as e) {
+  <div class="scrim" (click)="closeDrawer()"></div>
+  <div class="drawer" (click)="$event.stopPropagation()">
+    <div class="drawer__header">
+      <div class="drawer__headerText">
+        <span class="drawer__name">{{ title(e) }}</span>
+        <span class="drawer__sub">{{ e.reference }} · {{ typeNames()[e.type] }}</span>
+      </div>
+      <button type="button" class="drawer__close" (click)="closeDrawer()">✕</button>
+    </div>
+    <div class="drawer__body">
+      <span class="pill" [class]="'pill--status-' + e.status">{{ e.status }}</span>
+      <div class="drawer__row"><span class="drawer__k">{{ t('When', 'الوقت') }}</span><span>{{ time(e.startsAt) }} – {{ time(e.endsAt) }}</span></div>
+      @if (e.place) {
+        <div class="drawer__row"><span class="drawer__k">{{ t('Place', 'المكان') }}</span><span>{{ e.place }}</span></div>
+      }
+      @if (e.contact) {
+        <div class="drawer__row"><span class="drawer__k">{{ t('Contact', 'جهة الاتصال') }}</span><span>{{ e.contact.name[lang()] }}</span></div>
+      }
+      @if (e.lead) {
+        <div class="drawer__row"><span class="drawer__k">{{ t('Lead', 'العميل') }}</span><span>{{ e.lead.name[lang()] }}</span></div>
+      }
+      <div class="drawer__row"><span class="drawer__k">{{ t('Owner', 'المسؤول') }}</span><span>{{ e.owner?.name || '—' }}</span></div>
+      @if (e.notes) {
+        <div class="drawer__row"><span class="drawer__k">{{ t('Notes', 'ملاحظات') }}</span><span>{{ e.notes }}</span></div>
+      }
+      @if (e.outcome) {
+        <div class="drawer__row"><span class="drawer__k">{{ t('Outcome', 'النتيجة') }}</span><span>{{ e.outcome }}</span></div>
+      }
+    </div>
+    <div class="drawer__footer">
+      @if (canManage()) {
+        @if (e.status === 'scheduled') {
+          <button type="button" class="btn btn--ghost" (click)="openNew(undefined, e)">{{ t('Edit', 'تعديل') }}</button>
+          <button type="button" class="btn btn--ghost" [disabled]="saving()" (click)="setStatus(e, 'done')">{{ t('Mark done', 'تمّ') }}</button>
+          <button type="button" class="btn btn--ghost" [disabled]="saving()" (click)="setStatus(e, 'canceled')">{{ t('Cancel', 'إلغاء') }}</button>
+        } @else {
+          <button type="button" class="btn btn--ghost" [disabled]="saving()" (click)="setStatus(e, 'reopen')">{{ t('Reopen', 'إعادة فتح') }}</button>
+        }
+      }
+      <button type="button" class="btn btn--ghost" (click)="closeDrawer()">{{ t('Close', 'إغلاق') }}</button>
+    </div>
+  </div>
+}
+
+@if (newOpen()) {
+  <div class="scrim" (click)="closeNew()"></div>
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ editing() ? t('Edit event', 'تعديل الحدث') : t('New event', 'حدث جديد') }}</span>
+      @if (formError()) {
+        <p role="alert">{{ formError() }}</p>
+      }
+      <label class="field">
+        <span class="field__label">{{ t('Type', 'النوع') }}</span>
+        <select class="search" [(ngModel)]="draft.type" name="type">
+          @for (ty of types; track ty) {
+            <option [value]="ty">{{ typeNames()[ty] }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span class="field__label">{{ t('Title', 'العنوان') }}</span>
+        <input class="search" [(ngModel)]="draft.title" name="title" />
+      </label>
+      <label class="field">
+        <span class="field__label">{{ t('Date', 'التاريخ') }}</span>
+        <input class="search" type="date" [(ngModel)]="draft.date" name="date" />
+      </label>
+      <div class="dur-row">
+        <label class="field">
+          <span class="field__label">{{ t('Start', 'البداية') }}</span>
+          <input class="search" type="time" [(ngModel)]="draft.startTime" name="startTime" />
+        </label>
+        <label class="field">
+          <span class="field__label">{{ t('End', 'النهاية') }}</span>
+          <input class="search" type="time" [(ngModel)]="draft.endTime" name="endTime" />
+        </label>
+      </div>
+      <label class="field">
+        <span class="field__label">{{ t('Place', 'المكان') }}</span>
+        <input class="search" [(ngModel)]="draft.place" name="place" />
+      </label>
+      <label class="field">
+        <span class="field__label">{{ t('Contact', 'جهة الاتصال') }}</span>
+        <select class="search" [(ngModel)]="draft.contactId" name="contactId">
+          <option value="">—</option>
+          @for (c of contactOptions(); track c.id) {
+            <option [value]="c.id">{{ c.name[lang()] }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span class="field__label">{{ t('Lead', 'العميل') }}</span>
+        <select class="search" [(ngModel)]="draft.leadId" name="leadId">
+          <option value="">—</option>
+          @for (l of leadOptions(); track l.id) {
+            <option [value]="l.id">{{ l.name[lang()] }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span class="field__label">{{ t('Owner', 'المسؤول') }}</span>
+        <select class="search" [(ngModel)]="draft.ownerId" name="ownerId">
+          <option value="">{{ t('Me', 'أنا') }}</option>
+          @for (o of owners(); track o.id) {
+            <option [value]="o.id">{{ o.name }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span class="field__label">{{ t('Notes', 'ملاحظات') }}</span>
+        <textarea class="textarea" rows="2" [(ngModel)]="draft.notes" name="notes"></textarea>
+      </label>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeNew()">{{ t('Cancel', 'إلغاء') }}</button>
+      <button type="button" class="btn btn--primary" [disabled]="saving() || !draft.title.trim()" (click)="submit()">
+        {{ t('Save', 'حفظ') }}
+      </button>
+    </div>
+  </div>
+}
+
+@if (toast()) {
+  <div class="toast">{{ toast() }}</div>
+}

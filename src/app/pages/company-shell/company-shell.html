@@ -1,4 +1,102 @@
-<div class="shell" [attr.dir]="dir()" [class.shell--collapsed]="collapsed()" (click)="closeMenus()">
+@if (workspace(); as ws) {
+  <div class="ws-banner" [attr.dir]="dir()">
+    <span class="ws-banner__badge">{{ lang() === 'ar' ? 'وضع إدارة المنصة' : 'Platform Admin Mode' }}</span>
+    <span class="ws-banner__company">{{ ws.company.name[lang()] }}</span>
+    <span class="ws-banner__mode" [class.ws-banner__mode--manage]="ws.mode === 'manage'">
+      {{ ws.mode === 'manage' ? (lang() === 'ar' ? 'وضع الإدارة' : 'Management') : (lang() === 'ar' ? 'قراءة فقط' : 'Read-only') }}
+      @if (ws.mode === 'manage' && manageCountdown()) {
+        · {{ manageCountdown() }}
+      }
+    </span>
+    <span class="ws-banner__who">
+      {{ lang() === 'ar' ? 'مسجّل الدخول باسم' : 'Signed in as' }} {{ ws.platformUserName }}
+      @if (ws.platformRoleName) {
+        · {{ ws.platformRoleName[lang()] }}
+      }
+      — {{ lang() === 'ar' ? 'ليس مستخدمًا في الشركة' : 'not a company user' }}
+    </span>
+    <span class="ws-banner__actions">
+      @if (ws.mode === 'read') {
+        <button type="button" class="ws-banner__btn" [disabled]="wsBusy()" (click)="openElevate()">
+          {{ lang() === 'ar' ? 'طلب صلاحية الإدارة' : 'Request management' }}
+        </button>
+      } @else {
+        <button type="button" class="ws-banner__btn" [disabled]="wsBusy()" (click)="dropToReadOnly()">
+          {{ lang() === 'ar' ? 'العودة للقراءة فقط' : 'Drop to read-only' }}
+        </button>
+      }
+      <button type="button" class="ws-banner__btn" [disabled]="wsBusy()" (click)="switchWorkspace()">
+        {{ lang() === 'ar' ? 'تبديل مساحة العمل' : 'Switch workspace' }}
+      </button>
+      <button type="button" class="ws-banner__btn ws-banner__btn--exit" [disabled]="wsBusy()" (click)="exitWorkspace()">
+        {{ lang() === 'ar' ? 'العودة للإدارة' : 'Back to Admin' }}
+      </button>
+    </span>
+  </div>
+}
+
+@if (elevateOpen()) {
+  <div class="scrim" (click)="closeElevate()"></div>
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog__body dialog__body--pad">
+      <span class="dialog__title">{{ lang() === 'ar' ? 'طلب صلاحية الإدارة' : 'Request management access' }}</span>
+      <label class="field">
+        <span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span>
+        <textarea
+          class="textarea"
+          rows="2"
+          [value]="elevateReason()"
+          (input)="elevateReason.set($any($event.target).value)"
+        ></textarea>
+      </label>
+      <div class="dur-row">
+        <span class="field__label">{{ lang() === 'ar' ? 'المدة' : 'Duration' }}</span>
+        <div class="chip-row">
+          @for (d of wsDurations; track d) {
+            <button
+              type="button"
+              class="chip"
+              [class.chip--active]="elevateDuration() === d"
+              (click)="elevateDuration.set(d)"
+            >
+              {{ d }}m
+            </button>
+          }
+        </div>
+      </div>
+      <label class="field">
+        <span class="field__label">{{ lang() === 'ar' ? 'كلمة المرور' : 'Your password' }}</span>
+        <input
+          class="search"
+          type="password"
+          autocomplete="current-password"
+          dir="ltr"
+          [value]="elevatePassword()"
+          (input)="elevatePassword.set($any($event.target).value)"
+        />
+      </label>
+      @if (wsError()) {
+        <span class="field__error">{{ wsError() }}</span>
+      }
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn--ghost" (click)="closeElevate()">
+        {{ lang() === 'ar' ? 'إلغاء' : 'Cancel' }}
+      </button>
+      <button type="button" class="btn btn--primary" [disabled]="wsBusy()" (click)="submitElevate()">
+        {{ lang() === 'ar' ? 'تأكيد' : 'Confirm' }}
+      </button>
+    </div>
+  </div>
+}
+
+<div
+  class="shell"
+  [attr.dir]="dir()"
+  [class.shell--collapsed]="collapsed()"
+  [class.shell--ws]="!!workspace()"
+  (click)="closeMenus()"
+>
   <aside class="sidebar" [class.sidebar--open]="mobileNavOpen()" [class.sidebar--collapsed]="collapsed()">
     <div class="sidebar__brand">
       <svg width="26" height="26" viewBox="0 0 64 64" class="sidebar__logo">

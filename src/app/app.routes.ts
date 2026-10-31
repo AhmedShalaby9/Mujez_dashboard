@@ -156,6 +156,18 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/company-shell/leads/leads').then((m) => m.Leads),
       },
       {
+        path: 'contacts',
+        data: { permission: 'contacts.read' },
+        loadComponent: () =>
+          import('./pages/company-shell/contacts/contacts').then((m) => m.Contacts),
+      },
+      {
+        path: 'calendar',
+        data: { permission: 'calendar.read' },
+        loadComponent: () =>
+          import('./pages/company-shell/calendar/calendar').then((m) => m.Calendar),
+      },
+      {
         path: 'tasks',
         data: { permission: 'tasks.read' },
         loadComponent: () => import('./pages/company-shell/tasks/tasks').then((m) => m.Tasks),

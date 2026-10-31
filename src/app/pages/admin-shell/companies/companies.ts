@@ -1,4 +1,5 @@
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { CompaniesApi } from '../../../companies-api.service';
 import { AuthService } from '../../../auth.service';
 import { Component, computed, inject, signal } from '@angular/core';
@@ -24,6 +25,8 @@ interface Company {
   website: string;
   plan: Plan;
   status: CompanyStatus;
+  statusReason?: string | null;
+  cycle?: 'monthly' | 'annual' | null;
   users: number;
   mrr: number;
   createdAt: string;
@@ -143,7 +146,11 @@ interface Copy {
     mrr: string;
     created: string;
     lastActivity: string;
+    cycle: string;
+    owner: string;
   };
+  cycleNames: { monthly: string; annual: string };
+  statusNote: (status: CompanyStatus, reason: string | null) => string | null;
   wsTitle: string;
   wsSub: string;
   wsModeRead: string;
@@ -158,7 +165,7 @@ interface Copy {
   wsEnter: string;
   wsReasonErr: string;
   wsAckErr: string;
-  wsToast: string;
+  wsPasswordLabel: string;
   confirmSuspendTitle: string;
   confirmSuspendBody: (name: string) => string;
   confirmReactivateTitle: string;
@@ -222,7 +229,20 @@ const COPY: Record<Lang, Copy> = {
       mrr: 'MRR',
       created: 'Created',
       lastActivity: 'Last activity',
+      cycle: 'Billing cycle',
+      owner: 'Account owner',
     },
+    cycleNames: { monthly: 'Monthly', annual: 'Annual' },
+    statusNote: (status, reason) =>
+      status === 'suspended'
+        ? `Suspended${reason ? ' — ' + reason : ''}. Users cannot sign in; data is kept.`
+        : status === 'archived'
+          ? 'Archived — read-only for 90 days, then exported and scheduled for deletion.'
+          : status === 'expired'
+            ? 'Subscription expired. Renew to restore full access.'
+            : status === 'trial'
+              ? 'Trial company — converts to paid when a plan is purchased.'
+              : null,
     wsTitle: 'Enter workspace',
     wsSub: 'Choose how you want to access this company.',
     wsModeRead: 'Read-only',
@@ -238,7 +258,7 @@ const COPY: Record<Lang, Copy> = {
     wsEnter: 'Enter workspace',
     wsReasonErr: 'Reason must be at least 10 characters.',
     wsAckErr: 'Please acknowledge before continuing.',
-    wsToast: 'Static design preview — entering a workspace isn’t wired to a tenant app.',
+    wsPasswordLabel: 'Confirm with your password',
     confirmSuspendTitle: 'Suspend company',
     confirmSuspendBody: (name) =>
       `${name} will lose access immediately. Billing is managed separately.`,
@@ -301,7 +321,20 @@ const COPY: Record<Lang, Copy> = {
       mrr: 'الإيراد الشهري',
       created: 'تاريخ الإنشاء',
       lastActivity: 'آخر نشاط',
+      cycle: 'دورة الفوترة',
+      owner: 'مالك الحساب',
     },
+    cycleNames: { monthly: 'شهري', annual: 'سنوي' },
+    statusNote: (status, reason) =>
+      status === 'suspended'
+        ? `موقوفة${reason ? ' — ' + reason : ''}. لا يمكن للمستخدمين الدخول والبيانات محفوظة.`
+        : status === 'archived'
+          ? 'مؤرشفة — للقراءة فقط لمدة 90 يومًا ثم يتم التصدير وجدولة الحذف.'
+          : status === 'expired'
+            ? 'انتهى الاشتراك. جدّد للعودة للوصول الكامل.'
+            : status === 'trial'
+              ? 'شركة تجريبية — تتحول للدفع عند شراء باقة.'
+              : null,
     wsTitle: 'دخول مساحة العمل',
     wsSub: 'اختر طريقة الوصول إلى مساحة عمل هذه الشركة.',
     wsModeRead: 'قراءة فقط',
@@ -316,7 +349,7 @@ const COPY: Record<Lang, Copy> = {
     wsEnter: 'دخول مساحة العمل',
     wsReasonErr: 'يجب ألا يقل السبب عن 10 أحرف.',
     wsAckErr: 'يرجى التأكيد قبل المتابعة.',
-    wsToast: 'معاينة تصميم ثابتة — الدخول إلى مساحة العمل غير متصل بتطبيق المستأجر.',
+    wsPasswordLabel: 'تأكيد بكلمة المرور',
     confirmSuspendTitle: 'إيقاف الشركة',
     confirmSuspendBody: (name) => `ستفقد ${name} الوصول فورًا. اشتراكها لن يتأثر.`,
     confirmReactivateTitle: 'إعادة تفعيل الشركة',
@@ -347,6 +380,7 @@ export class Companies {
   }
   private readonly api = inject(CompaniesApi);
   readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   readonly loading = signal(false);
   readonly error = signal('');
   readonly saving = signal(false);
@@ -606,6 +640,8 @@ export class Companies {
   readonly wsDuration = signal<30 | 60 | 120>(30);
   readonly wsAck = signal(false);
   readonly wsError = signal('');
+  readonly wsPassword = signal('');
+  readonly wsSaving = signal(false);
   readonly confirming = signal<{ company: Company; kind: ConfirmKind } | null>(null);
   readonly toast = signal<string | null>(null);
   private toastTimer?: ReturnType<typeof setTimeout>;
@@ -829,14 +865,18 @@ export class Companies {
     this.wsDuration.set(30);
     this.wsAck.set(false);
     this.wsError.set('');
+    this.wsPassword.set('');
     this.kebabFor.set(null);
   }
 
   closeWsDialog(): void {
     this.wsCompany.set(null);
+    this.wsPassword.set('');
   }
 
-  submitWsDialog(): void {
+  async submitWsDialog(): Promise<void> {
+    const c = this.wsCompany();
+    if (!c || this.wsSaving()) return;
     if (this.wsMode() === 'manage') {
       if (this.wsReason().trim().length < 10) {
         this.wsError.set(this.L().wsReasonErr);
@@ -846,9 +886,33 @@ export class Companies {
         this.wsError.set(this.L().wsAckErr);
         return;
       }
+      if (!this.wsPassword()) {
+        this.wsError.set(this.L().wsPasswordLabel);
+        return;
+      }
     }
-    this.closeWsDialog();
-    this.showToast(this.L().wsToast);
+    this.wsError.set('');
+    this.wsSaving.set(true);
+    try {
+      await this.auth.request(
+        '/admin/api/v1/companies/' + encodeURIComponent(c.id) + '/workspace-session',
+        this.wsMode() === 'manage'
+          ? {
+              mode: 'manage',
+              reason: this.wsReason().trim(),
+              durationMinutes: this.wsDuration(),
+              password: this.wsPassword(),
+            }
+          : { mode: 'read' },
+      );
+      this.closeWsDialog();
+      await this.router.navigateByUrl('/company/dashboard');
+    } catch (e) {
+      this.wsError.set((e as Error).message);
+    } finally {
+      this.wsPassword.set('');
+      this.wsSaving.set(false);
+    }
   }
 
   askConfirm(c: Company, kind: ConfirmKind): void {

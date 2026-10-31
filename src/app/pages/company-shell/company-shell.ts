@@ -1,6 +1,6 @@
 import { AuthService } from '../../auth.service';
 import { Router } from '@angular/router';
-import { Component, computed, signal } from '@angular/core';
+import { Component, DestroyRef, computed, signal } from '@angular/core';
 import { inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { CompanyUiState, type Lang } from './company-ui-state';
@@ -10,6 +10,8 @@ const ICONS: Record<string, string> = {
   dashboard: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>',
   pipeline: '<path d="M3 4h18l-7 9v6l-4 2v-8z"/>',
   leads: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
+  contacts: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
   tasks: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
   projects: '<path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-7h6v7"/>',
   units: '<rect x="3" y="7" width="7" height="14"/><rect x="14" y="3" width="7" height="18"/><path d="M6 11h1M6 15h1M17 7h1M17 11h1M17 15h1"/>',
@@ -64,6 +66,8 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Dashboard', path: 'dashboard' },
   { kind: 'item', label: 'Pipeline', path: 'pipeline' },
   { kind: 'item', label: 'Leads', path: 'leads' },
+  { kind: 'item', label: 'Contacts', path: 'contacts' },
+  { kind: 'item', label: 'Calendar', path: 'calendar' },
   { kind: 'item', label: 'Tasks', path: 'tasks' },
   { kind: 'head', label: 'Inventory' },
   { kind: 'item', label: 'Projects', path: 'projects' },
@@ -86,6 +90,8 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'لوحة التحكم', path: 'dashboard' },
   { kind: 'item', label: 'مراحل الصفقات', path: 'pipeline' },
   { kind: 'item', label: 'العملاء المحتملون', path: 'leads' },
+  { kind: 'item', label: 'جهات الاتصال', path: 'contacts' },
+  { kind: 'item', label: 'التقويم', path: 'calendar' },
   { kind: 'item', label: 'المهام', path: 'tasks' },
   { kind: 'head', label: 'المخزون' },
   { kind: 'item', label: 'المشروعات', path: 'projects' },
@@ -140,6 +146,7 @@ export class CompanyShell {
   private readonly ui = inject(CompanyUiState);
 
   readonly dir = this.ui.dir;
+  readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.ui.lang()]);
   readonly notifications = computed<Notification[]>(() => []);
 
@@ -147,12 +154,21 @@ export class CompanyShell {
   private readonly router = inject(Router);
   readonly companyName = computed(() => this.auth.user()?.company?.name[this.ui.lang()] ?? '');
   readonly error = signal('');
+  readonly workspace = computed(() => this.auth.user()?.workspace ?? null);
+
   get me() {
     const u = this.auth.user();
+    const ws = u?.workspace;
+    const name = ws ? ws.platformUserName : (u?.name ?? '');
+    const role = ws
+      ? (ws.platformRoleName?.[this.ui.lang()] ?? (this.ui.lang() === 'ar' ? 'مدير منصة' : 'Platform Admin'))
+      : this.ui.lang() === 'ar'
+        ? 'مالك الشركة'
+        : 'Company Owner';
     return {
-      name: u?.name ?? '',
-      role: this.ui.lang() === 'ar' ? 'مالك الشركة' : 'Company Owner',
-      initials: (u?.name ?? '')
+      name,
+      role,
+      initials: name
         .split(' ')
         .filter(Boolean)
         .slice(0, 2)
@@ -167,6 +183,99 @@ export class CompanyShell {
     } catch (e) {
       this.error.set((e as Error).message);
     }
+  }
+
+  // ---- workspace banner (platform admin inside a controlled workspace session) ----
+
+  readonly now = signal(Date.now());
+  private readonly nowTimer = setInterval(() => this.now.set(Date.now()), 1000);
+  private readonly destroyRef = inject(DestroyRef).onDestroy(() => clearInterval(this.nowTimer));
+
+  readonly manageCountdown = computed(() => {
+    const ws = this.workspace();
+    if (!ws?.manageExpiresAt) return null;
+    const ms = new Date(ws.manageExpiresAt).getTime() - this.now();
+    if (ms <= 0) return '0:00';
+    const m = Math.floor(ms / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    return m + ':' + String(s).padStart(2, '0');
+  });
+
+  readonly wsBusy = signal(false);
+  readonly wsError = signal('');
+  readonly elevateOpen = signal(false);
+  readonly elevateReason = signal('');
+  readonly elevateDuration = signal<30 | 60 | 120>(30);
+  readonly elevatePassword = signal('');
+  readonly wsDurations: Array<30 | 60 | 120> = [30, 60, 120];
+
+  openElevate(): void {
+    this.elevateOpen.set(true);
+    this.elevateReason.set('');
+    this.elevateDuration.set(30);
+    this.elevatePassword.set('');
+    this.wsError.set('');
+  }
+  closeElevate(): void {
+    this.elevateOpen.set(false);
+    this.elevatePassword.set('');
+  }
+
+  async submitElevate(): Promise<void> {
+    if (this.wsBusy()) return;
+    if (this.elevateReason().trim().length < 10) {
+      this.wsError.set(this.ui.lang() === 'ar' ? 'يجب ألا يقل السبب عن 10 أحرف.' : 'Reason must be at least 10 characters.');
+      return;
+    }
+    if (!this.elevatePassword()) {
+      this.wsError.set(this.ui.lang() === 'ar' ? 'أدخل كلمة المرور.' : 'Enter your password.');
+      return;
+    }
+    this.wsBusy.set(true);
+    try {
+      await this.auth.request('/api/v1/workspace-session/elevate', {
+        reason: this.elevateReason().trim(),
+        durationMinutes: this.elevateDuration(),
+        password: this.elevatePassword(),
+      });
+      await this.auth.restore();
+      this.closeElevate();
+    } catch (e) {
+      this.wsError.set((e as Error).message);
+    } finally {
+      this.elevatePassword.set('');
+      this.wsBusy.set(false);
+    }
+  }
+
+  async dropToReadOnly(): Promise<void> {
+    if (this.wsBusy()) return;
+    this.wsBusy.set(true);
+    try {
+      await this.auth.request('/api/v1/workspace-session/drop', {});
+      await this.auth.restore();
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.wsBusy.set(false);
+    }
+  }
+
+  async exitWorkspace(): Promise<void> {
+    if (this.wsBusy()) return;
+    this.wsBusy.set(true);
+    try {
+      await this.auth.request('/api/v1/workspace-session/exit', {});
+      await this.router.navigateByUrl('/admin/dashboard');
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.wsBusy.set(false);
+    }
+  }
+
+  switchWorkspace(): void {
+    void this.router.navigateByUrl('/admin/companies');
   }
 
   readonly mobileNavOpen = signal(false);

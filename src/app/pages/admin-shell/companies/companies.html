@@ -236,13 +236,8 @@
             <div class="t-cell t-cell--end mono">{{ formatMrr(c.mrr) }}</div>
             <div class="t-cell">{{ c.lastActivity }}</div>
             <div class="t-cell t-cell--end t-cell--actions" (click)="$event.stopPropagation()">
-              @if (c.status !== 'archived') {
-                <button
-                  type="button"
-                  class="row-btn"
-                  disabled
-                  title="Workspace access is not available yet"
-                >
+              @if (c.status !== 'archived' && auth.user()?.permissions?.includes('ws.read')) {
+                <button type="button" class="row-btn" (click)="openWsDialog(c)">
                   {{ L().actions.enter }}
                 </button>
               }
@@ -322,9 +317,16 @@
     </div>
 
     <div class="drawer__body">
-      <section
-        style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 16px"
-      >
+      @if (L().statusNote(c.status, c.statusReason ?? null); as note) {
+        <p
+          class="status-note"
+          [class.status-note--danger]="c.status === 'suspended' || c.status === 'expired'"
+          [class.status-note--neutral]="c.status === 'archived'"
+        >
+          {{ note }}
+        </p>
+      }
+      <section class="owner-card">
         <h3>{{ lang() === 'ar' ? 'حساب مالك الشركة' : 'Company owner account' }}</h3>
         @if (ownerLoading()) {
           <p>{{ lang() === 'ar' ? 'جار التحميل…' : 'Loading owner…' }}</p>
@@ -473,6 +475,10 @@
         ><span class="drawer__v">{{ cityLabel(c.city) }}</span>
       </div>
       <div class="drawer__row">
+        <span class="drawer__k">{{ L().drawerFields.owner }}</span
+        ><span class="drawer__v">{{ ownerInfo()?.name || '—' }}</span>
+      </div>
+      <div class="drawer__row">
         <span class="drawer__k">{{ L().drawerFields.adminEmail }}</span
         ><span class="drawer__v" dir="ltr">{{ c.adminEmail }}</span>
       </div>
@@ -492,6 +498,12 @@
         <span class="drawer__k">{{ L().drawerFields.mrr }}</span
         ><span class="drawer__v mono">{{ formatMrr(c.mrr) }}</span>
       </div>
+      @if (c.cycle) {
+        <div class="drawer__row">
+          <span class="drawer__k">{{ L().drawerFields.cycle }}</span
+          ><span class="drawer__v">{{ L().cycleNames[c.cycle] }}</span>
+        </div>
+      }
       <div class="drawer__row">
         <span class="drawer__k">{{ L().drawerFields.created }}</span
         ><span class="drawer__v">{{ c.createdAt }}</span>
@@ -504,14 +516,11 @@
 
     <div class="drawer__footer">
       @if (c.status !== 'archived') {
-        <button
-          type="button"
-          class="btn btn--primary"
-          disabled
-          title="Workspace access is not available yet"
-        >
-          {{ L().actions.enter }}
-        </button>
+        @if (auth.user()?.permissions?.includes('ws.read')) {
+          <button type="button" class="btn btn--primary" (click)="openWsDialog(c)">
+            {{ L().actions.enter }}
+          </button>
+        }
         @for (kind of rowActions(c); track kind) {
           <button type="button" class="btn btn--ghost" (click)="askConfirm(c, kind)">
             {{ L().actions[kind] }}
@@ -549,18 +558,23 @@
           <span class="ws-mode__sub">{{ L().wsModeReadSub }}</span>
         </span>
       </button>
-      <button
-        type="button"
-        class="ws-mode"
-        [class.ws-mode--active]="wsMode() === 'manage'"
-        (click)="wsMode.set('manage')"
-      >
-        <span class="ws-mode__radio" [class.ws-mode__radio--active]="wsMode() === 'manage'"></span>
-        <span class="ws-mode__text">
-          <span class="ws-mode__label">{{ L().wsModeManage }}</span>
-          <span class="ws-mode__sub">{{ L().wsModeManageSub }}</span>
-        </span>
-      </button>
+      @if (auth.user()?.permissions?.includes('ws.manage')) {
+        <button
+          type="button"
+          class="ws-mode"
+          [class.ws-mode--active]="wsMode() === 'manage'"
+          (click)="wsMode.set('manage')"
+        >
+          <span
+            class="ws-mode__radio"
+            [class.ws-mode__radio--active]="wsMode() === 'manage'"
+          ></span>
+          <span class="ws-mode__text">
+            <span class="ws-mode__label">{{ L().wsModeManage }}</span>
+            <span class="ws-mode__sub">{{ L().wsModeManageSub }}</span>
+          </span>
+        </button>
+      }
 
       @if (wsMode() === 'manage') {
         <label class="field">
@@ -596,6 +610,18 @@
           </span>
           <span class="ack-text">{{ L().wsAck }}</span>
         </button>
+        <label class="field">
+          <span class="field__label">{{ L().wsPasswordLabel }}</span>
+          <input
+            class="search"
+            type="password"
+            autocomplete="current-password"
+            dir="ltr"
+            maxlength="256"
+            [value]="wsPassword()"
+            (input)="wsPassword.set($any($event.target).value)"
+          />
+        </label>
       }
 
       @if (wsError()) {
@@ -607,7 +633,12 @@
       <button type="button" class="btn btn--ghost" (click)="closeWsDialog()">
         {{ L().wsCancel }}
       </button>
-      <button type="button" class="btn btn--primary" (click)="submitWsDialog()">
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="wsSaving()"
+        (click)="submitWsDialog()"
+      >
         {{ L().wsEnter }}
       </button>
     </div>

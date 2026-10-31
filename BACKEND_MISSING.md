@@ -455,3 +455,41 @@ converted. **Convert** on a reserved row opens Contracts with the reservation pr
 | CR3 | **Open** (active + expiring) and **Expiring < 24h** chips | Chips follow the API statuses. The 24h warning counts the loaded page only. | `status=open` and `expiringWithin=24h` filters, plus `summary` counts (open, expiring) in `GET /reservations`. |
 | CR4 | Residential / Commercial segment switch | Not shown. | Segment filter on `GET /reservations` (see CU2). |
 | CR5 | Hold bar scale | Assumes a 72h maximum on the client. | Optional: return `startedAt` (or hold length) so the bar shows the real fraction used. |
+
+## Contracts (`/company/contracts`)
+
+Already real: design list (unit or title, reference · type, party, value, status + key date), header counts (total +
+awaiting signature via a second `status=sent&limit=1` query), status chips (Draft / Awaiting signature / Signed /
+Expiring / Void), type filter, search, paging; detail panel (Draft → Sent → Signed steps, value, title, key date, owner,
+unit link, shared reference, signed date, void reason, signers, **document checklist** with attach / upload, contract
+files link), create / edit draft (reservation-based sale/lease or lead-based, planned parties, evidence requirements),
+record shared / record signature / record void, download the signed copy, `?contractId=` and `?reservationId=` (prefill
+from Reservations → Convert).
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| CK1 | **Docs x/y** column in the list | Filled for the selected contract only; other rows show `—`. | `requirementsTotal` / `requirementsSatisfied` on the contract list DTO. |
+| CK2 | Chip counts (`Draft · 3`, `Signed · 9`) | Only the header shows the "awaiting signature" count (extra request). | `summary` counts by effective status in `GET /contracts`. |
+| CK3 | **Terms** row (payment plan / lease terms) | Not shown. | `terms` (en/ar text or structured plan) on contracts. |
+| CK4 | **Commission** row (e.g. "2.5% · EGP 210K") | Not shown. | Linked commission summary (`rateBps`, `grossMinor`, status) on the contract DTO, or `contractId` filter on `GET /commissions`. |
+| CK5 | **Download PDF** (generated contract) | "Soon" button. The signed copy downloads when one is recorded. | Contract PDF generation from a template. |
+| CK6 | **Send reminder** / per-signer signed state | Signatures are one manual record for the whole contract. | Per-signer status (and optionally e-signature / reminder sending). |
+| CK7 | **Renew** an expiring contract | "Soon" button. | Renew action (new key date, or a follow-up contract linked to the old one). |
+| CK8 | Residential / Commercial segment switch | Not shown. | Segment filter on `GET /contracts` (see CL1). |
+
+## Commissions (`/company/commissions`)
+
+Already real: KPI strip from the server `summary` (gross, awaiting approval, payable, paid out), status chips, search,
+paging, design list (deal · unit, client · rate, contract value, gross, agent share, status, forecast / recalculate tags),
+detail panel (value × rate = gross, split lines with share and amount, split bar, forecast / recalculation warnings,
+Calculated → Approved → Payable → Paid steps, payment reference / date / receipt download), calculate / recalculate with
+splits, approve, mark payable and record paid with receipt evidence, cancel.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| CM1 | **Agent payouts** table (earned / paid out / due per agent) | Computed from the loaded page only (labelled "Commissions on this page"). | Per-payee totals endpoint (or `summary.byPayee`) across all commissions. |
+| CM2 | **Collection** flow (Pending → Invoiced → Collected → Paid, money from developer / client) | Shows the existing approval flow (Calculated → Approved → Payable → Paid). | Collection states + invoice/collection records if the company tracks money coming in. |
+| CM3 | **Statement PDF** | "Soon" button. | Commission statement PDF per commission / per agent. |
+| CM4 | Inline rate / split editing in the panel | Done through the Recalculate dialog. | Nothing required (frontend). Listed for completeness. |
+| CM5 | Split **roles** (Listing agent / Selling agent / Team lead) | Lines show "Agent" or "Company share". | `role` on commission lines. |
+| CM6 | Residential / Commercial segment switch | Not shown. | Segment filter on `GET /commissions` (see CL1). |

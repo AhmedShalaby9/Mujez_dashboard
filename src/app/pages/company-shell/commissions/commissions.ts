@@ -88,7 +88,12 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-commissions',
   imports: [FormsModule, RouterLink],
   templateUrl: './commissions.html',
-  styleUrl: './commissions.scss',
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './commissions.scss',
+  ],
 })
 export class Commissions implements OnDestroy {
   readonly ui = inject(CompanyUiState);
@@ -177,6 +182,94 @@ export class Commissions implements OnDestroy {
   changed() {
     this.requestId = crypto.randomUUID();
   }
+  readonly toast = signal('');
+  soon(msg: string) {
+    this.toast.set(msg);
+    setTimeout(() => this.toast.set(''), 3500);
+  }
+  /** Design status colors: [background, text]. */
+  readonly statusTone: Record<CommStatus, [string, string]> = {
+    calculated: ['#FDF3DC', '#8A5A14'],
+    approved: ['#F1F1ED', '#45454A'],
+    payable: ['#EEF6DA', '#111113'],
+    paid: ['#111113', '#FFFFFF'],
+    canceled: ['#F4F4F1', '#8A8A90'],
+  };
+  readonly flow: CommStatus[] = ['calculated', 'approved', 'payable', 'paid'];
+  steps(c: Commission) {
+    const n = this.flow.indexOf(c.status);
+    return this.flow.map((s, j) => ({
+      label: this.L().statusNames[s],
+      bar: j <= n ? '#111113' : '#F1F1ED',
+      fg: j <= n ? '#111113' : '#8A8A90',
+    }));
+  }
+  private sum(keys: CommStatus[]) {
+    return keys.reduce((a, k) => a + BigInt(this.summary()[k] ?? '0'), 0n).toString();
+  }
+  /** KPI strip from the server summary (company-wide, or own scope for agents). */
+  readonly kpis = computed(() => [
+    {
+      label: this.t('Gross commission', 'إجمالي العمولات'),
+      value: this.money(this.sum(this.flow)),
+      sub: this.t('all non-cancelled', 'كل غير الملغاة'),
+      fg: '#111113',
+    },
+    {
+      label: this.t('Awaiting approval', 'بانتظار الاعتماد'),
+      value: this.money(this.sum(['calculated', 'approved'])),
+      sub: this.t('calculated + approved', 'محسوبة + معتمدة'),
+      fg: '#8A5A14',
+    },
+    {
+      label: this.t('Payable', 'جاهزة للصرف'),
+      value: this.money(this.sum(['payable'])),
+      sub: this.t('evidence recorded', 'تم تسجيل المستند'),
+      fg: '#111113',
+    },
+    {
+      label: this.t('Paid out', 'تم الصرف'),
+      value: this.money(this.sum(['paid'])),
+      sub: this.t('external payments recorded', 'دفعات خارجية مسجلة'),
+      fg: '#111113',
+    },
+  ]);
+  /** Agent share = lines paid to people (company share has no payee). */
+  agentShare(c: Commission) {
+    return c.lines
+      .filter((l) => l.payeeId)
+      .reduce((a, l) => a + BigInt(l.amountMinor), 0n)
+      .toString();
+  }
+  readonly splitColors = ['#111113', '#8BB33A', '#D99A28', '#5B78E5', '#C4C4BE', '#8A5A14'];
+  splitColor(i: number, l: Commission['lines'][number]) {
+    return l.payeeId ? this.splitColors[i % this.splitColors.length] : '#E2E2DC';
+  }
+  /** Per-payee earned / paid / due, from the loaded page only. */
+  readonly payouts = computed(() => {
+    const m = new Map<string, { name: string; earned: bigint; paid: bigint }>();
+    for (const c of this.commissions()) {
+      if (c.status === 'canceled') continue;
+      for (const l of c.lines) {
+        if (!l.payeeId) continue;
+        const row = m.get(l.payeeId) ?? { name: l.who[this.lang()], earned: 0n, paid: 0n };
+        row.earned += BigInt(l.amountMinor);
+        if (c.status === 'paid') row.paid += BigInt(l.amountMinor);
+        m.set(l.payeeId, row);
+      }
+    }
+    return [...m.values()]
+      .sort((a, b) => (b.earned > a.earned ? 1 : -1))
+      .map((r) => ({
+        name: r.name,
+        earned: this.money(r.earned.toString()),
+        paid: this.money(r.paid.toString()),
+        due: this.money((r.earned - r.paid).toString()),
+      }));
+  });
+  splitTotal() {
+    return this.splits.reduce((a, s) => a + (Number(s.pct) || 0), 0);
+  }
   async reload() {
     const n = ++this.serial;
     this.loading.set(true);
@@ -193,6 +286,12 @@ export class Commissions implements OnDestroy {
       this.commissions.set(r.items);
       this.total.set(r.total);
       this.summary.set(r.summary);
+      // Design: the detail panel always shows a commission — default to the first row.
+      const cur = this.selected();
+      if (!cur || !r.items.some((c) => c.id === cur.id)) {
+        if (r.items[0]) void this.open(r.items[0].id);
+        else this.selected.set(null);
+      }
     } catch (e: any) {
       if (n === this.serial) this.error.set(e.message);
     } finally {

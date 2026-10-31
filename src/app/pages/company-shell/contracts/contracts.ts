@@ -113,7 +113,12 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-contracts',
   imports: [FormsModule, RouterLink],
   templateUrl: './contracts.html',
-  styleUrl: './contracts.scss',
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './contracts.scss',
+  ],
 })
 export class Contracts implements OnDestroy {
   readonly ui = inject(CompanyUiState);
@@ -145,6 +150,9 @@ export class Contracts implements OnDestroy {
   typeFilter = '';
   page = signal(1);
   total = signal(0);
+  /** Contracts awaiting signature (separate count query, same search/type). */
+  sentTotal = signal<number | null>(null);
+  readonly toast = signal('');
   loading = signal(false);
   busy = signal(false);
   error = signal('');
@@ -236,6 +244,33 @@ export class Contracts implements OnDestroy {
     this.requestId = crypto.randomUUID();
     this.pendingCreate = null;
   }
+  /** Design status colors: [background, text]. */
+  readonly statusTone: Record<ContractStatus, [string, string]> = {
+    draft: ['#F1F1ED', '#45454A'],
+    sent: ['#FDF3DC', '#8A5A14'],
+    signed: ['#EEF6DA', '#111113'],
+    expiring: ['#F8E1DC', '#9A3422'],
+    void: ['#F4F4F1', '#8A8A90'],
+  };
+  /** Draft → Sent → Signed progress bars. */
+  steps(c: Contract) {
+    const n = { draft: 1, sent: 2, signed: 3, expiring: 3, void: 0 }[c.status];
+    const on = c.status === 'expiring' ? '#B4442F' : '#111113';
+    return [this.L().statusNames.draft, this.L().statusNames.sent, this.L().statusNames.signed].map(
+      (label, j) => ({ label, bar: j < n ? on : '#F1F1ED', fg: j < n ? '#111113' : '#8A8A90' }),
+    );
+  }
+  docsDone(c: Contract) {
+    const r = c.requirements ?? [];
+    return r.filter((d) => d.satisfied).length + '/' + r.length;
+  }
+  isSelected(c: Contract) {
+    return this.selected()?.id === c.id;
+  }
+  soon(what: string) {
+    this.toast.set(what);
+    setTimeout(() => this.toast.set(''), 3500);
+  }
   async reload() {
     const n = ++this.serial;
     this.loading.set(true);
@@ -244,10 +279,22 @@ export class Contracts implements OnDestroy {
     if (this.statusFilter() !== 'all') q['status'] = this.statusFilter();
     if (this.typeFilter) q['type'] = this.typeFilter;
     try {
-      const r = await this.api.get<{ items: Contract[]; total: number }>('contracts', q);
+      const sentQ = { ...q, status: 'sent', page: '1', limit: '1' };
+      const [r, sent] = await Promise.all([
+        this.api.get<{ items: Contract[]; total: number }>('contracts', q),
+        this.api.get<{ total: number }>('contracts', sentQ).catch(() => null),
+      ]);
       if (n !== this.serial) return;
       this.contracts.set(r.items);
       this.total.set(r.total);
+      this.sentTotal.set(sent?.total ?? null);
+      // Design: the detail panel always shows a contract — default to the first row.
+      const cur = this.selected();
+      if (!cur || !r.items.some((c) => c.id === cur.id)) {
+        if (r.items[0] && !this.route.snapshot.queryParamMap.get('contractId'))
+          void this.open(r.items[0].id);
+        else if (!r.items.length) this.selected.set(null);
+      }
     } catch (e: any) {
       if (n === this.serial) this.error.set(e.message);
     } finally {

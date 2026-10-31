@@ -205,7 +205,7 @@ export class Documents implements OnDestroy {
   }
   ext(d: Doc) {
     const m = /\.([a-z0-9]{1,5})$/i.exec(d.file);
-    return (m ? m[1] : d.mimeType.split('/')[1] || 'file').toUpperCase().slice(0, 4);
+    return (m ? m[1] : d.mimeType?.split('/')[1] || 'file').toUpperCase().slice(0, 4);
   }
   /** Design file-type tile colors: [background, text]. */
   extTone(d: Doc): [string, string] {
@@ -233,7 +233,7 @@ export class Documents implements OnDestroy {
     return { label: this.t('Current', 'ساري'), bg: '#EEF6DA', fg: '#111113' };
   }
   isImage(d: Doc) {
-    return d.mimeType.startsWith('image/');
+    return !!d.mimeType?.startsWith('image/');
   }
   /** Upload a new file with the same kind / title / links (files are immutable in the API). */
   replace(d: Doc) {

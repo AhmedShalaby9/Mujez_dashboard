@@ -279,21 +279,24 @@ export class Contracts implements OnDestroy {
     if (this.statusFilter() !== 'all') q['status'] = this.statusFilter();
     if (this.typeFilter) q['type'] = this.typeFilter;
     try {
+      // Header "awaiting signature" — a separate count query that never blocks the list.
       const sentQ = { ...q, status: 'sent', page: '1', limit: '1' };
-      const [r, sent] = await Promise.all([
-        this.api.get<{ items: Contract[]; total: number }>('contracts', q),
-        this.api.get<{ total: number }>('contracts', sentQ).catch(() => null),
-      ]);
+      void this.api
+        .get<{ total: number }>('contracts', sentQ)
+        .then((s) => n === this.serial && this.sentTotal.set(s.total))
+        .catch(() => n === this.serial && this.sentTotal.set(null));
+      const r = await this.api.get<{ items: Contract[]; total: number }>('contracts', q);
       if (n !== this.serial) return;
       this.contracts.set(r.items);
       this.total.set(r.total);
-      this.sentTotal.set(sent?.total ?? null);
-      // Design: the detail panel always shows a contract — default to the first row.
+      // Design: the detail panel always shows a contract — default to the first row
+      // (list row first, then the full record with requirements).
       const cur = this.selected();
       if (!cur || !r.items.some((c) => c.id === cur.id)) {
-        if (r.items[0] && !this.route.snapshot.queryParamMap.get('contractId'))
+        if (r.items[0] && !this.route.snapshot?.queryParamMap.get('contractId')) {
+          this.selected.set(r.items[0]);
           void this.open(r.items[0].id);
-        else if (!r.items.length) this.selected.set(null);
+        } else if (!r.items.length) this.selected.set(null);
       }
     } catch (e: any) {
       if (n === this.serial) this.error.set(e.message);

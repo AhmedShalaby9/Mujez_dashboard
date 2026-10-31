@@ -193,15 +193,16 @@ export class Units implements OnDestroy {
     if (this.statusFilter() !== 'all') q['status'] = this.statusFilter();
     if (this.listing !== 'all') q['listing'] = this.listing;
     try {
-      const avail = { ...q, status: 'available', page: '1', limit: '1' };
-      const [r, a] = await Promise.all([
-        this.api.get<{ items: InventoryUnit[]; total: number }>('units', q),
-        this.api.get<{ total: number }>('units', avail).catch(() => null),
-      ]);
+      const r = await this.api.get<{ items: InventoryUnit[]; total: number }>('units', q);
       if (n !== this.serial) return;
       this.units.set(r.items);
       this.total.set(r.total);
-      this.availableTotal.set(a?.total ?? null);
+      // Header "N available" — a separate count query that never blocks the grid.
+      const avail = { ...q, status: 'available', page: '1', limit: '1' };
+      void this.api
+        .get<{ total: number }>('units', avail)
+        .then((a) => n === this.serial && this.availableTotal.set(a.total))
+        .catch(() => n === this.serial && this.availableTotal.set(null));
     } catch (e: any) {
       if (n === this.serial) this.error.set(e.message);
     } finally {

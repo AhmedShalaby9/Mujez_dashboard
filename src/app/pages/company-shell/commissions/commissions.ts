@@ -289,8 +289,10 @@ export class Commissions implements OnDestroy {
       // Design: the detail panel always shows a commission — default to the first row.
       const cur = this.selected();
       if (!cur || !r.items.some((c) => c.id === cur.id)) {
-        if (r.items[0]) void this.open(r.items[0].id);
-        else this.selected.set(null);
+        if (r.items[0]) {
+          this.selected.set(r.items[0]);
+          void this.open(r.items[0].id);
+        } else this.selected.set(null);
       }
     } catch (e: any) {
       if (n === this.serial) this.error.set(e.message);

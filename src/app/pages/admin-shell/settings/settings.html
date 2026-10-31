@@ -1,365 +1,485 @@
-@if (error()) {
-  <p role="alert">{{ error() }} <button class="btn btn--ghost" (click)="load()">Reload</button></p>
-}
-@if (loading()) {
-  <p role="status">Loading settings...</p>
-}
-<p>
-  Only Super Admin can save. Unsupported controls are disabled: MFA, workspace sessions, IP
-  restrictions and notification delivery. Timezone, currency and invoice numbering show current
-  fixed behavior.
-</p>
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ L().title }}</h1>
+      <span [class.dirty]="isDirty()">{{
+        isDirty() ? (lang() === 'ar' ? 'تغييرات غير محفوظة' : 'Unsaved changes') : L().sub
+      }}</span>
+    </div>
+    <div class="head__actions">
+      @if (isDirty()) {
+        <button type="button" class="btn" (click)="discard()">
+          {{ lang() === 'ar' ? 'تجاهل' : 'Discard' }}
+        </button>
+      }
+      <button
+        type="button"
+        class="btn btn--dark"
+        [disabled]="loading() || !canEdit() || !isDirty()"
+        (click)="openSave()"
+      >
+        {{ L().saveBtn }}
+      </button>
+    </div>
   </div>
-  <div class="page-head__actions">
-    <button
-      type="button"
-      class="btn btn--primary"
-      [disabled]="loading() || !canEdit()"
-      (click)="openSave()"
-    >
-      {{ L().saveBtn }}
-    </button>
-  </div>
-</div>
 
-<div class="tabs">
-  @for (t of tabOrder; track t) {
-    <button type="button" class="tab" [class.tab--active]="activeTab() === t" (click)="setTab(t)">
-      {{ tabName(t) }}
-    </button>
+  @if (error() && !saving()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+  @if (loading()) {
+    <p class="muted" role="status">{{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading settings…' }}</p>
+  }
+  @if (!canEdit()) {
+    <p class="note">
+      {{
+        lang() === 'ar'
+          ? 'عرض فقط — الحفظ يتطلب مديرًا عامًا.'
+          : 'View only — saving requires a Super Admin.'
+      }}
+    </p>
+  }
+
+  @if (!loading()) {
+    <div class="layout">
+      <nav class="sideNav">
+        @for (sec of sections(); track sec[0]) {
+          <button type="button" [class.on]="activeTab() === sec[0]" (click)="jump(sec[0])">
+            {{ sec[1] }}
+          </button>
+        }
+      </nav>
+
+      <div class="forms">
+        <!-- General -->
+        <section class="card form" id="set-general">
+          <div class="form__head">
+            <b>{{ sections()[0][1] }}</b
+            ><span>{{ sections()[0][2] }}</span>
+          </div>
+          <div class="grid">
+            <label class="field"
+              ><span>{{ L().fields['platformName'] }}</span
+              ><input [(ngModel)]="state.platformName" [disabled]="!canEdit()"
+            /></label>
+            <label class="field"
+              ><span>{{ L().fields['supportEmail'] }}</span
+              ><input
+                type="email"
+                dir="ltr"
+                [(ngModel)]="state.supportEmail"
+                [disabled]="!canEdit()"
+            /></label>
+            <label class="field full"
+              ><span>{{ L().fields['supportUrl'] }}</span
+              ><input
+                dir="ltr"
+                placeholder="https://"
+                [(ngModel)]="state.supportUrl"
+                [disabled]="!canEdit()"
+            /></label>
+            <div class="field">
+              <span>{{ L().fields['defaultLang'] }}</span>
+              <div class="segs">
+                <button
+                  type="button"
+                  class="seg"
+                  [class.seg--on]="state.defaultLang === 'ar'"
+                  [disabled]="!canEdit()"
+                  (click)="state.defaultLang = 'ar'"
+                >
+                  العربية
+                </button>
+                <button
+                  type="button"
+                  class="seg"
+                  [class.seg--on]="state.defaultLang === 'en'"
+                  [disabled]="!canEdit()"
+                  (click)="state.defaultLang = 'en'"
+                >
+                  English
+                </button>
+              </div>
+            </div>
+            <div class="field">
+              <span
+                >{{ lang() === 'ar' ? 'اللغات المدعومة' : 'Supported languages'
+                }}<i class="soon">{{ lang() === 'ar' ? 'ثابت' : 'Fixed' }}</i></span
+              >
+              <div class="segs">
+                <button type="button" class="seg seg--on">
+                  {{ lang() === 'ar' ? 'العربية + الإنجليزية' : 'Arabic + English' }}
+                </button>
+                <button type="button" class="seg" (click)="soon()">
+                  {{ lang() === 'ar' ? 'العربية فقط' : 'Arabic only' }}
+                </button>
+              </div>
+            </div>
+            <label class="field">
+              <span
+                >{{ L().fields['defaultCurrency']
+                }}<i class="soon">{{ lang() === 'ar' ? 'ثابت' : 'Fixed' }}</i></span
+              >
+              <select disabled>
+                <option>{{ state.defaultCurrency }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span
+                >{{ L().fields['defaultTimezone']
+                }}<i class="soon">{{ lang() === 'ar' ? 'ثابت' : 'Fixed' }}</i></span
+              >
+              <select disabled>
+                <option>{{ state.defaultTimezone }} (UTC+2/+3)</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <!-- Company defaults -->
+        <section class="card form" id="set-defaults">
+          <div class="form__head">
+            <b>{{ sections()[1][1] }}</b
+            ><span>{{ sections()[1][2] }}</span>
+          </div>
+          <div class="grid">
+            <label class="field">
+              <span>{{ L().fields['trialDays'] }}</span>
+              <input
+                type="number"
+                min="1"
+                max="90"
+                dir="ltr"
+                class="mono"
+                [(ngModel)]="state.trialDays"
+                [disabled]="!canEdit()"
+              />
+              <span class="hint">{{
+                lang() === 'ar'
+                  ? 'تُطبق على الاشتراكات التجريبية الجديدة فقط (1–90).'
+                  : 'Applies to new trial subscriptions only (1–90).'
+              }}</span>
+            </label>
+            <label class="field">
+              <span>{{ L().fields['defaultPlan'] }}</span>
+              <select [(ngModel)]="state.defaultPlan" [disabled]="!canEdit()">
+                <option value="starter">{{ L().plans.starter }}</option>
+                <option value="pro">{{ L().plans.pro }}</option>
+                <option value="business">{{ L().plans.business }}</option>
+                <option value="enterprise">{{ L().plans.enterprise }}</option>
+              </select>
+              <span class="hint">{{
+                lang() === 'ar'
+                  ? 'يُختار مسبقًا في نموذج إنشاء الشركة.'
+                  : 'Preselected in the create-company form.'
+              }}</span>
+            </label>
+            <div class="field full">
+              <span
+                >{{ lang() === 'ar' ? 'الوحدات الافتراضية' : 'Default CRM modules'
+                }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+              >
+              <div class="segs">
+                <button type="button" class="seg seg--on">
+                  {{ lang() === 'ar' ? 'كل ما في الباقة' : 'Everything in the plan' }}
+                </button>
+                <button type="button" class="seg" (click)="soon()">
+                  {{ lang() === 'ar' ? 'الأساسية فقط' : 'Core only — enable the rest later' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Billing -->
+        <section class="card form" id="set-billing">
+          <div class="form__head">
+            <b>{{ sections()[2][1] }}</b
+            ><span>{{ sections()[2][2] }}</span>
+          </div>
+          <div class="grid">
+            <label class="field">
+              <span
+                >{{ L().fields['invoiceFormat']
+                }}<i class="soon">{{ lang() === 'ar' ? 'ثابت' : 'Fixed' }}</i></span
+              >
+              <input dir="ltr" class="mono" readonly [value]="state.invoiceFormat" />
+              <span class="hint">{{
+                lang() === 'ar'
+                  ? 'الصيغة المخصصة مثل INV-{YYYY}-{####} قريبًا.'
+                  : 'Custom format like INV-{YYYY}-{####} coming soon.'
+              }}</span>
+            </label>
+            <label class="field">
+              <span>{{ L().fields['paymentTerms'] }}</span>
+              <input
+                type="number"
+                min="0"
+                max="180"
+                dir="ltr"
+                class="mono"
+                [(ngModel)]="state.paymentTerms"
+                [disabled]="!canEdit()"
+              />
+              <span class="hint">{{
+                lang() === 'ar'
+                  ? 'تملأ تاريخ الاستحقاق في الفواتير الجديدة.'
+                  : 'Prefills the due date on new invoices.'
+              }}</span>
+            </label>
+            <label class="field">
+              <span>{{ L().fields['taxRate'] }}</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                dir="ltr"
+                class="mono"
+                [(ngModel)]="state.taxRate"
+                [disabled]="!canEdit()"
+              />
+              <span class="hint">{{
+                lang() === 'ar'
+                  ? 'افتراضي للفواتير الجديدة؛ ليس قاعدة ضريبية تلقائية.'
+                  : 'Default for new invoices; not an automatic tax rule.'
+              }}</span>
+            </label>
+            <label class="field">
+              <span
+                >{{ L().fields['taxProfile']
+                }}<i class="soon">{{ lang() === 'ar' ? 'ثابت' : 'Fixed' }}</i></span
+              >
+              <select disabled>
+                <option>{{ lang() === 'ar' ? 'يدوي' : 'Manual' }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span
+                >{{ lang() === 'ar' ? 'العملات المدعومة' : 'Supported currencies'
+                }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+              >
+              <input dir="ltr" readonly value="EGP" />
+            </label>
+            <label class="field">
+              <span
+                >{{ lang() === 'ar' ? 'مزود الدفع' : 'Payment provider'
+                }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+              >
+              <select disabled>
+                <option>{{ lang() === 'ar' ? 'يدوي فقط' : 'Manual only' }}</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <!-- Security -->
+        <section class="card form" id="set-security">
+          <div class="form__head">
+            <b>{{ sections()[3][1] }}</b
+            ><span>{{ sections()[3][2] }}</span>
+          </div>
+          <div class="grid">
+            <div class="field">
+              <span
+                >{{ lang() === 'ar' ? 'التحقق الثنائي' : 'MFA requirement'
+                }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+              >
+              <div class="segs">
+                <button type="button" class="seg seg--on">
+                  {{ lang() === 'ar' ? 'غير مفعّل' : 'Not enforced' }}
+                </button>
+                <button type="button" class="seg" (click)="soon()">
+                  {{ lang() === 'ar' ? 'كل المديرين' : 'All admins' }}
+                </button>
+              </div>
+            </div>
+            <label class="field">
+              <span>{{ L().fields['sessionLength'] }}</span>
+              <input
+                type="number"
+                min="15"
+                max="1440"
+                dir="ltr"
+                class="mono"
+                [(ngModel)]="state.sessionLength"
+                [disabled]="!canEdit()"
+              />
+              <span class="hint">{{
+                lang() === 'ar'
+                  ? '15–1440 دقيقة. التقصير يحد الجلسات الحالية.'
+                  : '15–1440 minutes. Shortening also caps existing sessions.'
+              }}</span>
+            </label>
+            <label class="field">
+              <span>{{
+                lang() === 'ar' ? 'محاولات الدخول لكل 15 دقيقة' : 'Login attempts per 15 min'
+              }}</span>
+              <input
+                type="number"
+                min="3"
+                max="30"
+                dir="ltr"
+                class="mono"
+                [(ngModel)]="state.lockoutAttempts"
+                [disabled]="!canEdit()"
+              />
+              <span class="hint">{{
+                lang() === 'ar' ? 'حد معدل لكل حساب (3–30).' : 'Per-account rate limit (3–30).'
+              }}</span>
+            </label>
+            <label class="field">
+              <span
+                >{{ lang() === 'ar' ? 'سياسة كلمة المرور' : 'Password policy'
+                }}<i class="soon">{{ lang() === 'ar' ? 'ثابت' : 'Fixed' }}</i></span
+              >
+              <select disabled>
+                <option>
+                  {{ lang() === 'ar' ? '12 حرفًا على الأقل' : 'At least 12 characters' }}
+                </option>
+              </select>
+            </label>
+            <label class="field">
+              <span
+                >{{ L().fields['managementMaxMinutes']
+                }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+              >
+              <input dir="ltr" class="mono" readonly [value]="state.managementMaxMinutes" />
+            </label>
+            <div class="field full">
+              <span
+                >{{ lang() === 'ar' ? 'تقييد وصول المديرين' : 'Admin access restriction'
+                }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+              >
+              <div class="segs">
+                <button type="button" class="seg seg--on">
+                  {{ lang() === 'ar' ? 'أي شبكة' : 'Any network' }}
+                </button>
+                <button type="button" class="seg" (click)="soon()">
+                  {{ lang() === 'ar' ? 'عناوين المكتب + VPN' : 'Office IPs + VPN' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Notifications -->
+        <section class="card form" id="set-notifs">
+          <div class="form__head">
+            <b
+              >{{ sections()[4][1]
+              }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></b
+            ><span>{{ sections()[4][2] }}</span>
+          </div>
+          <p class="note">
+            {{
+              lang() === 'ar'
+                ? 'إرسال الرسائل للشركات غير مهيأ بعد، لذا تبقى هذه التنبيهات معطلة.'
+                : 'Outbound delivery to companies is not set up yet, so these stay off.'
+            }}
+          </p>
+          <div class="toggles">
+            @for (
+              k of [
+                'notifyPaymentFailed',
+                'notifyTrialEnding',
+                'notifyTicketAssigned',
+                'notifyIncident',
+              ];
+              track k
+            ) {
+              <button type="button" class="trow" (click)="soon()">
+                <span>{{ L().fields[k] }}</span>
+                <span class="tog" [class.on]="$any(state)[k]"><span></span></span>
+              </button>
+            }
+          </div>
+        </section>
+
+        <!-- Branding -->
+        <section class="card form" id="set-brand">
+          <div class="form__head">
+            <b>{{ sections()[5][1] }}</b
+            ><span>{{ sections()[5][2] }}</span>
+          </div>
+          <div class="grid">
+            <label class="field">
+              <span>{{ L().fields['primaryColor'] }}</span>
+              <div class="color">
+                <input type="color" [(ngModel)]="state.primaryColor" [disabled]="!canEdit()" />
+                <input
+                  dir="ltr"
+                  class="mono"
+                  maxlength="7"
+                  [(ngModel)]="state.primaryColor"
+                  [disabled]="!canEdit()"
+                />
+              </div>
+              <span class="hint">{{
+                lang() === 'ar'
+                  ? 'يُستخدم في بوابة الدخول والإدارة.'
+                  : 'Used on the login and admin portal.'
+              }}</span>
+            </label>
+            <div class="field">
+              <span
+                >{{ lang() === 'ar' ? 'قوالب بريد بالهوية' : 'Brand email templates'
+                }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+              >
+              <div class="segs">
+                <button type="button" class="seg" (click)="soon()">
+                  {{ lang() === 'ar' ? 'مفعّل' : 'On' }}
+                </button>
+                <button type="button" class="seg seg--on">
+                  {{ lang() === 'ar' ? 'معطّل' : 'Off' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
   }
 </div>
 
-@if (!loading() && state.platformName) {
-  <div class="card">
-    @switch (activeTab()) {
-      @case ('general') {
-        <div class="form-grid">
-          <label class="field">
-            <span class="field__label">{{ L().fields['platformName'] }}</span>
-            <input
-              class="textbox"
-              type="text"
-              [(ngModel)]="state.platformName"
-              name="platformName"
-            />
-          </label>
-          <label class="field">
-            <span class="field__label">{{ L().fields['supportEmail'] }}</span>
-            <input
-              class="textbox"
-              type="text"
-              dir="ltr"
-              [(ngModel)]="state.supportEmail"
-              name="supportEmail"
-            />
-          </label>
-          <div class="field">
-            <span class="field__label">{{ L().fields['defaultLang'] }}</span>
-            <div class="chip-row">
-              <button
-                type="button"
-                class="chip"
-                [class.chip--active]="state.defaultLang === 'en'"
-                (click)="state.defaultLang = 'en'"
-              >
-                English
-              </button>
-              <button
-                type="button"
-                class="chip"
-                [class.chip--active]="state.defaultLang === 'ar'"
-                (click)="state.defaultLang = 'ar'"
-              >
-                العربية
-              </button>
-            </div>
-          </div>
-          <label class="field">
-            <span class="field__label">{{ L().fields['defaultTimezone'] }}</span>
-            <input
-              class="textbox"
-              type="text"
-              dir="ltr"
-              [(ngModel)]="state.defaultTimezone"
-              readonly
-              name="defaultTimezone"
-            />
-          </label>
-        </div>
-      }
-      @case ('defaults') {
-        <div class="form-grid">
-          <label class="field">
-            <span class="field__label">{{ L().fields['trialDays'] }}</span>
-            <input
-              class="textbox"
-              type="number"
-              min="1"
-              max="90"
-              [(ngModel)]="state.trialDays"
-              name="trialDays"
-            />
-          </label>
-          <div class="field">
-            <span class="field__label">{{ L().fields['defaultPlan'] }}</span>
-            <div class="chip-row">
-              <button
-                type="button"
-                class="chip"
-                [class.chip--active]="state.defaultPlan === 'starter'"
-                (click)="state.defaultPlan = 'starter'"
-              >
-                {{ L().plans.starter }}
-              </button>
-              <button
-                type="button"
-                class="chip"
-                [class.chip--active]="state.defaultPlan === 'pro'"
-                (click)="state.defaultPlan = 'pro'"
-              >
-                {{ L().plans.pro }}
-              </button>
-              <button
-                type="button"
-                class="chip"
-                [class.chip--active]="state.defaultPlan === 'business'"
-                (click)="state.defaultPlan = 'business'"
-              >
-                {{ L().plans.business }}
-              </button>
-              <button
-                type="button"
-                class="chip"
-                [class.chip--active]="state.defaultPlan === 'enterprise'"
-                (click)="state.defaultPlan = 'enterprise'"
-              >
-                {{ L().plans.enterprise }}
-              </button>
-            </div>
-          </div>
-          <label class="field">
-            <span class="field__label">{{ L().fields['defaultCurrency'] }}</span>
-            <input
-              class="textbox"
-              type="text"
-              dir="ltr"
-              [(ngModel)]="state.defaultCurrency"
-              readonly
-              name="defaultCurrency"
-            />
-          </label>
-        </div>
-      }
-      @case ('billing') {
-        <div class="form-grid">
-          <label class="field">
-            <span class="field__label">{{ L().fields['invoiceFormat'] }}</span>
-            <input
-              class="textbox mono"
-              type="text"
-              dir="ltr"
-              [(ngModel)]="state.invoiceFormat"
-              readonly
-              name="invoiceFormat"
-            />
-          </label>
-          <label class="field">
-            <span class="field__label">{{ L().fields['paymentTerms'] }}</span>
-            <input
-              class="textbox"
-              type="number"
-              min="0"
-              [(ngModel)]="state.paymentTerms"
-              name="paymentTerms"
-            />
-          </label>
-          <label class="field">
-            <span class="field__label">{{ L().fields['taxRate'] }}</span>
-            <input
-              class="textbox"
-              type="number"
-              min="0"
-              max="100"
-              [(ngModel)]="state.taxRate"
-              step="0.01"
-              name="taxRate"
-            />
-          </label>
-          <div class="field">
-            <span class="field__label">{{ L().fields['taxProfile'] }}</span>
-            <div class="chip-row">
-              <span>Manual tax percentage per invoice; no automated tax jurisdiction rules.</span>
-            </div>
-          </div>
-        </div>
-      }
-      @case ('security') {
-        <p>
-          Shortening the session duration also shortens existing sessions, including remembered
-          sessions. New remembered sign-ins retain the fixed 30-day policy.
-        </p>
-        <div class="form-grid">
-          <button type="button" class="toggle-row" disabled>
-            <span class="toggle" [class.toggle--on]="state.requireMfa"
-              ><span class="toggle__knob"></span
-            ></span>
-            <span class="toggle-row__label">{{ L().fields['requireMfa'] }}</span>
-          </button>
-          <label class="field">
-            <span class="field__label">{{
-              lang() === 'ar' ? 'مدة الجلسة العادية (دقائق)' : 'Regular session duration (minutes)'
-            }}</span>
-            <input
-              class="textbox"
-              type="number"
-              min="15"
-              max="1440"
-              [(ngModel)]="state.sessionLength"
-              name="sessionLength"
-            />
-          </label>
-          <label class="field">
-            <span class="field__label">{{ L().fields['managementMaxMinutes'] }}</span>
-            <input
-              class="textbox"
-              type="number"
-              min="5"
-              [(ngModel)]="state.managementMaxMinutes"
-              readonly
-              name="managementMaxMinutes"
-            />
-          </label>
-          <label class="field">
-            <span class="field__label">{{
-              lang() === 'ar'
-                ? 'محاولات الدخول لكل حساب خلال 15 دقيقة'
-                : 'Login attempts per account / 15 minutes (all attempts)'
-            }}</span>
-            <input
-              class="textbox"
-              type="number"
-              min="3"
-              max="30"
-              [(ngModel)]="state.lockoutAttempts"
-              name="lockoutAttempts"
-            />
-          </label>
-          <label class="field field--wide">
-            <span class="field__label">{{ L().fields['ipAllowlist'] }}</span>
-            <textarea
-              class="textarea"
-              rows="3"
-              dir="ltr"
-              [(ngModel)]="state.ipAllowlist"
-              readonly
-              name="ipAllowlist"
-              placeholder="41.33.12.0/24"
-            ></textarea>
-          </label>
-        </div>
-      }
-      @case ('notifs') {
-        <div class="form-grid">
-          <button type="button" class="toggle-row" disabled>
-            <span class="toggle" [class.toggle--on]="state.notifyPaymentFailed"
-              ><span class="toggle__knob"></span
-            ></span>
-            <span class="toggle-row__label">{{ L().fields['notifyPaymentFailed'] }}</span>
-          </button>
-          <button type="button" class="toggle-row" disabled>
-            <span class="toggle" [class.toggle--on]="state.notifyTrialEnding"
-              ><span class="toggle__knob"></span
-            ></span>
-            <span class="toggle-row__label">{{ L().fields['notifyTrialEnding'] }}</span>
-          </button>
-          <button type="button" class="toggle-row" disabled>
-            <span class="toggle" [class.toggle--on]="state.notifyTicketAssigned"
-              ><span class="toggle__knob"></span
-            ></span>
-            <span class="toggle-row__label">{{ L().fields['notifyTicketAssigned'] }}</span>
-          </button>
-          <button type="button" class="toggle-row" disabled>
-            <span class="toggle" [class.toggle--on]="state.notifyIncident"
-              ><span class="toggle__knob"></span
-            ></span>
-            <span class="toggle-row__label">{{ L().fields['notifyIncident'] }}</span>
-          </button>
-        </div>
-      }
-      @case ('brand') {
-        <div class="form-grid">
-          <label class="field">
-            <span class="field__label">{{ L().fields['supportUrl'] }}</span>
-            <input
-              class="textbox"
-              type="text"
-              dir="ltr"
-              [(ngModel)]="state.supportUrl"
-              name="supportUrl"
-            />
-          </label>
-          <div class="field">
-            <span class="field__label">{{ L().fields['primaryColor'] }}</span>
-            <div class="color-row">
-              <span class="color-swatch" [style.background]="state.primaryColor"></span>
-              <input
-                class="textbox mono"
-                type="text"
-                dir="ltr"
-                [(ngModel)]="state.primaryColor"
-                name="primaryColor"
-              />
-            </div>
-          </div>
-        </div>
-      }
-    }
-  </div>
-}
-
 @if (saving()) {
-  <div class="scrim" (click)="closeSave()"></div>
-  <div class="dialog dialog--sm" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
+  <div class="scrim scrim--top" (click)="closeSave()"></div>
+  <div class="dialog" role="dialog">
+    <div class="dialog__head">
       <span class="dialog__title">{{ L().saveTitle }}</span>
-      @if (error()) {
-        <p role="alert">{{ error() }}</p>
-      }
+      <span class="dialog__body">{{ L().saveBodySecurity }}</span>
+    </div>
+    <div class="dialog__main">
       <label class="field"
-        ><span class="field__label">Reason</span
-        ><textarea class="textarea" [(ngModel)]="reason" name="reason" maxlength="500"></textarea>
+        ><span>{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
+        ><textarea
+          rows="2"
+          [value]="reason()"
+          (input)="reason.set($any($event.target).value)"
+        ></textarea>
       </label>
-      <p class="dialog__text">
-        {{ activeTab() === 'security' ? L().saveBodySecurity : L().saveBody }}
-      </p>
-      @if (saving()) {
-        <label class="field">
-          <span class="field__label">{{ L().codeLabel }}</span>
-          <input
-            class="textbox"
-            type="password"
-            autocomplete="current-password"
-            dir="ltr"
-            maxlength="256"
-            [ngModel]="saveCode()"
-            (ngModelChange)="saveCode.set($event)"
-            name="saveCode"
-          />
-          @if (saveError()) {
-            <span class="field__error">{{ L().codeError }}</span>
-          }
-        </label>
+      <label class="field">
+        <span>{{ L().codeLabel }}</span>
+        <input
+          type="password"
+          autocomplete="current-password"
+          dir="ltr"
+          [class.invalid]="saveError()"
+          [value]="saveCode()"
+          (input)="saveCode.set($any($event.target).value)"
+        />
+      </label>
+      @if (error()) {
+        <p class="note note--bad" role="alert">{{ error() }}</p>
       }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeSave()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="confirmSave()">
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="closeSave()">{{ L().cancel }}</button>
+      <button
+        type="button"
+        class="btn btn--dark"
+        [disabled]="busy() || !saveCode() || reason().trim().length < 5"
+        (click)="confirmSave()"
+      >
         {{ L().confirm }}
       </button>
     </div>
@@ -367,5 +487,5 @@
 }
 
 @if (toast(); as msg) {
-  <div class="toast">{{ msg }}</div>
+  <div class="toast"><span></span>{{ msg }}</div>
 }

@@ -153,7 +153,7 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-settings',
   imports: [FormsModule],
   templateUrl: './settings.html',
-  styleUrl: './settings.scss',
+  styleUrls: ['../admin-ui.scss', './settings.scss'],
 })
 export class Settings {
   private readonly ui = inject(AdminUiState);
@@ -172,6 +172,58 @@ export class Settings {
   readonly canEdit = computed(() => this.api.user()?.role === 'super_admin');
   version = 0;
   state = {} as SettingsState;
+  /** Last loaded value, for the "Unsaved changes" state and Discard. */
+  private original = '{}';
+  isDirty() {
+    return JSON.stringify(this.state) !== this.original;
+  }
+  discard() {
+    this.state = JSON.parse(this.original);
+    this.error.set('');
+  }
+  readonly staticToast = signal('');
+  soon() {
+    this.showToast(
+      this.lang() === 'ar'
+        ? 'هذا الإعداد غير مدعوم في الخادم بعد ولن يُحفظ.'
+        : "This setting isn't supported by the backend yet and won't be saved.",
+    );
+  }
+  sections(): Array<[Tab, string, string]> {
+    const ar = this.lang() === 'ar';
+    return [
+      [
+        'general',
+        this.L().tabs.general,
+        ar ? 'هوية المنصة والإعدادات الإقليمية' : 'Platform identity and locale defaults',
+      ],
+      [
+        'defaults',
+        this.L().tabs.defaults,
+        ar ? 'تُطبق عند إنشاء شركة' : 'Applied when a company is created',
+      ],
+      [
+        'billing',
+        this.L().tabs.billing,
+        ar ? 'الفواتير والشروط والضريبة' : 'Invoices, terms and tax',
+      ],
+      [
+        'security',
+        this.L().tabs.security,
+        ar ? 'تُطبق على مديري المنصة' : 'Applies to platform administrators',
+      ],
+      [
+        'notifs',
+        this.L().tabs.notifs,
+        ar ? 'رسائل تلقائية لمديري الشركات' : 'Automatic messages to company admins',
+      ],
+      ['brand', this.L().tabs.brand, ar ? 'الألوان وقوالب البريد' : 'Colors and email templates'],
+    ];
+  }
+  jump(t: Tab) {
+    this.setTab(t);
+    document.getElementById('set-' + t)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   constructor() {
     void this.load();
   }
@@ -181,6 +233,7 @@ export class Settings {
     try {
       const r = await this.api.request('/admin/api/v1/settings');
       this.state = { ...r.value };
+      this.original = JSON.stringify(r.value);
       this.version = r.version;
     } catch (e) {
       this.error.set((e as Error).message);

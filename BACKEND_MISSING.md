@@ -4,7 +4,7 @@ Things the new Platform Admin design shows that the backend doesn't support yet.
 The frontend renders each one statically. In the UI, these are marked with an amber **Not saved yet / Soon / Sample** tag or a dashed card, and the data is never sent.
 When an item is implemented, remove its tag in the listed file and wire it to the new field or endpoint.
 
-Checked against `mujez_backend` @ `af51c30` (`src/modules/platform/companies`, `src/modules/platform/subscriptions`, `src/modules/platform/billing`, `src/modules/platform/features`, `src/modules/platform/integrations`, `src/modules/platform/health`, `src/modules/platform/support`, `src/modules/platform/announcements`, `docs/*.md`).
+Checked against `mujez_backend` @ `af51c30` (`src/modules/platform/companies`, `src/modules/platform/subscriptions`, `src/modules/platform/billing`, `src/modules/platform/features`, `src/modules/platform/integrations`, `src/modules/platform/health`, `src/modules/platform/support`, `src/modules/platform/announcements`, `src/modules/platform/settings`, `docs/*.md`).
 
 ---
 
@@ -287,6 +287,29 @@ JSON, result and IP, password-confirmed CSV export (redacted, max 5,000 rows).
 | L3 | **Company** column (company name for company-scoped events) | Not shown. Resource column only. | Return `companyId` / company name on audit summaries. |
 | L4 | **Administrator** dropdown filter | Covered by free-text search. | Optional `actorId` filter + `GET /audit-logs/actors` list. |
 | L5 | **Failed sign-in** events | Not present unless the backend records them. | Audit failed logins / lockouts (security events). |
+
+## Settings (`/admin/settings`)
+
+Already real (`GET/POST /settings`, password + reason, versioned): platform name, support email/URL, default language,
+trial days, default plan, payment terms, VAT rate, session length, login-attempt rate limit, primary color. The page shows
+"Unsaved changes" with **Discard**, keeps your draft on a 409 conflict, and only Super Admin can save.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| S-1 | **Default currency** (EGP/USD/SAR/AED) and **Supported currencies** | Locked to EGP ("Fixed"). | Multi-currency support (DTO allows only `EGP`). |
+| S-2 | **Time zone** choice | Locked to Africa/Cairo. | Accept other IANA zones (DTO allows only `Africa/Cairo`). |
+| S-3 | **Supported languages** (Arabic + English / Arabic only) | Fixed to both. | `supportedLangs` setting honored by tenant UI. |
+| S-4 | **Invoice numbering** pattern `INV-{YYYY}-{####}` | Locked to `INV-{UUID}`. | Sequential per-year numbering with a configurable pattern. |
+| S-5 | **Tax profile** (standard / reverse charge) | Locked to "Manual". | Tax profiles (DTO allows only `manual`), see B5. |
+| S-6 | **Payment provider** (Paymob) | "Manual only", disabled. | Gateway integration + provider setting (see Y1). |
+| S-7 | **Default CRM modules** (everything in plan / core only) | Static segment. | Setting consumed at company creation to seed feature overrides. |
+| S-8 | **MFA requirement** | "Not enforced", static. | MFA support (see U-1). `requireMfa` cannot be saved as true today. |
+| S-9 | **Password policy** selector | Fixed "At least 12 characters". | Configurable policy (length, complexity, reuse history). |
+| S-10 | **Admin access restriction** (office IPs + VPN) and **management-mode max duration** | Static / read-only. | IP allowlist enforcement and management workspace sessions (DTO forces empty / 0). |
+| S-11 | **Lock after failed attempts** (true lockout) | Shown as "Login attempts per 15 min" (the real behavior: a rate limit counting all attempts). | Failed-attempt-only lockout with unlock flow, if a true lockout is wanted. |
+| S-12 | **Notifications to company admins** (expiry reminder days, trial notice, payment failure, incidents) | Toggles shown off, "Soon". Clicking shows a toast. | Outbound delivery (email) + allowing `notify*` to be saved true. Reminder lead-time settings (`expiryReminderDays`, `trialNoticeDays`). |
+| S-13 | **Brand email templates** | Static "Off". | Branded email templates once email delivery exists. |
+| S-14 | **Logo / favicon** upload (design section subtitle) | Not shown. | File upload + storage for brand assets. |
 
 ---
 

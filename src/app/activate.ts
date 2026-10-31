@@ -6,7 +6,10 @@ import { AuthService } from './auth.service';
   selector: 'app-activate',
   imports: [FormsModule, RouterLink],
   template: `<main>
-    <h1>Activate your {{ company ? 'company owner' : 'Mujez administrator' }} account</h1>
+    <h1>
+      Activate your {{ team ? 'team' : company ? 'company owner' : 'Mujez administrator' }}
+      account
+    </h1>
     <p>
       Set a password of at least 12 characters. This link expires after 24 hours and works once.
     </p>
@@ -78,9 +81,14 @@ export class Activate {
   readonly done = signal(false);
   readonly saving = signal(false);
   readonly company = location.pathname === '/activate/company';
+  readonly team = location.pathname === '/activate/team';
   readonly token = new URLSearchParams(location.hash.slice(1)).get('token') ?? '';
   constructor() {
-    history.replaceState(null, '', this.company ? '/activate/company' : '/activate');
+    history.replaceState(
+      null,
+      '',
+      this.team ? '/activate/team' : this.company ? '/activate/company' : '/activate',
+    );
   }
   async activate() {
     if (this.password() !== this.confirm()) {
@@ -95,7 +103,11 @@ export class Activate {
     this.saving.set(true);
     try {
       await this.api.request(
-        this.company ? '/api/v1/auth/activate' : '/admin/api/v1/auth/activate',
+        this.team
+          ? '/api/v1/team/activate'
+          : this.company
+            ? '/api/v1/auth/activate'
+            : '/admin/api/v1/auth/activate',
         {
           token: this.token,
           password: this.password(),

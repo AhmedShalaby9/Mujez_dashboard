@@ -21,7 +21,13 @@ export interface User {
     manageExpiresAt: string | null;
     platformUserName: string;
     platformRoleName?: { en: string; ar: string };
-    company: { id: string; uuid: string; slug: string; name: { en: string; ar: string }; status: string };
+    company: {
+      id: string;
+      uuid: string;
+      slug: string;
+      name: { en: string; ar: string };
+      status: string;
+    };
   };
 }
 export class ApiError extends Error {
@@ -108,7 +114,8 @@ export const companyGuard: CanActivateFn = async (route) => {
     u?.role === 'company_owner' &&
     u?.permissions.includes('workspace.view');
   const isWorkspace = u?.pool === 'company_admin' && !!u?.workspace;
-  return isOwner || isWorkspace
+  const isEmployee = u?.pool === 'company_user';
+  return isOwner || isWorkspace || isEmployee
     ? !route.data['permission'] || u?.permissions.includes(route.data['permission'])
       ? true
       : router.createUrlTree(['/company/dashboard'])

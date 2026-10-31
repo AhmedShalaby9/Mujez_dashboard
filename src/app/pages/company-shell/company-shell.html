@@ -1,9 +1,19 @@
 @if (workspace(); as ws) {
   <div class="ws-banner" [attr.dir]="dir()">
-    <span class="ws-banner__badge">{{ lang() === 'ar' ? 'وضع إدارة المنصة' : 'Platform Admin Mode' }}</span>
+    <span class="ws-banner__badge">{{
+      lang() === 'ar' ? 'وضع إدارة المنصة' : 'Platform Admin Mode'
+    }}</span>
     <span class="ws-banner__company">{{ ws.company.name[lang()] }}</span>
     <span class="ws-banner__mode" [class.ws-banner__mode--manage]="ws.mode === 'manage'">
-      {{ ws.mode === 'manage' ? (lang() === 'ar' ? 'وضع الإدارة' : 'Management') : (lang() === 'ar' ? 'قراءة فقط' : 'Read-only') }}
+      {{
+        ws.mode === 'manage'
+          ? lang() === 'ar'
+            ? 'وضع الإدارة'
+            : 'Management'
+          : lang() === 'ar'
+            ? 'قراءة فقط'
+            : 'Read-only'
+      }}
       @if (ws.mode === 'manage' && manageCountdown()) {
         · {{ manageCountdown() }}
       }
@@ -21,14 +31,29 @@
           {{ lang() === 'ar' ? 'طلب صلاحية الإدارة' : 'Request management' }}
         </button>
       } @else {
-        <button type="button" class="ws-banner__btn" [disabled]="wsBusy()" (click)="dropToReadOnly()">
+        <button
+          type="button"
+          class="ws-banner__btn"
+          [disabled]="wsBusy()"
+          (click)="dropToReadOnly()"
+        >
           {{ lang() === 'ar' ? 'العودة للقراءة فقط' : 'Drop to read-only' }}
         </button>
       }
-      <button type="button" class="ws-banner__btn" [disabled]="wsBusy()" (click)="switchWorkspace()">
+      <button
+        type="button"
+        class="ws-banner__btn"
+        [disabled]="wsBusy()"
+        (click)="switchWorkspace()"
+      >
         {{ lang() === 'ar' ? 'تبديل مساحة العمل' : 'Switch workspace' }}
       </button>
-      <button type="button" class="ws-banner__btn ws-banner__btn--exit" [disabled]="wsBusy()" (click)="exitWorkspace()">
+      <button
+        type="button"
+        class="ws-banner__btn ws-banner__btn--exit"
+        [disabled]="wsBusy()"
+        (click)="exitWorkspace()"
+      >
         {{ lang() === 'ar' ? 'العودة للإدارة' : 'Back to Admin' }}
       </button>
     </span>
@@ -39,7 +64,9 @@
   <div class="scrim" (click)="closeElevate()"></div>
   <div class="dialog" (click)="$event.stopPropagation()">
     <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{ lang() === 'ar' ? 'طلب صلاحية الإدارة' : 'Request management access' }}</span>
+      <span class="dialog__title">{{
+        lang() === 'ar' ? 'طلب صلاحية الإدارة' : 'Request management access'
+      }}</span>
       <label class="field">
         <span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span>
         <textarea
@@ -83,7 +110,12 @@
       <button type="button" class="btn btn--ghost" (click)="closeElevate()">
         {{ lang() === 'ar' ? 'إلغاء' : 'Cancel' }}
       </button>
-      <button type="button" class="btn btn--primary" [disabled]="wsBusy()" (click)="submitElevate()">
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="wsBusy()"
+        (click)="submitElevate()"
+      >
         {{ lang() === 'ar' ? 'تأكيد' : 'Confirm' }}
       </button>
     </div>
@@ -97,7 +129,11 @@
   [class.shell--ws]="!!workspace()"
   (click)="closeMenus()"
 >
-  <aside class="sidebar" [class.sidebar--open]="mobileNavOpen()" [class.sidebar--collapsed]="collapsed()">
+  <aside
+    class="sidebar"
+    [class.sidebar--open]="mobileNavOpen()"
+    [class.sidebar--collapsed]="collapsed()"
+  >
     <div class="sidebar__brand">
       <svg width="26" height="26" viewBox="0 0 64 64" class="sidebar__logo">
         <rect width="64" height="64" rx="15" fill="#111113" />
@@ -124,14 +160,24 @@
         [title]="collapsed() ? L().expand : L().collapse"
         (click)="$event.stopPropagation(); toggleCollapsed()"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="collapsed() ? 'rotate(180deg)' : 'none'">
+        <svg
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          [style.transform]="collapsed() ? 'rotate(180deg)' : 'none'"
+        >
           <path d="M15 18l-6-6 6-6" />
         </svg>
       </button>
     </div>
 
     <nav class="sidebar__nav">
-      @for (entry of L().nav; track $index) {
+      @for (entry of visibleNav(); track $index) {
         @if (entry.kind === 'head') {
           @if (!collapsed()) {
             <div class="sidebar__groupLabel">{{ entry.label }}</div>
@@ -146,7 +192,18 @@
             [title]="collapsed() ? entry.label : null"
             (click)="closeMobileNav()"
           >
-            <svg class="sidebar__itemIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [innerHTML]="navIcon(entry.path)"></svg>
+            <svg
+              class="sidebar__itemIcon"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              [innerHTML]="navIcon(entry.path)"
+            ></svg>
             @if (!collapsed()) {
               <span class="sidebar__itemLabel">{{ entry.label }}</span>
               @if (entry.count) {

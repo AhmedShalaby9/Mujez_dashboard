@@ -1,0 +1,151 @@
+<div class="team">
+  <header class="team__head">
+    <div>
+      <h1>{{ t('Team', 'الفريق') }}</h1>
+      <p>
+        {{
+          t(
+            'Invite agents to work their own leads and deals.',
+            'ادعُ وكلاء للعمل على عملائهم وصفقاتهم الخاصة.'
+          )
+        }}
+      </p>
+    </div>
+    <button type="button" class="btn btn--primary" (click)="openInvite()">
+      {{ t('+ Invite member', '+ دعوة عضو') }}
+    </button>
+  </header>
+
+  @if (error()) {
+    <p class="team__error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="team__muted">{{ t('Loading…', 'جارٍ التحميل…') }}</p>
+  } @else if (!items().length) {
+    <div class="team__empty">
+      <p>{{ t('No team members yet.', 'لا يوجد أعضاء في الفريق بعد.') }}</p>
+    </div>
+  } @else {
+    <table class="team__table">
+      <thead>
+        <tr>
+          <th>{{ t('Name', 'الاسم') }}</th>
+          <th>{{ t('Email', 'البريد الإلكتروني') }}</th>
+          <th>{{ t('Role', 'الدور') }}</th>
+          <th>{{ t('Status', 'الحالة') }}</th>
+          <th>{{ t('Last login', 'آخر دخول') }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of items(); track m.id) {
+          <tr>
+            <td>{{ m.name }}</td>
+            <td class="team__email">{{ m.email }}</td>
+            <td>{{ roleNames[m.role]?.[lang()] ?? m.roleName[lang()] }}</td>
+            <td>
+              <span
+                class="chip"
+                [class.chip--active]="m.status === 'active'"
+                [class.chip--muted]="m.status === 'disabled'"
+                >{{ statusNames[m.status][lang()] }}</span
+              >
+            </td>
+            <td>{{ m.lastLoginAt ? (m.lastLoginAt | date: 'medium') : '—' }}</td>
+            <td class="team__actions">
+              @if (m.status === 'invited') {
+                <button type="button" class="link" [disabled]="busy() === m.id" (click)="resend(m)">
+                  {{ t('Resend', 'إعادة الإرسال') }}
+                </button>
+                <button
+                  type="button"
+                  class="link link--danger"
+                  [disabled]="busy() === m.id"
+                  (click)="revoke(m)"
+                >
+                  {{ t('Revoke', 'إلغاء') }}
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  class="link"
+                  [class.link--danger]="m.status === 'active'"
+                  [disabled]="busy() === m.id"
+                  (click)="toggle(m)"
+                >
+                  {{ m.status === 'active' ? t('Disable', 'تعطيل') : t('Enable', 'تفعيل') }}
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (inviteOpen()) {
+    <div class="modal" (click)="closeInvite()">
+      <div class="modal__panel" (click)="$event.stopPropagation()">
+        @if (inviteLink()) {
+          <h2>{{ t('Invitation ready', 'الدعوة جاهزة') }}</h2>
+          <p class="team__muted">
+            {{
+              t(
+                'Share this link with the new member. It works once and expires in 24 hours.',
+                'شارك هذا الرابط مع العضو الجديد. يعمل مرة واحدة وتنتهي صلاحيته خلال 24 ساعة.'
+              )
+            }}
+          </p>
+          <div class="team__linkRow">
+            <input type="text" readonly [value]="inviteLink()" />
+            <button type="button" class="btn" (click)="copyLink()">{{ t('Copy', 'نسخ') }}</button>
+          </div>
+          <div class="modal__actions">
+            <button type="button" class="btn btn--primary" (click)="closeInvite()">
+              {{ t('Done', 'تم') }}
+            </button>
+          </div>
+        } @else {
+          <h2>{{ t('Invite a team member', 'دعوة عضو فريق') }}</h2>
+          <form (ngSubmit)="submitInvite()">
+            @if (inviteError()) {
+              <p class="team__error" role="alert">{{ inviteError() }}</p>
+            }
+            <label>
+              {{ t('Name', 'الاسم') }}
+              <input
+                type="text"
+                name="name"
+                [(ngModel)]="inviteName"
+                required
+                minlength="2"
+                maxlength="120"
+              />
+            </label>
+            <label>
+              {{ t('Email', 'البريد الإلكتروني') }}
+              <input type="email" name="email" [(ngModel)]="inviteEmail" required maxlength="254" />
+            </label>
+            <label>
+              {{ t('Role', 'الدور') }}
+              <select name="role" [(ngModel)]="inviteRole">
+                @for (r of roles; track r) {
+                  <option [value]="r">{{ roleNames[r][lang()] }}</option>
+                }
+              </select>
+            </label>
+            <div class="modal__actions">
+              <button type="button" class="btn" (click)="closeInvite()" [disabled]="inviting()">
+                {{ t('Cancel', 'إلغاء') }}
+              </button>
+              <button type="submit" class="btn btn--primary" [disabled]="inviting()">
+                {{ inviting() ? t('Sending…', 'جارٍ الإرسال…') : t('Send invite', 'إرسال الدعوة') }}
+              </button>
+            </div>
+          </form>
+        }
+      </div>
+    </div>
+  }
+</div>

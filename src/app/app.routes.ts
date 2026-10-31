@@ -8,6 +8,7 @@ export const routes: Routes = [
     loadComponent: () => import('./change-password').then((m) => m.ChangePassword),
   },
   { path: 'activate/company', loadComponent: () => import('./activate').then((m) => m.Activate) },
+  { path: 'activate/team', loadComponent: () => import('./activate').then((m) => m.Activate) },
   { path: 'activate', loadComponent: () => import('./activate').then((m) => m.Activate) },
   { path: '', loadComponent: () => import('./pages/login/login').then((m) => m.Login) },
   {
@@ -229,6 +230,11 @@ export const routes: Routes = [
         data: { permission: 'audit.read' },
         loadComponent: () =>
           import('./pages/company-shell/audit-log/audit-log').then((m) => m.AuditLog),
+      },
+      {
+        path: 'team',
+        data: { permission: 'team.read' },
+        loadComponent: () => import('./pages/company-shell/team/team').then((m) => m.Team),
       },
     ],
   },

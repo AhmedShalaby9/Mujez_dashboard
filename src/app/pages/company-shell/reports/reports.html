@@ -1,128 +1,202 @@
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <span
+        >{{ t('Team', 'الفريق') }} · {{ L().periodNames[period()] }}
+        @if (data(); as d) {
+          · {{ d.from }} – {{ d.to }}
+        }
+      </span>
+      <h1>{{ L().title }}</h1>
+    </div>
+    <div class="head__actions">
+      <div class="toggle">
+        <button type="button" [class.on]="segment() === 'all'" (click)="setSegment('all')">
+          {{ t('All', 'الكل') }}
+        </button>
+        <button type="button" [class.on]="segment() === 'res'" (click)="setSegment('res')">
+          {{ t('Residential', 'سكني') }}
+        </button>
+        <button type="button" [class.on]="segment() === 'com'" (click)="setSegment('com')">
+          {{ t('Commercial', 'تجاري') }}
+        </button>
+      </div>
+    </div>
   </div>
-  <div class="page-head__actions">
-    <button
-      type="button"
-      class="btn btn--ghost"
-      [disabled]="!canExport() || exporting() || busy()"
-      (click)="exportCsv()"
-    >
-      {{ L().exportBtn }}
-    </button>
-  </div>
-</div>
 
-<div class="chip-row">
-  @for (p of periods; track p) {
-    <button type="button" class="chip" [class.chip--active]="period() === p" (click)="load(p)">
-      {{ L().periodNames[p] }}
-    </button>
+  <div class="tools">
+    <div class="chips">
+      @for (p of periods; track p) {
+        <button type="button" class="chip" [class.on]="period() === p" (click)="load(p)">
+          {{ L().periodNames[p] }}
+        </button>
+      }
+    </div>
+    @if (canExport()) {
+      <button
+        type="button"
+        class="btn btn--sm end-auto"
+        [disabled]="exporting() || busy()"
+        (click)="exportCsv()"
+      >
+        {{ exporting() ? t('Exporting…', 'جار التصدير…') : L().exportBtn }}
+      </button>
+    }
+  </div>
+
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
   }
-</div>
+  @if (busy() && !data()) {
+    <p class="muted" role="status">{{ t('Loading…', 'جار التحميل…') }}</p>
+  }
 
-@if (error()) {
-  <p role="alert">{{ error() }}</p>
-}
-@if (busy()) {
-  <p role="status">{{ ar() ? 'جار التحميل…' : 'Loading…' }}</p>
-}
-@if (data(); as d) {
-  <p class="page-head__sub">
-    {{ d.from }} – {{ d.to }} · {{ d.timeZone }} · {{ ar() ? 'آخر تحديث' : 'As of' }} {{ d.asOf }}
-  </p>
-  <p>
-    {{ ar() ? 'العملاء' : 'Leads' }}: {{ d.summary.leads }} ·
-    {{ ar() ? 'المبيعات الموقعة' : 'Signed sales' }}: {{ d.summary.signedSales }} ·
-    {{ api.money(d.summary.signedSaleValueMinor) }}
-  </p>
-  @if (d.summary.recordedPaidCommissionMinor !== null) {
-    <p>
-      {{ ar() ? 'عمولات مسجلة كمدفوعة يدويًا' : 'Manually recorded paid commissions' }}:
-      {{ api.money(d.summary.recordedPaidCommissionMinor) }}
+  @if (data(); as d) {
+    <section class="kpis">
+      @for (k of kpis(); track k.label) {
+        <div class="kpi">
+          <span class="kpi__label">{{ k.label }}</span>
+          <span class="kpi__value mono">{{ k.value }}</span>
+          <span class="kpi__sub">{{ k.sub }}</span>
+        </div>
+      }
+    </section>
+
+    <div class="row">
+      <section class="card box box--wide">
+        <div class="c-head">
+          <h2>{{ t('Signed volume by month', 'المبيعات الموقعة شهريًا') }}</h2>
+          <span class="muted small">{{ t('sale contracts, EGP', 'عقود البيع، جنيه') }}</span>
+        </div>
+        <div class="chart">
+          <div
+            class="bars"
+            [style.grid-template-columns]="'repeat(' + d.volume.length + ', minmax(0, 1fr))'"
+          >
+            @for (v of d.volume; track v.month) {
+              <div class="bar" [title]="v.deals + ' ' + t('deals', 'صفقات')">
+                <span class="bar__val mono">{{ money(v.valueMinor) }}</span>
+                <div class="bar__fill" [style.height]="barHeight(v.valueMinor)"></div>
+              </div>
+            }
+          </div>
+          <div
+            class="axis"
+            [style.grid-template-columns]="'repeat(' + d.volume.length + ', minmax(0, 1fr))'"
+          >
+            @for (v of d.volume; track v.month) {
+              <span>{{ month(v.month) }}</span>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="card box">
+        <div class="c-head">
+          <h2>{{ t('Conversion funnel', 'مراحل التحويل') }}</h2>
+          <span class="muted small">{{ t('% of previous stage', '% من المرحلة السابقة') }}</span>
+        </div>
+        <div class="funnel">
+          @for (f of funnel(); track f.key) {
+            <div class="fu">
+              <div class="fu__row">
+                <span class="small">{{ stageName(f.key) }}</span>
+                <span class="sub">{{ f.conv }}</span>
+                <span class="mono small strong end-auto">{{ f.n }}</span>
+              </div>
+              <div class="track">
+                <div [style.width]="f.w" [style.background]="stageColor[f.key] ?? '#111113'"></div>
+              </div>
+            </div>
+          }
+          <span class="sub">
+            {{ t('Lost', 'مفقود') }}: {{ lost() }} ·
+            {{
+              t(
+                'counts leads at or beyond each stage today',
+                'يحسب العملاء في المرحلة أو بعدها حاليًا'
+              )
+            }}
+          </span>
+        </div>
+      </section>
+    </div>
+
+    <div class="row">
+      <section class="card box">
+        <div class="c-head">
+          <h2>{{ L().sourcesTitle }}</h2>
+          <span class="muted small">{{
+            t('share of leads · lead→won', 'النسبة · التحويل لمكسوب')
+          }}</span>
+        </div>
+        <div class="sgrid shead">
+          <span>{{ L().thSource }}</span>
+          <span>{{ t('Share', 'النسبة') }}</span>
+          <span class="end">{{ t('Conv.', 'التحويل') }}</span>
+        </div>
+        @for (s of sourceRows(); track s.key) {
+          <div class="sgrid srow">
+            <span class="ell">{{ sourceName(s.key) }}</span>
+            <span class="share">
+              <span class="track track--sm"><span [style.width]="s.bar"></span></span>
+              <span class="mono sub share__n">{{ s.share }}</span>
+            </span>
+            <span
+              class="end mono small strong"
+              [style.color]="s.conversion !== null && s.conversion < 3 ? '#B4442F' : null"
+              >{{ s.conversion === null ? '—' : s.conversion + '%' }}</span
+            >
+          </div>
+        }
+        @if (!sourceRows().length) {
+          <p class="muted empty">
+            {{ t('No leads in this period.', 'لا يوجد عملاء في هذه الفترة.') }}
+          </p>
+        }
+      </section>
+
+      <section class="card box box--wide2">
+        <div class="c-head">
+          <h2>{{ t('Agent performance', 'أداء الوكلاء') }}</h2>
+          <span class="muted small">{{
+            t('current assignees / contract owners', 'المسند إليهم وملاك العقود')
+          }}</span>
+        </div>
+        <div class="scroll-x">
+          <div class="agrid shead">
+            <span>{{ L().thAgent }}</span>
+            <span class="end">{{ L().thLeads }}</span>
+            <span class="end">{{ L().thDeals }}</span>
+            <span class="end">{{ t('Volume', 'الحجم') }}</span>
+            <span class="end">{{ t('Conv.', 'التحويل') }}</span>
+          </div>
+          @for (a of d.owners; track a.id ?? 'none') {
+            <div class="agrid srow">
+              <span class="strong ell">{{ a.name ?? t('Unassigned', 'غير مسند') }}</span>
+              <span class="end mono small">{{ a.leads }}</span>
+              <span class="end mono small">{{ a.deals }}</span>
+              <span class="end mono small">{{ money(a.saleValueMinor) }}</span>
+              <span class="end mono small">{{ pct(a.deals, a.leads) }}</span>
+            </div>
+          }
+          @if (!d.owners.length) {
+            <p class="muted empty">
+              {{ t('No activity in this period.', 'لا يوجد نشاط في هذه الفترة.') }}
+            </p>
+          }
+        </div>
+      </section>
+    </div>
+
+    <p class="muted small">
+      {{
+        t(
+          'Cairo calendar dates. Leads include archived leads created in the period. Conversion is current won ÷ leads. Contract values are not cash collections.',
+          'بتوقيت القاهرة. يشمل العملاء المؤرشفين المضافين خلال الفترة. التحويل = المكسوب حاليًا ÷ العملاء. قيم العقود ليست تحصيلات نقدية.'
+        )
+      }}
+      {{ t('As of', 'حتى') }} {{ d.asOf }}.
     </p>
   }
-  <p class="page-head__sub">
-    {{
-      ar()
-        ? 'نسبة التحويل هي العملاء في مرحلة تم الفوز بهم حاليًا ÷ عملاء الفترة. قيم العقود ليست تحصيلات نقدية.'
-        : 'Conversion is the current won count ÷ cohort leads. Contract values are not cash collections.'
-    }}
-  </p>
-  <div class="grid-2">
-    <div class="card chart-card">
-      <span class="card__title">{{ L().volumeTitle }}</span>
-      <div class="bars">
-        @for (v of d.volume; track v.month) {
-          <div class="bar-col">
-            <span class="mono">{{ api.money(v.valueMinor) }}</span>
-            <div class="bar-col__bar" [style.height.%]="percent(v.valueMinor)"></div>
-            <span class="bar-col__label">{{ v.month }}</span>
-          </div>
-        }
-      </div>
-    </div>
-
-    <div class="card chart-card">
-      <span class="card__title">{{ L().funnelTitle }}</span>
-      <div class="funnel">
-        @for (f of d.funnel; track f.key) {
-          <div class="funnel-row">
-            <span class="funnel-row__label">{{ stageName(f.key) }}</span>
-            <div class="funnel-row__track">
-              <div class="funnel-row__fill" [style.width.%]="(f.count / maxFunnel()) * 100"></div>
-            </div>
-            <span class="funnel-row__count mono">{{ f.count }}</span>
-          </div>
-        }
-      </div>
-    </div>
-  </div>
-
-  <div class="grid-2">
-    <div class="card">
-      <div class="card__head">
-        <span class="card__title">{{ L().sourcesTitle }}</span>
-      </div>
-      <div class="s-table">
-        <div class="s-head">
-          <span>{{ L().thSource }}</span>
-          <span>{{ L().thLeads }}</span>
-          <span>{{ L().thConversion }}</span>
-        </div>
-        @for (s of d.sources; track s.key) {
-          <div class="s-row">
-            <span>{{ sourceName(s.key) }}</span>
-            <span class="mono">{{ s.leads }}</span>
-            <span class="mono">{{ s.conversion === null ? '—' : s.conversion + '%' }}</span>
-          </div>
-        }
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card__head">
-        <span class="card__title">{{ L().agentsTitle }}</span>
-      </div>
-      <div class="a-table">
-        <div class="a-head">
-          <span>{{ L().thAgent }}</span>
-          <span>{{ L().thLeads }}</span>
-          <span>{{ L().thDeals }}</span>
-          <span>{{ L().thRevenue }}</span>
-        </div>
-        @for (a of d.owners; track a.id) {
-          <div class="a-row">
-            <span>{{ a.name ?? (ar() ? 'غير مسند' : 'Unassigned') }}</span>
-            <span class="mono">{{ a.leads }}</span>
-            <span class="mono">{{ a.deals }}</span>
-            <span class="mono">{{ api.money(a.saleValueMinor) }}</span>
-          </div>
-        }
-      </div>
-    </div>
-  </div>
-}
+</div>

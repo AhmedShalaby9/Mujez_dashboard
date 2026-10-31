@@ -1,313 +1,471 @@
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <span>{{
+        t(
+          'New leads are assigned by the first matching rule with an eligible agent',
+          'يُسند العميل الجديد بأول قاعدة مطابقة لديها وكيل متاح'
+        )
+      }}</span>
+      <h1>{{ L().title }}</h1>
+    </div>
+    <div class="head__actions">
+      @if (canManage()) {
+        <button type="button" class="btn btn--dark" (click)="edit()">
+          {{ t('+ New rule', '+ قاعدة جديدة') }}
+        </button>
+      }
+    </div>
   </div>
-  @if (canManage()) {
-    <button class="btn btn--primary" (click)="edit()">{{ t('New rule', 'قاعدة جديدة') }}</button>
+
+  @if (kpis().length && loaded()) {
+    <section class="kpis">
+      @for (k of kpis(); track k.label) {
+        <div class="kpi">
+          <span class="kpi__label">{{ k.label }}</span>
+          <span class="kpi__value mono" [style.color]="k.fg">{{ k.value }}</span>
+          <span class="kpi__sub">{{ k.sub }}</span>
+        </div>
+      }
+    </section>
   }
-</div>
-<p>
-  {{
-    t(
-      'Explicit lead ownership overrides routing. Teams here are named user rosters defined in each rule. First contact must be recorded on the lead; no message is sent automatically.',
-      'اختيار مسؤول العميل يدوياً يتجاوز التوزيع. الفرق هنا قوائم مستخدمين مسماة داخل كل قاعدة. يجب تسجيل أول تواصل في العميل؛ لا ترسل رسالة تلقائياً.'
-    )
-  }}
-</p>
-<div class="chip-row">
-  <button class="btn btn--ghost" [disabled]="loading()" (click)="reload()">
-    {{ t('Refresh', 'تحديث') }}</button
-  ><label
-    ><input
-      type="checkbox"
-      [ngModel]="includeArchived()"
-      (ngModelChange)="includeArchived.set($event)"
-    />{{ t('Include archived', 'تضمين المؤرشفة') }}</label
-  >
-</div>
-@if (loaded() && !advancedAvailable()) {
-  <p>
-    {{
-      t(
-        'Advanced strategies and first-contact SLA reassignment require the configured advanced-routing entitlement. Basic rules can use round robin or a specific user with SLA set to zero.',
-        'تحتاج الإستراتيجيات المتقدمة وإعادة الإسناد بالمهلة إلى صلاحية التوزيع المتقدم المفعلة. يمكن للقواعد الأساسية استخدام التوزيع الدوري أو مستخدم محدد مع مهلة صفر.'
-      )
-    }}
-  </p>
-}
-@if (worker(); as w) {
-  <p [class.worker-stale]="!w.healthy">
-    {{ t('SLA worker', 'عامل مهلة التواصل') }}:
-    {{
-      w.healthy
-        ? t('Healthy', 'سليم')
-        : t('Heartbeat missing or stale', 'إشارة التشغيل مفقودة أو قديمة')
-    }}
-    · {{ date(w.lastSeenAt) }}
-  </p>
-}
-@if (error()) {
-  <p role="alert">{{ error() }}</p>
-}
-@if (loading()) {
-  <p>{{ t('Loading…', 'جارٍ التحميل…') }}</p>
-}
-<div class="card">
-  <div class="table-scroll">
-    <div class="routing-table">
-      <div class="routing-head">
-        <span>{{ L().thPriority }}</span
-        ><span>{{ L().thMatch }}</span
-        ><span>{{ L().thStrategy }}</span
-        ><span>{{ L().thTarget }}</span
-        ><span>{{ L().thSla }}</span
-        ><span>{{ L().thActive }}</span
-        ><span></span>
+
+  @if (error() && !formOpen()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+  @if (loaded() && !advancedAvailable()) {
+    <p class="note note--warn">
+      {{
+        t(
+          'Weighted and team strategies and SLA reassignment need the advanced-routing feature on your plan. Basic rules can use round robin or a specific user with SLA 0.',
+          'الإستراتيجيات المرجحة والفرق وإعادة الإسناد بالمهلة تحتاج ميزة التوزيع المتقدم في باقتك. القواعد الأساسية تستخدم التوزيع الدوري أو مستخدمًا محددًا بمهلة 0.'
+        )
+      }}
+    </p>
+  }
+
+  <div class="split">
+    <section class="card" [class.busy]="loading()">
+      <div class="c-head">
+        <h2>{{ t('Routing rules', 'قواعد التوزيع') }}</h2>
+        <span class="muted small">{{
+          t(
+            'evaluated top to bottom · first match wins',
+            'تُقيّم من الأعلى للأسفل · أول تطابق يفوز'
+          )
+        }}</span>
+        <label class="check end-auto"
+          ><input
+            type="checkbox"
+            [ngModel]="includeArchived()"
+            (ngModelChange)="includeArchived.set($event)"
+          />{{ t('Archived', 'المؤرشفة') }}</label
+        >
       </div>
       @for (r of visible(); track r.id; let i = $index) {
-        <div class="routing-row">
-          <span>{{ i + 1 }}</span
-          ><span
-            ><strong>{{ r.name[lang()] }}</strong
-            ><small
-              >{{ match(r) }}
+        <div class="rule" [class.rule--off]="!r.active || r.archivedAt">
+          <span class="mono rule__n">{{ i + 1 }}</span>
+          <div class="cell">
+            <span class="strong"
+              >{{ r.name[lang()] }}
               @if (r.sample) {
-                · {{ t('Sample', 'تجريبي') }}
+                <i class="soon">{{ t('Sample', 'تجريبي') }}</i>
               }
               @if (r.archivedAt) {
-                · {{ t('Archived', 'مؤرشفة') }}
+                <i class="soon">{{ t('Archived', 'مؤرشفة') }}</i>
               }
-            </small></span
-          ><span>{{ L().strategyNames[r.strategy] }}</span
-          ><span>{{ target(r) }}</span
-          ><span>{{ r.slaMinutes || '—' }} {{ r.slaMinutes ? L().minutes : '' }}</span
-          ><span
-            ><button
-              class="btn btn--ghost"
-              [disabled]="busy() || !canManage() || !!r.archivedAt"
-              (click)="toggleActive(r)"
+            </span>
+            <span class="rule__cond"
+              ><span class="muted">{{ t('If', 'إذا') }}</span> {{ match(r) }}
+              <span class="muted">→</span> {{ target(r) }}</span
             >
-              {{ r.active ? t('Enabled', 'مفعلة') : t('Disabled', 'معطلة') }}
-            </button></span
-          ><span>
-            @if (canManage()) {
+            <span class="tags">
+              <span class="tag tag--ok">{{ L().strategyNames[r.strategy] }}</span>
+              @if (r.slaMinutes) {
+                <span class="tag"
+                  >{{ t('SLA', 'المهلة') }} {{ r.slaMinutes }} {{ L().minutes }}</span
+                >
+              }
+            </span>
+          </div>
+          @if (canManage()) {
+            <div class="rule__acts">
               @if (!r.archivedAt) {
-                <button class="row-btn" [disabled]="busy() || !canUp(r)" (click)="moveUp(r)">
-                  ↑</button
-                ><button class="row-btn" [disabled]="busy() || !canDown(r)" (click)="moveDown(r)">
-                  ↓</button
-                ><button class="row-btn" (click)="edit(r)">{{ t('Edit', 'تعديل') }}</button>
+                <button
+                  type="button"
+                  class="mini"
+                  [style.visibility]="canUp(r) ? 'visible' : 'hidden'"
+                  [disabled]="busy()"
+                  (click)="moveUp(r)"
+                  [attr.aria-label]="t('Move up', 'تحريك لأعلى')"
+                >
+                  ▲
+                </button>
+                <button
+                  type="button"
+                  class="mini"
+                  [style.visibility]="canDown(r) ? 'visible' : 'hidden'"
+                  [disabled]="busy()"
+                  (click)="moveDown(r)"
+                  [attr.aria-label]="t('Move down', 'تحريك لأسفل')"
+                >
+                  ▼
+                </button>
+                <button type="button" class="link small" (click)="edit(r)">
+                  {{ t('Edit', 'تعديل') }}
+                </button>
               }
               <button
-                class="row-btn"
+                type="button"
+                class="link small"
                 [disabled]="busy()"
                 (click)="action(r, r.archivedAt ? 'restore' : 'archive')"
               >
                 {{ r.archivedAt ? t('Restore', 'استعادة') : t('Archive', 'أرشفة') }}
               </button>
-            }
-          </span>
+              @if (!r.archivedAt) {
+                <button
+                  type="button"
+                  class="sw"
+                  [class.sw--on]="r.active"
+                  role="switch"
+                  [attr.aria-checked]="r.active"
+                  [disabled]="busy()"
+                  (click)="toggleActive(r)"
+                  [attr.aria-label]="t('Enable rule', 'تفعيل القاعدة')"
+                >
+                  <span></span>
+                </button>
+              }
+            </div>
+          } @else {
+            <span class="tag">{{ r.active ? t('Enabled', 'مفعلة') : t('Disabled', 'معطلة') }}</span>
+          }
         </div>
       }
       @if (loaded() && !loading() && !visible().length) {
-        <p>
+        <p class="muted empty">
           {{
             t(
               'No saved rules. New leads default to their creator unless an owner is selected.',
-              'لا توجد قواعد محفوظة. المسؤول الافتراضي هو منشئ العميل ما لم يختر مسؤولاً.'
+              'لا توجد قواعد محفوظة. المسؤول الافتراضي هو منشئ العميل ما لم يُختر مسؤول.'
             )
           }}
         </p>
       }
+      <p class="muted small foot">
+        {{
+          t(
+            'Choosing an owner on a lead overrides routing. Reassignment after a missed SLA needs another active agent and stops after three attempts. No message is sent automatically.',
+            'اختيار مسؤول للعميل يتجاوز التوزيع. إعادة الإسناد بعد فوات المهلة تحتاج وكيلًا آخر نشطًا وتتوقف بعد ثلاث محاولات. لا تُرسل رسائل تلقائيًا.'
+          )
+        }}
+      </p>
+    </section>
+
+    <section class="card">
+      <div class="c-head">
+        <h2>{{ t('Simulate incoming lead', 'محاكاة عميل وارد') }}</h2>
+      </div>
+      <div class="sim">
+        <label class="field">
+          <span>{{ L().simSource }}</span>
+          <select [ngModel]="simSource()" (ngModelChange)="simSource.set($event)">
+            @for (s of sources; track s) {
+              <option [value]="s">{{ sourceName(s) }}</option>
+            }
+          </select>
+        </label>
+        <div class="field">
+          <span>{{ L().simSegment }}</span>
+          <div class="toggle">
+            <button
+              type="button"
+              [class.on]="simSegment() === 'res'"
+              (click)="simSegment.set('res')"
+            >
+              {{ t('Residential', 'سكني') }}
+            </button>
+            <button
+              type="button"
+              [class.on]="simSegment() === 'com'"
+              (click)="simSegment.set('com')"
+            >
+              {{ t('Commercial', 'تجاري') }}
+            </button>
+          </div>
+        </div>
+        <label class="field">
+          <span>{{ L().simBudget }}</span>
+          <input
+            class="mono"
+            inputmode="decimal"
+            [ngModel]="simBudget()"
+            (ngModelChange)="simBudget.set($event)"
+          />
+        </label>
+        <button type="button" class="btn btn--dark" (click)="simulate()">{{ L().simBtn }}</button>
+      </div>
+      @if (simResult(); as res) {
+        <div class="trace">
+          @for (tr of trace(); track $index) {
+            <div class="tr">
+              <span
+                class="tr__icon"
+                [style.background]="traceTone[tr.state][0]"
+                [style.color]="traceTone[tr.state][1]"
+                >{{ traceTone[tr.state][2] }}</span
+              >
+              <span class="ell small" [class.muted]="tr.state !== 'pick'">{{ tr.name }}</span>
+              <span class="sub">{{ tr.note }}</span>
+            </div>
+          }
+        </div>
+        <div class="result" [class.result--fallback]="!res.assignment">
+          <span class="avatar avatar--lg">{{ initials(resultAgent()) }}</span>
+          <div class="cell">
+            <span class="sub">{{ t('Would be assigned to', 'سيُسند إلى') }}</span>
+            <span class="strong">{{ resultAgent() }}</span>
+            <span class="small muted2">{{ resultRule() }}</span>
+          </div>
+        </div>
+        <p class="muted small foot">
+          {{
+            t(
+              'Simulation does not create a lead or move the rotation.',
+              'المحاكاة لا تنشئ عميلًا ولا تحرّك الدور.'
+            )
+          }}
+        </p>
+      } @else {
+        <p class="muted empty">
+          {{
+            t(
+              'Pick a source, segment and budget, then simulate to see which rule and agent a new lead would get.',
+              'اختر المصدر والقطاع والميزانية ثم شغّل المحاكاة لترى القاعدة والوكيل.'
+            )
+          }}
+        </p>
+      }
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="c-head">
+      <h2>{{ t('Agents', 'الوكلاء') }}</h2>
+      <span class="muted small">{{
+        t('users in active rule rosters', 'المستخدمون في قوائم القواعد النشطة')
+      }}</span>
     </div>
-  </div>
+    <div class="scroll-x">
+      <div class="agrid ahead">
+        <span>{{ t('Agent', 'الوكيل') }}</span>
+        <span>{{ t('Status', 'الحالة') }}</span>
+        <span>{{ t('Rules', 'القواعد') }}</span>
+      </div>
+      @for (a of roster(); track a.id) {
+        <div class="agrid arow" [class.rule--off]="!a.active">
+          <span class="who">
+            <span class="avatar">{{ initials(a.name) }}</span>
+            <span class="strong ell">{{ a.name }}</span>
+          </span>
+          <span class="tag" [class.tag--ok]="a.active">{{
+            a.active ? t('Active', 'نشط') : t('Inactive', 'غير نشط')
+          }}</span>
+          <span class="tags">
+            @for (n of a.rules; track $index) {
+              <span class="tag tag--line">{{ n }}</span>
+            }
+          </span>
+        </div>
+      }
+      @if (loaded() && !roster().length) {
+        <p class="muted empty">
+          {{ t('No agents in active rules.', 'لا يوجد وكلاء في القواعد النشطة.') }}
+        </p>
+      }
+    </div>
+  </section>
 </div>
-<section class="card simulator">
-  <h2>{{ L().simTitle }}</h2>
-  <div class="sim-inputs">
-    <label
-      >{{ L().simSource
-      }}<select [ngModel]="simSource()" (ngModelChange)="simSource.set($event)">
-        @for (s of sources; track s) {
-          <option [value]="s">{{ sourceName(s) }}</option>
-        }
-      </select></label
-    ><label
-      >{{ L().simSegment
-      }}<select [ngModel]="simSegment()" (ngModelChange)="simSegment.set($event)">
-        <option value="res">{{ t('Residential', 'سكني') }}</option>
-        <option value="com">{{ t('Commercial', 'تجاري') }}</option>
-      </select></label
-    ><label
-      >{{ L().simBudget
-      }}<input
-        inputmode="decimal"
-        [ngModel]="simBudget()"
-        (ngModelChange)="simBudget.set($event)" /></label
-    ><button class="btn btn--primary" (click)="simulate()">{{ L().simBtn }}</button>
-  </div>
-  @if (simResult()) {
-    <p>
-      {{ L().simResultPrefix }} {{ resultAgent() }} · {{ L().simRulePrefix }} {{ resultRule() }}
-    </p>
-    <small>{{
-      t(
-        'Simulation does not create a lead or advance rotation.',
-        'المحاكاة لا تنشئ عميلاً أو تحرّك الدور.'
-      )
-    }}</small>
-  }
-</section>
+
 @if (formOpen()) {
-  <div class="routing-scrim"></div>
+  <div class="scrim scrim--top"></div>
   <section
-    class="routing-form"
+    class="dialog dialog--wide"
     role="dialog"
     aria-modal="true"
     [attr.aria-label]="t('Routing rule form', 'نموذج قاعدة التوزيع')"
   >
-    <h2>{{ editing() ? t('Edit rule', 'تعديل القاعدة') : t('New rule', 'قاعدة جديدة') }}</h2>
-    @if (error()) {
-      <p role="alert">{{ error() }}</p>
-    }
     <form (ngSubmit)="save()">
-      <label
-        >{{ t('Name', 'الاسم')
-        }}<input
-          [(ngModel)]="form.name"
-          name="name"
-          required
-          maxlength="160"
-          (ngModelChange)="changed()" /></label
-      ><label
-        >{{ t('Arabic name', 'الاسم بالعربية')
-        }}<input
-          [(ngModel)]="form.nameAr"
-          name="nameAr"
-          maxlength="160"
-          (ngModelChange)="changed()" /></label
-      ><label
-        >{{ L().simSource
-        }}<select [(ngModel)]="form.source" name="source" (ngModelChange)="changed()">
-          <option value="">{{ t('Any source', 'كل المصادر') }}</option>
-          @for (s of sources; track s) {
-            <option [value]="s">{{ sourceName(s) }}</option>
-          }
-        </select></label
-      ><label
-        >{{ L().simSegment
-        }}<select [(ngModel)]="form.segment" name="segment" (ngModelChange)="changed()">
-          <option value="">{{ t('Any segment', 'كل القطاعات') }}</option>
-          <option value="res">{{ t('Residential', 'سكني') }}</option>
-          <option value="com">{{ t('Commercial', 'تجاري') }}</option>
-        </select></label
-      ><label
-        >{{ t('Minimum budget (EGP, optional)', 'الحد الأدنى للميزانية (جنيه، اختياري)')
-        }}<input
-          inputmode="decimal"
-          [(ngModel)]="form.minBudget"
-          name="budget"
-          (ngModelChange)="changed()" /></label
-      ><label
-        >{{ L().thStrategy
-        }}<select [(ngModel)]="form.strategy" name="strategy" (ngModelChange)="changed()">
-          @for (s of strategies; track s) {
-            <option [value]="s">{{ L().strategyNames[s] }}</option>
-          }
-        </select></label
-      >
-      @if (form.strategy === 'team') {
-        <label
-          >{{ t('Team roster name', 'اسم قائمة الفريق')
-          }}<input
-            [(ngModel)]="form.teamName"
-            name="team"
-            required
-            (ngModelChange)="changed()" /></label
-        ><label
-          >{{ t('Arabic team name', 'اسم الفريق بالعربية')
-          }}<input [(ngModel)]="form.teamNameAr" name="teamAr" (ngModelChange)="changed()"
-        /></label>
-      }
-      <h3>{{ t('Actual company users', 'مستخدمو الشركة الفعليون') }}</h3>
-      @for (target of form.targets; track $index; let i = $index) {
-        <div class="target-input">
-          <label
-            >{{ t('User', 'المستخدم')
-            }}<select [(ngModel)]="target.userId" [name]="'user' + i" (ngModelChange)="changed()">
+      <div class="dialog__head">
+        <span class="dialog__title">{{
+          editing() ? t('Edit rule', 'تعديل القاعدة') : t('New rule', 'قاعدة جديدة')
+        }}</span>
+      </div>
+      <div class="dialog__main">
+        @if (error()) {
+          <p role="alert" class="note note--bad">{{ error() }}</p>
+        }
+        <div class="grid">
+          <label class="field">
+            <span>{{ t('Name', 'الاسم') }}</span>
+            <input
+              [(ngModel)]="form.name"
+              name="name"
+              required
+              maxlength="160"
+              (ngModelChange)="changed()"
+            />
+          </label>
+          <label class="field">
+            <span>{{ t('Arabic name', 'الاسم بالعربية') }}</span>
+            <input
+              [(ngModel)]="form.nameAr"
+              name="nameAr"
+              maxlength="160"
+              dir="rtl"
+              (ngModelChange)="changed()"
+            />
+          </label>
+        </div>
+        <span class="p-label">{{ t('IF THE LEAD MATCHES', 'إذا طابق العميل') }}</span>
+        <div class="grid grid--3">
+          <label class="field">
+            <span>{{ L().simSource }}</span>
+            <select [(ngModel)]="form.source" name="source" (ngModelChange)="changed()">
+              <option value="">{{ t('Any source', 'كل المصادر') }}</option>
+              @for (s of sources; track s) {
+                <option [value]="s">{{ sourceName(s) }}</option>
+              }
+            </select>
+          </label>
+          <label class="field">
+            <span>{{ L().simSegment }}</span>
+            <select [(ngModel)]="form.segment" name="segment" (ngModelChange)="changed()">
+              <option value="">{{ t('Any segment', 'كل القطاعات') }}</option>
+              <option value="res">{{ t('Residential', 'سكني') }}</option>
+              <option value="com">{{ t('Commercial', 'تجاري') }}</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>{{ t('Min. budget (EGP)', 'أدنى ميزانية (جنيه)') }}</span>
+            <input
+              class="mono"
+              inputmode="decimal"
+              [(ngModel)]="form.minBudget"
+              name="budget"
+              (ngModelChange)="changed()"
+            />
+          </label>
+        </div>
+        <span class="p-label">{{ t('THEN ASSIGN', 'ثم أسند') }}</span>
+        <label class="field">
+          <span>{{ L().thStrategy }}</span>
+          <select [(ngModel)]="form.strategy" name="strategy" (ngModelChange)="changed()">
+            @for (s of strategies; track s) {
+              <option [value]="s">{{ L().strategyNames[s] }}</option>
+            }
+          </select>
+        </label>
+        @if (form.strategy === 'team') {
+          <div class="grid">
+            <label class="field">
+              <span>{{ t('Team name', 'اسم الفريق') }}</span>
+              <input [(ngModel)]="form.teamName" name="team" required (ngModelChange)="changed()" />
+            </label>
+            <label class="field">
+              <span>{{ t('Arabic team name', 'اسم الفريق بالعربية') }}</span>
+              <input
+                [(ngModel)]="form.teamNameAr"
+                name="teamAr"
+                dir="rtl"
+                (ngModelChange)="changed()"
+              />
+            </label>
+          </div>
+        }
+        @for (target of form.targets; track $index; let i = $index) {
+          <div class="target">
+            <select
+              [(ngModel)]="target.userId"
+              [name]="'user' + i"
+              (ngModelChange)="changed()"
+              [attr.aria-label]="t('User', 'المستخدم')"
+            >
               <option value="">—</option>
               @for (u of users(); track u.id) {
                 <option [value]="u.id">{{ u.name }}</option>
               }
-            </select></label
-          >
-          @if (form.strategy === 'weighted') {
-            <label
-              >{{ t('Relative weight', 'الوزن النسبي')
-              }}<input
+            </select>
+            @if (form.strategy === 'weighted') {
+              <input
+                class="mono weight"
                 type="number"
                 min="1"
                 max="1000"
                 [(ngModel)]="target.weight"
                 [name]="'weight' + i"
                 (ngModelChange)="changed()"
-            /></label>
-          }
-          <button
-            type="button"
-            class="btn btn--ghost"
-            (click)="form.targets.splice(i, 1); changed()"
-          >
-            {{ t('Remove', 'حذف') }}
-          </button>
-        </div>
-      }
-      <button
-        type="button"
-        class="btn btn--ghost"
-        [disabled]="form.targets.length >= 20"
-        (click)="form.targets.push({ userId: '', weight: 1 }); changed()"
-      >
-        {{ t('Add user', 'إضافة مستخدم') }}</button
-      ><label
-        >{{ t('First-contact SLA (minutes, 0 disables)', 'مهلة أول تواصل (دقائق، صفر للإيقاف)')
-        }}<input
-          type="number"
-          min="0"
-          max="1440"
-          [(ngModel)]="form.slaMinutes"
-          name="sla"
-          (ngModelChange)="changed()" /></label
-      ><label
-        ><input
-          type="checkbox"
-          [(ngModel)]="form.active"
-          name="active"
-          (ngModelChange)="changed()"
-        />{{ t('Enable rule', 'تفعيل القاعدة') }}</label
-      >
-      <p>
-        {{
-          t(
-            'Rule changes apply to future automatic assignments and open first-contact SLAs. Reassignment requires an alternate active roster user and stops after three attempts.',
-            'تُطبق التغييرات على التوزيع الآلي القادم ومهل أول تواصل المفتوحة. تتطلب إعادة الإسناد مستخدماً بديلاً نشطاً وتتوقف بعد ثلاث محاولات.'
-          )
-        }}
-      </p>
-      <footer>
+                [attr.aria-label]="t('Relative weight', 'الوزن النسبي')"
+              />
+            }
+            <button
+              type="button"
+              class="x"
+              (click)="form.targets.splice(i, 1); changed()"
+              [attr.aria-label]="t('Remove', 'حذف')"
+            >
+              ×
+            </button>
+          </div>
+        }
         <button
           type="button"
-          class="btn btn--ghost"
-          [disabled]="busy()"
-          (click)="formOpen.set(false)"
+          class="btn btn--sm self-start"
+          [disabled]="form.targets.length >= 20"
+          (click)="form.targets.push({ userId: '', weight: 1 }); changed()"
         >
-          {{ t('Cancel', 'إلغاء') }}</button
-        ><button type="submit" class="btn btn--primary" [disabled]="busy()">
+          {{ t('+ Add user', '+ إضافة مستخدم') }}
+        </button>
+        <div class="grid">
+          <label class="field">
+            <span>{{
+              t('First-contact SLA (minutes, 0 = off)', 'مهلة أول تواصل (دقائق، 0 = إيقاف)')
+            }}</span>
+            <input
+              class="mono"
+              type="number"
+              min="0"
+              max="1440"
+              [(ngModel)]="form.slaMinutes"
+              name="sla"
+              (ngModelChange)="changed()"
+            />
+          </label>
+          <label class="check check--field"
+            ><input
+              type="checkbox"
+              [(ngModel)]="form.active"
+              name="active"
+              (ngModelChange)="changed()"
+            />{{ t('Enable rule', 'تفعيل القاعدة') }}</label
+          >
+        </div>
+        <span class="muted small">{{
+          t(
+            'Changes apply to future automatic assignments and open first-contact SLAs.',
+            'تُطبق التغييرات على التوزيع الآلي القادم ومهل أول تواصل المفتوحة.'
+          )
+        }}</span>
+      </div>
+      <div class="dialog__foot">
+        <button type="button" class="btn" [disabled]="busy()" (click)="formOpen.set(false)">
+          {{ t('Cancel', 'إلغاء') }}
+        </button>
+        <button type="submit" class="btn btn--dark" [disabled]="busy()">
           {{ t('Save', 'حفظ') }}
         </button>
-      </footer>
+      </div>
     </form>
   </section>
 }

@@ -84,7 +84,12 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-lead-routing',
   imports: [FormsModule],
   templateUrl: './lead-routing.html',
-  styleUrl: './lead-routing.scss',
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './lead-routing.scss',
+  ],
 })
 export class LeadRouting implements OnDestroy {
   readonly ui = inject(CompanyUiState);
@@ -128,6 +133,8 @@ export class LeadRouting implements OnDestroy {
   simSegment = signal<'res' | 'com'>('res');
   simBudget = signal('');
   simResult = signal<any>(null);
+  /** Inputs of the last simulation, so the trace doesn't change while editing the form. */
+  simInput = signal<{ source: string; segment: 'res' | 'com'; budget: string } | null>(null);
   requestId = crypto.randomUUID();
   private serial = 0;
   private simSerial = 0;
@@ -323,11 +330,123 @@ export class LeadRouting implements OnDestroy {
         segment: this.simSegment(),
         budgetMinor: minorAmount(this.simBudget(), true),
       });
-      if (n === this.simSerial) this.simResult.set(r);
+      if (n === this.simSerial) {
+        this.simInput.set({
+          source: this.simSource(),
+          segment: this.simSegment(),
+          budget: this.simBudget(),
+        });
+        this.simResult.set(r);
+      }
     } catch (e: any) {
       if (n === this.simSerial) this.error.set(e.message);
     }
   }
+  /** Mirrors the server matcher (routing-picker): source, segment, min budget. */
+  matches(r: Rule, source: string, segment: string, budgetMinor: string | null) {
+    if (r.source && r.source !== source) return false;
+    if (r.segment && r.segment !== segment) return false;
+    if (r.minBudgetMinor !== null) {
+      if (budgetMinor === null) return false;
+      if (BigInt(r.minBudgetMinor) > BigInt(budgetMinor)) return false;
+    }
+    return true;
+  }
+  /** Rule-by-rule trace of the last simulation (the API returns only the picked rule). */
+  readonly trace = computed(() => {
+    const res = this.simResult(),
+      inp = this.simInput();
+    if (!res || !inp) return [];
+    let budget: string | null = null;
+    try {
+      budget = minorAmount(inp.budget, true);
+    } catch {
+      budget = null;
+    }
+    const picked = res.assignment?.ruleId ?? null;
+    const out: Array<{ name: string; state: 'pick' | 'skip' | 'miss' | 'off'; note: string }> = [];
+    for (const r of this.rules().filter((x) => !x.archivedAt)) {
+      const name = r.name[this.lang()];
+      if (r.id === picked) {
+        out.push({
+          name,
+          state: 'pick',
+          note: this.t('matched · assigned', 'مطابقة · تم الإسناد'),
+        });
+        break;
+      }
+      if (!r.active) out.push({ name, state: 'off', note: this.t('disabled', 'معطلة') });
+      else if (this.matches(r, inp.source, inp.segment, budget))
+        out.push({
+          name,
+          state: 'skip',
+          note: this.t('matched · no eligible agent', 'مطابقة · لا يوجد وكيل متاح'),
+        });
+      else out.push({ name, state: 'miss', note: this.t('no match', 'غير مطابقة') });
+    }
+    return out;
+  });
+  readonly traceTone = {
+    pick: ['#111113', '#FFFFFF', '✓'],
+    skip: ['#FDF3DC', '#8A5A14', '!'],
+    miss: ['#F1F1ED', '#8A8A90', '–'],
+    off: ['#F4F4F1', '#C4C4BE', '·'],
+  } as const;
+  initials(name: string) {
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase();
+  }
+  readonly activeRules = computed(() => this.rules().filter((r) => r.active && !r.archivedAt));
+  /** Everyone who appears in an active rule roster. */
+  readonly roster = computed(() => {
+    const m = new Map<string, { id: string; name: string; active: boolean; rules: string[] }>();
+    for (const r of this.activeRules())
+      for (const t of r.targets) {
+        const row = m.get(t.userId) ?? { id: t.userId, name: t.name, active: t.active, rules: [] };
+        row.rules.push(r.name[this.lang()]);
+        m.set(t.userId, row);
+      }
+    return [...m.values()].sort((a, b) => a.name.localeCompare(b.name));
+  });
+  readonly kpis = computed(() => {
+    const w = this.worker();
+    const sla = this.activeRules().filter((r) => r.slaMinutes > 0);
+    return [
+      {
+        label: this.t('Active rules', 'القواعد النشطة'),
+        value: String(this.activeRules().length),
+        sub: this.t(this.visible().length + ' saved', this.visible().length + ' محفوظة'),
+        fg: '#111113',
+      },
+      {
+        label: this.t('Agents in rotation', 'وكلاء في التوزيع'),
+        value: String(this.roster().filter((a) => a.active).length),
+        sub: this.t('across active rules', 'في القواعد النشطة'),
+        fg: '#111113',
+      },
+      {
+        label: this.t('First-contact SLA', 'مهلة أول تواصل'),
+        value: sla.length
+          ? Math.min(...sla.map((r) => r.slaMinutes)) + ' ' + this.L().minutes
+          : '—',
+        sub: sla.length
+          ? this.t('tightest of ' + sla.length + ' rules', 'الأقصر بين ' + sla.length + ' قواعد')
+          : this.t('no SLA set', 'لا توجد مهلة'),
+        fg: '#111113',
+      },
+      {
+        label: this.t('SLA worker', 'عامل المهلة'),
+        value: w ? (w.healthy ? this.t('Healthy', 'سليم') : this.t('Stale', 'متوقف')) : '—',
+        sub: w ? this.date(w.lastSeenAt) : '',
+        fg: w && !w.healthy ? '#B4442F' : '#111113',
+      },
+    ];
+  });
   resultAgent() {
     const r = this.simResult();
     return r?.assignment?.userName ?? r?.fallback?.userName ?? '';

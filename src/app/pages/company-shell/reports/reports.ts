@@ -66,7 +66,16 @@ const COPY: Record<Lang, Copy> = {
   },
 };
 
-@Component({ selector: 'app-reports', templateUrl: './reports.html', styleUrl: './reports.scss' })
+@Component({
+  selector: 'app-reports',
+  templateUrl: './reports.html',
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './reports.scss',
+  ],
+})
 export class Reports {
   readonly ui = inject(CompanyUiState);
   readonly api = inject(CompanyInsightsApi);
@@ -76,6 +85,8 @@ export class Reports {
   readonly L = computed(() => COPY[this.lang()]);
   readonly period = signal<Period>('quarter');
   readonly periods: Period[] = ['month', 'quarter', 'ytd'];
+  /** Residential / Commercial filter — supported by GET /reports and the export. */
+  readonly segment = signal<'all' | 'res' | 'com'>('all');
   readonly data = signal<CompanyReport | null>(null);
   readonly error = signal('');
   readonly busy = signal(false);
@@ -92,7 +103,9 @@ export class Reports {
     this.error.set('');
     this.data.set(null);
     try {
-      const d = await this.api.get<CompanyReport>('/reports', { period });
+      const q: Record<string, string> = { period };
+      if (this.segment() !== 'all') q['segment'] = this.segment();
+      const d = await this.api.get<CompanyReport>('/reports', q);
       if (n === this.generation) this.data.set(d);
     } catch (e) {
       if (n === this.generation) this.error.set((e as Error).message);
@@ -100,6 +113,103 @@ export class Reports {
       if (n === this.generation) this.busy.set(false);
     }
   }
+  t(en: string, ar: string) {
+    return this.ar() ? ar : en;
+  }
+  setSegment(s: 'all' | 'res' | 'com') {
+    this.segment.set(s);
+    void this.load();
+  }
+  money(v: string | null) {
+    return this.api.money(v);
+  }
+  pct(n: number, d: number) {
+    return d ? Math.round((n / d) * 1000) / 10 + '%' : '—';
+  }
+  readonly stageColor: Record<string, string> = {
+    new: '#C4C4BE',
+    qualified: '#5B78E5',
+    viewing: '#D99A28',
+    offer: '#8BB33A',
+    contract: '#111113',
+    won: '#2FA35F',
+    lost: '#E2553B',
+  };
+  readonly kpis = computed(() => {
+    const d = this.data();
+    if (!d) return [];
+    const s = d.summary;
+    const won = d.sources.reduce((a, x) => a + x.won, 0);
+    const avg = s.signedSales
+      ? (BigInt(s.signedSaleValueMinor) / BigInt(s.signedSales)).toString()
+      : null;
+    return [
+      {
+        label: this.t('Signed sale value', 'قيمة المبيعات الموقعة'),
+        value: this.money(s.signedSaleValueMinor),
+        sub: this.t('sale contracts signed in the period', 'عقود بيع موقعة خلال الفترة'),
+      },
+      {
+        label: this.t('Deals signed', 'صفقات موقعة'),
+        value: String(s.signedSales),
+        sub: avg ? this.t('avg ', 'متوسط ') + this.money(avg) : '—',
+      },
+      {
+        label: this.t('Paid commission', 'العمولات المصروفة'),
+        value:
+          s.recordedPaidCommissionMinor === null ? '—' : this.money(s.recordedPaidCommissionMinor),
+        sub:
+          s.recordedPaidCommissionMinor === null
+            ? this.t('needs commissions access', 'يتطلب صلاحية العمولات')
+            : this.t('recorded as paid', 'مسجلة كمصروفة'),
+      },
+      {
+        label: this.t('Lead → won', 'تحويل العميل لمكسوب'),
+        value: this.pct(won, s.leads),
+        sub: this.t(s.leads + ' leads in the period', s.leads + ' عميل خلال الفترة'),
+      },
+    ];
+  });
+  readonly maxVolume = computed(() =>
+    Math.max(1, ...(this.data()?.volume ?? []).map((v) => Number(v.valueMinor))),
+  );
+  barHeight(v: string) {
+    return (Number(v) / this.maxVolume()) * 170 + 'px';
+  }
+  month(m: string) {
+    return new Intl.DateTimeFormat(this.ar() ? 'ar-EG' : 'en-GB', {
+      month: 'short',
+      timeZone: 'UTC',
+    }).format(new Date(m.slice(0, 7) + '-15T00:00:00Z'));
+  }
+  /**
+   * Funnel from current stage counts: leads at or beyond each open stage (lost excluded).
+   * The API returns exclusive current stages, not stage history.
+   */
+  readonly funnel = computed(() => {
+    const f = (this.data()?.funnel ?? []).filter((x) => x.key !== 'lost');
+    const reached = f.map((_, i) => f.slice(i).reduce((a, x) => a + x.count, 0));
+    const top = Math.max(1, reached[0] ?? 0);
+    return f.map((x, i) => ({
+      key: x.key,
+      n: reached[i],
+      w: (reached[i] / top) * 100 + '%',
+      conv: i && reached[i - 1] ? Math.round((reached[i] / reached[i - 1]) * 100) + '%' : '',
+    }));
+  });
+  readonly lost = computed(() => this.data()?.funnel.find((x) => x.key === 'lost')?.count ?? 0);
+  readonly sourceRows = computed(() => {
+    const src = (this.data()?.sources ?? []).filter((s) => s.leads > 0);
+    const total = src.reduce((a, s) => a + s.leads, 0);
+    const max = Math.max(1, ...src.map((s) => s.leads));
+    return [...src]
+      .sort((a, b) => b.leads - a.leads)
+      .map((s) => ({
+        ...s,
+        share: this.pct(s.leads, total),
+        bar: (s.leads / max) * 100 + '%',
+      }));
+  });
   readonly maxFunnel = computed(() =>
     Math.max(1, ...(this.data()?.funnel ?? []).map((f) => f.count)),
   );
@@ -117,7 +227,12 @@ export class Reports {
     this.exporting.set(true);
     this.error.set('');
     try {
-      const r = await this.api.exportReport(this.period(), this.lang());
+      const seg = this.segment();
+      const r = await this.api.exportReport(
+        this.period(),
+        this.lang(),
+        seg === 'all' ? undefined : seg,
+      );
       const url = URL.createObjectURL(new Blob([r.content], { type: 'text/csv;charset=utf-8' }));
       const a = document.createElement('a');
       a.href = url;

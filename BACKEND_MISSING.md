@@ -528,3 +528,38 @@ cohort, from `GET /reports`, needs `reports.read`).
 | MK5 | Lead sources **spend** and **CPL** per source | Not shown (source table has leads / won / conversion). | Spend aggregated by source (from campaigns) in `GET /reports` or `GET /marketing`. |
 | MK6 | Lead sources "last 90 days" | Uses the Reports "quarter" period (quarter to date). | Optional: a rolling `90d` period on `GET /reports`. |
 | MK7 | Residential / Commercial segment switch | Not shown. | Segment filter on `GET /marketing` (Reports already accepts `segment`). |
+
+## Reports (`/company/reports`)
+
+Already real: period chips (This month / This quarter / YTD), **Residential / Commercial switch** (sent as `segment` to
+`GET /reports` and to the CSV export), CSV export, KPI strip (signed sale value, deals signed + average, recorded paid
+commission, lead → won), signed volume by month bars, conversion funnel, lead sources (share bar + conversion), agent
+performance (leads, deals, signed volume, conversion).
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| RP1 | KPI **deltas** vs previous period (`+14%`, `+3`) | Not shown. | Previous-period values in `summary` (or a `compare=previous` option). |
+| RP2 | **Commission** KPI ("avg 1.0% of volume") and per-agent **commission** column | KPI shows commission *recorded as paid*; agents table has no commission column. | Gross commission for the period (all non-cancelled) in `summary` and per owner in `owners`. |
+| RP3 | Funnel "**% of previous stage**" | Built from current stages: leads at or beyond each stage today (lost shown separately). Leads that were lost after a viewing aren't counted in earlier stages. | Stage history (highest stage reached per lead) so the funnel counts real progression. |
+| RP4 | Volume chart covers the **year** with the period highlighted | Shows the months inside the selected period only. | Optional: return the trailing 12 months alongside the period. |
+| RP5 | "**By area**" table (for a single agent view) | Not shown. | Volume / deals grouped by unit location or project. |
+| RP6 | "Market avg" benchmark under Lead → deal | Not shown. | Platform benchmark (if wanted). |
+
+## Lead Routing (`/company/lead-routing`)
+
+Already real: KPI strip (active rules, agents in rotation, tightest first-contact SLA, SLA worker health), rules list in
+priority order (If match → target, strategy and SLA tags, move up / down, enable switch, edit, archive / restore, include
+archived), advanced-routing entitlement note, create / edit rule (match, strategy, team, users + weights, SLA, enabled),
+**simulator** (source, segment, budget → assigned agent + rule, with a rule-by-rule trace computed with the same match
+logic as the server), agents roster built from active rule targets.
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| LR1 | Global **routing on / paused** switch | Not shown (each rule has its own switch). | Company-level `routingPaused` setting. |
+| LR2 | **Recent assignments** feed (lead, agent, rule, time) | Not shown. | `GET /routing/assignments` (recent automatic assignments with rule and reason), or a filter on the audit log. |
+| LR3 | Simulation **trace** from the server | Built on the client from rule order + match fields. Rules that match but have no eligible agent show "no eligible agent". | Return the evaluated rules (matched / skipped + reason) from `POST /routing/simulate`. |
+| LR4 | Agent **availability** switch, **daily cap** (today / cap) and "respect daily caps" | Not shown. Roster shows active / inactive user status and which rules include them. | Per-agent availability and daily cap, plus today's assignment count, honoured by the picker. |
+| LR5 | Agent **conversion** and **avg reply time** | Not shown. | Per-agent conversion and first-contact response time (from SLA records). |
+| LR6 | Agent **specialties** (Residential, New Cairo, Commercial…) | Not shown. | Agent tags that rules can match on. |
+| LR7 | Company-wide **SLA** setting and "reassign when SLA is missed" toggle | SLA is per rule; reassignment is always on when SLA > 0. | Optional company default SLA + reassignment switch. |
+| LR8 | **Working hours** (queue leads outside hours) | Not shown. | Working-hours setting and queued routing. |

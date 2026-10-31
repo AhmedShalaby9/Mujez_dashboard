@@ -107,10 +107,11 @@ export class CompanyInsightsApi {
   money(v: string | null) {
     return this.api.money(v);
   }
-  exportReport(period: string, lang: string) {
+  exportReport(period: string, lang: string, segment?: 'res' | 'com') {
     return this.api.write<{ fileName: string; content: string }>('reports/export', {
       period,
       lang,
+      ...(segment ? { segment } : {}),
     });
   }
 }

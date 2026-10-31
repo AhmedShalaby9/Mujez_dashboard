@@ -1,14 +1,10 @@
 :host {
   display: block;
   min-height: 100vh;
-  font-family:
-    'IBM Plex Sans',
-    'IBM Plex Sans Arabic',
-    system-ui,
-    sans-serif;
+  font-family: var(--font-ui);
   font-size: 13px;
   line-height: 1.45;
-  color: #17181a;
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -25,7 +21,7 @@ input {
   min-height: 100vh;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  background: #fff;
+  background: var(--surface);
 }
 
 // ---- left panel ----
@@ -36,7 +32,7 @@ input {
   justify-content: space-between;
   gap: 32px;
   padding: 40px 48px;
-  background: #16182a;
+  background: var(--sidebar-bg);
   color: #e9eaf2;
 }
 
@@ -54,9 +50,9 @@ input {
 
 .login-aside__badge {
   padding: 2px 8px;
-  border-radius: 10px;
-  background: #2b2f55;
-  color: #c3c5d6;
+  border-radius: var(--r-pill);
+  background: var(--sidebar-item-active-bg);
+  color: var(--sidebar-text);
   font-size: 11px;
   font-weight: 500;
 }
@@ -73,7 +69,7 @@ input {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #f5b841;
+  color: var(--accent);
 }
 
 .login-aside__headline {
@@ -90,7 +86,7 @@ input {
   margin: 0;
   font-size: 15px;
   line-height: 1.6;
-  color: #a9acc4;
+  color: var(--sidebar-text);
   text-wrap: pretty;
 }
 
@@ -99,7 +95,7 @@ input {
   flex-direction: column;
   gap: 10px;
   padding-top: 20px;
-  border-top: 1px solid #2a2d47;
+  border-top: 1px solid var(--sidebar-border);
 }
 
 .login-aside__point {
@@ -107,14 +103,14 @@ input {
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  color: #c3c5d6;
+  color: var(--sidebar-text);
 }
 
 .login-aside__dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #7e89e6;
+  background: var(--accent);
   flex: none;
 }
 
@@ -148,16 +144,16 @@ input {
   margin-inline-start: auto;
   height: 30px;
   padding: 0 12px;
-  border: 1px solid #dddbd4;
-  border-radius: 6px;
-  background: #fff;
-  color: #17181a;
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-control);
+  background: var(--surface);
+  color: var(--ink);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
 
   &:hover {
-    background: #f4f3ef;
+    background: var(--surface-alt-2);
   }
 }
 
@@ -191,16 +187,16 @@ input {
 
 .login-form__subtitle {
   font-size: 14px;
-  color: #6b6a65;
+  color: var(--ink-muted);
 }
 
 .login-form__error {
   display: flex;
   gap: 8px;
   padding: 10px 12px;
-  border-radius: 6px;
-  background: #f8e1dc;
-  color: #9a3422;
+  border-radius: var(--r-control);
+  background: var(--danger-bg);
+  color: var(--danger-text);
   font-size: 13px;
 }
 
@@ -225,14 +221,14 @@ input {
 .field__label {
   font-size: 13px;
   font-weight: 500;
-  color: #17181a;
+  color: var(--ink);
 }
 
 .field__link {
   border: 0;
   background: transparent;
   padding: 0;
-  color: var(--platform-primary, #4945cc);
+  color: var(--primary);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -240,29 +236,29 @@ input {
 
 .field__error {
   font-size: 12px;
-  color: #b4442f;
+  color: var(--danger-text);
 }
 
 .input {
   height: 42px;
   padding: 0 12px;
-  border-radius: 6px;
+  border-radius: var(--r-control);
   font-size: 14px;
   outline: none;
-  background: #fff;
+  background: var(--surface);
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #dddbd4;
+  border: 1px solid var(--border-input);
   text-align: start;
 
   &:focus {
-    border-color: var(--platform-primary, #4945cc);
-    box-shadow: 0 0 0 3px #e6e8fb;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--accent-wash);
   }
 }
 
 .input--error {
-  border-color: #b4442f;
+  border-color: var(--danger-solid);
 }
 
 .input--password {
@@ -281,9 +277,9 @@ input {
   height: 30px;
   padding: 0 10px;
   border: 0;
-  border-radius: 4px;
-  background: #f4f3ef;
-  color: #45443f;
+  border-radius: calc(var(--r-control) - 4px);
+  background: var(--surface-alt);
+  color: var(--ink-secondary);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -294,13 +290,13 @@ input {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #45443f;
+  color: var(--ink-secondary);
   cursor: pointer;
 
   input {
     width: 16px;
     height: 16px;
-    accent-color: var(--platform-primary, #4945cc);
+    accent-color: var(--primary);
     margin: 0;
   }
 }
@@ -308,19 +304,19 @@ input {
 .submit-btn {
   height: 44px;
   border: 0;
-  border-radius: 6px;
-  background: var(--platform-primary, #4945cc);
+  border-radius: var(--r-control);
+  background: var(--primary);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    background: #2f3fb8;
+    background: var(--primary-hover);
   }
 
   &:disabled {
-    background: #9aa4ec;
+    background: var(--ink-disabled);
     cursor: default;
   }
 }
@@ -329,11 +325,11 @@ input {
   display: flex;
   gap: 10px;
   padding: 12px;
-  border-radius: 6px;
-  background: #f4f3ef;
+  border-radius: var(--r-control);
+  background: var(--surface-alt);
   font-size: 12px;
   line-height: 1.5;
-  color: #6b6a65;
+  color: var(--ink-muted);
 }
 
 .notice__icon {
@@ -341,8 +337,8 @@ input {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #e6e8fb;
-  color: var(--platform-primary, #4945cc);
+  background: var(--accent-wash);
+  color: var(--accent-wash-ink);
   display: grid;
   place-items: center;
   font-weight: 600;
@@ -351,9 +347,9 @@ input {
 
 .forgot-sent {
   padding: 12px;
-  border-radius: 6px;
-  background: #e6e8fb;
-  color: #2b37a0;
+  border-radius: var(--r-control);
+  background: var(--accent-wash);
+  color: var(--accent-wash-ink);
   font-size: 13px;
   line-height: 1.5;
   text-wrap: pretty;
@@ -364,7 +360,7 @@ input {
   border: 0;
   background: transparent;
   padding: 0;
-  color: var(--platform-primary, #4945cc);
+  color: var(--primary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -376,7 +372,7 @@ input {
   justify-content: space-between;
   gap: 8px;
   font-size: 12px;
-  color: #8a8983;
+  color: var(--ink-faint);
 }
 
 // ---- responsive ----

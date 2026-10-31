@@ -43,14 +43,22 @@ import { AuthService } from './auth.service';
   </main>`,
   styles: [
     `
+      :host {
+        display: block;
+        min-height: 100vh;
+        background: var(--bg, #f4f4f1);
+      }
       main {
         max-width: 480px;
-        margin: 10vh auto;
+        margin: 0 auto;
         padding: 28px;
-        font: 16px system-ui;
-        background: #fff;
-        border: 1px solid #ddd;
-        border-radius: 12px;
+        font: 16px var(--font-ui, 'Geist', system-ui, sans-serif);
+        color: var(--ink, #111113);
+        background: var(--surface, #fff);
+        border: 1px solid var(--border-card, #e2e2dc);
+        border-radius: var(--r-card, 12px);
+        position: relative;
+        top: 10vh;
       }
       label {
         display: block;
@@ -62,13 +70,27 @@ import { AuthService } from './auth.service';
         box-sizing: border-box;
         padding: 12px;
         margin-top: 6px;
+        border: 1px solid var(--border-input, #c4c4be);
+        border-radius: var(--r-control, 9px);
+        font: inherit;
       }
       button {
         padding: 12px;
-        background: #4945cc;
+        background: var(--primary, #111113);
         color: white;
         border: 0;
-        border-radius: 6px;
+        border-radius: var(--r-control, 9px);
+        cursor: pointer;
+      }
+      button:hover:not(:disabled) {
+        background: var(--primary-hover, #2a2b30);
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+      p[role='alert'] {
+        color: var(--danger-text, #a23624);
       }
     `,
   ],

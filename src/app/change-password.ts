@@ -56,18 +56,18 @@ import { AuthService } from './auth.service';
     `
       main {
         min-height: 100vh;
-        background: #f4f5fa;
+        background: var(--bg, #f4f4f1);
         display: grid;
         place-items: center;
         padding: 30px;
-        font-family: system-ui, sans-serif;
-        color: #192238;
+        font-family: var(--font-ui, 'Geist', system-ui, sans-serif);
+        color: var(--ink, #111113);
       }
       section {
-        background: white;
+        background: var(--surface, #fff);
         padding: 35px;
-        border: 1px solid #dfe4ed;
-        border-radius: 14px;
+        border: 1px solid var(--border-card, #e2e2dc);
+        border-radius: var(--r-card, 12px);
         width: min(100%, 520px);
       }
       h1 {
@@ -78,7 +78,7 @@ import { AuthService } from './auth.service';
       }
       p {
         line-height: 1.8;
-        color: #61708b;
+        color: var(--ink-muted, #6e6e73);
         font-size: 13px;
       }
       label {
@@ -92,18 +92,21 @@ import { AuthService } from './auth.service';
         box-sizing: border-box;
         margin-top: 7px;
         padding: 12px;
-        border: 1px solid #cad2e3;
-        border-radius: 7px;
+        border: 1px solid var(--border-input, #c4c4be);
+        border-radius: var(--r-control, 9px);
         font: inherit;
       }
       button {
         padding: 12px 18px;
-        background: #4945cc;
+        background: var(--primary, #111113);
         color: white;
         border: 0;
-        border-radius: 7px;
+        border-radius: var(--r-control, 9px);
         font: inherit;
         cursor: pointer;
+      }
+      button:hover:not(:disabled) {
+        background: var(--primary-hover, #2a2b30);
       }
       button:disabled {
         opacity: 0.5;
@@ -111,10 +114,10 @@ import { AuthService } from './auth.service';
       .quiet {
         margin-top: 15px;
         background: transparent;
-        color: #4945cc;
+        color: var(--primary, #111113);
       }
       p[role='alert'] {
-        color: #a12a37;
+        color: var(--danger-text, #a23624);
       }
     `,
   ],

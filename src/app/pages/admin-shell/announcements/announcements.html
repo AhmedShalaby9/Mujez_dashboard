@@ -1,192 +1,321 @@
-@if (error()) {
-  <p role="alert">{{ error() }}</p>
-}
-@if (loading()) {
-  <p role="status">{{ lang() === 'ar' ? 'جار التحميل…' : 'Loading…' }}</p>
-}
-<div class="page-head">
-  <div class="page-head__text">
-    <span class="page-head__eyebrow">{{ L().eyebrow }}</span>
-    <h1 class="page-head__title">{{ L().title }}</h1>
-    <span class="page-head__sub">{{ L().sub }}</span>
-  </div>
-  <div class="page-head__actions">
-    <button type="button" class="btn btn--ghost" [disabled]="loading()" (click)="load()">
-      {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
-    </button>
-    <button type="button" class="btn btn--primary" (click)="openCreate()">{{ L().newBtn }}</button>
-  </div>
-</div>
-
-<div class="card">
-  <div class="table-scroll">
-    <div class="ann-table">
-      <div class="ann-head">
-        <span>{{ L().colTitle }}</span>
-        <span>{{ L().colTarget }}</span>
-        <span>{{ L().colWindow }}</span>
-        <span>{{ L().colStatus }}</span>
-        <span></span>
-      </div>
-      @for (a of items(); track a.id) {
-        <div class="ann-row">
-          <span class="ann-cell__text">
-            <span class="ann-cell__title">{{ title(a) }}</span>
-            <span class="ann-cell__sub">{{ body(a) }}</span>
-          </span>
-          <span>{{ targetName(a.target) }}</span>
-          <span class="mono">{{ a.from || '—' }} – {{ a.to || '—' }}</span>
-          <span
-            ><span class="pill" [class]="'pill--' + a.status">{{
-              statusName(a.status)
-            }}</span></span
-          >
-          <span>
-            <button type="button" class="row-btn" (click)="openEdit(a)">{{ L().edit }}</button>
-          </span>
-        </div>
-      }
-      @if (!items().length) {
-        <div class="t-empty">{{ L().emptyTitle }}</div>
-      }
+<div class="pg" (click)="kebabFor.set(null)">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ L().title }}</h1>
+      <span>{{
+        lang() === 'ar'
+          ? 'شرائط تظهر داخل لوحات CRM للشركات'
+          : 'Banners shown inside company CRM dashboards'
+      }}</span>
+    </div>
+    <div class="head__actions">
+      <button type="button" class="btn btn--dark" (click)="openCreate()">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#C8F169"
+          stroke-width="2.2"
+          stroke-linecap="round"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        {{ lang() === 'ar' ? 'إعلان جديد' : 'New announcement' }}
+      </button>
     </div>
   </div>
+
+  @if (error() && !creating() && !editing()) {
+    <p class="note note--bad" role="alert">
+      {{ error() }}
+      <button type="button" class="link" (click)="load()">
+        {{ lang() === 'ar' ? 'تحديث' : 'Refresh' }}
+      </button>
+    </p>
+  }
+  @if (loading()) {
+    <p class="muted" role="status">
+      {{ lang() === 'ar' ? 'جارٍ التحميل…' : 'Loading announcements…' }}
+    </p>
+  }
+
+  <div class="kpis kpis--4">
+    @for (s of statuses; track s) {
+      <button type="button" class="kpi" (click)="statusFilter.set(s)">
+        <span>{{ statusName(s) }}</span
+        ><b>{{ count(s) }}</b>
+        <small>{{
+          s === 'published'
+            ? lang() === 'ar'
+              ? 'ظاهرة الآن'
+              : 'visible now'
+            : s === 'scheduled'
+              ? lang() === 'ar'
+                ? 'تبدأ تلقائيًا'
+                : 'starts automatically'
+              : s === 'draft'
+                ? lang() === 'ar'
+                  ? 'غير منشورة'
+                  : 'not published'
+                : lang() === 'ar'
+                  ? 'انتهت مدتها'
+                  : 'window ended'
+        }}</small>
+      </button>
+    }
+  </div>
+
+  <div class="tabs" role="tablist">
+    @for (t of tabs(); track t.k) {
+      <button
+        type="button"
+        class="tab"
+        role="tab"
+        [class.tab--on]="statusFilter() === t.k"
+        (click)="statusFilter.set(t.k)"
+      >
+        {{ t.label }}<span class="tab__n">{{ t.n }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="filters">
+    <div class="search">
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#8A8A90"
+        stroke-width="1.8"
+        stroke-linecap="round"
+      >
+        <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" />
+      </svg>
+      <input
+        type="text"
+        [placeholder]="lang() === 'ar' ? 'ابحث في الإعلانات' : 'Search announcements'"
+        [value]="search()"
+        (input)="search.set($any($event.target).value)"
+      />
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ lang() === 'ar' ? 'الإعلان' : 'Announcement' }}</th>
+            <th>{{ L().fieldType }}</th>
+            <th>
+              {{ lang() === 'ar' ? 'الأولوية' : 'Priority'
+              }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+            </th>
+            <th>{{ lang() === 'ar' ? 'الجمهور' : 'Audience' }}</th>
+            <th>{{ lang() === 'ar' ? 'المدة' : 'Runs' }}</th>
+            <th>{{ L().fieldLang }}</th>
+            <th>{{ L().colStatus }}</th>
+            <th class="act"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of filtered(); track a.id) {
+            <tr (click)="openEdit(a)">
+              <td>
+                <span class="strong">{{ title(a) }}</span
+                ><span class="sub mono">{{ a.id }}</span>
+              </td>
+              <td class="soft">{{ typeName(a.type) }}</td>
+              <td class="dim">—</td>
+              <td class="soft">{{ targetName(a.target) }}</td>
+              <td class="muted">{{ a.from ? date(a.from) : '—' }} – {{ date(a.to) }}</td>
+              <td class="mono muted">{{ a.lang === 'both' ? 'EN · AR' : a.lang.toUpperCase() }}</td>
+              <td>
+                <span
+                  class="pill"
+                  [style.background]="statusPill(a.status).bg"
+                  [style.color]="statusPill(a.status).fg"
+                  ><span class="dot" [style.background]="statusPill(a.status).dot"></span
+                  >{{ statusName(a.status) }}</span
+                >
+              </td>
+              <td class="act" (click)="$event.stopPropagation()">
+                <button
+                  type="button"
+                  class="kebab"
+                  aria-label="Actions"
+                  (click)="kebabFor.set(kebabFor() === a.id ? null : a.id)"
+                >
+                  ⋯
+                </button>
+                @if (kebabFor() === a.id) {
+                  <div class="menu">
+                    <button type="button" (click)="kebabFor.set(null); openEdit(a)">
+                      {{ lang() === 'ar' ? 'تعديل ومعاينة' : 'Edit & preview' }}
+                    </button>
+                    @if (a.status === 'draft' || a.status === 'scheduled') {
+                      <button type="button" (click)="publishNow(a)">
+                        {{ lang() === 'ar' ? 'نشر الآن' : 'Publish now' }}
+                      </button>
+                    }
+                    @if (a.status === 'published' || a.status === 'scheduled') {
+                      <button type="button" class="bad" (click)="endNow(a)">
+                        {{ lang() === 'ar' ? 'إنهاء الآن (إلى مسودة)' : 'End now (back to draft)' }}
+                      </button>
+                    }
+                    @if (a.status === 'draft') {
+                      <button type="button" class="bad" (click)="deleteSoon()">
+                        {{ lang() === 'ar' ? 'حذف المسودة' : 'Delete draft'
+                        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+                      </button>
+                    }
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (!loading() && !filtered().length) {
+      <div class="empty">
+        <strong>{{ L().emptyTitle }}</strong>
+      </div>
+    }
+  </section>
+  <span class="muted">{{
+    lang() === 'ar'
+      ? 'تظهر الإعلانات كشريط في لوحة CRM للشركات عند اكتمال واجهة الشركات. التواريخ بتوقيتك المحلي وتُحفظ بالتوقيت العالمي.'
+      : 'Announcements appear as a banner on the company CRM dashboard once the tenant UI ships. Dates use your local time and are saved in UTC.'
+  }}</span>
 </div>
 
 @if (creating() || editing()) {
-  <div class="scrim" (click)="close()"></div>
-  <div class="drawer" (click)="$event.stopPropagation()">
-    <div class="drawer__header">
-      <div class="drawer__headerText">
-        <span class="drawer__name">{{ creating() ? L().formTitleNew : L().formTitleEdit }}</span>
-      </div>
-      <button type="button" class="drawer__close" (click)="close()">✕</button>
-    </div>
-    <div class="drawer__body">
-      @if (error()) {
-        <p role="alert">{{ error() }}</p>
+  <div class="scrim scrim--top" (click)="close()"></div>
+  <div class="dialog dialog--wide" role="dialog">
+    <div class="dialog__head">
+      <span class="dialog__title">{{ creating() ? L().formTitleNew : L().formTitleEdit }}</span>
+      @if (editing(); as e) {
+        <span class="dialog__body"
+          ><span class="mono">{{ e.id }}</span> · {{ statusName(e.status) }}</span
+        >
       }
-      <p>
-        {{
-          lang() === 'ar'
-            ? 'توقيت الحقول حسب الجهاز. يتم الحفظ بتوقيت UTC. حفظ إعلان منشور كمسودة يوقف ظهوره.'
-            : 'Dates use this device’s local time and are stored as UTC. Saving a published notice as a draft withdraws it.'
-        }}
-      </p>
-      <span class="section-title">{{ L().previewTitle }}</span>
-      <div class="preview-banner" [class]="typeColorClass(draft.type)">
-        <span class="preview-banner__title">{{ draft.titleEn || '—' }}</span>
-        <span class="preview-banner__body">{{ draft.bodyEn || '—' }}</span>
-      </div>
-
-      <label class="field">
-        <span class="field__label">{{ L().fieldTitleEn }}</span>
-        <input
-          class="textbox"
-          type="text"
-          maxlength="120"
-          [(ngModel)]="draft.titleEn"
-          name="titleEn"
-        />
-      </label>
-      <label class="field">
-        <span class="field__label">{{ L().fieldTitleAr }}</span>
-        <input
-          class="textbox"
-          type="text"
-          maxlength="120"
-          [(ngModel)]="draft.titleAr"
-          name="titleAr"
-          dir="rtl"
-        />
-      </label>
-      <label class="field">
-        <span class="field__label">{{ L().fieldBodyEn }}</span>
-        <textarea
-          class="textarea"
-          rows="2"
-          maxlength="280"
-          [(ngModel)]="draft.bodyEn"
-          name="bodyEn"
-        ></textarea>
-      </label>
-      <label class="field">
-        <span class="field__label">{{ L().fieldBodyAr }}</span>
-        <textarea
-          class="textarea"
-          rows="2"
-          maxlength="280"
-          [(ngModel)]="draft.bodyAr"
-          name="bodyAr"
-          dir="rtl"
-        ></textarea>
-      </label>
-
-      <div class="field">
-        <span class="field__label">{{ L().fieldType }}</span>
-        <div class="chip-row">
-          @for (t of types; track t) {
-            <button
-              type="button"
-              class="chip"
-              [class.chip--active]="draft.type === t"
-              (click)="draft.type = t"
-            >
-              {{ typeName(t) }}
-            </button>
-          }
-        </div>
-      </div>
-
-      <div class="field">
-        <span class="field__label">{{ L().fieldTarget }}</span>
-        <div class="chip-row">
-          @for (t of targets; track t) {
-            <button
-              type="button"
-              class="chip"
-              [class.chip--active]="draft.target === t"
-              (click)="draft.target = t"
-            >
-              {{ targetName(t) }}
-            </button>
-          }
-        </div>
-      </div>
-
-      <div class="win-row">
-        <label class="field">
-          <span class="field__label">{{ L().fieldFrom }}</span>
-          <input class="textbox" type="datetime-local" [(ngModel)]="draft.from" name="fromDate" />
-        </label>
-        <label class="field">
-          <span class="field__label">{{ L().fieldTo }}</span>
-          <input class="textbox" type="datetime-local" [(ngModel)]="draft.to" name="toDate" />
-        </label>
-      </div>
-
-      <div class="field">
-        <span class="field__label">{{ L().fieldLang }}</span>
-        <div class="chip-row">
-          @for (l of langs; track l) {
-            <button
-              type="button"
-              class="chip"
-              [class.chip--active]="draft.lang === l"
-              (click)="draft.lang = l"
-            >
-              {{ langName(l) }}
-            </button>
-          }
-        </div>
-      </div>
     </div>
-    <div class="drawer__footer">
-      <button type="button" class="btn btn--ghost" (click)="close()">{{ L().cancel }}</button>
-      <button type="button" class="btn btn--ghost" [disabled]="saving()" (click)="saveDraft()">
+    <div class="dialog__main">
+      <div class="grid">
+        <label class="field"
+          ><span>{{ L().fieldTitleEn }}</span
+          ><input dir="ltr" [(ngModel)]="draft.titleEn"
+        /></label>
+        <label class="field"
+          ><span>{{ L().fieldTitleAr }}</span
+          ><input dir="rtl" [(ngModel)]="draft.titleAr"
+        /></label>
+        <label class="field"
+          ><span>{{ L().fieldBodyEn }}</span
+          ><textarea dir="ltr" rows="2" [(ngModel)]="draft.bodyEn"></textarea>
+        </label>
+        <label class="field"
+          ><span>{{ L().fieldBodyAr }}</span
+          ><textarea dir="rtl" rows="2" [(ngModel)]="draft.bodyAr"></textarea>
+        </label>
+        <div class="field full">
+          <span>{{ L().fieldType }}</span>
+          <div class="segs">
+            @for (t of types; track t) {
+              <button
+                type="button"
+                class="seg"
+                [class.seg--on]="draft.type === t"
+                (click)="draft.type = t"
+              >
+                {{ typeName(t) }}
+              </button>
+            }
+          </div>
+        </div>
+        <label class="field"
+          ><span>{{ L().fieldTarget }}</span
+          ><select [(ngModel)]="draft.target">
+            @for (t of targets; track t) {
+              <option [value]="t">{{ targetName(t) }}</option>
+            }
+          </select></label
+        >
+        <div class="field">
+          <span>{{ L().fieldLang }}</span>
+          <div class="segs">
+            @for (l of langs; track l) {
+              <button
+                type="button"
+                class="seg"
+                [class.seg--on]="draft.lang === l"
+                (click)="draft.lang = l"
+              >
+                {{ langName(l) }}
+              </button>
+            }
+          </div>
+        </div>
+        <label class="field"
+          ><span>{{ L().fieldFrom }}</span
+          ><input type="datetime-local" dir="ltr" [(ngModel)]="draft.from"
+        /></label>
+        <label class="field"
+          ><span>{{ L().fieldTo }}</span
+          ><input type="datetime-local" dir="ltr" [(ngModel)]="draft.to"
+        /></label>
+        <div class="field full">
+          <span
+            >{{ lang() === 'ar' ? 'الأولوية' : 'Priority'
+            }}<i class="soon">{{ lang() === 'ar' ? 'لا يُحفظ بعد' : 'Not saved yet' }}</i></span
+          >
+          <div class="segs">
+            <button type="button" class="seg seg--on">
+              {{ lang() === 'ar' ? 'عادية' : 'Normal' }}
+            </button>
+            <button type="button" class="seg" disabled>
+              {{ lang() === 'ar' ? 'عالية' : 'High' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <span class="sect__label">{{ L().previewTitle }}</span>
+      <div class="crm">
+        <div class="crm__bar"><span></span>Mujez CRM · {{ targetName(draft.target) }}</div>
+        @if (draft.lang !== 'ar') {
+          <div class="crm__banner" [attr.data-type]="draft.type" dir="ltr">
+            <span class="crm__tag">{{ L().type[draft.type] }}</span>
+            <span class="crm__text"
+              ><b>{{ draft.titleEn || '—' }}</b
+              ><span>{{ draft.bodyEn || '—' }}</span></span
+            >
+          </div>
+        }
+        @if (draft.lang !== 'en') {
+          <div class="crm__banner" [attr.data-type]="draft.type" dir="rtl">
+            <span class="crm__tag">{{ typeName(draft.type) }}</span>
+            <span class="crm__text"
+              ><b>{{ draft.titleAr || '—' }}</b
+              ><span>{{ draft.bodyAr || '—' }}</span></span
+            >
+          </div>
+        }
+        <div class="crm__cards"><span></span><span></span><span></span></div>
+      </div>
+      @if (error()) {
+        <p class="note note--bad" role="alert">{{ error() }}</p>
+      }
+    </div>
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="close()">{{ L().cancel }}</button>
+      <button type="button" class="btn" [disabled]="saving()" (click)="saveDraft()">
         {{ L().saveDraft }}
       </button>
-      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="publish()">
+      <button type="button" class="btn btn--dark" [disabled]="saving()" (click)="publish()">
         {{ L().publish }}
       </button>
     </div>
@@ -194,5 +323,5 @@
 }
 
 @if (toast(); as msg) {
-  <div class="toast">{{ msg }}</div>
+  <div class="toast"><span></span>{{ msg }}</div>
 }

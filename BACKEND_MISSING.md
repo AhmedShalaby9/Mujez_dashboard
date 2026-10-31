@@ -4,7 +4,7 @@ Things the new Platform Admin design shows that the backend doesn't support yet.
 The frontend renders each one statically. In the UI, these are marked with an amber **Not saved yet / Soon / Sample** tag or a dashed card, and the data is never sent.
 When an item is implemented, remove its tag in the listed file and wire it to the new field or endpoint.
 
-Checked against `mujez_backend` @ `af51c30` (`src/modules/platform/companies`, `src/modules/platform/subscriptions`, `src/modules/platform/billing`, `src/modules/platform/features`, `src/modules/platform/integrations`, `src/modules/platform/health`, `docs/*.md`).
+Checked against `mujez_backend` @ `af51c30` (`src/modules/platform/companies`, `src/modules/platform/subscriptions`, `src/modules/platform/billing`, `src/modules/platform/features`, `src/modules/platform/integrations`, `src/modules/platform/health`, `src/modules/platform/support`, `src/modules/platform/announcements`, `docs/*.md`).
 
 ---
 
@@ -203,6 +203,36 @@ stale when a refresh fails.
 | H6 | **Storage** KPI ("71% · 4.1 / 5.8 TB") | Dashed static card showing API memory instead. | `storageBytes` + capacity (null today). |
 | H7 | **Acknowledge** alert / on-call notification, incident history (resolved alerts) | "Soon" button. Only current failing probes are listed. | Persisted incidents with `acknowledgedBy/At`, resolution time, and on-call paging. |
 | H8 | Metrics across replicas | Single process only. | Shared metrics store so multiple API replicas report together. |
+
+## Support tickets (`/admin/support-tickets`)
+
+Already real: ticket list, status tabs, search, KPIs (open across N companies, urgent + past SLA, unassigned) computed from
+tickets, SLA countdown per ticket, drawer with status / priority / assignee controls (`/:id/update`), conversation +
+internal notes with one composer and an Internal toggle (`/:id/entries`), resolve / close / reopen, workspace access requests
+(record + cancel), new ticket on behalf of a requester, row shortcuts (Assign to me, Mark resolved).
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| T1 | **First response** KPI ("38 min · median 30 d") | Dashed static card. | Store `firstResponseAt` per ticket (first agent reply) and return a median in `kpis`. |
+| T2 | **CSAT** KPI ("4.7 / 5 · 112 ratings") | Dashed static card (shows resolved in 7 d as the subtitle). | Satisfaction rating capture after resolution + aggregate. |
+| T3 | Replies **delivered to the customer** (email / in-app) | The page says replies are stored only. | Outbound email / tenant-portal delivery for `kind: 'reply'` (docs: not configured). |
+| T4 | Customer-originated tickets (portal intake) | Tickets are created by staff on behalf of a requester. | Tenant-side ticket submission route + notification to staff. |
+| T5 | **Request support access** turning into a real session | Records a pending request only (as the backend states). | Approval flow that creates a time-boxed workspace session from an approved request. |
+
+## Announcements (`/admin/announcements`)
+
+Already real: list with derived status (draft / scheduled / published / expired), status tabs + KPIs, search, create / edit
+with bilingual title + body, type, audience (all or plan), language, start/end (local → UTC), Save as draft (withdraw) /
+Publish, live CRM banner preview (EN and/or AR), row shortcuts **Publish now** (start = now) and **End now** (withdraw to
+draft).
+
+| # | Design element | Today | Needed from backend |
+|---|---|---|---|
+| A1 | **Priority** (Normal / High) column + form field | Column shows `—` with "Soon". Form field is "Not saved yet". | `priority: 'normal' \| 'high'` on announcements (and use it for banner ordering/styling). |
+| A2 | **Delete draft** | "Soon" menu item, toast only. | `POST /announcements/:id/delete` (drafts only, audited). |
+| A3 | **End now** as a real "expired" state | Implemented as withdraw-to-draft (hides it immediately but shows as Draft). | Accept `to = now` on published notices (today the end must not be in the past on publication), or an `end` action. |
+| A4 | Banner visible inside company CRM | Feed endpoint exists. Tenant UI banner isn't built. | Company-side banner component consuming `GET /api/v1/announcements` (frontend work in the company shell, plus company auth readiness per docs). |
+| A5 | Audience counts ("Published to 148 companies") | Not shown. | Return the number of companies matching `target` with a current subscription. |
 
 ---
 

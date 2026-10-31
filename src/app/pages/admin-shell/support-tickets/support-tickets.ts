@@ -233,7 +233,7 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-support-tickets',
   imports: [FormsModule],
   templateUrl: './support-tickets.html',
-  styleUrl: './support-tickets.scss',
+  styleUrls: ['../admin-ui.scss', '../admin-table.scss', './support-tickets.scss'],
 })
 export class SupportTickets {
   private readonly ui = inject(AdminUiState);
@@ -379,6 +379,88 @@ export class SupportTickets {
 
   readonly toast = signal<string | null>(null);
   private toastTimer?: ReturnType<typeof setTimeout>;
+  readonly kebabFor = signal<string | null>(null);
+  /** Composer toggle: reply to the customer vs staff-only internal note. */
+  readonly internal = signal(false);
+  readonly tabs = computed(() => {
+    const ar = this.lang() === 'ar';
+    const list: Array<Status | 'all'> = ['all', ...this.statuses];
+    return list.map((k) => ({
+      k,
+      label: k === 'all' ? (ar ? 'الكل' : 'All') : this.statusName(k),
+      n: k === 'all' ? this.tickets().length : this.tickets().filter((t) => t.status === k).length,
+    }));
+  });
+  readonly stats = computed(() => {
+    const active = this.tickets().filter((t) => ['open', 'progress', 'waiting'].includes(t.status));
+    return {
+      active: active.length,
+      companies: new Set(active.map((t) => t.companyEn)).size,
+      urgent: active.filter((t) => t.priority === 'urgent').length,
+      unassigned: active.filter((t) => !t.assignedTo).length,
+      overdue: active.filter((t) => this.isOverdue(t)).length,
+    };
+  });
+  statusPill(s: Status) {
+    return (
+      {
+        open: { bg: '#EAEFFD', fg: '#2E47A8', dot: '#5B78E5' },
+        progress: { bg: '#E6EEFB', fg: '#274A93', dot: '#5B78E5' },
+        waiting: { bg: '#FCF2DE', fg: '#83570C', dot: '#D99A28' },
+        resolved: { bg: '#E7F5EC', fg: '#1E6B3E', dot: '#2FA35F' },
+        closed: { bg: '#F1F1ED', fg: '#6E6E73', dot: '#B4B4AE' },
+      } as Record<Status, { bg: string; fg: string; dot: string }>
+    )[s];
+  }
+  priorityPill(p: Priority) {
+    return (
+      {
+        urgent: { bg: '#FBE7E3', fg: '#A23624', dot: '#E2553B' },
+        high: { bg: '#FCF2DE', fg: '#83570C', dot: '#D99A28' },
+        med: { bg: '#EAEFFD', fg: '#2E47A8', dot: '#5B78E5' },
+        low: { bg: '#F1F1ED', fg: '#6E6E73', dot: '#B4B4AE' },
+      } as Record<Priority, { bg: string; fg: string; dot: string }>
+    )[p];
+  }
+  ago(iso: string) {
+    const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    const ar = this.lang() === 'ar';
+    if (m < 60) return ar ? `منذ ${m} دقيقة` : `${m} min ago`;
+    if (m < 1440) return ar ? `منذ ${Math.round(m / 60)} ساعة` : `${Math.round(m / 60)} h ago`;
+    return ar ? `منذ ${Math.round(m / 1440)} يوم` : `${Math.round(m / 1440)} d ago`;
+  }
+  /** Remaining SLA time, e.g. "3 h left" or "overdue 2 h". */
+  slaLeft(t: Ticket) {
+    if (!['open', 'progress', 'waiting'].includes(t.status)) return '';
+    const m = Math.round((new Date(t.slaDue).getTime() - Date.now()) / 60000);
+    const ar = this.lang() === 'ar';
+    const span =
+      Math.abs(m) < 60
+        ? Math.abs(m) + (ar ? ' د' : ' min')
+        : Math.round(Math.abs(m) / 60) + (ar ? ' س' : ' h');
+    return m < 0 ? (ar ? 'متأخرة ' : 'overdue ') + span : span + (ar ? ' متبقية' : ' left');
+  }
+  get meId() {
+    return this.auth.user()?.id ?? '';
+  }
+  canAssignMe() {
+    return this.options().agents.some((a) => a.id === this.meId);
+  }
+  /** Row-menu shortcuts open the ticket first so the mutation uses its current version. */
+  async quick(t: Ticket, what: 'me' | 'resolve') {
+    this.kebabFor.set(null);
+    await this.openTicket(t);
+    if (!this.viewing()) return;
+    if (what === 'me') await this.assign(this.meId);
+    else await this.setStatus('resolved');
+  }
+  async submitComposer() {
+    if (this.internal()) {
+      this.noteDraft.set(this.replyDraft());
+      await this.addNote();
+      if (!this.noteDraft()) this.replyDraft.set('');
+    } else await this.sendReply();
+  }
 
   time(value: string): string {
     return new Intl.DateTimeFormat(this.lang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', {

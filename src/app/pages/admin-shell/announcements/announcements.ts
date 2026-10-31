@@ -160,7 +160,7 @@ const EMPTY_DRAFT: Draft = {
   selector: 'app-announcements',
   imports: [FormsModule],
   templateUrl: './announcements.html',
-  styleUrl: './announcements.scss',
+  styleUrls: ['../admin-ui.scss', '../admin-table.scss', './announcements.scss'],
 })
 export class Announcements {
   private readonly api = inject(AuthService);
@@ -283,6 +283,68 @@ export class Announcements {
   }
   saveDraft() {
     return this.save(false);
+  }
+  readonly statusFilter = signal<Status | 'all'>('all');
+  readonly search = signal('');
+  readonly kebabFor = signal<string | null>(null);
+  readonly statuses: Status[] = ['draft', 'scheduled', 'published', 'expired'];
+  readonly tabs = computed(() =>
+    (['all', ...this.statuses] as Array<Status | 'all'>).map((k) => ({
+      k,
+      label: k === 'all' ? (this.lang() === 'ar' ? 'الكل' : 'All') : this.statusName(k),
+      n: k === 'all' ? this.items().length : this.items().filter((a) => a.status === k).length,
+    })),
+  );
+  readonly filtered = computed(() => {
+    const st = this.statusFilter(),
+      q = this.search().trim().toLowerCase();
+    return this.items().filter(
+      (a) =>
+        (st === 'all' || a.status === st) &&
+        (!q || (a.id + ' ' + a.titleEn + ' ' + a.titleAr).toLowerCase().includes(q)),
+    );
+  });
+  count(s: Status) {
+    return this.items().filter((a) => a.status === s).length;
+  }
+  statusPill(s: Status) {
+    return (
+      {
+        draft: { bg: '#F1F1ED', fg: '#6E6E73', dot: '#B4B4AE' },
+        scheduled: { bg: '#EAEFFD', fg: '#2E47A8', dot: '#5B78E5' },
+        published: { bg: '#E7F5EC', fg: '#1E6B3E', dot: '#2FA35F' },
+        expired: { bg: '#F1F1ED', fg: '#8A8A90', dot: '#C4C4BE' },
+      } as Record<Status, { bg: string; fg: string; dot: string }>
+    )[s];
+  }
+  date(iso: string | null) {
+    if (!iso) return this.lang() === 'ar' ? 'بلا نهاية' : 'no end';
+    return new Intl.DateTimeFormat(this.lang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(iso));
+  }
+  /** Row shortcut: publish immediately (start = now). */
+  async publishNow(a: Announcement) {
+    this.kebabFor.set(null);
+    this.openEdit(a);
+    this.draft.from = this.localTime(new Date().toISOString());
+    await this.publish();
+  }
+  /** Row shortcut: "End now" withdraws the notice to draft, which hides it immediately. */
+  async endNow(a: Announcement) {
+    this.kebabFor.set(null);
+    this.openEdit(a);
+    await this.saveDraft();
+  }
+  deleteSoon() {
+    this.kebabFor.set(null);
+    this.showToast(
+      this.lang() === 'ar'
+        ? 'حذف المسودات غير متاح بعد — لم يُحذف شيء.'
+        : "Deleting drafts isn't available yet — nothing was deleted.",
+    );
   }
   publish() {
     return this.save(true);

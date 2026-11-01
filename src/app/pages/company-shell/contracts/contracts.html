@@ -97,7 +97,7 @@
             <span class="sub sub--dim">{{ date(c.keyDate) }}</span>
           </span>
           <span class="end mono small">{{
-            isSelected(c) && selected()?.requirements ? docsDone(selected()!) : '—'
+            isSelected(c) && selected()?.requirements ? docsDone(selected()!) : docsDone(c)
           }}</span>
         </button>
       }

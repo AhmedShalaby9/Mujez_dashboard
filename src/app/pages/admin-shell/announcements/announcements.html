@@ -204,6 +204,13 @@
       }
     </div>
     <div class="dialog__main">
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'الأولوية' : 'Priority' }}</span
+        ><select [(ngModel)]="draft.priority">
+          <option value="normal">{{ lang() === 'ar' ? 'عادية' : 'Normal' }}</option>
+          <option value="high">{{ lang() === 'ar' ? 'عالية' : 'High' }}</option>
+        </select></label
+      >
       <div class="grid">
         <label class="field"
           ><span>{{ L().fieldTitleEn }}</span

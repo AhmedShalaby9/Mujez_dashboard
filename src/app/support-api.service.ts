@@ -4,7 +4,15 @@ import { AuthService } from './auth.service';
 export class SupportApi {
   private readonly auth = inject(AuthService);
   readonly count = signal<number | undefined>(undefined);
-  readonly kpis = signal({ open: 0, waiting: 0, overdue: 0, resolved: 0, active: 0 });
+  readonly kpis = signal({
+    open: 0,
+    waiting: 0,
+    overdue: 0,
+    resolved: 0,
+    active: 0,
+    firstResponseMedianMinutes: null as number | null,
+    firstResponseCount: 0,
+  });
   async summary() {
     try {
       const s = await this.auth.request('/admin/api/v1/support-tickets/summary');

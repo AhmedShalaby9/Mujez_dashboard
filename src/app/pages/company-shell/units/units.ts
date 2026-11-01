@@ -163,13 +163,11 @@ export class Units implements OnDestroy {
   price(u: InventoryUnit) {
     return this.money(u.priceMinor) + (u.listing === 'rental' ? this.t('/mo', '/شهر') : '');
   }
-  segmentSoon() {
-    this.showToast(
-      this.t(
-        'Segment filtering is not available from the API yet.',
-        'التصفية حسب القطاع غير متاحة من الخادم بعد.',
-      ),
-    );
+  readonly segment = signal<'all' | 'res' | 'com'>('all');
+  setSegment(value: 'all' | 'res' | 'com') {
+    this.segment.set(value);
+    this.page.set(1);
+    void this.reload();
   }
   showToast(msg: string) {
     this.toast.set(msg);
@@ -189,20 +187,20 @@ export class Units implements OnDestroy {
       limit: '30',
       archived: this.archived ? 'all' : 'active',
     };
+    if (this.segment() !== 'all') q['segment'] = this.segment();
     if (this.typeFilter() !== 'all') q['type'] = this.typeFilter();
     if (this.statusFilter() !== 'all') q['status'] = this.statusFilter();
     if (this.listing !== 'all') q['listing'] = this.listing;
     try {
-      const r = await this.api.get<{ items: InventoryUnit[]; total: number }>('units', q);
+      const r = await this.api.get<{
+        items: InventoryUnit[];
+        total: number;
+        summary?: Record<string, number>;
+      }>('units', q);
       if (n !== this.serial) return;
       this.units.set(r.items);
       this.total.set(r.total);
-      // Header "N available" — a separate count query that never blocks the grid.
-      const avail = { ...q, status: 'available', page: '1', limit: '1' };
-      void this.api
-        .get<{ total: number }>('units', avail)
-        .then((a) => n === this.serial && this.availableTotal.set(a.total))
-        .catch(() => n === this.serial && this.availableTotal.set(null));
+      this.availableTotal.set(r.summary?.['available'] ?? 0);
     } catch (e: any) {
       if (n === this.serial) this.error.set(e.message);
     } finally {

@@ -11,21 +11,20 @@
     </div>
   </div>
 
-  @if (overview.alertError()) {
-    <p class="note note--bad" role="alert">{{ overview.alertError() }}</p>
+  @if (feed.error()) {
+    <p class="note note--bad" role="alert">{{ feed.error() }}</p>
   }
 
   <section class="card">
     <div class="cardHead">
       <div>
         <h2>
-          {{ lang() === 'ar' ? 'قواعد التسليم' : 'Delivery rules'
-          }}<i class="soon">{{ lang() === 'ar' ? 'لا تُحفظ بعد' : 'Not saved yet' }}</i>
+          {{ lang() === 'ar' ? 'قواعد التسليم' : 'Delivery rules' }}
         </h2>
         <span>{{
           lang() === 'ar'
-            ? 'اختر طريقة التنبيه. الرسائل النصية للأحداث الحرجة فقط.'
-            : 'Choose how you are notified. SMS is limited to critical events.'
+            ? 'تُحفظ تفضيلات الإشعارات داخل التطبيق. البريد والرسائل النصية مؤجلة حاليًا.'
+            : 'In-app preferences are saved to your account. Email and SMS providers are skipped for now.'
         }}</span>
       </div>
     </div>
@@ -92,6 +91,7 @@
         <thead>
           <tr>
             <th>{{ lang() === 'ar' ? 'الإشعار' : 'Notification' }}</th>
+            <th>{{ lang() === 'ar' ? 'وقت الاستلام' : 'Received' }}</th>
             <th>{{ lang() === 'ar' ? 'النوع' : 'Type' }}</th>
             <th>{{ lang() === 'ar' ? 'الخطورة' : 'Severity' }}</th>
             <th>{{ lang() === 'ar' ? 'الحالة' : 'State' }}</th>
@@ -102,6 +102,7 @@
           @for (n of shown(); track n.id) {
             <tr (click)="open(n)">
               <td [class.strong]="!n.read">{{ n.title }}</td>
+              <td class="soft">{{ n.createdAt }}</td>
               <td class="soft">{{ n.kind }}</td>
               <td>
                 <span
@@ -141,7 +142,7 @@
         </tbody>
       </table>
     </div>
-    @if (!shown().length && !overview.alertError()) {
+    @if (!shown().length && !feed.error()) {
       <div class="empty">
         <strong>{{ L().empty }}</strong>
       </div>
@@ -156,4 +157,16 @@
 
 @if (toast()) {
   <div class="toast"><span></span>{{ toast() }}</div>
+}
+
+@if (feed.items().length < feed.total()) {
+  <button type="button" class="btn" (click)="feed.refresh(true)">
+    {{ lang() === 'ar' ? 'تحميل المزيد' : 'Load more' }}
+  </button>
+}
+
+@if (feed.items().length < feed.total()) {
+  <button type="button" class="btn" (click)="feed.refresh(true)">
+    {{ lang() === 'ar' ? 'المزيد' : 'Load more' }}
+  </button>
 }

@@ -4,7 +4,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
-type ResourceKey = 'users' | 'listings' | 'storage';
+type ResourceKey =
+  'users' | 'listings' | 'storage' | 'leads' | 'contacts' | 'projects' | 'apiPerDay';
 type PlanKey = string;
 
 interface Resource {
@@ -21,6 +22,10 @@ interface UsageRow {
   nameEn: string;
   nameAr: string;
   plan: PlanKey;
+  leads: Resource;
+  contacts: Resource;
+  projects: Resource;
+  apiPerDay: Resource;
   users: Resource;
   listings: Resource;
   storage: Resource;
@@ -78,7 +83,15 @@ const COPY: Record<Lang, Copy> = {
     overrideTitle: (company, resource) => `Override ${resource} limit — ${company}`,
     overrideBody: (current, next) =>
       `Raises the limit from ${current} to ${next} (+20%) for 30 days.`,
-    resourceLabel: { users: 'users', listings: 'listings', storage: 'storage' },
+    resourceLabel: {
+      users: 'users',
+      listings: 'listings',
+      storage: 'storage',
+      leads: 'leads',
+      contacts: 'contacts',
+      projects: 'projects',
+      apiPerDay: 'API requests / day',
+    },
     reasonLabel: 'Reason',
     reasonError: 'A reason is required.',
     cancel: 'Cancel',
@@ -103,7 +116,15 @@ const COPY: Record<Lang, Copy> = {
     override: 'تجاوز الحد',
     overrideTitle: (company, resource) => `تجاوز حد ${resource} — ${company}`,
     overrideBody: (current, next) => `يرفع الحد من ${current} إلى ${next} (+20%) لمدة 30 يومًا.`,
-    resourceLabel: { users: 'المستخدمين', listings: 'الوحدات', storage: 'التخزين' },
+    resourceLabel: {
+      users: 'المستخدمين',
+      listings: 'الوحدات',
+      storage: 'التخزين',
+      leads: 'العملاء المحتملون',
+      contacts: 'جهات الاتصال',
+      projects: 'المشاريع',
+      apiPerDay: 'طلبات API / يوم',
+    },
     reasonLabel: 'السبب',
     reasonError: 'السبب مطلوب.',
     cancel: 'إلغاء',
@@ -163,7 +184,15 @@ export class UsageLimits {
 
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);
-  readonly resourceKeys: ResourceKey[] = ['users', 'listings', 'storage'];
+  readonly resourceKeys: ResourceKey[] = [
+    'users',
+    'listings',
+    'storage',
+    'leads',
+    'contacts',
+    'projects',
+    'apiPerDay',
+  ];
 
   readonly rows = signal<UsageRow[]>([]);
   readonly filter = signal<Threshold>('all');
@@ -189,7 +218,7 @@ export class UsageLimits {
   }
 
   highestPct(r: UsageRow): number {
-    return Math.max(this.pct(r.users), this.pct(r.listings), this.pct(r.storage));
+    return Math.max(...this.resourceKeys.map((key) => this.pct(r[key])));
   }
 
   barClass(pct: number): string {
@@ -228,7 +257,13 @@ export class UsageLimits {
     this.filter.set(f);
   }
 
+  readonly customLimit = signal<number | null>(null);
+  readonly customDays = signal(30);
   askOverride(row: UsageRow, resource: ResourceKey): void {
+    this.customLimit.set(
+      row[resource].limit === null ? 100 : Math.ceil(row[resource].limit! * 1.2),
+    );
+    this.customDays.set(30);
     this.kebabFor.set(null);
     this.overrideResource.set(resource);
     this.overriding.set({ row, resource });
@@ -244,7 +279,7 @@ export class UsageLimits {
   /** A +20% override needs a current subscription and a positive finite base limit. */
   canOverride(r: UsageRow, k: ResourceKey) {
     const res = r[k];
-    return r.plan !== 'none' && res.limit !== null && res.limit > 0 && !res.overrideExpires;
+    return r.plan !== 'none' && !res.overrideExpires;
   }
   activeOverrides(r: UsageRow) {
     return this.resourceKeys.filter((k) => !!r[k].overrideExpires);
@@ -280,6 +315,9 @@ export class UsageLimits {
       storageCap: sum('storage', 'limit'),
     };
   });
+  usageTotal(key: 'leads' | 'contacts' | 'projects' | 'apiPerDay') {
+    return this.rows().reduce((n, r) => n + (r[key]?.used ?? 0), 0);
+  }
   cell(res: Resource, unit = '') {
     const ar = this.lang() === 'ar';
     if (!res.measured || res.used === null)
@@ -411,6 +449,8 @@ export class UsageLimits {
         version: t.row.version,
         resource: t.resource,
         reason: this.overrideReason(),
+        limit: this.customLimit() ?? this.nextLimit(),
+        days: this.customDays(),
       });
       this.overriding.set(null);
       await this.reload();

@@ -1,3 +1,4 @@
+import { NotificationsApi } from '../../../notifications-api.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AdminUiState, type Lang } from '../admin-ui-state';
@@ -29,13 +30,11 @@ const KIND: Record<string, [string, string]> = {
 };
 /** Design delivery-rule events. Static until the backend stores per-user preferences (BACKEND_MISSING.md N2). */
 const EVENTS: Array<[string, string, string]> = [
-  ['pay', 'Subscription payment failed', 'فشل سداد اشتراك'],
-  ['newco', 'New company registered', 'تسجيل شركة جديدة'],
-  ['trial', 'Trial expiring (3 days)', 'انتهاء التجربة (3 أيام)'],
-  ['ticket', 'Support ticket assigned to me', 'إسناد تذكرة لي'],
-  ['limit', 'Company exceeded a limit', 'تجاوز شركة للحد'],
-  ['incident', 'System incident detected', 'اكتشاف حادث نظام'],
-  ['expiry', 'Subscription expiry reminder (7 days)', 'تذكير انتهاء الاشتراك'],
+  ['newco', 'Company updates', 'تحديثات الشركات'],
+  ['ticket', 'Support ticket updates', 'تحديثات تذاكر الدعم'],
+  ['pay', 'Invoice and payment updates', 'تحديثات الفواتير والمدفوعات'],
+  ['expiry', 'Subscription updates', 'تحديثات الاشتراكات'],
+  ['announcement', 'Announcements', 'الإعلانات'],
 ];
 const CRITICAL = ['pay', 'incident'];
 
@@ -57,53 +56,53 @@ export class Notifications {
   readonly rules = signal<Record<string, boolean>>({});
   readonly toast = signal('');
 
-  /** Read state is kept per user in this browser only — the API has no notification read state. */
-  private get storeKey() {
-    return 'mujez.admin.notifRead.' + (this.auth.user()?.id ?? 'anon');
-  }
+  readonly feed = inject(NotificationsApi);
   readonly read = signal<Record<string, true>>({});
-
   constructor() {
-    void this.overview.refreshAlerts();
-    try {
-      this.read.set(JSON.parse(localStorage.getItem(this.storeKey) || '{}'));
-    } catch {}
+    void this.feed.refresh();
+    void this.loadPreferences();
   }
-  private persist() {
+  private async loadPreferences() {
     try {
-      localStorage.setItem(this.storeKey, JSON.stringify(this.read()));
-    } catch {}
+      const r = await this.auth.request('/admin/api/v1/me/notification-preferences');
+      this.rules.set(r.value);
+    } catch (e) {
+      this.toast.set((e as Error).message);
+    }
   }
-
   readonly items = computed(() =>
-    this.overview.alerts().map((a) => ({
-      id: a.id,
-      path: a.path,
-      severity: a.severity,
-      kind: KIND[a.kind]?.[this.lang() === 'ar' ? 1 : 0] ?? a.kind,
-      title: overviewAlertText(a, this.lang()),
-      read: !!this.read()[a.id],
-    })),
+    this.feed
+      .items()
+      .map((n) => ({
+        id: n.id,
+        path: n.route,
+        severity: /failed|suspend|overdue/.test(n.kind) ? 'high' : 'low',
+        kind: n.kind,
+        title: n.title,
+        createdAt: n.createdAt,
+        read: !!n.readAt,
+      })),
   );
-  readonly unread = computed(() => this.items().filter((n) => !n.read).length);
+  readonly unread = this.feed.unread;
   readonly shown = computed(() => this.items().filter((n) => this.tab() === 'all' || !n.read));
 
   open(n: { id: string; path: string }) {
     this.setRead(n.id, true);
     void this.router.navigateByUrl(n.path);
   }
-  setRead(id: string, on: boolean) {
-    this.read.update((r) => {
-      const next = { ...r };
-      if (on) next[id] = true;
-      else delete next[id];
-      return next;
-    });
-    this.persist();
+  async setRead(id: string, on: boolean) {
+    try {
+      await this.feed.mark(id, on);
+    } catch (e) {
+      this.toast.set((e as Error).message);
+    }
   }
-  markAll() {
-    this.read.set(Object.fromEntries(this.items().map((n) => [n.id, true as const])));
-    this.persist();
+  async markAll() {
+    try {
+      await this.feed.markAll();
+    } catch (e) {
+      this.toast.set((e as Error).message);
+    }
   }
   sevPill(s: string) {
     return s === 'high'
@@ -125,7 +124,7 @@ export class Notifications {
         : 'SMS';
   }
   locked(e: string, c: Channel) {
-    return c === 'sms' && !CRITICAL.includes(e);
+    return c !== 'app';
   }
   ruleOn(e: string, c: Channel) {
     if (this.locked(e, c)) return false;
@@ -134,14 +133,17 @@ export class Notifications {
       (c === 'app' || (c === 'email' && e !== 'newco') || (c === 'sms' && CRITICAL.includes(e)))
     );
   }
-  toggleRule(e: string, c: Channel) {
+  async toggleRule(e: string, c: Channel) {
     if (this.locked(e, c)) return;
-    this.rules.update((r) => ({ ...r, [e + ':' + c]: !this.ruleOn(e, c) }));
-    this.toast.set(
-      this.lang() === 'ar'
-        ? 'معاينة فقط — قواعد التسليم لا تُحفظ بعد.'
-        : 'Preview only — delivery rules are not saved yet.',
-    );
-    setTimeout(() => this.toast.set(''), 3000);
+    const value = { ...this.rules(), [e + ':' + c]: !this.ruleOn(e, c) };
+    try {
+      const r = await this.auth.request('/admin/api/v1/me/notification-preferences', { value });
+      this.rules.set(r.value);
+      this.toast.set(
+        this.lang() === 'ar' ? 'تم حفظ تفضيلات الإشعارات' : 'Notification preferences saved',
+      );
+    } catch (e) {
+      this.toast.set((e as Error).message);
+    }
   }
 }

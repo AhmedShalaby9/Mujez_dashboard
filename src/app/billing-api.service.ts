@@ -1,4 +1,5 @@
 import { inject, Injectable, signal } from '@angular/core';
+import { RUNTIME_CONFIG } from './runtime-config';
 import { AuthService } from './auth.service';
 export function toMinor(value: string): string {
   if (!/^\d+(\.\d{1,2})?$/.test(value.trim()))
@@ -12,6 +13,20 @@ export function toMinor(value: string): string {
 @Injectable({ providedIn: 'root' })
 export class BillingApi {
   private readonly auth = inject(AuthService);
+  private readonly config = inject(RUNTIME_CONFIG);
+  async downloadPdf(number: string) {
+    const r = await fetch(
+      this.config.apiUrl + '/admin/api/v1/invoices/' + encodeURIComponent(number) + '/pdf',
+      { credentials: 'include' },
+    );
+    if (!r.ok) throw Error('Unable to download invoice');
+    const url = URL.createObjectURL(await r.blob());
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = number + '.pdf';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
   readonly counts = signal<{ invoices?: number; payments?: number }>({});
   async list<T>(resource: 'invoices' | 'payments'): Promise<T[]> {
     const list: T[] = [];

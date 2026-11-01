@@ -7,6 +7,8 @@ type RoleKey = string;
 type UserStatus = 'active' | 'invited' | 'disabled';
 
 interface PlatformUser {
+  createdAt?: string;
+  invitationExpiresAt?: string | null;
   id: string;
   name: string;
   email: string;

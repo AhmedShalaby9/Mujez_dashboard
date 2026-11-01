@@ -96,16 +96,12 @@
             </div>
           }
           <div class="static">
-            <span
-              >{{ lang() === 'ar' ? 'العملاء' : 'Leads'
-              }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
-            ><b>—</b>
+            <span>{{ lang() === 'ar' ? 'العملاء' : 'Leads' }}</span
+            ><b>{{ p.leads === null || p.leads === undefined ? '∞' : p.leads }}</b>
           </div>
           <div class="static">
-            <span
-              >{{ lang() === 'ar' ? 'API يوميًا' : 'API / day'
-              }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
-            ><b>—</b>
+            <span>{{ lang() === 'ar' ? 'API يوميًا' : 'API / day' }}</span
+            ><b>{{ p.apiPerDay === null || p.apiPerDay === undefined ? '∞' : p.apiPerDay }}</b>
           </div>
         </div>
         @if (chips(p).length) {
@@ -230,16 +226,12 @@
           ><input dir="rtl" maxlength="1000" [(ngModel)]="draft.featsAr"
         /></label>
         <label class="field"
-          ><span
-            >{{ lang() === 'ar' ? 'حد العملاء' : 'Leads limit'
-            }}<i class="soon">{{ lang() === 'ar' ? 'لا يُحفظ بعد' : 'Not saved yet' }}</i></span
-          ><input type="number" min="0" class="mono" disabled
+          ><span>{{ lang() === 'ar' ? 'حد العملاء' : 'Leads limit' }}</span
+          ><input type="number" min="0" class="mono" [(ngModel)]="draft.leads"
         /></label>
         <label class="field"
-          ><span
-            >{{ lang() === 'ar' ? 'طلبات API يوميًا' : 'API requests / day'
-            }}<i class="soon">{{ lang() === 'ar' ? 'لا يُحفظ بعد' : 'Not saved yet' }}</i></span
-          ><input type="number" min="0" class="mono" disabled
+          ><span>{{ lang() === 'ar' ? 'طلبات API يوميًا' : 'API requests / day' }}</span
+          ><input type="number" min="0" class="mono" [(ngModel)]="draft.apiPerDay"
         /></label>
       </div>
 

@@ -261,6 +261,8 @@ export class Contracts implements OnDestroy {
     );
   }
   docsDone(c: Contract) {
+    if (!c.requirements && c.requirementsTotal !== undefined)
+      return c.requirementsSatisfied + '/' + c.requirementsTotal;
     const r = c.requirements ?? [];
     return r.filter((d) => d.satisfied).length + '/' + r.length;
   }

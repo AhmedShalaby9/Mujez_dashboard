@@ -772,13 +772,13 @@ export class Billing {
         : `Invoice email isn't connected yet — ${i.number} was not sent.`,
     );
   }
-  downloadPdf(i: Invoice) {
+  async downloadPdf(i: Invoice) {
     this.kebabFor.set(null);
-    this.showToast(
-      this.lang() === 'ar'
-        ? `ملفات PDF غير متاحة بعد — لم يتم إنشاء ${i.number}.pdf.`
-        : `PDF export isn't available yet — ${i.number}.pdf was not generated.`,
-    );
+    try {
+      await this.api.downloadPdf(i.number);
+    } catch (e) {
+      this.showToast((e as Error).message);
+    }
   }
   readonly tabs = computed(() => {
     const ar = this.lang() === 'ar';

@@ -4,14 +4,22 @@ export interface LocalName {
   en: string;
   ar: string;
 }
-export interface Building {
+interface InventoryCounts {
+  total?: number;
+  available?: number;
+  held?: number;
+  reserved?: number;
+  sold?: number;
+  fromPriceMinor?: string | null;
+}
+export interface Building extends InventoryCounts {
   id: string;
   code: string;
   name: LocalName;
   floors: number;
   version: number;
 }
-export interface Phase {
+export interface Phase extends InventoryCounts {
   id: string;
   code: string;
   name: LocalName;
@@ -39,6 +47,8 @@ export interface Project {
   phases: Phase[];
 }
 export interface InventoryUnit {
+  segment?: 'res' | 'com';
+  deliveryYear?: number | null;
   id: string;
   code: string;
   buildingId: string | null;

@@ -57,11 +57,13 @@
       ><b class="warnTxt">{{ stats().unassigned }}</b>
       <small>{{ lang() === 'ar' ? 'تحتاج فرز' : 'needs triage' }}</small>
     </div>
-    <div class="kpi kpi--static">
-      <span
-        >{{ lang() === 'ar' ? 'أول رد' : 'First response'
-        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
-      ><b>—</b>
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'أول رد' : 'First response' }}</span>
+      <b>{{
+        kpis().firstResponseMedianMinutes === null
+          ? '—'
+          : kpis().firstResponseMedianMinutes?.toFixed(0) + ' min'
+      }}</b>
       <small>{{ lang() === 'ar' ? 'الوسيط · 30 يومًا' : 'median · 30 d' }}</small>
     </div>
     <div class="kpi kpi--static">

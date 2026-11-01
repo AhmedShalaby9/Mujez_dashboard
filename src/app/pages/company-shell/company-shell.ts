@@ -1,3 +1,4 @@
+import { NotificationsApi } from '../../notifications-api.service';
 import { AuthService } from '../../auth.service';
 import { Router } from '@angular/router';
 import { Component, DestroyRef, HostListener, computed, signal } from '@angular/core';
@@ -151,8 +152,17 @@ const COPY: Record<Lang, Copy> = {
   styleUrl: './company-shell.scss',
 })
 export class CompanyShell {
- readonly announcements=signal<Array<{id:string;title:string;body:string;type:string;priority:string}>>([]);
- private async loadAnnouncements(){try{const list=await this.auth.request('/api/v1/announcements?lang='+this.lang());this.announcements.set(list);}catch{this.announcements.set([]);}}
+  readonly announcements = signal<
+    Array<{ id: string; title: string; body: string; type: string; priority: string }>
+  >([]);
+  private async loadAnnouncements() {
+    try {
+      const list = await this.auth.request('/api/v1/announcements?lang=' + this.lang());
+      this.announcements.set(list);
+    } catch {
+      this.announcements.set([]);
+    }
+  }
 
   private readonly ui = inject(CompanyUiState);
 
@@ -162,15 +172,25 @@ export class CompanyShell {
   private readonly insights = inject(CompanyInsightsApi);
   /** Live alerts from GET /company-overview (permission-filtered on the server). */
   readonly alerts = signal<Overview['alerts']>([]);
+  readonly notificationFeed = inject(NotificationsApi);
   readonly notifications = computed<Notification[]>(() =>
-    this.alerts().map((a) => ({
-      id: a.id,
-      path: a.route,
-      title: (ALERT_NAMES[a.id]?.[this.ui.lang() === 'ar' ? 1 : 0] ?? a.id) + ' · ' + a.count,
-      time: '',
-      attention: a.count > 0,
-    })),
+    this.notificationFeed
+      .items()
+      .slice(0, 10)
+      .map((n) => ({
+        id: n.id,
+        path: n.route,
+        title: n.title,
+        time: new Date(n.createdAt).toLocaleString(this.lang() === 'ar' ? 'ar-EG' : 'en-GB'),
+        attention: !n.readAt,
+      })),
   );
+  async readNotification(id: string) {
+    try {
+      await this.notificationFeed.mark(id);
+    } catch {}
+  }
+
   /** Sidebar counts: tasks due today + alert counts on the page each alert opens. */
   private readonly counts = signal<Record<string, number>>({});
 
@@ -339,13 +359,6 @@ export class CompanyShell {
       const d = await this.insights.get<Overview>('/company-overview');
       if (n !== this.alertsSerial) return;
       this.alerts.set(d.alerts.filter((a) => a.count > 0));
-      const c: Record<string, number> = {};
-      if (d.metrics.todayTasks) c['tasks'] = d.metrics.todayTasks;
-      for (const a of d.alerts) {
-        const path = a.route.replace(/^\/company\//, '').split(/[?#/]/)[0];
-        if (a.count > 0 && path && path !== 'tasks') c[path] = (c[path] ?? 0) + a.count;
-      }
-      this.counts.set(c);
     } catch {
       // The bell stays empty if the overview isn't available (no workspace.view).
       if (n === this.alertsSerial) this.alerts.set([]);
@@ -353,28 +366,75 @@ export class CompanyShell {
   }
   private readonly navSub = this.router.events
     .pipe(filter((e) => e instanceof NavigationEnd))
-    .subscribe(() => {void this.loadAlerts();void this.loadAnnouncements();});
+    .subscribe(() => {
+      void this.loadAlerts();
+      void this.loadAnnouncements();
+      void this.notificationFeed.refresh();
+      void this.loadTools();
+    });
   private readonly navCleanup = inject(DestroyRef).onDestroy(() => this.navSub.unsubscribe());
   private readonly initAlerts = void this.loadAlerts();
-  private readonly initAnnouncements=void this.loadAnnouncements();
+  private readonly initAnnouncements = void this.loadAnnouncements();
+  private readonly initNotifications = void this.notificationFeed.refresh();
+  private readonly initTools = void this.loadTools();
 
   readonly canSearchLeads = computed(
-    () => this.auth.user()?.permissions.includes('leads.read') ?? false,
+    () =>
+      this.auth
+        .user()
+        ?.permissions.some((p) =>
+          ['leads.read', 'contacts.read', 'units.read', 'contracts.read'].includes(p),
+        ) ?? false,
   );
   readonly canNewLead = computed(
     () => this.auth.user()?.permissions.includes('leads.manage') ?? false,
   );
   /** Top-bar search goes to Leads (there is no global search endpoint yet). */
-  submitSearch(input: HTMLInputElement) {
+  readonly searchResults = signal<Array<{ id: string; name: string; type: string; route: string }>>(
+    [],
+  );
+  readonly searchDone = signal(false);
+  readonly savedViews = signal<
+    Array<{ id: string; name: string; filters: Record<string, string>; version: number }>
+  >([]);
+  async loadTools() {
+    try {
+      const [counts, views] = await Promise.all([
+        this.auth.request('/api/v1/navigation-counts'),
+        this.auth.request('/api/v1/saved-views'),
+      ]);
+      this.counts.set(counts);
+      this.savedViews.set(views.items);
+    } catch {}
+  }
+  async submitSearch(input: HTMLInputElement) {
     const q = input.value.trim();
-    if (!q || !this.canSearchLeads()) return;
-    void this.router.navigate(['/company/leads'], { queryParams: { q } });
+    if (q.length < 2) return;
+    try {
+      const r = await this.auth.request('/api/v1/search?q=' + encodeURIComponent(q));
+      this.searchResults.set(r.items);
+      this.searchDone.set(true);
+    } catch (e) {
+      this.error.set((e as Error).message);
+    }
+  }
+  async removeSaved(v: { id: string; version: number }) {
+    try {
+      await this.auth.request('/api/v1/saved-views/' + v.id + '/delete', { version: v.version });
+      await this.loadTools();
+    } catch (e) {
+      this.error.set((e as Error).message);
+    }
+  }
+  openSaved(v: { filters: Record<string, string> }) {
+    void this.router.navigate(['/company/leads'], { queryParams: v.filters });
   }
   newLead() {
     void this.router.navigate(['/company/leads'], { queryParams: { new: Date.now() } });
   }
   setLang(l: Lang) {
     this.ui.lang.set(l);
+    void this.loadAnnouncements();
   }
   @HostListener('document:keydown', ['$event'])
   onKey(e: KeyboardEvent) {
@@ -392,7 +452,7 @@ export class CompanyShell {
   readonly notifOpen = signal(false);
   readonly profileOpen = signal(false);
   readonly search = signal('');
-  readonly unreadCount = computed(() => this.notifications().filter((n) => n.attention).length);
+  readonly unreadCount = computed(() => this.notificationFeed.unread());
 
   toggleLang(): void {
     this.ui.toggleLang();

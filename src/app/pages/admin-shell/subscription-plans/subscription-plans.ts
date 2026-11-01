@@ -15,6 +15,10 @@ interface PlanLimit {
 }
 
 interface PlanDef {
+  leads: number | null;
+  contacts: number | null;
+  apiPerDay: number | null;
+  mrrMinor?: string;
   version: number;
   planVersionId: string;
   archived: boolean;
@@ -174,6 +178,9 @@ export class SubscriptionPlans {
     listings: null as number | null,
     projects: null as number | null,
     storageGb: null as number | null,
+    leads: null as number | null,
+    contacts: null as number | null,
+    apiPerDay: null as number | null,
     featsEn: '',
     featsAr: '',
   };
@@ -247,6 +254,9 @@ export class SubscriptionPlans {
       listings: null,
       projects: null,
       storageGb: null,
+      leads: null,
+      contacts: null,
+      apiPerDay: null,
       featsEn: '',
       featsAr: '',
     };
@@ -313,6 +323,9 @@ export class SubscriptionPlans {
       listings: p.listings,
       projects: p.projects,
       storageGb: p.storageGb,
+      leads: p.leads ?? null,
+      contacts: p.contacts ?? null,
+      apiPerDay: p.apiPerDay ?? null,
       featsEn: p.featsEn,
       featsAr: p.featsAr,
     };
@@ -387,6 +400,10 @@ export class SubscriptionPlans {
   }
   /** Sum of current subscription MRR on this plan (needs `sub.manage`). */
   planMrr(p: PlanDef): string {
+    if (p.mrrMinor !== undefined)
+      return (
+        'EGP ' + (Number(p.mrrMinor) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })
+      );
     if (!this.canSubs()) return '—';
     const v = this.subscribers()
       .filter((s) => s.plan === p.key)
@@ -430,7 +447,12 @@ export class SubscriptionPlans {
     this.saving.set(true);
     this.error.set('');
     try {
-      await this.api.archive(target.plan.key, target.plan.version, target.kind === 'archive',this.archiveNote());
+      await this.api.archive(
+        target.plan.key,
+        target.plan.version,
+        target.kind === 'archive',
+        this.archiveNote(),
+      );
       this.confirming.set(null);
       await this.reload();
     } catch (error) {

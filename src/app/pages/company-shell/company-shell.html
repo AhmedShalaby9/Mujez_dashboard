@@ -198,7 +198,11 @@
           type="search"
           class="topbar__searchInput"
           [disabled]="!canSearchLeads()"
-          [placeholder]="lang() === 'ar' ? 'ابحث في العملاء…' : 'Search leads…'"
+          [placeholder]="
+            lang() === 'ar'
+              ? 'ابحث في العملاء وجهات الاتصال والوحدات والعقود…'
+              : 'Search leads, contacts, units and contracts…'
+          "
           [attr.aria-label]="lang() === 'ar' ? 'بحث العملاء' : 'Search leads'"
         />
         <span class="topbar__kbd mono">Ctrl K</span>
@@ -251,7 +255,9 @@
             <div class="dropdown dropdown--notif" (click)="$event.stopPropagation()">
               <div class="dropdown__head">
                 <span class="dropdown__title">{{ L().notifTitle }}</span>
-                <span class="dropdown__meta">{{ notifications().length }}</span>
+                <button type="button" class="btn" (click)="notificationFeed.markAll()">
+                  {{ lang() === 'ar' ? 'تعليم الكل كمقروء' : 'Mark all read' }}
+                </button>
               </div>
               @for (n of notifications(); track n.id) {
                 <a
@@ -316,10 +322,50 @@
     </header>
 
     <div class="page">
+      @if (savedViews().length) {
+        <nav class="workspace-banner" aria-label="Saved views">
+          <strong>{{ lang() === 'ar' ? 'طرق العرض المحفوظة' : 'Saved views' }}</strong>
+          @for (v of savedViews(); track v.id) {
+            <button type="button" class="btn" (click)="openSaved(v)">{{ v.name }}</button
+            ><button
+              type="button"
+              class="btn"
+              [attr.aria-label]="'Delete saved view ' + v.name"
+              (click)="removeSaved(v)"
+            >
+              ×
+            </button>
+          }
+        </nav>
+      }
+
       @if (error()) {
         <p role="alert">{{ error() }}</p>
       }
-      @for(a of announcements();track a.id){<section role="status" class="workspace-banner" [style.border-color]="a.priority==='high'?'#d99a28':null"><strong>{{a.title}}</strong><span>{{a.body}}</span></section>}
+      @for (a of announcements(); track a.id) {
+        <section
+          role="status"
+          class="workspace-banner"
+          [style.border-color]="a.priority === 'high' ? '#d99a28' : null"
+        >
+          <strong>{{ a.title }}</strong
+          ><span>{{ a.body }}</span>
+        </section>
+      }
+      @if (searchDone()) {
+        <section class="card" aria-label="Search results">
+          <button type="button" class="btn" (click)="searchDone.set(false)">
+            {{ lang() === 'ar' ? 'إغلاق البحث' : 'Close search' }}
+          </button>
+          @for (r of searchResults(); track r.type + r.id) {
+            <a class="dropdown__item" [routerLink]="r.route" (click)="searchDone.set(false)"
+              >{{ r.type }} · {{ r.name }}</a
+            >
+          } @empty {
+            <p>{{ lang() === 'ar' ? 'لا توجد نتائج' : 'No results' }}</p>
+          }
+        </section>
+      }
       <router-outlet />
     </div>
   </div>

@@ -7,7 +7,20 @@
       >
       <h1>{{ t('Pipeline', 'الصفقات') }}</h1>
     </div>
-    <div class="head__actions"><div class="toggle">@for(s of ['all','res','com'];track s){<button type="button" [class.on]="segmentFilter()===s" (click)="setSegment($any(s))">{{s==='all'?t('All','الكل'):s==='res'?t('Residential','سكني'):t('Commercial','تجاري')}}</button>}</div>
+    <div class="head__actions">
+      <div class="toggle">
+        @for (s of ['all', 'res', 'com']; track s) {
+          <button type="button" [class.on]="segmentFilter() === s" (click)="setSegment($any(s))">
+            {{
+              s === 'all'
+                ? t('All', 'الكل')
+                : s === 'res'
+                  ? t('Residential', 'سكني')
+                  : t('Commercial', 'تجاري')
+            }}
+          </button>
+        }
+      </div>
       <div class="search">
         <svg
           width="15"
@@ -98,6 +111,10 @@
                 </button>
               }
             </div>
+            <span class="sub"
+              >{{ daysInStage(d) ?? '—' }} {{ t('days in stage', 'أيام في المرحلة') }} ·
+              {{ d.segment === 'com' ? t('Commercial', 'تجاري') : t('Residential', 'سكني') }}</span
+            >
             <span class="cardx__title">{{ d.title[lang()] }}</span>
             <span class="cardx__client"
               >{{ d.contact[lang()] }} · <span class="mono">{{ d.reference }}</span></span

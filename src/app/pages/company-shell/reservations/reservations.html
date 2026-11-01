@@ -92,6 +92,15 @@
           >
           <span class="sub"
             >{{ r.reference }}
+            @if (r.project) {
+              · {{ r.project![lang()] }}
+            }
+            @if (r.phase) {
+              · {{ r.phase![lang()] }}
+            }
+            @if (r.unitPriceMinor) {
+              · {{ money(r.unitPriceMinor!) }}
+            }
             @if (r.sample) {
               <i class="soon">{{ t('Sample', 'تجريبي') }}</i>
             }
@@ -104,7 +113,12 @@
             [queryParams]="{ leadId: r.leadId }"
             >{{ contact(r) }}</a
           >
-          <span class="sub ell">{{ agent(r) }} · {{ r.leadReference }}</span>
+          <span class="sub ell"
+            >{{ agent(r) }} · {{ r.leadReference }}
+            @if (r.createdAt) {
+              · {{ date(r.createdAt!) }}
+            }
+          </span>
         </div>
         <span class="mono small">{{ r.depositMinor !== null ? money(r.depositMinor) : '—' }}</span>
         <div class="cell left" [title]="date(r.expiresAt)">

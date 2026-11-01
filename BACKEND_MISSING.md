@@ -1,3 +1,21 @@
+# Implementation status — 2026-11-01
+
+The status column below is authoritative; the original **Today** descriptions are the baseline design audit and are preserved for context. This release does **not** complete every item in this backlog.
+
+Implemented: company metadata, success managers and drafts; server pricing quotes and annual onboarding; subscription timing/cycle/cancellation/history; lead/contact/project/API usage and quota controls; feature deprecation/permanent exceptions; notification history/read state and in-app preferences; announcements; lead email/activity/filtering, task workload and pipeline aging; inventory/reservation/contract aggregates; document review/preview; invoice PDF and billing contact snapshots; platform role cloning/descriptions and user dates; company audit filtering/export; global search and personal saved lead views.
+
+Third-party payments, messaging, ads/portals, Egyptian e-invoicing and AI integrations are skipped at the user's request. Self-hosted welcome email remains enabled. New free trials remain disabled. Other non-integrated features, including additional email/reminder workflows, billing automation, health history, contact relationships, imports and richer reporting, remain **Pending** below; preview-only controls retain explicit labels.
+
+Implementation notes:
+- Notifications begin with new domain events after migration; historical events are not fabricated. Read state is per user, and current permissions are checked again on reads.
+- API requests are metered by company/day in Africa/Cairo; authentication and notification controls remain usable at the cap. Resource creates/restores enforce limits without deleting existing data.
+- Deferred subscription changes take effect on the explicit renewal action. This release does not introduce automatic billing, charges, proration or renewal jobs.
+- Invoice contact details are captured on new invoices; historical issued invoices are not rewritten. PDFs are not ETA e-invoices.
+- Phase/building/project summaries and CRM filters are calculated before pagination. Reservation segment follows its lead; unit segment follows its project or, for standalone inventory, its residential/commercial unit type.
+- Saved views currently support private lead filters only; delete is supported, editing a saved view is pending.
+
+---
+
 # Backend missing
 
 Things the new Platform Admin design shows that the backend doesn't support yet.
@@ -15,14 +33,14 @@ enter workspace, suspend/reactivate/archive, CSV export. The Subscription column
 bars use real data from `GET /subscriptions` (needs `sub.manage`) and `GET /usage` (needs `usage`). Without
 those permissions the cells show `—`.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| C1 | **Last active** column / drawer row | Shows `lastActivity`, which is `companies.updated_at` (last *record edit*). Relabelled **Last updated** to stay accurate. | A real last-tenant-activity timestamp (e.g. latest tenant session/login or audited tenant write) on the company DTO, e.g. `lastActiveAt`. |
-| C2 | **Subscription** status per company in the list | Frontend fetches every page of `/subscriptions` and joins by `companyId`. Users without `sub.manage` see `—`. | Add `subscriptionStatus` (`trialing/active/past_due/canceled/expired/suspended`) to `companyDto` (the `company_subscription_summary` view already has the row). Also lets `co.view`-only admins see it. |
-| C3 | **Users x / seats** bar | Uses `/usage` (needs `usage` permission). | Optional: add `seatLimit` to `companyDto` so `co.view` users get the bar without the usage permission. |
-| C4 | Suspend/archive dialog **Reason category** (Non-payment / Security review / Terms violation / Customer request) and **acknowledgement** checkbox | API has one free-text `reason`. Frontend sends `"[Category] note"`. The acknowledgement is client-side only. | `StatusInput.reasonCode` enum (stored in `status_reason_code`, shown in the drawer note and audit log). Optional `acknowledged: true` in the audit payload. |
-| C5 | Drawer **Leads** usage bar (design: Users / Leads / Storage) | Shows Users / Listings / Storage from `/usage`. Leads isn't shown. | A leads quota + measurement in `/usage` if leads should be capped per plan (docs say there's no lead quota today). |
-| C6 | Workspace URL `slug.mujez.com` | Shows the slug only, since the tenant domain format isn't defined. | Expose the tenant workspace URL (or base domain) in `/platform-defaults` or the company DTO. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| C1 | **Last active** column / drawer row | Shows `lastActivity`, which is `companies.updated_at` (last *record edit*). Relabelled **Last updated** to stay accurate. | A real last-tenant-activity timestamp (e.g. latest tenant session/login or audited tenant write) on the company DTO, e.g. `lastActiveAt`. | Implemented |
+| C2 | **Subscription** status per company in the list | Frontend fetches every page of `/subscriptions` and joins by `companyId`. Users without `sub.manage` see `—`. | Add `subscriptionStatus` (`trialing/active/past_due/canceled/expired/suspended`) to `companyDto` (the `company_subscription_summary` view already has the row). Also lets `co.view`-only admins see it. | Implemented |
+| C3 | **Users x / seats** bar | Uses `/usage` (needs `usage` permission). | Optional: add `seatLimit` to `companyDto` so `co.view` users get the bar without the usage permission. | Implemented |
+| C4 | Suspend/archive dialog **Reason category** (Non-payment / Security review / Terms violation / Customer request) and **acknowledgement** checkbox | API has one free-text `reason`. Frontend sends `"[Category] note"`. The acknowledgement is client-side only. | `StatusInput.reasonCode` enum (stored in `status_reason_code`, shown in the drawer note and audit log). Optional `acknowledged: true` in the audit payload. | Implemented |
+| C5 | Drawer **Leads** usage bar (design: Users / Leads / Storage) | Shows Users / Listings / Storage from `/usage`. Leads isn't shown. | A leads quota + measurement in `/usage` if leads should be capped per plan (docs say there's no lead quota today). | Partial — Leads usage/limits available; company drawer layout still uses listings. |
+| C6 | Workspace URL `slug.mujez.com` | Shows the slug only, since the tenant domain format isn't defined. | Expose the tenant workspace URL (or base domain) in `/platform-defaults` or the company DTO. | Partial — Shared authenticated workspacePath returned; no tenant subdomains. |
 
 ## Onboarding (`/admin/onboarding`)
 
@@ -31,13 +49,13 @@ stuck days, status, step toggles, activate. **Trials ending ≤ 7 days** and the
 subscriptions' `renewsOn` (needs `sub.manage`). **Resend invite** opens the company drawer in Companies, where the
 real resend/invite flow lives.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| O1 | **Median time to first deal** stat | Static sample value (`11 days`), dashed card + "Sample" tag. | Endpoint/aggregate: median days from company `created_at` to the first `first_deal` completion (or first closed deal), last 90 days. |
-| O2 | **Trial → paid** conversion stat | Static sample value (`58%`, `18 of 31`). | Aggregate: trials started vs. converted to paid in the last 90 days. Note: docs say new companies start paid with no free trial, so define the metric first. |
-| O3 | **Success manager** column | Static "Unassigned", "Soon" tag. | `successManagerId` on companies (a platform user), returned as `{ id, name }`, plus an endpoint to assign it. |
-| O4 | **Send reminder** action (trial/active companies) | Shows a toast saying reminders aren't connected. Nothing is sent. | `POST /companies/:id/onboarding/reminder` with `{ step?, version }`, queued through the outbox/email worker and audited. |
-| O5 | **Trial ends** for `co.view`-only admins | `—` without `sub.manage`. | Add `trialEndsAt` to the onboarding DTO. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| O1 | **Median time to first deal** stat | Static sample value (`11 days`), dashed card + "Sample" tag. | Endpoint/aggregate: median days from company `created_at` to the first `first_deal` completion (or first closed deal), last 90 days. | Implemented |
+| O2 | **Trial → paid** conversion stat | Static sample value (`58%`, `18 of 31`). | Aggregate: trials started vs. converted to paid in the last 90 days. Note: docs say new companies start paid with no free trial, so define the metric first. | Not offered — no free trials, per user policy |
+| O3 | **Success manager** column | Static "Unassigned", "Soon" tag. | `successManagerId` on companies (a platform user), returned as `{ id, name }`, plus an endpoint to assign it. | Implemented |
+| O4 | **Send reminder** action (trial/active companies) | Shows a toast saying reminders aren't connected. Nothing is sent. | `POST /companies/:id/onboarding/reminder` with `{ step?, version }`, queued through the outbox/email worker and audited. | Pending |
+| O5 | **Trial ends** for `co.view`-only admins | `—` without `sub.manage`. | Add `trialEndsAt` to the onboarding DTO. | Implemented |
 
 ## Create company wizard (`/admin/onboarding/new`, new page)
 
@@ -45,23 +63,23 @@ Sent today (`POST /admin/api/v1/companies`): `nameEn, nameAr, slug, type, city, 
 The backend always creates an **active** company with a **monthly** subscription on the plan and emails the owner.
 Plan prices and default limits shown in the wizard come from `GET /plans` (falls back to `/plan-options`).
 
-| # | Wizard field / feature | Step | Needed from backend |
-|---|---|---|---|
-| W1 | Country | Company | `country` (ISO-2) on companies; drives VAT/currency. |
-| W2 | Business address | Company | `address` on companies. |
-| W3 | Company email (separate from owner email) | Company | `companyEmail` on companies. Today `adminEmail` is both contact and owner login. |
-| W4 | Tax registration no., Commercial registration no. | Company | `taxNumber`, `crNumber` on companies (needed for invoices). |
-| W5 | Administrator full name, mobile, job title, preferred language | Administrator | Accept `owner: { name, phone, title, lang }` on create and pass it to `OwnerWelcomeService.provision` (welcome email language, owner display name). |
-| W6 | Billing cycle **Annual** | Subscription | Accept `cycle: 'monthly' \| 'annual'` on create (`createInitialSubscription` is monthly only). |
-| W7 | **Start as trial** (21 days) | Subscription | Accept `mode: 'trial' \| 'paid'` (company `trial` + `trialing` subscription), if trials come back. |
-| W8 | Start date | Subscription | Accept `startDate` for the initial subscription period. |
-| W9 | Payment method (card / bank / InstaPay / invoice net 14) | Subscription | Accept `paymentMethod` on the initial subscription (the subscription entity already has `payment`). |
-| W10 | Discount (10/15/20%) | Subscription | Accept `discountPercent` and apply it to the first invoice / subscription amount. |
-| W11 | Billing currency (EGP/USD/SAR) | Subscription | Multi-currency plan prices + `currency` on subscription. |
-| W12 | First-invoice preview with VAT 14% | Subscription | Shown as a *Preview* computed client-side. Needs a `POST /companies/quote` (or plan pricing with tax rules) so the numbers come from the server. |
-| W13 | Custom resource limits at creation (users, listings, projects, storage, unlimited toggles) | Limits | Accept `limits` overrides on create. Today only `/usage/:id/override` exists, and it's +20% for 30 days, not arbitrary values. |
-| W14 | Per-company module on/off at creation | Features | Accept `featureOverrides: [{ key, enabled }]` on create (no expiry). Today `/feature-overrides` requires an expiry within a year and a reason, and the company must exist first. |
-| W15 | **Save draft** | Footer | A draft state (`status: 'draft'`, no owner email, no subscription) + `POST /companies/drafts` / resume. Today the button shows a "not saved yet" toast. |
+| # | Wizard field / feature | Step | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| W1 | Country | Company | `country` (ISO-2) on companies; drives VAT/currency. | Implemented |
+| W2 | Business address | Company | `address` on companies. | Implemented |
+| W3 | Company email (separate from owner email) | Company | `companyEmail` on companies. Today `adminEmail` is both contact and owner login. | Implemented |
+| W4 | Tax registration no., Commercial registration no. | Company | `taxNumber`, `crNumber` on companies (needed for invoices). | Implemented |
+| W5 | Administrator full name, mobile, job title, preferred language | Administrator | Accept `owner: { name, phone, title, lang }` on create and pass it to `OwnerWelcomeService.provision` (welcome email language, owner display name). | Partial — Profile stored; display name used. Preferred-language mail rendering remains. |
+| W6 | Billing cycle **Annual** | Subscription | Accept `cycle: 'monthly' \| 'annual'` on create (`createInitialSubscription` is monthly only). | Implemented |
+| W7 | **Start as trial** (21 days) | Subscription | Accept `mode: 'trial' \| 'paid'` (company `trial` + `trialing` subscription), if trials come back. | Not offered — no free trials, per user policy |
+| W8 | Start date | Subscription | Accept `startDate` for the initial subscription period. | Pending |
+| W9 | Payment method (card / bank / InstaPay / invoice net 14) | Subscription | Accept `paymentMethod` on the initial subscription (the subscription entity already has `payment`). | Partial — Card/bank/InstaPay recorded; no gateway charge or invoice-net-14 method. |
+| W10 | Discount (10/15/20%) | Subscription | Accept `discountPercent` and apply it to the first invoice / subscription amount. | Pending |
+| W11 | Billing currency (EGP/USD/SAR) | Subscription | Multi-currency plan prices + `currency` on subscription. | Pending |
+| W12 | First-invoice preview with VAT 14% | Subscription | Shown as a *Preview* computed client-side. Needs a `POST /companies/quote` (or plan pricing with tax rules) so the numbers come from the server. | Implemented |
+| W13 | Custom resource limits at creation (users, listings, projects, storage, unlimited toggles) | Limits | Accept `limits` overrides on create. Today only `/usage/:id/override` exists, and it's +20% for 30 days, not arbitrary values. | Pending |
+| W14 | Per-company module on/off at creation | Features | Accept `featureOverrides: [{ key, enabled }]` on create (no expiry). Today `/feature-overrides` requires an expiry within a year and a reason, and the company must exist first. | Pending |
+| W15 | **Save draft** | Footer | A draft state (`status: 'draft'`, no owner email, no subscription) + `POST /companies/drafts` / resume. Today the button shows a "not saved yet" toast. | Implemented |
 
 ---
 
@@ -72,14 +90,14 @@ feature chips (split from `featsEn/featsAr`), subscriber count, create, versione
 and subscriber selection, archive/restore, and Subscribers link. **Most popular** goes to the plan with the most current
 subscribers. **Est. MRR** per plan sums `mrr` from `GET /subscriptions` (needs `sub.manage`, else `—`).
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| P1 | **Leads** limit row on each card + edit field | Row shows `—` with a "Soon" tag. The edit field is disabled. | `leads` limit on plan versions (`PlanInput.leads`, nullable = unlimited) and its measurement in `/usage`. |
-| P2 | **API requests / day** limit row + edit field | Same as P1. | `apiPerDay` limit on plan versions and enforcement at the API gateway. |
-| P3 | **Est. MRR** per plan for users without `sub.manage` | `—`. | Add `mrrMinor` (sum of current active contract MRR) to each row of `GET /plans`. |
-| P4 | Archive dialog **internal note** | Field shown with a "Not saved yet" tag and not sent. | Optional `reason` on `PlanArchive`, written to the audit log. |
-| P5 | Structured feature list (design shows module chips derived from the plan tier) | Chips are split from free-text `featsEn/featsAr`. | Optional: return the plan's feature entitlements from `/features` keyed by plan, so chips match real module access. |
-| P6 | Design note "Prices exclude 14% VAT" | Left out, because there's no tax configuration. | Tax settings (rate, inclusive/exclusive) in `/settings` or on the plan. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| P1 | **Leads** limit row on each card + edit field | Row shows `—` with a "Soon" tag. The edit field is disabled. | `leads` limit on plan versions (`PlanInput.leads`, nullable = unlimited) and its measurement in `/usage`. | Implemented |
+| P2 | **API requests / day** limit row + edit field | Same as P1. | `apiPerDay` limit on plan versions and enforcement at the API gateway. | Implemented |
+| P3 | **Est. MRR** per plan for users without `sub.manage` | `—`. | Add `mrrMinor` (sum of current active contract MRR) to each row of `GET /plans`. | Implemented |
+| P4 | Archive dialog **internal note** | Field shown with a "Not saved yet" tag and not sent. | Optional `reason` on `PlanArchive`, written to the audit log. | Implemented |
+| P5 | Structured feature list (design shows module chips derived from the plan tier) | Chips are split from free-text `featsEn/featsAr`. | Optional: return the plan's feature entitlements from `/features` keyed by plan, so chips match real module access. | Pending |
+| P6 | Design note "Prices exclude 14% VAT" | Left out, because there's no tax configuration. | Tax settings (rate, inclusive/exclusive) in `/settings` or on the plan. | Pending |
 
 ## Subscriptions (`/admin/subscriptions`)
 
@@ -88,20 +106,20 @@ Already real: list, search, plan and payment-method filters, status tabs includi
 amount, cycle, started (`periodStart`), renews/ends, drawer, create subscription, **Change plan** (upgrade/downgrade
 shortcuts preselect the next plan), **Renew**, and **Cancel** (at period end).
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| S1 | **Churn** KPI | Static sample (`2.4%`, `3 cancellations`), dashed card + "Sample" tag. | Monthly churn aggregate (cancellations ÷ subscriptions active at month start), e.g. in `/overview`. |
-| S2 | **Send renewal reminders** button | Opens a preview dialog. Confirm shows "not connected" and nothing is sent. | `POST /subscriptions/reminders` (`withinDays`) queued through the outbox/email worker. Docs: no renewal/dunning worker yet. |
-| S3 | **Change billing cycle…** (row menu) | Preview dialog only. The change-plan dialog keeps the cycle unchanged. | Accept `cycle` on `POST /subscriptions/:id/change` (or a new `/cycle` action), applied at renewal. |
-| S4 | Change plan **"At renewal"** timing | Disabled option with a "Soon" tag. Only "Immediately" works. | `when: 'now' \| 'renewal'` on change. Renewal = store a pending plan version (like the plan-edit renewal scope). |
-| S5 | Change plan **proration preview** | Shows current vs new price and says no proration is processed. | If proration is wanted, `POST /subscriptions/:id/change/preview` returning the prorated amount. |
-| S6 | **Extend trial…** | Preview dialog only (7/14/21 days + note). | `POST /subscriptions/:id/extend-trial` with `days`, `reason`, `version`. Note: new trials aren't offered, so this applies only to historic trialing records. |
-| S7 | **Manual adjustment…** (credit/charge) | Preview dialog only. | `POST /subscriptions/:id/adjustments` with `type: credit\|charge`, `amountMinor`, `reason`, linked to billing/invoices. |
-| S8 | Cancel **reason** + **internal note** | Shown with "Not saved yet" tags and not sent. The cancel API takes only `version`. | `reason` enum (`price/features/competitor/closed/other`) + `note` on `POST /subscriptions/:id/cancel`, stored and audited (also feeds S1). |
-| S9 | Cancel **Immediately** option | Disabled with a "Soon" tag. Cancellation is always at period end. | `when: 'now'` on cancel (ends access immediately, optional refund flag). |
-| S10 | **Payment** column as payment *status* (Paid / Failed / Pending) | Shows the recorded payment *method* (card/bank/InstaPay). | `paymentStatus` from the latest invoice/payment per subscription. Depends on billing/payments being real. |
-| S11 | **Past due** handling note (grace period, auto-suspend) | The drawer says there's no automatic retry or suspension yet. | Dunning: grace period setting, retries, automatic suspension job. |
-| S12 | Drawer **HISTORY** timeline | Shows the current period start only + a pointer to Audit logs, "Soon" tag. | `GET /subscriptions/:id/history` (created, plan changes, renewals, cancellation) from audit/outbox events. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| S1 | **Churn** KPI | Static sample (`2.4%`, `3 cancellations`), dashed card + "Sample" tag. | Monthly churn aggregate (cancellations ÷ subscriptions active at month start), e.g. in `/overview`. | Pending |
+| S2 | **Send renewal reminders** button | Opens a preview dialog. Confirm shows "not connected" and nothing is sent. | `POST /subscriptions/reminders` (`withinDays`) queued through the outbox/email worker. Docs: no renewal/dunning worker yet. | Pending |
+| S3 | **Change billing cycle…** (row menu) | Preview dialog only. The change-plan dialog keeps the cycle unchanged. | Accept `cycle` on `POST /subscriptions/:id/change` (or a new `/cycle` action), applied at renewal. | Implemented |
+| S4 | Change plan **"At renewal"** timing | Disabled option with a "Soon" tag. Only "Immediately" works. | `when: 'now' \| 'renewal'` on change. Renewal = store a pending plan version (like the plan-edit renewal scope). | Implemented |
+| S5 | Change plan **proration preview** | Shows current vs new price and says no proration is processed. | If proration is wanted, `POST /subscriptions/:id/change/preview` returning the prorated amount. | Pending |
+| S6 | **Extend trial…** | Preview dialog only (7/14/21 days + note). | `POST /subscriptions/:id/extend-trial` with `days`, `reason`, `version`. Note: new trials aren't offered, so this applies only to historic trialing records. | Not offered — no free trials, per user policy |
+| S7 | **Manual adjustment…** (credit/charge) | Preview dialog only. | `POST /subscriptions/:id/adjustments` with `type: credit\|charge`, `amountMinor`, `reason`, linked to billing/invoices. | Pending |
+| S8 | Cancel **reason** + **internal note** | Shown with "Not saved yet" tags and not sent. The cancel API takes only `version`. | `reason` enum (`price/features/competitor/closed/other`) + `note` on `POST /subscriptions/:id/cancel`, stored and audited (also feeds S1). | Implemented |
+| S9 | Cancel **Immediately** option | Disabled with a "Soon" tag. Cancellation is always at period end. | `when: 'now'` on cancel (ends access immediately, optional refund flag). | Implemented |
+| S10 | **Payment** column as payment *status* (Paid / Failed / Pending) | Shows the recorded payment *method* (card/bank/InstaPay). | `paymentStatus` from the latest invoice/payment per subscription. Depends on billing/payments being real. | Pending |
+| S11 | **Past due** handling note (grace period, auto-suspend) | The drawer says there's no automatic retry or suspension yet. | Dunning: grace period setting, retries, automatic suspension job. | Pending |
+| S12 | Drawer **HISTORY** timeline | Shows the current period start only + a pointer to Audit logs, "Soon" tag. | `GET /subscriptions/:id/history` (created, plan changes, renewals, cancellation) from audit/outbox events. | Implemented |
 
 ## Billing & invoices (`/admin/billing`)
 
@@ -111,16 +129,16 @@ credited/balance lines, credit notes, linked payments (from `GET /payments`), ne
 (`/issue`), **Record manual payment**, **Issue credit note** and **Void** (password-confirmed), CSV export (client-side).
 Header terms come from `/platform-defaults` (`paymentTerms`, `taxRate`). `/admin/billing?invoice=INV-…` opens an invoice.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| B1 | **Download PDF** | Menu/drawer item with "Soon" tag. Shows a "not available" toast. | `GET /invoices/:number/pdf` (rendered invoice with company tax details). |
-| B2 | **Send invoice** (email to billing contact) | "Soon" tag, toast only. | `POST /invoices/:number/send`, queued through outbox/email, audited (and record `sentAt`). |
-| B3 | **Failed payments** KPI | Dashed static card (`—`). | Gateway payment attempts with a `failed` state (see Y1). |
-| B4 | **Automatic overdue reminders** (design note: "reminders sent on day 1 and 3") | The drawer says no automatic reminders are sent. | Dunning schedule + reminder log per invoice. |
-| B5 | **Tax treatment / ETA e-invoice** | Shows the entered tax rate + "e-invoice: soon" tag. | Egyptian Tax Authority e-invoice submission (UUID, status) and per-company tax profile. |
-| B6 | **Bill-to email** in the drawer | Shows the company name only. | Include the billing contact email (`companyEmail` / `adminEmail`) in the invoice DTO snapshot. |
-| B7 | Server-side search/filter/totals | All pages are fetched and filtered client-side (`limit` max 100/page). | `GET /invoices?status=&q=&from=&to=` plus a `summary` block (billed/collected/outstanding/overdue) for large datasets. |
-| B8 | Invoice numbering format shown in header (`INV-{YYYY}-{####}`) | Replaced with real payment terms/tax from settings. | Expose the numbering pattern in `/platform-defaults` if it should be shown. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| B1 | **Download PDF** | Menu/drawer item with "Soon" tag. Shows a "not available" toast. | `GET /invoices/:number/pdf` (rendered invoice with company tax details). | Implemented |
+| B2 | **Send invoice** (email to billing contact) | "Soon" tag, toast only. | `POST /invoices/:number/send`, queued through outbox/email, audited (and record `sentAt`). | Pending |
+| B3 | **Failed payments** KPI | Dashed static card (`—`). | Gateway payment attempts with a `failed` state (see Y1). | Skipped — third-party integration, per user request |
+| B4 | **Automatic overdue reminders** (design note: "reminders sent on day 1 and 3") | The drawer says no automatic reminders are sent. | Dunning schedule + reminder log per invoice. | Pending |
+| B5 | **Tax treatment / ETA e-invoice** | Shows the entered tax rate + "e-invoice: soon" tag. | Egyptian Tax Authority e-invoice submission (UUID, status) and per-company tax profile. | Skipped — third-party integration, per user request |
+| B6 | **Bill-to email** in the drawer | Shows the company name only. | Include the billing contact email (`companyEmail` / `adminEmail`) in the invoice DTO snapshot. | Implemented |
+| B7 | Server-side search/filter/totals | All pages are fetched and filtered client-side (`limit` max 100/page). | `GET /invoices?status=&q=&from=&to=` plus a `summary` block (billed/collected/outstanding/overdue) for large datasets. | Pending |
+| B8 | Invoice numbering format shown in header (`INV-{YYYY}-{####}`) | Replaced with real payment terms/tax from settings. | Expose the numbering pattern in `/platform-defaults` if it should be shown. | Pending |
 
 ## Payments (`/admin/payments`)
 
@@ -129,14 +147,14 @@ KPIs (collected last 30 days net of refunds, pending + unmatched reconciliation,
 amount/refunded/net, refund history, **Mark as reconciled / unmatched** (`/reconcile`), **Refund** (password-confirmed),
 **Open invoice** (deep link into Billing).
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| Y1 | **Failed** tab + KPI, **Retry charge** action, decline reason ("insufficient funds…") | No Failed tab. Dashed static KPI card. Retry shows a "needs gateway" toast. | Payment-gateway integration that records attempts (`pending/failed/succeeded`), decline codes, and `POST /payments/:id/retry`. Payments today are manual records only. |
-| Y2 | **Success rate** KPI | Dashed static card (`—`). | Derived from Y1 attempts (succeeded ÷ attempted, excluding pending). |
-| Y3 | **Reconcile bank file** button | "Soon" tag, toast only. | `POST /payments/reconciliation/import` (CSV/MT940 upload) that auto-matches by reference and amount and returns matched/unmatched lists. |
-| Y4 | Card **•••• last 4** in the drawer | Not shown. | Store a masked card suffix/brand from the gateway (never the full PAN). |
-| Y5 | "Customer was emailed a payment link" (failed note) | Not shown. | Payment-link generation + email (depends on Y1/B2). |
-| Y6 | Server-side search/filter/totals | Client-side over all pages. | `GET /payments?status=&reconciliation=&method=&q=&from=&to=` + summary block. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| Y1 | **Failed** tab + KPI, **Retry charge** action, decline reason ("insufficient funds…") | No Failed tab. Dashed static KPI card. Retry shows a "needs gateway" toast. | Payment-gateway integration that records attempts (`pending/failed/succeeded`), decline codes, and `POST /payments/:id/retry`. Payments today are manual records only. | Skipped — third-party integration, per user request |
+| Y2 | **Success rate** KPI | Dashed static card (`—`). | Derived from Y1 attempts (succeeded ÷ attempted, excluding pending). | Skipped — third-party integration, per user request |
+| Y3 | **Reconcile bank file** button | "Soon" tag, toast only. | `POST /payments/reconciliation/import` (CSV/MT940 upload) that auto-matches by reference and amount and returns matched/unmatched lists. | Pending |
+| Y4 | Card **•••• last 4** in the drawer | Not shown. | Store a masked card suffix/brand from the gateway (never the full PAN). | Skipped — third-party integration, per user request |
+| Y5 | "Customer was emailed a payment link" (failed note) | Not shown. | Payment-link generation + email (depends on Y1/B2). | Skipped — third-party integration, per user request |
+| Y6 | Server-side search/filter/totals | Client-side over all pages. | `GET /payments?status=&reconciliation=&method=&q=&from=&to=` + summary block. | Pending |
 
 ## Feature management (`/admin/feature-management`)
 
@@ -145,13 +163,13 @@ reason + acknowledgement), rollout % (stable hash bucket), company overrides lis
 effective-state column (computed from flag + override + company plan), "Check a company" (`/features/effective/:id`).
 KPIs for features, overrides, gradual rollout and globally disabled are computed from the catalog.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| F1 | **Deprecated** KPI + "Deprecated (hidden for new plans)" switch in the rollout dialog | Dashed static KPI. The switch shows a "not supported" toast. | `deprecated` boolean on feature definitions + `action: 'deprecate'` on `/features/:key/update`. Hide deprecated features from new plan versions. |
-| F2 | **Permanent** company override | Disabled option with "Soon" tag. Max duration is 365 days. | Allow `expiresAt: null` (permanent) on `/feature-overrides` (today it must be in the future and within one year). |
-| F3 | Override **By** column (who created it) | Shows the reason instead. | Return `createdBy: { id, name }` and `createdAt` on each override. |
-| F4 | Feature **category** ("12 modules · 6 advanced") and "from {plan}" tier label | "from {plan}" is derived from the lowest enabled plan. No module/advanced split. | `category` (`module`/`advanced`) on feature definitions. |
-| F5 | Plan-toggle **reason** | The UI sends a fixed reason string (the API requires one). | Optional: collect a reason in the dialog (frontend), no backend change needed. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| F1 | **Deprecated** KPI + "Deprecated (hidden for new plans)" switch in the rollout dialog | Dashed static KPI. The switch shows a "not supported" toast. | `deprecated` boolean on feature definitions + `action: 'deprecate'` on `/features/:key/update`. Hide deprecated features from new plan versions. | Implemented |
+| F2 | **Permanent** company override | Disabled option with "Soon" tag. Max duration is 365 days. | Allow `expiresAt: null` (permanent) on `/feature-overrides` (today it must be in the future and within one year). | Implemented |
+| F3 | Override **By** column (who created it) | Shows the reason instead. | Return `createdBy: { id, name }` and `createdAt` on each override. | Implemented |
+| F4 | Feature **category** ("12 modules · 6 advanced") and "from {plan}" tier label | "from {plan}" is derived from the lowest enabled plan. No module/advanced split. | `category` (`module`/`advanced`) on feature definitions. | Partial — Category returned; existing definitions retain the default category until classified. |
+| F5 | Plan-toggle **reason** | The UI sends a fixed reason string (the API requires one). | Optional: collect a reason in the dialog (frontend), no backend change needed. | Pending |
 
 ## Usage & limits (`/admin/usage-limits`)
 
@@ -160,15 +178,15 @@ Already real: per-company users / listings / storage readings and effective limi
 temporary **+20% / 30-day** override per resource and remove, CSV export (client-side), open company. Missing readings
 show "Not measured" (never zero), as the backend requires.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| U1 | **Leads** KPI + column | Dashed static KPI. Column shows `—` with "Soon". | Lead counts in `platform.resource_usage` + a leads limit on plans (see P1). |
-| U2 | **Contacts** KPI | Dashed static KPI. | Contact counts in `resource_usage` (and an optional limit). |
-| U3 | **API requests / day** KPI + column | Dashed static KPI. Column shows `—` with "Soon". | Gateway request metering per company + limit (see P2). |
-| U4 | **Projects** count (design: "Projects · Units") | Only listings shown. | Projects reading in `resource_usage` (plan already stores a `projects` limit). |
-| U5 | Override with **custom value** and **custom duration** | Fields shown disabled ("+20% only", "30 days only"). | Accept `limit` and `days` on `POST /usage/:id/override` (today fixed `ceil(base×1.2)` for 30 days, non-stacking). |
-| U6 | **Notify company admin** (usage alert email) | "Soon" tag, toast only. | `POST /usage/:id/notify` queued through outbox/email, plus automatic 80/90/100% alerts. |
-| U7 | "Soft-blocked creates" when over limit | Not claimed in the UI. | Quota enforcement in the CRM create paths (docs: modules must call the resolver; not done yet). |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| U1 | **Leads** KPI + column | Dashed static KPI. Column shows `—` with "Soon". | Lead counts in `platform.resource_usage` + a leads limit on plans (see P1). | Implemented |
+| U2 | **Contacts** KPI | Dashed static KPI. | Contact counts in `resource_usage` (and an optional limit). | Implemented |
+| U3 | **API requests / day** KPI + column | Dashed static KPI. Column shows `—` with "Soon". | Gateway request metering per company + limit (see P2). | Implemented |
+| U4 | **Projects** count (design: "Projects · Units") | Only listings shown. | Projects reading in `resource_usage` (plan already stores a `projects` limit). | Implemented |
+| U5 | Override with **custom value** and **custom duration** | Fields shown disabled ("+20% only", "30 days only"). | Accept `limit` and `days` on `POST /usage/:id/override` (today fixed `ceil(base×1.2)` for 30 days, non-stacking). | Implemented |
+| U6 | **Notify company admin** (usage alert email) | "Soon" tag, toast only. | `POST /usage/:id/notify` queued through outbox/email, plus automatic 80/90/100% alerts. | Pending |
+| U7 | "Soft-blocked creates" when over limit | Not claimed in the UI. | Quota enforcement in the CRM create paths (docs: modules must call the resolver; not done yet). | Implemented |
 
 ## Integrations (`/admin/integrations`)
 
@@ -177,14 +195,14 @@ reported), category + status filters, search, **Enable availability / Disable fo
 (`/integrations/:key/update`), configuration history (last 20 changes), credential/webhook/companies fields (shown as
 "Not configured" / `—` because the backend returns them empty by design).
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| I1 | Working connectors (WhatsApp, email relay, SMS, Meta/Google ads, portals, inventory feeds, Paymob, bank reconciliation, storage, analytics) | Every connector shows "No provider adapter… set up yet". `connectorReady` is always `false`. | Provider adapters, credentials in a vault, webhook handlers and per-company bindings, one connector at a time. |
-| I2 | **Connected companies**, **Last successful sync**, **Errors · 24h** columns + KPI | `—` (backend returns `0` / `null`). Errors KPI is a dashed static card. | Real values from connector runs: per-company bindings count, last successful sync time, error counter. |
-| I3 | **Leads via integrations** KPI ("68% of new leads · 30d") | Dashed static card. | Lead `source` attribution aggregated over 30 days. |
-| I4 | Drawer **Environment**, **Rate limit**, **Keys rotated** rows | Rows shown with "Soon" tags and `—`. | Per-connector config metadata (environment, rate limit, `rotatedAt`). |
-| I5 | **Rotate keys in vault** (needs a second Super Admin) | "Soon" tag, toast only. | `POST /integrations/:key/rotate` with two-person approval. |
-| I6 | **Recent sync log** in the drawer | "Soon" section. | `GET /integrations/:key/sync-log` (time, result, record count, error). |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| I1 | Working connectors (WhatsApp, email relay, SMS, Meta/Google ads, portals, inventory feeds, Paymob, bank reconciliation, storage, analytics) | Every connector shows "No provider adapter… set up yet". `connectorReady` is always `false`. | Provider adapters, credentials in a vault, webhook handlers and per-company bindings, one connector at a time. | Skipped — third-party integration, per user request |
+| I2 | **Connected companies**, **Last successful sync**, **Errors · 24h** columns + KPI | `—` (backend returns `0` / `null`). Errors KPI is a dashed static card. | Real values from connector runs: per-company bindings count, last successful sync time, error counter. | Skipped — third-party integration, per user request |
+| I3 | **Leads via integrations** KPI ("68% of new leads · 30d") | Dashed static card. | Lead `source` attribution aggregated over 30 days. | Pending |
+| I4 | Drawer **Environment**, **Rate limit**, **Keys rotated** rows | Rows shown with "Soon" tags and `—`. | Per-connector config metadata (environment, rate limit, `rotatedAt`). | Skipped — third-party integration, per user request |
+| I5 | **Rotate keys in vault** (needs a second Super Admin) | "Soon" tag, toast only. | `POST /integrations/:key/rotate` with two-person approval. | Skipped — third-party integration, per user request |
+| I6 | **Recent sync log** in the drawer | "Soon" section. | `GET /integrations/:key/sync-log` (time, result, record count, error). | Skipped — third-party integration, per user request |
 
 ## System health (`/admin/system-health`)
 
@@ -193,16 +211,16 @@ latency and last heartbeat, process uptime, p50/p95 latency, 5xx error rate, API
 requests and 5xx charts (24 h, process-local), alerts from failing probes with severity filter. The page marks data
 stale when a refresh fails.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| H1 | **Environment** switch (Production / Staging) | Only "This environment". "Other" shows a toast. | A cross-environment health endpoint or external monitoring aggregation. |
-| H2 | **Range** 1 h / 7 d | 24 h only. Other options show a toast. | Persisted metrics (Prometheus/time-series DB). Today buckets are in-memory, max 24 h, per process. |
-| H3 | **API availability %** / SLA | Replaced by process uptime. | External uptime monitoring (availability over 30 days). |
-| H4 | **Latency p95 per hour** chart | Dashed static card with the overall p95 only. | Per-bucket latency percentiles. |
-| H5 | **Background jobs** count, queued, failed + **job failures** chart | KPI shows the routing-worker heartbeat. Chart is a dashed static card. | Job queue instrumentation (`activeJobs` is `null` today). |
-| H6 | **Storage** KPI ("71% · 4.1 / 5.8 TB") | Dashed static card showing API memory instead. | `storageBytes` + capacity (null today). |
-| H7 | **Acknowledge** alert / on-call notification, incident history (resolved alerts) | "Soon" button. Only current failing probes are listed. | Persisted incidents with `acknowledgedBy/At`, resolution time, and on-call paging. |
-| H8 | Metrics across replicas | Single process only. | Shared metrics store so multiple API replicas report together. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| H1 | **Environment** switch (Production / Staging) | Only "This environment". "Other" shows a toast. | A cross-environment health endpoint or external monitoring aggregation. | Pending |
+| H2 | **Range** 1 h / 7 d | 24 h only. Other options show a toast. | Persisted metrics (Prometheus/time-series DB). Today buckets are in-memory, max 24 h, per process. | Pending |
+| H3 | **API availability %** / SLA | Replaced by process uptime. | External uptime monitoring (availability over 30 days). | Pending |
+| H4 | **Latency p95 per hour** chart | Dashed static card with the overall p95 only. | Per-bucket latency percentiles. | Pending |
+| H5 | **Background jobs** count, queued, failed + **job failures** chart | KPI shows the routing-worker heartbeat. Chart is a dashed static card. | Job queue instrumentation (`activeJobs` is `null` today). | Pending |
+| H6 | **Storage** KPI ("71% · 4.1 / 5.8 TB") | Dashed static card showing API memory instead. | `storageBytes` + capacity (null today). | Pending |
+| H7 | **Acknowledge** alert / on-call notification, incident history (resolved alerts) | "Soon" button. Only current failing probes are listed. | Persisted incidents with `acknowledgedBy/At`, resolution time, and on-call paging. | Pending |
+| H8 | Metrics across replicas | Single process only. | Shared metrics store so multiple API replicas report together. | Pending |
 
 ## Support tickets (`/admin/support-tickets`)
 
@@ -211,13 +229,13 @@ tickets, SLA countdown per ticket, drawer with status / priority / assignee cont
 internal notes with one composer and an Internal toggle (`/:id/entries`), resolve / close / reopen, workspace access requests
 (record + cancel), new ticket on behalf of a requester, row shortcuts (Assign to me, Mark resolved).
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| T1 | **First response** KPI ("38 min · median 30 d") | Dashed static card. | Store `firstResponseAt` per ticket (first agent reply) and return a median in `kpis`. |
-| T2 | **CSAT** KPI ("4.7 / 5 · 112 ratings") | Dashed static card (shows resolved in 7 d as the subtitle). | Satisfaction rating capture after resolution + aggregate. |
-| T3 | Replies **delivered to the customer** (email / in-app) | The page says replies are stored only. | Outbound email / tenant-portal delivery for `kind: 'reply'` (docs: not configured). |
-| T4 | Customer-originated tickets (portal intake) | Tickets are created by staff on behalf of a requester. | Tenant-side ticket submission route + notification to staff. |
-| T5 | **Request support access** turning into a real session | Records a pending request only (as the backend states). | Approval flow that creates a time-boxed workspace session from an approved request. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| T1 | **First response** KPI ("38 min · median 30 d") | Dashed static card. | Store `firstResponseAt` per ticket (first agent reply) and return a median in `kpis`. | Implemented |
+| T2 | **CSAT** KPI ("4.7 / 5 · 112 ratings") | Dashed static card (shows resolved in 7 d as the subtitle). | Satisfaction rating capture after resolution + aggregate. | Pending |
+| T3 | Replies **delivered to the customer** (email / in-app) | The page says replies are stored only. | Outbound email / tenant-portal delivery for `kind: 'reply'` (docs: not configured). | Pending |
+| T4 | Customer-originated tickets (portal intake) | Tickets are created by staff on behalf of a requester. | Tenant-side ticket submission route + notification to staff. | Pending |
+| T5 | **Request support access** turning into a real session | Records a pending request only (as the backend states). | Approval flow that creates a time-boxed workspace session from an approved request. | Pending |
 
 ## Announcements (`/admin/announcements`)
 
@@ -226,13 +244,13 @@ with bilingual title + body, type, audience (all or plan), language, start/end (
 Publish, live CRM banner preview (EN and/or AR), row shortcuts **Publish now** (start = now) and **End now** (withdraw to
 draft).
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| A1 | **Priority** (Normal / High) column + form field | Column shows `—` with "Soon". Form field is "Not saved yet". | `priority: 'normal' \| 'high'` on announcements (and use it for banner ordering/styling). |
-| A2 | **Delete draft** | "Soon" menu item, toast only. | `POST /announcements/:id/delete` (drafts only, audited). |
-| A3 | **End now** as a real "expired" state | Implemented as withdraw-to-draft (hides it immediately but shows as Draft). | Accept `to = now` on published notices (today the end must not be in the past on publication), or an `end` action. |
-| A4 | Banner visible inside company CRM | Feed endpoint exists. Tenant UI banner isn't built. | Company-side banner component consuming `GET /api/v1/announcements` (frontend work in the company shell, plus company auth readiness per docs). |
-| A5 | Audience counts ("Published to 148 companies") | Not shown. | Return the number of companies matching `target` with a current subscription. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| A1 | **Priority** (Normal / High) column + form field | Column shows `—` with "Soon". Form field is "Not saved yet". | `priority: 'normal' \| 'high'` on announcements (and use it for banner ordering/styling). | Implemented |
+| A2 | **Delete draft** | "Soon" menu item, toast only. | `POST /announcements/:id/delete` (drafts only, audited). | Implemented |
+| A3 | **End now** as a real "expired" state | Implemented as withdraw-to-draft (hides it immediately but shows as Draft). | Accept `to = now` on published notices (today the end must not be in the past on publication), or an `end` action. | Implemented |
+| A4 | Banner visible inside company CRM | Feed endpoint exists. Tenant UI banner isn't built. | Company-side banner component consuming `GET /api/v1/announcements` (frontend work in the company shell, plus company auth readiness per docs). | Implemented |
+| A5 | Audience counts ("Published to 148 companies") | Not shown. | Return the number of companies matching `target` with a current subscription. | Implemented |
 
 ## Notifications (`/admin/notifications`)
 
@@ -240,12 +258,12 @@ Already real: the notification list is the current alert set from `GET /overview
 support SLA, user limits, new companies) filtered by your permissions. Each row opens its related screen. Severity is real.
 Read/unread and "Mark all read" work, but are stored **in this browser only** (per signed-in user).
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| N1 | Server-side **read / unread** state (sync across devices), notification history | Kept in `localStorage` per user. Alerts are current conditions, not a stored feed. | Persisted notifications per platform user (`GET /notifications`, `POST /notifications/:id/read`, `POST /notifications/read-all`). |
-| N2 | **Delivery rules** matrix (event × In-app / Email / SMS) | Shown with a "Not saved yet" tag. Toggles are local preview only. SMS locked to critical events as in the design. | `GET/POST /me/notification-preferences` + delivery workers for email/SMS. |
-| N3 | **Received** time per notification | Not shown (alerts have no timestamp). | `createdAt` on each notification/alert. |
-| N4 | Events not covered by current alerts: payment failed, system incident, ticket assigned to me, subscription expiry reminder | Only the five alert kinds above appear. | Emit these events into the notification feed (depends on Y1 payments gateway, H7 incidents, support assignment events). |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| N1 | Server-side **read / unread** state (sync across devices), notification history | Kept in `localStorage` per user. Alerts are current conditions, not a stored feed. | Persisted notifications per platform user (`GET /notifications`, `POST /notifications/:id/read`, `POST /notifications/read-all`). | Implemented |
+| N2 | **Delivery rules** matrix (event × In-app / Email / SMS) | Shown with a "Not saved yet" tag. Toggles are local preview only. SMS locked to critical events as in the design. | `GET/POST /me/notification-preferences` + delivery workers for email/SMS. | Partial — In-app preferences only for emitted company, subscription, billing, support and announcement events. |
+| N3 | **Received** time per notification | Not shown (alerts have no timestamp). | `createdAt` on each notification/alert. | Implemented |
+| N4 | Events not covered by current alerts: payment failed, system incident, ticket assigned to me, subscription expiry reminder | Only the five alert kinds above appear. | Emit these events into the notification feed (depends on Y1 payments gateway, H7 incidents, support assignment events). | Partial — Domain changes emitted; gateway failures, incident and scheduled expiry events still pending. |
 
 ## Platform users (`/admin/platform-users`)
 
@@ -254,12 +272,12 @@ Already real: account list with role, status, last login (measured), active sess
 24-hour activation link shown for manual sharing), change role, reissue invitation, revoke sessions, disable / re-enable.
 All mutations are password + reason confirmed. Own account and Super Admins are protected, and only a Super Admin sees actions.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| U-1 | **MFA** column, **MFA enabled** KPI, **Reset MFA…** | Column `—` + "Soon". Dashed KPI. Menu item shows "not supported" toast. | Second-factor enrollment/verification, `mfaEnabled` on users, reset flow (docs: MFA is explicitly unsupported). |
-| U-2 | **Invitation email** ("Invitation re-sent to …") | Activation link is displayed for manual sharing. | Email delivery of activation links. |
-| U-3 | **Created** date column | Not shown. | Return `createdAt` on platform users. |
-| U-4 | Invitation **expires in** countdown for invited users | Generic "links expire after 24 h" text. | Return `invitationExpiresAt` for invited accounts. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| U-1 | **MFA** column, **MFA enabled** KPI, **Reset MFA…** | Column `—` + "Soon". Dashed KPI. Menu item shows "not supported" toast. | Second-factor enrollment/verification, `mfaEnabled` on users, reset flow (docs: MFA is explicitly unsupported). | Pending |
+| U-2 | **Invitation email** ("Invitation re-sent to …") | Activation link is displayed for manual sharing. | Email delivery of activation links. | Pending |
+| U-3 | **Created** date column | Not shown. | Return `createdAt` on platform users. | Implemented |
+| U-4 | Invitation **expires in** countdown for invited users | Generic "links expire after 24 h" text. | Return `invitationExpiresAt` for invited accounts. | Implemented |
 
 ## Roles & permissions (`/admin/roles-permissions`)
 
@@ -267,12 +285,12 @@ Already real: role cards with live member counts and granted/total permissions, 
 key prefix), per-role on/off toggle (`/roles/:key/permission`), create custom role, archive unused custom role (blocked
 while it has members). All writes need password + reason. Super Admin is locked. Only a Super Admin sees enabled controls.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| R1 | Permission levels **Limited** / **Optional · on/off** (e.g. Support "limited" company view) | Binary Yes/No per role. | Scoped permissions (e.g. `co.view:assigned`) or a level enum per grant. |
-| R2 | Custom role **based on** an existing role (inherit, then only remove access) | "Based on role" field shown disabled with "Soon". New roles start with `co.view` only. | Accept `baseRole` on `POST /roles` and copy its grants. Optional "can only remove" constraint. |
-| R3 | Permission **group** labels (Companies, Revenue, …) | Derived on the client from key prefixes. | Return `group` (and order) with each permission in `GET /roles`. |
-| R4 | Role **description** ("tickets & access", "invoices & payments") | Shows built-in / custom / locked instead. | `descriptionEn/Ar` on roles. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| R1 | Permission levels **Limited** / **Optional · on/off** (e.g. Support "limited" company view) | Binary Yes/No per role. | Scoped permissions (e.g. `co.view:assigned`) or a level enum per grant. | Pending |
+| R2 | Custom role **based on** an existing role (inherit, then only remove access) | "Based on role" field shown disabled with "Soon". New roles start with `co.view` only. | Accept `baseRole` on `POST /roles` and copy its grants. Optional "can only remove" constraint. | Implemented |
+| R3 | Permission **group** labels (Companies, Revenue, …) | Derived on the client from key prefixes. | Return `group` (and order) with each permission in `GET /roles`. | Implemented |
+| R4 | Role **description** ("tickets & access", "invoices & payments") | Shows built-in / custom / locked instead. | `descriptionEn/Ar` on roles. | Implemented |
 
 ## Audit logs (`/admin/audit-logs`)
 
@@ -280,13 +298,13 @@ Already real: immutable event list with server-side search, severity / workspace
 filters, keyset "Load more", KPIs (matching total, high severity, workspace access), detail drawer with actual before/after
 JSON, result and IP, password-confirmed CSV export (redacted, max 5,000 rows).
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| L1 | **Denied** KPI (blocked attempts) | Counts denied rows among the results loaded so far (labelled as such). | `denied` count in the list `kpis`, plus auditing of denied/failed attempts (docs: not all denied requests are audited). |
-| L2 | **Retention "7 years"** | Shows "Immutable" + "retention period: soon". | A configured retention policy (and archival job) exposed in settings. |
-| L3 | **Company** column (company name for company-scoped events) | Not shown. Resource column only. | Return `companyId` / company name on audit summaries. |
-| L4 | **Administrator** dropdown filter | Covered by free-text search. | Optional `actorId` filter + `GET /audit-logs/actors` list. |
-| L5 | **Failed sign-in** events | Not present unless the backend records them. | Audit failed logins / lockouts (security events). |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| L1 | **Denied** KPI (blocked attempts) | Counts denied rows among the results loaded so far (labelled as such). | `denied` count in the list `kpis`, plus auditing of denied/failed attempts (docs: not all denied requests are audited). | Pending |
+| L2 | **Retention "7 years"** | Shows "Immutable" + "retention period: soon". | A configured retention policy (and archival job) exposed in settings. | Pending |
+| L3 | **Company** column (company name for company-scoped events) | Not shown. Resource column only. | Return `companyId` / company name on audit summaries. | Pending |
+| L4 | **Administrator** dropdown filter | Covered by free-text search. | Optional `actorId` filter + `GET /audit-logs/actors` list. | Pending |
+| L5 | **Failed sign-in** events | Not present unless the backend records them. | Audit failed logins / lockouts (security events). | Pending |
 
 ## Settings (`/admin/settings`)
 
@@ -294,22 +312,22 @@ Already real (`GET/POST /settings`, password + reason, versioned): platform name
 trial days, default plan, payment terms, VAT rate, session length, login-attempt rate limit, primary color. The page shows
 "Unsaved changes" with **Discard**, keeps your draft on a 409 conflict, and only Super Admin can save.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| S-1 | **Default currency** (EGP/USD/SAR/AED) and **Supported currencies** | Locked to EGP ("Fixed"). | Multi-currency support (DTO allows only `EGP`). |
-| S-2 | **Time zone** choice | Locked to Africa/Cairo. | Accept other IANA zones (DTO allows only `Africa/Cairo`). |
-| S-3 | **Supported languages** (Arabic + English / Arabic only) | Fixed to both. | `supportedLangs` setting honored by tenant UI. |
-| S-4 | **Invoice numbering** pattern `INV-{YYYY}-{####}` | Locked to `INV-{UUID}`. | Sequential per-year numbering with a configurable pattern. |
-| S-5 | **Tax profile** (standard / reverse charge) | Locked to "Manual". | Tax profiles (DTO allows only `manual`), see B5. |
-| S-6 | **Payment provider** (Paymob) | "Manual only", disabled. | Gateway integration + provider setting (see Y1). |
-| S-7 | **Default CRM modules** (everything in plan / core only) | Static segment. | Setting consumed at company creation to seed feature overrides. |
-| S-8 | **MFA requirement** | "Not enforced", static. | MFA support (see U-1). `requireMfa` cannot be saved as true today. |
-| S-9 | **Password policy** selector | Fixed "At least 12 characters". | Configurable policy (length, complexity, reuse history). |
-| S-10 | **Admin access restriction** (office IPs + VPN) and **management-mode max duration** | Static / read-only. | IP allowlist enforcement and management workspace sessions (DTO forces empty / 0). |
-| S-11 | **Lock after failed attempts** (true lockout) | Shown as "Login attempts per 15 min" (the real behavior: a rate limit counting all attempts). | Failed-attempt-only lockout with unlock flow, if a true lockout is wanted. |
-| S-12 | **Notifications to company admins** (expiry reminder days, trial notice, payment failure, incidents) | Toggles shown off, "Soon". Clicking shows a toast. | Outbound delivery (email) + allowing `notify*` to be saved true. Reminder lead-time settings (`expiryReminderDays`, `trialNoticeDays`). |
-| S-13 | **Brand email templates** | Static "Off". | Branded email templates once email delivery exists. |
-| S-14 | **Logo / favicon** upload (design section subtitle) | Not shown. | File upload + storage for brand assets. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| S-1 | **Default currency** (EGP/USD/SAR/AED) and **Supported currencies** | Locked to EGP ("Fixed"). | Multi-currency support (DTO allows only `EGP`). | Pending |
+| S-2 | **Time zone** choice | Locked to Africa/Cairo. | Accept other IANA zones (DTO allows only `Africa/Cairo`). | Pending |
+| S-3 | **Supported languages** (Arabic + English / Arabic only) | Fixed to both. | `supportedLangs` setting honored by tenant UI. | Pending |
+| S-4 | **Invoice numbering** pattern `INV-{YYYY}-{####}` | Locked to `INV-{UUID}`. | Sequential per-year numbering with a configurable pattern. | Pending |
+| S-5 | **Tax profile** (standard / reverse charge) | Locked to "Manual". | Tax profiles (DTO allows only `manual`), see B5. | Pending |
+| S-6 | **Payment provider** (Paymob) | "Manual only", disabled. | Gateway integration + provider setting (see Y1). | Pending |
+| S-7 | **Default CRM modules** (everything in plan / core only) | Static segment. | Setting consumed at company creation to seed feature overrides. | Pending |
+| S-8 | **MFA requirement** | "Not enforced", static. | MFA support (see U-1). `requireMfa` cannot be saved as true today. | Pending |
+| S-9 | **Password policy** selector | Fixed "At least 12 characters". | Configurable policy (length, complexity, reuse history). | Pending |
+| S-10 | **Admin access restriction** (office IPs + VPN) and **management-mode max duration** | Static / read-only. | IP allowlist enforcement and management workspace sessions (DTO forces empty / 0). | Pending |
+| S-11 | **Lock after failed attempts** (true lockout) | Shown as "Login attempts per 15 min" (the real behavior: a rate limit counting all attempts). | Failed-attempt-only lockout with unlock flow, if a true lockout is wanted. | Pending |
+| S-12 | **Notifications to company admins** (expiry reminder days, trial notice, payment failure, incidents) | Toggles shown off, "Soon". Clicking shows a toast. | Outbound delivery (email) + allowing `notify*` to be saved true. Reminder lead-time settings (`expiryReminderDays`, `trialNoticeDays`). | Pending |
+| S-13 | **Brand email templates** | Static "Off". | Branded email templates once email delivery exists. | Pending |
+| S-14 | **Logo / favicon** upload (design section subtitle) | Not shown. | File upload + storage for brand assets. | Pending |
 
 ---
 
@@ -317,14 +335,14 @@ trial days, default plan, payment terms, VAT rate, session length, login-attempt
 
 Already left out of the UI rather than faked. Listed so the full design can be restored later.
 
-| # | Design element | Needed from backend |
-|---|---|---|
-| D1 | MRR growth badge (e.g. `+3.3%`) and **MRR growth** bar chart | Historical MRR series (`capabilities.historicalMrr` is `false`). |
-| D2 | **Monthly churn** stat | Churn calculation (`capabilities.churn` is `false`). |
-| D3 | **Trial → paid** stat | Same as O2. |
-| D4 | **Upcoming renewals** list | `GET /subscriptions?renewingWithin=14d` or include in `/overview`. |
-| D5 | Revenue movement chips (New / Expansion / Churned / Net) | MRR movement breakdown per range. |
-| D6 | Recent companies: plan, status, last active columns | Add `plan`, `status`, `lastActiveAt` to `overview.growth[]`. |
+| # | Design element | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|
+| D1 | MRR growth badge (e.g. `+3.3%`) and **MRR growth** bar chart | Historical MRR series (`capabilities.historicalMrr` is `false`). | Pending |
+| D2 | **Monthly churn** stat | Churn calculation (`capabilities.churn` is `false`). | Pending |
+| D3 | **Trial → paid** stat | Same as O2. | Not offered — no free trials, per user policy |
+| D4 | **Upcoming renewals** list | `GET /subscriptions?renewingWithin=14d` or include in `/overview`. | Pending |
+| D5 | Revenue movement chips (New / Expansion / Churned / Net) | MRR movement breakdown per range. | Pending |
+| D6 | Recent companies: plan, status, last active columns | Add `plan`, `status`, `lastActiveAt` to `overview.growth[]`. | Pending |
 
 ---
 
@@ -342,14 +360,14 @@ wants, budget, stage, source, owner, last update, manual score), side panel with
 recording with channel + note, activity composer with kind chips, full activity timeline, related leads, edit, archive/restore,
 create with campaign attribution and backend duplicate handling.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| CL1 | **Residential / Commercial** segment switch (header) | Only "All" works. The others show a "not available" toast. | `segment=res\|com` filter on `GET /leads` (and `GET /pipeline`). Filtering a single loaded page would be misleading. |
-| CL2 | Lead **email** | Facts row shows `—` with "Soon". | `email` on leads (create/update + duplicate check). |
-| CL3 | **Last activity** time ("2 h ago") | Shows `updatedAt` labelled "Last update". | `lastActivityAt` on the lead list (latest activity entry). |
-| CL4 | Activity **kinds** (Call / WhatsApp / Viewing / Note) and **call outcome** logging | Saved as notes with a `[Kind]` prefix. Outcome isn't captured. | `kind` + optional `outcome` on `POST /leads/:id/notes` (or a dedicated `/activities` write), shown with their own icons. |
-| CL5 | WhatsApp send / call from inside the CRM | Opens the phone dialer or WhatsApp app. Nothing is logged automatically. | WhatsApp Business / telephony integration that logs messages and calls (see I1). |
-| CL6 | Owner / "My leads" filter | Not shown. | `ownerId` filter on `GET /leads` (agents could default to their own). |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| CL1 | **Residential / Commercial** segment switch (header) | Only "All" works. The others show a "not available" toast. | `segment=res\|com` filter on `GET /leads` (and `GET /pipeline`). Filtering a single loaded page would be misleading. | Implemented |
+| CL2 | Lead **email** | Facts row shows `—` with "Soon". | `email` on leads (create/update + duplicate check). | Implemented |
+| CL3 | **Last activity** time ("2 h ago") | Shows `updatedAt` labelled "Last update". | `lastActivityAt` on the lead list (latest activity entry). | Implemented |
+| CL4 | Activity **kinds** (Call / WhatsApp / Viewing / Note) and **call outcome** logging | Saved as notes with a `[Kind]` prefix. Outcome isn't captured. | `kind` + optional `outcome` on `POST /leads/:id/notes` (or a dedicated `/activities` write), shown with their own icons. | Implemented |
+| CL5 | WhatsApp send / call from inside the CRM | Opens the phone dialer or WhatsApp app. Nothing is logged automatically. | WhatsApp Business / telephony integration that logs messages and calls (see I1). | Pending |
+| CL6 | Owner / "My leads" filter | Not shown. | `ownerId` filter on `GET /leads` (agents could default to their own). | Implemented |
 
 ## Pipeline (`/company/pipeline`)
 
@@ -357,11 +375,11 @@ Already real: Kanban board with per-stage server counts and sale totals across a
 reference, value, owner initials), **drag and drop** to the next stage / to Lost / back to New (reopen), next-stage arrow,
 mark lost / reopen with reason, rollback on a rejected write, search, load more, new / edit deal.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| CP1 | **Days in stage** on each card ("12 d") | Not shown. | `stageChangedAt` on deals. |
-| CP2 | Residential / Commercial segment tag + switch | Cards show Sale / Lease (real) instead. No segment switch. | Deal `segment` (from its lead) + filter (see CL1). |
-| CP3 | Drag a card **across several stages** in one move | Only next stage, Lost, or reopen are accepted (the backend moves one stage at a time). | Allow direct jumps if the business wants them (with audit). |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| CP1 | **Days in stage** on each card ("12 d") | Not shown. | `stageChangedAt` on deals. | Implemented |
+| CP2 | Residential / Commercial segment tag + switch | Cards show Sale / Lease (real) instead. No segment switch. | Deal `segment` (from its lead) + filter (see CL1). | Implemented |
+| CP3 | Drag a card **across several stages** in one move | Only next stage, Lost, or reopen are accepted (the backend moves one stage at a time). | Allow direct jumps if the business wants them (with audit). | Pending |
 
 ## Contacts (`/company/contacts`)
 
@@ -371,16 +389,16 @@ avatars, last update and owner; profile header with type pill and company; quick
 reason); Activity tab (note composer + paged timeline); create/edit. `/company/contacts?contactId=…` opens a contact (used by
 Calendar).
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| CC1 | **AI summary** + suggested next step | Dashed "Soon" card. | Summary generation endpoint (`POST /contacts/:id/summary`) built on activity, deals and events. |
-| CC2 | **Closed deals** value / **Open deals** count | Dashed `—` stats. | Link contacts to leads/deals (`contactId` on leads or a contact↔lead relation) + aggregates on the contact. |
-| CC3 | **Properties** tab (units shared / of interest) | Placeholder, "Soon". | Contact↔unit relation (interest / shared / owned). |
-| CC4 | **Deals** tab (opportunities + contracts) | Placeholder, "Soon". | Same relation as CC2, plus contracts by contact. |
-| CC5 | **Documents** tab | Placeholder, "Soon". | Documents linked to a contact (`contactId` on documents). |
-| CC6 | Contact **source** | Facts row `—`, "Soon". | `source` on contacts (like leads). |
-| CC7 | Activity filters/kinds (calls, viewings, messages) and the contact's **calendar events** in the timeline | Notes and record changes only. | `contactId` filter on `GET /events` and typed activities (see CL4). |
-| CC8 | Residential / Commercial segment switch | Not shown on Contacts. | `segment` on contacts + filter (see CL1). |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| CC1 | **AI summary** + suggested next step | Dashed "Soon" card. | Summary generation endpoint (`POST /contacts/:id/summary`) built on activity, deals and events. | Skipped — third-party integration, per user request |
+| CC2 | **Closed deals** value / **Open deals** count | Dashed `—` stats. | Link contacts to leads/deals (`contactId` on leads or a contact↔lead relation) + aggregates on the contact. | Pending |
+| CC3 | **Properties** tab (units shared / of interest) | Placeholder, "Soon". | Contact↔unit relation (interest / shared / owned). | Pending |
+| CC4 | **Deals** tab (opportunities + contracts) | Placeholder, "Soon". | Same relation as CC2, plus contracts by contact. | Pending |
+| CC5 | **Documents** tab | Placeholder, "Soon". | Documents linked to a contact (`contactId` on documents). | Pending |
+| CC6 | Contact **source** | Facts row `—`, "Soon". | `source` on contacts (like leads). | Pending |
+| CC7 | Activity filters/kinds (calls, viewings, messages) and the contact's **calendar events** in the timeline | Notes and record changes only. | `contactId` filter on `GET /events` and typed activities (see CL4). | Pending |
+| CC8 | Residential / Commercial segment switch | Not shown on Contacts. | `segment` on contacts + filter (see CL1). | Pending |
 
 ## Calendar (`/company/calendar`)
 
@@ -390,11 +408,11 @@ panel (type, title, when, place, linked contact/lead with deep links, owner, sta
 Reschedule / Cancel / Reopen, **Up next** list, create/edit dialog (type, title, day, start/end, contact, lead, place, owner,
 notes), outcome captured when marking an event done.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| CA1 | **WhatsApp** reminder to the client from the event | Not shown (events don't carry a phone). | Return the linked contact's/lead's phone on events, or a reminder-send endpoint (see CL5). |
-| CA2 | Residential / Commercial segment switch | Not shown. | Segment on events (from lead/contact) + filter (see CL1). |
-| CA3 | Drag to move / resize events on the grid | Reschedule opens the form. | Nothing required (frontend). Listed for completeness, uses the existing update endpoint. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| CA1 | **WhatsApp** reminder to the client from the event | Not shown (events don't carry a phone). | Return the linked contact's/lead's phone on events, or a reminder-send endpoint (see CL5). | Pending |
+| CA2 | Residential / Commercial segment switch | Not shown. | Segment on events (from lead/contact) + filter (see CL1). | Pending |
+| CA3 | Drag to move / resize events on the grid | Reschedule opens the form. | Nothing required (frontend). Listed for completeness, uses the existing update endpoint. | Pending |
 
 ## Tasks (`/company/tasks`)
 
@@ -404,11 +422,11 @@ filter, status filter (list), check-to-complete / reopen, **drag and drop** (ont
 reschedule via update, out of Done = reopen + reschedule), lead links, task drawer (details, mark done, edit, cancel with
 reason, history), create/edit with lead and assignee, `?leadId=` context, overview + by-assignee panels.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| CT1 | **By agent** workload across the team | Computed from the loaded page only (labelled "Open tasks on this page"). | Per-assignee open counts in the `summary` of `GET /tasks`. |
-| CT2 | Residential / Commercial tag on tasks | Not shown. | Segment from the linked lead (see CL1). |
-| CT3 | Board drop dates ("This week" = +3 days, "Later" = +8 days) | Chosen on the client. | Optional: accept `group` on update and let the server pick the date. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| CT1 | **By agent** workload across the team | Computed from the loaded page only (labelled "Open tasks on this page"). | Per-assignee open counts in the `summary` of `GET /tasks`. | Implemented |
+| CT2 | Residential / Commercial tag on tasks | Not shown. | Segment from the linked lead (see CL1). | Implemented |
+| CT3 | Board drop dates ("This week" = +3 days, "Later" = +8 days) | Chosen on the client. | Optional: accept `group` on update and let the server pick the date. | Pending |
 
 ## Projects (`/company/projects`)
 
@@ -418,12 +436,12 @@ phases/buildings table (delivery year, buildings, floors), building **stacking p
 legend), unit panel (price, type, bedrooms, area, floor, view, delivery; **Hold for client** → Reservations, View unit,
 Edit), create/edit project / phase / building / unit (shared editor), archive / restore.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| CJ1 | **Import units** (bulk spreadsheet import) | "Soon" button, toast only. | `POST /units/import` (CSV/XLSX) with validation report. |
-| CJ2 | Per-**phase / building** unit counts, sold %, from-price in the table and tree | Project-level counts only. Rows show delivery year and floors. | Counts and from-price aggregated per phase and per building. |
-| CJ3 | Separate **Hold** and **Reserved** counts | The API combines them (`heldOrReserved`). | Separate `held` and `reserved` counts. |
-| CJ4 | **Link to the developer contact** from a project | Developer shown as text. | `developerContactId` on projects. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| CJ1 | **Import units** (bulk spreadsheet import) | "Soon" button, toast only. | `POST /units/import` (CSV/XLSX) with validation report. | Pending |
+| CJ2 | Per-**phase / building** unit counts, sold %, from-price in the table and tree | Project-level counts only. Rows show delivery year and floors. | Counts and from-price aggregated per phase and per building. | Partial — Real phase/building counts and building from-price connected; remaining percentage presentation pending. |
+| CJ3 | Separate **Hold** and **Reserved** counts | The API combines them (`heldOrReserved`). | Separate `held` and `reserved` counts. | Implemented |
+| CJ4 | **Link to the developer contact** from a project | Developer shown as text. | `developerContactId` on projects. | Pending |
 
 ## Units (`/company/units`)
 
@@ -432,13 +450,13 @@ header counts (total + available, via a second `status=available&limit=1` query 
 status chips (all five unit statuses), search, listing filter, include-archived, paging, unit drawer (details, project /
 phase / building, **Hold for client** → Reservations, reservation history, edit, archive / restore), create unit.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| CU1 | **Unit photo** on cards and in the drawer | Striped "no photo" placeholder. | Unit media (upload + `coverUrl` on the unit DTO). |
-| CU2 | Residential / Commercial segment switch | Only "All" works. The others show a "not available" toast. | `segment=res\|com` filter on `GET /units` (from the project, or on standalone units). |
-| CU3 | **Warehouse** type chip | Not shown (type enum is apt / villa / office / retail). | Add `warehouse` to the unit type enum, if needed. |
-| CU4 | **Delivery** ("Ready" / "Delivery 2027") in card specs | Not shown on the list (the unit DTO has no delivery year). | `deliveryYear` (from the phase) on the unit DTO. |
-| CU5 | Available count | Extra request per reload. | Optional: `summary` by status in `GET /units`. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| CU1 | **Unit photo** on cards and in the drawer | Striped "no photo" placeholder. | Unit media (upload + `coverUrl` on the unit DTO). | Pending |
+| CU2 | Residential / Commercial segment switch | Only "All" works. The others show a "not available" toast. | `segment=res\|com` filter on `GET /units` (from the project, or on standalone units). | Implemented |
+| CU3 | **Warehouse** type chip | Not shown (type enum is apt / villa / office / retail). | Add `warehouse` to the unit type enum, if needed. | Pending |
+| CU4 | **Delivery** ("Ready" / "Delivery 2027") in card specs | Not shown on the list (the unit DTO has no delivery year). | `deliveryYear` (from the phase) on the unit DTO. | Implemented |
+| CU5 | Available count | Extra request per reload. | Optional: `summary` by status in `GET /units`. | Implemented |
 
 ## Reservations (`/company/reservations`)
 
@@ -448,13 +466,13 @@ Expired / Cancelled), search, `?unitId=` filter, **expiring within 24h** warning
 assignee, 24/48/72h), confirm with deposit, extend (+24/48/72h with reason), cancel with reason, contract link once
 converted. **Convert** on a reserved row opens Contracts with the reservation prefilled (`?reservationId=`).
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| CR1 | Project · phase · **price** under the unit code | Shows the reservation reference instead. | Unit project / phase name and `priceMinor` on the reservation DTO. |
-| CR2 | Reservation **created** time under the client | Shows the lead reference instead. | `createdAt` on the reservation DTO (`created_at` is selected but not returned). |
-| CR3 | **Open** (active + expiring) and **Expiring < 24h** chips | Chips follow the API statuses. The 24h warning counts the loaded page only. | `status=open` and `expiringWithin=24h` filters, plus `summary` counts (open, expiring) in `GET /reservations`. |
-| CR4 | Residential / Commercial segment switch | Not shown. | Segment filter on `GET /reservations` (see CU2). |
-| CR5 | Hold bar scale | Assumes a 72h maximum on the client. | Optional: return `startedAt` (or hold length) so the bar shows the real fraction used. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| CR1 | Project · phase · **price** under the unit code | Shows the reservation reference instead. | Unit project / phase name and `priceMinor` on the reservation DTO. | Implemented |
+| CR2 | Reservation **created** time under the client | Shows the lead reference instead. | `createdAt` on the reservation DTO (`created_at` is selected but not returned). | Implemented |
+| CR3 | **Open** (active + expiring) and **Expiring < 24h** chips | Chips follow the API statuses. The 24h warning counts the loaded page only. | `status=open` and `expiringWithin=24h` filters, plus `summary` counts (open, expiring) in `GET /reservations`. | Implemented |
+| CR4 | Residential / Commercial segment switch | Not shown. | Segment filter on `GET /reservations` (see CU2). | Implemented |
+| CR5 | Hold bar scale | Assumes a 72h maximum on the client. | Optional: return `startedAt` (or hold length) so the bar shows the real fraction used. | Implemented |
 
 ## Contracts (`/company/contracts`)
 
@@ -466,16 +484,16 @@ files link), create / edit draft (reservation-based sale/lease or lead-based, pl
 record shared / record signature / record void, download the signed copy, `?contractId=` and `?reservationId=` (prefill
 from Reservations → Convert).
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| CK1 | **Docs x/y** column in the list | Filled for the selected contract only; other rows show `—`. | `requirementsTotal` / `requirementsSatisfied` on the contract list DTO. |
-| CK2 | Chip counts (`Draft · 3`, `Signed · 9`) | Only the header shows the "awaiting signature" count (extra request). | `summary` counts by effective status in `GET /contracts`. |
-| CK3 | **Terms** row (payment plan / lease terms) | Not shown. | `terms` (en/ar text or structured plan) on contracts. |
-| CK4 | **Commission** row (e.g. "2.5% · EGP 210K") | Not shown. | Linked commission summary (`rateBps`, `grossMinor`, status) on the contract DTO, or `contractId` filter on `GET /commissions`. |
-| CK5 | **Download PDF** (generated contract) | "Soon" button. The signed copy downloads when one is recorded. | Contract PDF generation from a template. |
-| CK6 | **Send reminder** / per-signer signed state | Signatures are one manual record for the whole contract. | Per-signer status (and optionally e-signature / reminder sending). |
-| CK7 | **Renew** an expiring contract | "Soon" button. | Renew action (new key date, or a follow-up contract linked to the old one). |
-| CK8 | Residential / Commercial segment switch | Not shown. | Segment filter on `GET /contracts` (see CL1). |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| CK1 | **Docs x/y** column in the list | Filled for the selected contract only; other rows show `—`. | `requirementsTotal` / `requirementsSatisfied` on the contract list DTO. | Implemented |
+| CK2 | Chip counts (`Draft · 3`, `Signed · 9`) | Only the header shows the "awaiting signature" count (extra request). | `summary` counts by effective status in `GET /contracts`. | Implemented |
+| CK3 | **Terms** row (payment plan / lease terms) | Not shown. | `terms` (en/ar text or structured plan) on contracts. | Pending |
+| CK4 | **Commission** row (e.g. "2.5% · EGP 210K") | Not shown. | Linked commission summary (`rateBps`, `grossMinor`, status) on the contract DTO, or `contractId` filter on `GET /commissions`. | Pending |
+| CK5 | **Download PDF** (generated contract) | "Soon" button. The signed copy downloads when one is recorded. | Contract PDF generation from a template. | Pending |
+| CK6 | **Send reminder** / per-signer signed state | Signatures are one manual record for the whole contract. | Per-signer status (and optionally e-signature / reminder sending). | Pending |
+| CK7 | **Renew** an expiring contract | "Soon" button. | Renew action (new key date, or a follow-up contract linked to the old one). | Pending |
+| CK8 | Residential / Commercial segment switch | Not shown. | Segment filter on `GET /contracts` (see CL1). | Implemented |
 
 ## Commissions (`/company/commissions`)
 
@@ -485,14 +503,14 @@ detail panel (value × rate = gross, split lines with share and amount, split ba
 Calculated → Approved → Payable → Paid steps, payment reference / date / receipt download), calculate / recalculate with
 splits, approve, mark payable and record paid with receipt evidence, cancel.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| CM1 | **Agent payouts** table (earned / paid out / due per agent) | Computed from the loaded page only (labelled "Commissions on this page"). | Per-payee totals endpoint (or `summary.byPayee`) across all commissions. |
-| CM2 | **Collection** flow (Pending → Invoiced → Collected → Paid, money from developer / client) | Shows the existing approval flow (Calculated → Approved → Payable → Paid). | Collection states + invoice/collection records if the company tracks money coming in. |
-| CM3 | **Statement PDF** | "Soon" button. | Commission statement PDF per commission / per agent. |
-| CM4 | Inline rate / split editing in the panel | Done through the Recalculate dialog. | Nothing required (frontend). Listed for completeness. |
-| CM5 | Split **roles** (Listing agent / Selling agent / Team lead) | Lines show "Agent" or "Company share". | `role` on commission lines. |
-| CM6 | Residential / Commercial segment switch | Not shown. | Segment filter on `GET /commissions` (see CL1). |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| CM1 | **Agent payouts** table (earned / paid out / due per agent) | Computed from the loaded page only (labelled "Commissions on this page"). | Per-payee totals endpoint (or `summary.byPayee`) across all commissions. | Pending |
+| CM2 | **Collection** flow (Pending → Invoiced → Collected → Paid, money from developer / client) | Shows the existing approval flow (Calculated → Approved → Payable → Paid). | Collection states + invoice/collection records if the company tracks money coming in. | Pending |
+| CM3 | **Statement PDF** | "Soon" button. | Commission statement PDF per commission / per agent. | Pending |
+| CM4 | Inline rate / split editing in the panel | Done through the Recalculate dialog. | Nothing required (frontend). Listed for completeness. | Pending |
+| CM5 | Split **roles** (Listing agent / Selling agent / Team lead) | Lines show "Agent" or "Company share". | `role` on commission lines. | Pending |
+| CM6 | Residential / Commercial segment switch | Not shown. | Segment filter on `GET /commissions` (see CL1). | Pending |
 
 ## Documents (`/company/documents`)
 
@@ -502,14 +520,14 @@ filter, paging; detail panel (file, kind, linked contract / lead links, uploaded
 **Replace** (opens upload prefilled with the same kind / title / links), archive / restore, upload (drop zone, kind, title,
 contract or lead, expiry), `?new=1&kind=` from Contracts / Commissions.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| CD1 | **Verified / Pending review** status and **Mark verified** | Status comes from expiry only (Current / Expiring soon / Expired / Archived). "Mark verified" is a "Soon" button. | Review state on documents (`reviewStatus`, `reviewedBy`, `reviewedAt`) + a verify / reject action (audited). |
-| CD2 | Header "**N need review · M expired**" counts and chip counts (`IDs · 4`) | Shows total files + storage. | `summary` in `GET /documents`: counts by kind, pending review, expired. |
-| CD3 | File **preview** in the panel | Placeholder with the file type. | Inline preview endpoint (correct `Content-Type` + `inline` disposition, or a thumbnail) — downloads are `application/octet-stream` attachments today. |
-| CD4 | Design **categories** (IDs / Contracts / Receipts / Ownership / Other) | Uses the API kinds (National ID, Ownership, Contract, Receipt, Power of attorney, Other). | Nothing required. Listed for completeness. |
-| CD5 | **Replace** as a new version of the same document | Uploads a separate document (the old one stays until archived). | `POST /documents/:id/replace` (version history) if replacements should keep links / requirements attached. |
-| CD6 | `expired` / `expiringSoon` filters | Not available as filters. | `status=expired\|expiring` on `GET /documents`. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| CD1 | **Verified / Pending review** status and **Mark verified** | Status comes from expiry only (Current / Expiring soon / Expired / Archived). "Mark verified" is a "Soon" button. | Review state on documents (`reviewStatus`, `reviewedBy`, `reviewedAt`) + a verify / reject action (audited). | Implemented |
+| CD2 | Header "**N need review · M expired**" counts and chip counts (`IDs · 4`) | Shows total files + storage. | `summary` in `GET /documents`: counts by kind, pending review, expired. | Implemented |
+| CD3 | File **preview** in the panel | Placeholder with the file type. | Inline preview endpoint (correct `Content-Type` + `inline` disposition, or a thumbnail) — downloads are `application/octet-stream` attachments today. | Implemented |
+| CD4 | Design **categories** (IDs / Contracts / Receipts / Ownership / Other) | Uses the API kinds (National ID, Ownership, Contract, Receipt, Power of attorney, Other). | Nothing required. Listed for completeness. | Pending |
+| CD5 | **Replace** as a new version of the same document | Uploads a separate document (the old one stays until archived). | `POST /documents/:id/replace` (version history) if replacements should keep links / requirements attached. | Partial — Existing replace flow creates an independent upload; version lineage is pending. |
+| CD6 | `expired` / `expiringSoon` filters | Not available as filters. | `status=expired\|expiring` on `GET /documents`. | Pending |
 
 ## Marketing (`/company/marketing`)
 
@@ -519,15 +537,15 @@ value, multiple, link to attributed leads), status filter, search, include archi
 change via update), edit, archive / restore, create; **Lead sources** table (leads / won / conversion for this quarter's
 cohort, from `GET /reports`, needs `reports.read`).
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| MK1 | **Budget** and the spend-vs-budget bar (`EGP 180K / 250K`) | Shows spend only. | `budgetMinor` on campaigns. |
-| MK2 | **Viewings** column | Not shown. | Viewings attributed per campaign (count of viewing events on attributed leads). |
-| MK3 | **ROI** (commission ÷ spend) | Shows signed **sale value** ÷ spend, labelled as such. | Attributed commission (gross) per campaign and in `totals`. |
-| MK4 | **Pause / Resume** | Draft → Active → Ended only (no paused state). | `paused` campaign status, if needed. |
-| MK5 | Lead sources **spend** and **CPL** per source | Not shown (source table has leads / won / conversion). | Spend aggregated by source (from campaigns) in `GET /reports` or `GET /marketing`. |
-| MK6 | Lead sources "last 90 days" | Uses the Reports "quarter" period (quarter to date). | Optional: a rolling `90d` period on `GET /reports`. |
-| MK7 | Residential / Commercial segment switch | Not shown. | Segment filter on `GET /marketing` (Reports already accepts `segment`). |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| MK1 | **Budget** and the spend-vs-budget bar (`EGP 180K / 250K`) | Shows spend only. | `budgetMinor` on campaigns. | Pending |
+| MK2 | **Viewings** column | Not shown. | Viewings attributed per campaign (count of viewing events on attributed leads). | Pending |
+| MK3 | **ROI** (commission ÷ spend) | Shows signed **sale value** ÷ spend, labelled as such. | Attributed commission (gross) per campaign and in `totals`. | Pending |
+| MK4 | **Pause / Resume** | Draft → Active → Ended only (no paused state). | `paused` campaign status, if needed. | Pending |
+| MK5 | Lead sources **spend** and **CPL** per source | Not shown (source table has leads / won / conversion). | Spend aggregated by source (from campaigns) in `GET /reports` or `GET /marketing`. | Pending |
+| MK6 | Lead sources "last 90 days" | Uses the Reports "quarter" period (quarter to date). | Optional: a rolling `90d` period on `GET /reports`. | Pending |
+| MK7 | Residential / Commercial segment switch | Not shown. | Segment filter on `GET /marketing` (Reports already accepts `segment`). | Pending |
 
 ## Reports (`/company/reports`)
 
@@ -536,14 +554,14 @@ Already real: period chips (This month / This quarter / YTD), **Residential / Co
 commission, lead → won), signed volume by month bars, conversion funnel, lead sources (share bar + conversion), agent
 performance (leads, deals, signed volume, conversion).
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| RP1 | KPI **deltas** vs previous period (`+14%`, `+3`) | Not shown. | Previous-period values in `summary` (or a `compare=previous` option). |
-| RP2 | **Commission** KPI ("avg 1.0% of volume") and per-agent **commission** column | KPI shows commission *recorded as paid*; agents table has no commission column. | Gross commission for the period (all non-cancelled) in `summary` and per owner in `owners`. |
-| RP3 | Funnel "**% of previous stage**" | Built from current stages: leads at or beyond each stage today (lost shown separately). Leads that were lost after a viewing aren't counted in earlier stages. | Stage history (highest stage reached per lead) so the funnel counts real progression. |
-| RP4 | Volume chart covers the **year** with the period highlighted | Shows the months inside the selected period only. | Optional: return the trailing 12 months alongside the period. |
-| RP5 | "**By area**" table (for a single agent view) | Not shown. | Volume / deals grouped by unit location or project. |
-| RP6 | "Market avg" benchmark under Lead → deal | Not shown. | Platform benchmark (if wanted). |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| RP1 | KPI **deltas** vs previous period (`+14%`, `+3`) | Not shown. | Previous-period values in `summary` (or a `compare=previous` option). | Pending |
+| RP2 | **Commission** KPI ("avg 1.0% of volume") and per-agent **commission** column | KPI shows commission *recorded as paid*; agents table has no commission column. | Gross commission for the period (all non-cancelled) in `summary` and per owner in `owners`. | Pending |
+| RP3 | Funnel "**% of previous stage**" | Built from current stages: leads at or beyond each stage today (lost shown separately). Leads that were lost after a viewing aren't counted in earlier stages. | Stage history (highest stage reached per lead) so the funnel counts real progression. | Pending |
+| RP4 | Volume chart covers the **year** with the period highlighted | Shows the months inside the selected period only. | Optional: return the trailing 12 months alongside the period. | Pending |
+| RP5 | "**By area**" table (for a single agent view) | Not shown. | Volume / deals grouped by unit location or project. | Pending |
+| RP6 | "Market avg" benchmark under Lead → deal | Not shown. | Platform benchmark (if wanted). | Pending |
 
 ## Lead Routing (`/company/lead-routing`)
 
@@ -553,16 +571,16 @@ archived), advanced-routing entitlement note, create / edit rule (match, strateg
 **simulator** (source, segment, budget → assigned agent + rule, with a rule-by-rule trace computed with the same match
 logic as the server), agents roster built from active rule targets.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| LR1 | Global **routing on / paused** switch | Not shown (each rule has its own switch). | Company-level `routingPaused` setting. |
-| LR2 | **Recent assignments** feed (lead, agent, rule, time) | Not shown. | `GET /routing/assignments` (recent automatic assignments with rule and reason), or a filter on the audit log. |
-| LR3 | Simulation **trace** from the server | Built on the client from rule order + match fields. Rules that match but have no eligible agent show "no eligible agent". | Return the evaluated rules (matched / skipped + reason) from `POST /routing/simulate`. |
-| LR4 | Agent **availability** switch, **daily cap** (today / cap) and "respect daily caps" | Not shown. Roster shows active / inactive user status and which rules include them. | Per-agent availability and daily cap, plus today's assignment count, honoured by the picker. |
-| LR5 | Agent **conversion** and **avg reply time** | Not shown. | Per-agent conversion and first-contact response time (from SLA records). |
-| LR6 | Agent **specialties** (Residential, New Cairo, Commercial…) | Not shown. | Agent tags that rules can match on. |
-| LR7 | Company-wide **SLA** setting and "reassign when SLA is missed" toggle | SLA is per rule; reassignment is always on when SLA > 0. | Optional company default SLA + reassignment switch. |
-| LR8 | **Working hours** (queue leads outside hours) | Not shown. | Working-hours setting and queued routing. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| LR1 | Global **routing on / paused** switch | Not shown (each rule has its own switch). | Company-level `routingPaused` setting. | Pending |
+| LR2 | **Recent assignments** feed (lead, agent, rule, time) | Not shown. | `GET /routing/assignments` (recent automatic assignments with rule and reason), or a filter on the audit log. | Pending |
+| LR3 | Simulation **trace** from the server | Built on the client from rule order + match fields. Rules that match but have no eligible agent show "no eligible agent". | Return the evaluated rules (matched / skipped + reason) from `POST /routing/simulate`. | Pending |
+| LR4 | Agent **availability** switch, **daily cap** (today / cap) and "respect daily caps" | Not shown. Roster shows active / inactive user status and which rules include them. | Per-agent availability and daily cap, plus today's assignment count, honoured by the picker. | Pending |
+| LR5 | Agent **conversion** and **avg reply time** | Not shown. | Per-agent conversion and first-contact response time (from SLA records). | Pending |
+| LR6 | Agent **specialties** (Residential, New Cairo, Commercial…) | Not shown. | Agent tags that rules can match on. | Pending |
+| LR7 | Company-wide **SLA** setting and "reassign when SLA is missed" toggle | SLA is per rule; reassignment is always on when SLA > 0. | Optional company default SLA + reassignment switch. | Pending |
+| LR8 | **Working hours** (queue leads outside hours) | Not shown. | Working-hours setting and queued routing. | Pending |
 
 ## Audit Log (`/company/audit-log`)
 
@@ -571,12 +589,12 @@ built from before / after), sensitive rows (delete / export / void / archive) ti
 action, from / to), cursor "Load more", total count, detail drawer (user, record type / id, IP, event id, change summary,
 before / after JSON).
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| AU1 | Category chips (Leads / Deals / Inventory / Documents / Settings) | Filter the **loaded** events on the client by resource type (labelled). | `resourceType` (or `category`) filter on `GET /company-audit`. |
-| AU2 | **Export CSV** | "Soon" button. | Company audit export (the platform has one: `audit_export`), audited itself. |
-| AU3 | **Record name** ("Ahmed Samir", "Unit B2-0402") instead of type + id | Shows resource type and id. | Resource display name / reference on audit entries (resolved at write time). |
-| AU4 | Human-readable change text ("Stage Qualified → Viewing") | Built on the client from before / after keys (raw field names). | Optional: server-side change summary with field labels (en / ar). |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| AU1 | Category chips (Leads / Deals / Inventory / Documents / Settings) | Filter the **loaded** events on the client by resource type (labelled). | `resourceType` (or `category`) filter on `GET /company-audit`. | Implemented |
+| AU2 | **Export CSV** | "Soon" button. | Company audit export (the platform has one: `audit_export`), audited itself. | Implemented |
+| AU3 | **Record name** ("Ahmed Samir", "Unit B2-0402") instead of type + id | Shows resource type and id. | Resource display name / reference on audit entries (resolved at write time). | Pending |
+| AU4 | Human-readable change text ("Stage Qualified → Viewing") | Built on the client from before / after keys (raw field names). | Optional: server-side change summary with field labels (en / ar). | Pending |
 
 ## Team (`/company/team`)
 
@@ -585,12 +603,12 @@ style. Already real: header counts (members / active / invited), status chips wi
 returns the whole team), member table (avatar, name, email, role, status, invite expiry, last login, added), invite
 (name, email, role) with one-time activation link + copy, resend / new link, revoke invite, disable / enable.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| TM1 | Roles beyond **Sales Agent** (team lead, finance, admin…) | Only `agent` can be invited. | More company roles (or custom roles, as in Platform Admin) on `POST /team/invite`. |
-| TM2 | Invitation **email** | The link is shown to copy and share manually. | Send the activation email from the backend (outbox), with resend. |
-| TM3 | Per-member stats (open leads, deals this month) | Not shown. | Counts per member on `GET /team`, or link to Reports owners. |
-| TM4 | Edit member name / role, remove member | Not available. | `POST /team/:id/update` and remove (keeping records reassigned). |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| TM1 | Roles beyond **Sales Agent** (team lead, finance, admin…) | Only `agent` can be invited. | More company roles (or custom roles, as in Platform Admin) on `POST /team/invite`. | Pending |
+| TM2 | Invitation **email** | The link is shown to copy and share manually. | Send the activation email from the backend (outbox), with resend. | Pending |
+| TM3 | Per-member stats (open leads, deals this month) | Not shown. | Counts per member on `GET /team`, or link to Reports owners. | Pending |
+| TM4 | Edit member name / role, remove member | Not available. | `POST /team/:id/update` and remove (keeping records reassigned). | Pending |
 
 ## Company dashboard (`/company/dashboard`)
 
@@ -601,13 +619,13 @@ card from `GET /pipeline` stats (open stages: value + deal count, bar by value),
 access), top leads by score, **Team · this quarter** leaderboard from `GET /reports` owners (needs `reports.read`),
 tasks due today, needs-attention alerts, inventory by status.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| CB1 | KPI **deltas** vs previous period (`+12%`, `+3`) | Not shown. | Previous-period values in `GET /company-overview` metrics. |
-| CB2 | Pipeline stages **by segment** | Stage stats cover all segments (labelled when a segment is selected). | `segment` filter on `GET /pipeline` (see CL1). |
-| CB3 | Top leads **segment tag**, **source** and **last touch** columns | Shows wants, budget, owner, score. | `segment`, `source`, `lastActivityAt` on `scoredLeads` in the overview. |
-| CB4 | "Closing in next 14 days" as **deals** (address, type, price, expected close) | Shows contract key dates (the overview's `keyDates`). | Expected close date on pipeline deals, returned in the overview. |
-| CB5 | Agent view (**my** tasks / **my** performance) vs manager view | One layout; sections appear by permission (team leaderboard needs `reports.read`). | Nothing required if permission-based sections are enough; otherwise an explicit role flag on the session. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| CB1 | KPI **deltas** vs previous period (`+12%`, `+3`) | Not shown. | Previous-period values in `GET /company-overview` metrics. | Pending |
+| CB2 | Pipeline stages **by segment** | Stage stats cover all segments (labelled when a segment is selected). | `segment` filter on `GET /pipeline` (see CL1). | Implemented |
+| CB3 | Top leads **segment tag**, **source** and **last touch** columns | Shows wants, budget, owner, score. | `segment`, `source`, `lastActivityAt` on `scoredLeads` in the overview. | Pending |
+| CB4 | "Closing in next 14 days" as **deals** (address, type, price, expected close) | Shows contract key dates (the overview's `keyDates`). | Expected close date on pipeline deals, returned in the overview. | Pending |
+| CB5 | Agent view (**my** tasks / **my** performance) vs manager view | One layout; sections appear by permission (team leaderboard needs `reports.read`). | Nothing required if permission-based sections are enough; otherwise an explicit role flag on the session. | Pending |
 
 ## Company shell (sidebar + top bar)
 
@@ -617,9 +635,9 @@ Already real: permission-filtered grouped nav, brand + company name, signed-in u
 opened), **sidebar counts** (tasks due today + alert counts on the page each alert opens), **search** (Enter searches
 Leads, Ctrl/⌘ K focuses it), **+ New lead** (opens the Leads create dialog), profile menu with sign out.
 
-| # | Design element | Today | Needed from backend |
-|---|---|---|---|
-| SH1 | **Global search** across contacts, units, deals ("Search contacts, units, deals…") | Searches leads only (`/company/leads?q=`). | `GET /search?q=` returning mixed results (leads, contacts, units, contracts) with type and route. |
-| SH2 | **Notifications feed** (follow-up, assignment, reservation, deal update, duplicate, commission), unread state, **Mark all read** | Shows current alert counts; no per-user feed or read state. | Per-user notifications (`GET /notifications`, `POST /notifications/read`) generated from domain events. |
-| SH3 | **Saved views** in the sidebar ("Hot buyers · under EGP 10M") | Not shown. | Saved filters per user (`GET/POST /saved-views`) that open Leads / Contacts with the stored query. |
-| SH4 | Sidebar **totals** per module (e.g. Leads 128, Pipeline 42) | Counts show only what needs attention. | Optional: lightweight counts endpoint for nav badges. |
+| # | Design element | Today | Needed from backend | Status (2026-11-01) |
+|---|---|---|---|---|
+| SH1 | **Global search** across contacts, units, deals ("Search contacts, units, deals…") | Searches leads only (`/company/leads?q=`). | `GET /search?q=` returning mixed results (leads, contacts, units, contracts) with type and route. | Implemented |
+| SH2 | **Notifications feed** (follow-up, assignment, reservation, deal update, duplicate, commission), unread state, **Mark all read** | Shows current alert counts; no per-user feed or read state. | Per-user notifications (`GET /notifications`, `POST /notifications/read`) generated from domain events. | Implemented |
+| SH3 | **Saved views** in the sidebar ("Hot buyers · under EGP 10M") | Not shown. | Saved filters per user (`GET/POST /saved-views`) that open Leads / Contacts with the stored query. | Implemented |
+| SH4 | Sidebar **totals** per module (e.g. Leads 128, Pipeline 42) | Counts show only what needs attention. | Optional: lightweight counts endpoint for nav badges. | Implemented |

@@ -202,7 +202,11 @@
                 @for (ph of p.phases; track ph.id) {
                   <tr class="still phase">
                     <td>
-                      <b>{{ name(ph) }}</b> <span class="mono sub">{{ ph.code }}</span>
+                      <b>{{ name(ph) }}</b>
+                      <span class="mono sub"
+                        >{{ ph.code }} · {{ ph.available ?? 0 }} / {{ ph.total ?? 0 }}
+                        {{ t('available', 'متاح') }}</span
+                      >
                     </td>
                     <td>{{ ph.deliveryYear }}</td>
                     <td class="end mono">{{ ph.buildings.length }} {{ t('bldg', 'مبنى') }}</td>
@@ -220,7 +224,12 @@
                   @for (b of ph.buildings; track b.id) {
                     <tr (click)="selectBuilding(b)">
                       <td class="indent">
-                        {{ name(b) }} <span class="mono sub">{{ b.code }}</span>
+                        {{ name(b) }}
+                        <span class="mono sub"
+                          >{{ b.code }} · {{ b.available ?? 0 }} / {{ b.total ?? 0 }}
+                          {{ t('available', 'متاح') }} ·
+                          {{ b.fromPriceMinor ? money(b.fromPriceMinor) : '—' }}</span
+                        >
                       </td>
                       <td class="muted">—</td>
                       <td class="end mono">{{ b.floors }}</td>

@@ -221,14 +221,23 @@ export class Reservations implements OnDestroy {
     return this.isOpen(r) && this.hoursLeft(r) <= 24;
   }
   leftWidth(r: Reservation) {
-    return this.isOpen(r) ? Math.min(100, (this.hoursLeft(r) / 72) * 100) + '%' : '0%';
+    return this.isOpen(r)
+      ? Math.min(
+          100,
+          (this.hoursLeft(r) /
+            (r.startedAt
+              ? Math.max(1, (Date.parse(r.expiresAt) - Date.parse(r.startedAt)) / 3600000)
+              : 72)) *
+            100,
+        ) + '%'
+      : '0%';
   }
   leftLabel(r: Reservation) {
     if (this.isOpen(r)) return this.expiry(r) + ' ' + this.t('left', 'متبقية');
     return r.status === 'expired' ? this.t('Lapsed', 'انتهى') : '—';
   }
   /** Open reservations on the loaded page that expire within 24 hours. */
-  readonly expSoon = computed(() => this.reservations().filter((r) => this.expiring(r)).length);
+  readonly expSoon = signal(0);
   expiry(r: Reservation) {
     if (!['hold', 'reserved'].includes(r.status)) return '—';
     const min = Math.max(0, Math.ceil((Date.parse(r.expiresAt) - Date.parse(r.asOf)) / 60000));
@@ -252,6 +261,7 @@ export class Reservations implements OnDestroy {
       if (n !== this.serial) return;
       this.reservations.set(r.items);
       this.total.set(r.total);
+      this.expSoon.set(r.summary?.expiring ?? 0);
       this.asOf.set(r.asOf);
     } catch (e: any) {
       if (n === this.serial) this.error.set(e.message);

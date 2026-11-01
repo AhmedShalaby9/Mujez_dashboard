@@ -13,16 +13,10 @@
       <button
         type="button"
         class="btn btn--sm"
-        (click)="
-          soon(
-            t(
-              'Audit export is not available for companies yet.',
-              'تصدير السجل غير متاح للشركات بعد.'
-            )
-          )
-        "
+        [disabled]="!canExport() || busy()"
+        (click)="exportCsv()"
       >
-        {{ t('Export CSV', 'تصدير CSV') }}<i class="soon">{{ t('Soon', 'قريبًا') }}</i>
+        {{ t('Export CSV', 'تصدير CSV') }}
       </button>
     </div>
   </div>
@@ -34,7 +28,7 @@
           type="button"
           class="chip"
           [class.on]="category() === c.key"
-          (click)="category.set(c.key)"
+          (click)="changeCategory(c.key)"
         >
           {{ ar() ? c.ar : c.en }}
         </button>
@@ -132,7 +126,10 @@
       <span class="muted"
         >{{ entries().length }} / {{ total() }} {{ t('loaded', 'محمّل') }}
         @if (category() !== 'all') {
-          · {{ t('category filters loaded events', 'التصنيف يصفّي الأحداث المحمّلة') }}
+          ·
+          {{
+            t('category applied to all matching events', 'التصنيف يطبق على جميع الأحداث المطابقة')
+          }}
         }
         · Africa/Cairo</span
       >

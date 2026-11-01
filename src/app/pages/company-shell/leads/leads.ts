@@ -91,9 +91,29 @@ export class Leads {
   readonly duplicates = signal<any[]>([]);
   readonly duplicateId = signal('');
   readonly dupReason = signal('');
-  readonly segmentFilter=signal<'all'|'res'|'com'>('all');
-  readonly ownerFilter=signal('');
-  readonly callOutcome=signal('');
+  readonly savedName = signal('');
+  readonly budgetMinFilter = signal('');
+  readonly budgetMaxFilter = signal('');
+  async saveView() {
+    if (this.savedName().trim().length < 2) return;
+    try {
+      const filters: Record<string, string> = {};
+      if (this.search().trim()) filters['q'] = this.search().trim();
+      if (this.segmentFilter() !== 'all') filters['segment'] = this.segmentFilter();
+      if (this.ownerFilter()) filters['ownerId'] = this.ownerFilter();
+      if (this.stageFilter() !== 'all') filters['stage'] = this.stageFilter();
+      if (this.budgetMinFilter()) filters['budgetMinMinor'] = this.budgetMinFilter();
+      if (this.budgetMaxFilter()) filters['budgetMaxMinor'] = this.budgetMaxFilter();
+      await this.api.write('saved-views', { name: this.savedName().trim(), filters });
+      this.savedName.set('');
+      this.showToast(this.t('View saved to your account', 'تم حفظ طريقة العرض بحسابك'));
+    } catch (e) {
+      this.error.set((e as Error).message);
+    }
+  }
+  readonly segmentFilter = signal<'all' | 'res' | 'com'>('all');
+  readonly ownerFilter = signal('');
+  readonly callOutcome = signal('');
   readonly note = signal('');
   readonly reason = signal('');
   readonly actionStage = signal('');
@@ -102,7 +122,7 @@ export class Leads {
     name: '',
     nameAr: '',
     phone: '',
-    email:'',
+    email: '',
     segment: 'res',
     want: '',
     wantAr: '',
@@ -123,6 +143,16 @@ export class Leads {
     this.search.set(this.route?.snapshot.queryParamMap.get('q') ?? '');
     void this.reload();
     const sub = this.route?.queryParamMap?.subscribe((p) => {
+      const segment = p.get('segment');
+      if (['all', 'res', 'com'].includes(segment ?? ''))
+        this.segmentFilter.set(segment as 'all' | 'res' | 'com');
+      this.ownerFilter.set(p.get('ownerId') ?? '');
+      this.budgetMinFilter.set(p.get('budgetMinMinor') ?? '');
+      this.budgetMaxFilter.set(p.get('budgetMaxMinor') ?? '');
+      const stage = p.get('stage');
+      if (stage && this.stages.includes(stage as SalesStage))
+        this.stageFilter.set(stage as SalesStage);
+      void this.reload();
       const q = p.get('q');
       if (q !== null && q !== this.search()) {
         this.search.set(q);
@@ -160,8 +190,10 @@ export class Leads {
         limit: '50',
         archived: this.archived() ? 'all' : 'active',
       };
-      if(this.segmentFilter()!=='all')q['segment']=this.segmentFilter();
-      if(this.ownerFilter())q['ownerId']=this.ownerFilter();
+      if (this.segmentFilter() !== 'all') q['segment'] = this.segmentFilter();
+      if (this.ownerFilter()) q['ownerId'] = this.ownerFilter();
+      if (this.budgetMinFilter()) q['budgetMinMinor'] = this.budgetMinFilter();
+      if (this.budgetMaxFilter()) q['budgetMaxMinor'] = this.budgetMaxFilter();
       if (this.campaignFilter()) q['campaignId'] = this.campaignFilter();
       if (this.search().trim()) q['q'] = this.search().trim();
       if (this.stageFilter() !== 'all') q['stage'] = this.stageFilter();
@@ -368,7 +400,7 @@ export class Leads {
           name: l.name.en,
           nameAr: l.name.ar,
           phone: l.phone,
-          email:l.email??'',
+          email: l.email ?? '',
           segment: l.segment,
           want: l.want.en,
           wantAr: l.want.ar,
@@ -382,7 +414,7 @@ export class Leads {
           name: '',
           nameAr: '',
           phone: '',
-          email:'',
+          email: '',
           segment: 'res',
           want: '',
           wantAr: '',
@@ -414,7 +446,7 @@ export class Leads {
         name: this.draft.name.trim(),
         ...(this.draft.nameAr.trim() ? { nameAr: this.draft.nameAr.trim() } : {}),
         phone: this.draft.phone,
-        email:this.draft.email.trim()||null,
+        email: this.draft.email.trim() || null,
         segment: this.draft.segment,
         want: this.draft.want.trim(),
         wantAr: this.draft.wantAr.trim() || this.draft.want.trim(),
@@ -531,7 +563,13 @@ export class Leads {
         requestId: kind === 'notes' ? this.noteRequest : crypto.randomUUID(),
         version: l.version,
         ...(kind === 'notes'
-          ? { note: this.note().trim(),kind:this.actKind()==='meeting'?'viewing':this.actKind(),...(this.actKind()==='call'&&this.callOutcome()?{outcome:this.callOutcome()}: {}) }
+          ? {
+              note: this.note().trim(),
+              kind: this.actKind() === 'meeting' ? 'viewing' : this.actKind(),
+              ...(this.actKind() === 'call' && this.callOutcome()
+                ? { outcome: this.callOutcome() }
+                : {}),
+            }
           : kind === 'stage'
             ? {
                 stage: this.actionStage(),
@@ -615,7 +653,10 @@ export class Leads {
   stageIndex(s: SalesStage) {
     return this.stages.indexOf(s);
   }
-  setSegment(s:'all'|'res'|'com'){this.segmentFilter.set(s);void this.reload();}
+  setSegment(s: 'all' | 'res' | 'com') {
+    this.segmentFilter.set(s);
+    void this.reload();
+  }
   showToast(msg: string) {
     this.toast.set(msg);
     setTimeout(() => this.toast.set(''), 3500);

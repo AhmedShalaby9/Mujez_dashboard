@@ -292,15 +292,31 @@
             (input)="newRoleNameAr.set($any($event.target).value)"
         /></label>
       </div>
-      <label class="field">
-        <span
-          >{{ lang() === 'ar' ? 'مبني على دور' : 'Based on role'
-          }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
-        >
-        <select disabled>
-          <option>{{ lang() === 'ar' ? 'عرض الشركات فقط' : 'View companies only' }}</option>
-        </select>
-      </label>
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'مبني على دور' : 'Based on role' }}</span
+        ><select [value]="baseRole()" (change)="baseRole.set($any($event.target).value)">
+          <option value="">
+            {{ lang() === 'ar' ? 'عرض الشركات فقط' : 'View companies only' }}
+          </option>
+          @for (r of roles(); track r.key) {
+            <option [value]="r.key">{{ name(r) }}</option>
+          }
+        </select></label
+      >
+      <label class="field"
+        ><span>Description (EN)</span
+        ><input
+          [value]="newDescriptionEn()"
+          (input)="newDescriptionEn.set($any($event.target).value)"
+          maxlength="500"
+      /></label>
+      <label class="field"
+        ><span>الوصف بالعربية</span
+        ><input
+          [value]="newDescriptionAr()"
+          (input)="newDescriptionAr.set($any($event.target).value)"
+          maxlength="500"
+      /></label>
       <label class="field"
         ><span>{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span
         ><textarea

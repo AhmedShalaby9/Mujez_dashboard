@@ -230,8 +230,7 @@
                       {{ lang() === 'ar' ? 'عرض الفاتورة' : 'View invoice' }}
                     </button>
                     <button type="button" (click)="downloadPdf(i)">
-                      {{ L().actions.pdf
-                      }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+                      {{ L().actions.pdf }}
                     </button>
                     @if (i.status === 'draft') {
                       <button type="button" (click)="issue(i)">
@@ -443,7 +442,7 @@
     </div>
     <div class="drawer__foot">
       <button type="button" class="btn" (click)="downloadPdf(i)">
-        {{ L().actions.pdf }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+        {{ L().actions.pdf }}
       </button>
       @if (i.status === 'draft') {
         <button type="button" class="btn btn--dark" [disabled]="saving()" (click)="issue(i)">

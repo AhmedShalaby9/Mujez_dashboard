@@ -11,9 +11,15 @@
     </div>
     <div class="head__actions">
       <div class="toggle" [title]="t('Segment filter — soon', 'تصفية القطاع — قريبًا')">
-        <button type="button" class="on">{{ t('All', 'الكل') }}</button>
-        <button type="button" (click)="segmentSoon()">{{ t('Residential', 'سكني') }}</button>
-        <button type="button" (click)="segmentSoon()">{{ t('Commercial', 'تجاري') }}</button>
+        <button type="button" [class.on]="segment() === 'all'" (click)="setSegment('all')">
+          {{ t('All', 'الكل') }}
+        </button>
+        <button type="button" [class.on]="segment() === 'res'" (click)="setSegment('res')">
+          {{ t('Residential', 'سكني') }}
+        </button>
+        <button type="button" [class.on]="segment() === 'com'" (click)="setSegment('com')">
+          {{ t('Commercial', 'تجاري') }}
+        </button>
       </div>
       @if (canManage()) {
         <button type="button" class="btn btn--dark" (click)="edit()">
@@ -115,7 +121,12 @@
               <i class="soon">{{ t('Archived', 'مؤرشفة') }}</i>
             }
           </span>
-          <span class="ucard__specs">{{ specs(u) }}</span>
+          <span class="ucard__specs"
+            >{{ specs(u) }}
+            @if (u.deliveryYear) {
+              · {{ t('Delivery ', 'التسليم ') }}{{ u.deliveryYear }}
+            }
+          </span>
         </div>
       </button>
     }

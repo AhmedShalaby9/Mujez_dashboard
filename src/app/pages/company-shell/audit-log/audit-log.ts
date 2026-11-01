@@ -1,3 +1,4 @@
+import { AuthService } from '../../../auth.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CompanyUiState, type Lang } from '../company-ui-state';
@@ -69,6 +70,10 @@ const COPY: Record<Lang, Copy> = {
 export class AuditLog {
   readonly ui = inject(CompanyUiState);
   readonly api = inject(CompanyInsightsApi);
+  private readonly auth = inject(AuthService);
+  readonly canExport = computed(
+    () => this.auth.user()?.permissions.includes('reports.export') ?? false,
+  );
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly ar = computed(() => this.lang() === 'ar');
   readonly L = computed(() => COPY[this.lang()]);
@@ -110,6 +115,7 @@ export class AuditLog {
       this.nextCursor.set(null);
     }
     const q: Record<string, string> = { limit: '50' };
+    if (this.category() !== 'all') q['category'] = this.category();
     if (this.search.trim()) q['q'] = this.search.trim();
     if (this.userFilter) q['actor'] = this.userFilter;
     if (this.actionFilter) q['action'] = this.actionFilter;
@@ -168,16 +174,35 @@ export class AuditLog {
     },
   ];
   readonly category = signal('all');
-  private catOf(e: AuditEntry) {
-    const rt = (e.resourceType || '').toLowerCase();
-    return (
-      this.categories.find((c) => c.types.some((t) => rt === t || rt.startsWith(t)))?.key ?? 'other'
-    );
+  readonly visible = this.entries;
+  changeCategory(key: string) {
+    this.category.set(key);
+    void this.load();
   }
-  readonly visible = computed(() => {
-    const c = this.category();
-    return c === 'all' ? this.entries() : this.entries().filter((e) => this.catOf(e) === c);
-  });
+  async exportCsv() {
+    try {
+      const q: Record<string, unknown> = {
+        category: this.category(),
+        ...(this.search.trim() ? { q: this.search.trim() } : {}),
+        ...(this.userFilter ? { actor: this.userFilter } : {}),
+        ...(this.actionFilter ? { action: this.actionFilter } : {}),
+        ...(this.from ? { from: this.from } : {}),
+        ...(this.to ? { to: this.to } : {}),
+      };
+      const r = await this.api.api.write<{ csv: string; fileName: string }>(
+        'company-audit/export',
+        q,
+      );
+      const url = URL.createObjectURL(new Blob([r.csv], { type: 'text/csv;charset=utf-8' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = r.fileName;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      this.error.set((e as Error).message);
+    }
+  }
   /** Verb of "lead.stage_changed" → "stage_changed", humanised. */
   verb(e: AuditEntry) {
     const v = e.action.split('.').slice(1).join('.') || e.action;

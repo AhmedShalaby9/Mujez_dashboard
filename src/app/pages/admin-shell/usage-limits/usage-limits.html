@@ -48,19 +48,15 @@
         }}{{ totals().unlimitedSeats ? '+' : '' }} {{ lang() === 'ar' ? 'مقعدًا' : 'seats' }}</small
       >
     </div>
-    <div class="kpi kpi--static">
-      <span
-        >{{ lang() === 'ar' ? 'العملاء المحتملون' : 'Leads'
-        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
-      ><b>—</b>
-      <small>{{ lang() === 'ar' ? 'غير مقاس بعد' : 'not measured yet' }}</small>
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'العملاء المحتملون' : 'Leads' }}</span
+      ><b>{{ usageTotal('leads') }}</b>
+      <small>{{ lang() === 'ar' ? 'مقاس من السجلات' : 'measured from records' }}</small>
     </div>
-    <div class="kpi kpi--static">
-      <span
-        >{{ lang() === 'ar' ? 'جهات الاتصال' : 'Contacts'
-        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
-      ><b>—</b>
-      <small>{{ lang() === 'ar' ? 'غير مقاس بعد' : 'not measured yet' }}</small>
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'جهات الاتصال' : 'Contacts' }}</span
+      ><b>{{ usageTotal('contacts') }}</b>
+      <small>{{ lang() === 'ar' ? 'مقاس من السجلات' : 'measured from records' }}</small>
     </div>
     <div class="kpi">
       <span>{{ lang() === 'ar' ? 'الوحدات' : 'Listings' }}</span>
@@ -87,12 +83,15 @@
         }
       </small>
     </div>
-    <div class="kpi kpi--static">
-      <span
-        >{{ lang() === 'ar' ? 'طلبات API' : 'API requests'
-        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
-      ><b>—</b>
-      <small>{{ lang() === 'ar' ? 'غير مقاس بعد' : 'not measured yet' }}</small>
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'طلبات API اليوم' : 'API requests today' }}</span
+      ><b>{{ usageTotal('apiPerDay') }}</b
+      ><small>Africa/Cairo</small>
+    </div>
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'المشاريع' : 'Projects' }}</span
+      ><b>{{ usageTotal('projects') }}</b
+      ><small>{{ lang() === 'ar' ? 'السجلات النشطة' : 'Active records' }}</small>
     </div>
     <button type="button" class="kpi" (click)="setFilter(80)">
       <span>{{ lang() === 'ar' ? 'فوق 80%' : 'Over 80%' }}</span>
@@ -129,14 +128,12 @@
             <th>{{ L().colPlan }}</th>
             <th>{{ L().colUsers }}</th>
             <th>
-              {{ lang() === 'ar' ? 'العملاء' : 'Leads'
-              }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+              {{ lang() === 'ar' ? 'العملاء' : 'Leads' }}
             </th>
             <th>{{ L().colListings }}</th>
             <th>{{ L().colStorage }}</th>
             <th>
-              {{ lang() === 'ar' ? 'API يوميًا' : 'API / day'
-              }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+              {{ lang() === 'ar' ? 'API يوميًا' : 'API / day' }}
             </th>
             <th>{{ lang() === 'ar' ? 'حالة الحد' : 'Limit status' }}</th>
             <th class="act"></th>
@@ -154,7 +151,10 @@
                 <span class="mono">{{ cell(r.users).t }}</span
                 ><span class="sub">{{ cell(r.users).sub }}</span>
               </td>
-              <td class="dim">—</td>
+              <td [class]="cell(r.leads).cls">
+                <span class="mono">{{ cell(r.leads).t }}</span
+                ><span class="sub">{{ cell(r.leads).sub }}</span>
+              </td>
               <td [class]="cell(r.listings).cls">
                 <span class="mono">{{ cell(r.listings).t }}</span
                 ><span class="sub">{{ cell(r.listings).sub }}</span>
@@ -163,7 +163,10 @@
                 <span class="mono">{{ cell(r.storage, ' GB').t }}</span
                 ><span class="sub">{{ cell(r.storage, ' GB').sub }}</span>
               </td>
-              <td class="dim">—</td>
+              <td [class]="cell(r.apiPerDay).cls">
+                <span class="mono">{{ cell(r.apiPerDay).t }}</span
+                ><span class="sub">{{ cell(r.apiPerDay).sub }}</span>
+              </td>
               <td>
                 <span class="pill" [style.background]="status(r).bg" [style.color]="status(r).fg"
                   ><span class="dot" [style.background]="status(r).dot"></span
@@ -237,7 +240,11 @@
         {{ name(t.row) }}</span
       >
       <span class="dialog__body">{{
-        L().overrideBody(t.row[t.resource].limit ?? 0, nextLimit())
+        (lang() === 'ar' ? 'الحد الجديد: ' : 'New limit: ') +
+          customLimit() +
+          ' · ' +
+          customDays() +
+          (lang() === 'ar' ? ' يوم' : ' days')
       }}</span>
     </div>
     <div class="dialog__main">
@@ -259,16 +266,22 @@
       </div>
       <div class="grid">
         <label class="field"
-          ><span
-            >{{ lang() === 'ar' ? 'الحد الجديد' : 'New limit'
-            }}<i class="soon">{{ lang() === 'ar' ? '+20% فقط' : '+20% only' }}</i></span
-          ><input class="mono" disabled [value]="nextLimit()"
+          ><span>{{ lang() === 'ar' ? 'الحد الجديد' : 'New limit' }}</span
+          ><input
+            class="mono"
+            type="number"
+            min="0"
+            [value]="customLimit()"
+            (input)="customLimit.set(+$any($event.target).value)"
         /></label>
         <label class="field"
-          ><span
-            >{{ lang() === 'ar' ? 'المدة' : 'Duration'
-            }}<i class="soon">{{ lang() === 'ar' ? '30 يومًا فقط' : '30 days only' }}</i></span
-          ><input disabled [value]="lang() === 'ar' ? '30 يومًا' : '30 days'"
+          ><span>{{ lang() === 'ar' ? 'المدة' : 'Duration' }}</span
+          ><input
+            type="number"
+            min="1"
+            max="365"
+            [value]="customDays()"
+            (input)="customDays.set(+$any($event.target).value)"
         /></label>
       </div>
       <label class="field"

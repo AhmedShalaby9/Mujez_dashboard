@@ -26,7 +26,16 @@
   </div>
 
   @if (!done()) {
-    @if(drafts().length){<div class="note"><b>{{t('Saved drafts','المسودات المحفوظة')}}</b> @for(d of drafts();track d.id){<button type="button" class="btn" (click)="resumeDraft(d.id)">{{d.payload.nameEn || d.payload.slug || t('Untitled draft','مسودة بلا عنوان')}}</button>}</div>}
+    @if (drafts().length) {
+      <div class="note">
+        <b>{{ t('Saved drafts', 'المسودات المحفوظة') }}</b>
+        @for (d of drafts(); track d.id) {
+          <button type="button" class="btn" (click)="resumeDraft(d.id)">
+            {{ d.payload.nameEn || d.payload.slug || t('Untitled draft', 'مسودة بلا عنوان') }}
+          </button>
+        }
+      </div>
+    }
 
     <div class="wiz">
       <nav class="rail">
@@ -115,10 +124,7 @@
                   </div>
                 </div>
                 <label class="field">
-                  <span
-                    >{{ t('Country', 'الدولة')
-                    }}</span
-                  >
+                  <span>{{ t('Country', 'الدولة') }}</span>
                   <select
                     [value]="x().country"
                     (change)="setX('country', $any($event.target).value)"
@@ -137,10 +143,7 @@
                   </select>
                 </label>
                 <label class="field full">
-                  <span
-                    >{{ t('Business address', 'عنوان الشركة')
-                    }}</span
-                  >
+                  <span>{{ t('Business address', 'عنوان الشركة') }}</span>
                   <input
                     [placeholder]="
                       t('90th Street, Fifth Settlement', 'شارع التسعين، التجمع الخامس')
@@ -150,10 +153,7 @@
                   />
                 </label>
                 <label class="field">
-                  <span
-                    >{{ t('Company email', 'بريد الشركة')
-                    }}</span
-                  >
+                  <span>{{ t('Company email', 'بريد الشركة') }}</span>
                   <input
                     type="email"
                     dir="ltr"
@@ -192,10 +192,7 @@
                   }
                 </label>
                 <label class="field">
-                  <span
-                    >{{ t('Tax registration no.', 'رقم التسجيل الضريبي')
-                    }}</span
-                  >
+                  <span>{{ t('Tax registration no.', 'رقم التسجيل الضريبي') }}</span>
                   <input
                     dir="ltr"
                     [value]="x().tax"
@@ -203,10 +200,7 @@
                   />
                 </label>
                 <label class="field">
-                  <span
-                    >{{ t('Commercial registration no.', 'رقم السجل التجاري')
-                    }}</span
-                  >
+                  <span>{{ t('Commercial registration no.', 'رقم السجل التجاري') }}</span>
                   <input
                     dir="ltr"
                     [value]="x().cr"
@@ -218,10 +212,7 @@
             @case (1) {
               <div class="grid">
                 <label class="field">
-                  <span
-                    >{{ t('Full name', 'الاسم بالكامل')
-                    }}</span
-                  >
+                  <span>{{ t('Full name', 'الاسم بالكامل') }}</span>
                   <input
                     [placeholder]="t('Karim Adel', 'كريم عادل')"
                     [value]="x().aName"
@@ -247,10 +238,7 @@
                   }
                 </label>
                 <label class="field">
-                  <span
-                    >{{ t('Mobile', 'الموبايل')
-                    }}</span
-                  >
+                  <span>{{ t('Mobile', 'الموبايل') }}</span>
                   <input
                     dir="ltr"
                     placeholder="+20 100 000 0000"
@@ -259,17 +247,11 @@
                   />
                 </label>
                 <label class="field">
-                  <span
-                    >{{ t('Job title', 'المسمى الوظيفي')
-                    }}</span
-                  >
+                  <span>{{ t('Job title', 'المسمى الوظيفي') }}</span>
                   <input [value]="x().aTitle" (input)="setX('aTitle', $any($event.target).value)" />
                 </label>
                 <div class="field full">
-                  <span
-                    >{{ t('Preferred language', 'اللغة المفضلة')
-                    }}</span
-                  >
+                  <span>{{ t('Preferred language', 'اللغة المفضلة') }}</span>
                   <div class="segs">
                     <button
                       type="button"
@@ -333,10 +315,7 @@
               </div>
               <div class="grid">
                 <div class="field">
-                  <span
-                    >{{ t('Billing cycle', 'دورة الفوترة')
-                    }}</span
-                  >
+                  <span>{{ t('Billing cycle', 'دورة الفوترة') }}</span>
                   <div class="segs">
                     <button
                       type="button"
@@ -385,19 +364,13 @@
                   />
                 </label>
                 <label class="field">
-                  <span
-                    >{{ t('Payment method', 'طريقة الدفع')
-                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
-                  >
+                  <span>{{ t('Payment method', 'طريقة الدفع') }}</span>
                   <select [value]="x().pay" (change)="setX('pay', $any($event.target).value)">
                     <option value="card">
-                      {{ t('Card / wallet (gateway)', 'بطاقة / محفظة') }}
+                      {{ t('Card (recorded method only)', 'بطاقة (تسجيل الطريقة فقط)') }}
                     </option>
                     <option value="bank">{{ t('Bank transfer', 'تحويل بنكي') }}</option>
                     <option value="instapay">InstaPay</option>
-                    <option value="invoice">
-                      {{ t('Invoice (net 14)', 'فاتورة (14 يومًا)') }}
-                    </option>
                   </select>
                 </label>
                 <label class="field">
@@ -431,7 +404,11 @@
                     }}<i class="soon">{{ t('Preview', 'معاينة') }}</i></span
                   >
                   <div>
-                    <span>{{ planName(plan()) }} · {{ x().cycle==='annual'?t('annual','سنوي'):t('monthly','شهري') }}</span
+                    <span
+                      >{{ planName(plan()) }} ·
+                      {{
+                        x().cycle === 'annual' ? t('annual', 'سنوي') : t('monthly', 'شهري')
+                      }}</span
                     ><b>{{ money(s.base) }}</b>
                   </div>
                   @if (s.disc) {
@@ -442,7 +419,7 @@
                   }
                   @if (s.vat) {
                     <div>
-                      <span>{{ t('Tax','الضريبة') }} {{ s.taxRate }}%</span
+                      <span>{{ t('Tax', 'الضريبة') }} {{ s.taxRate }}%</span
                       ><b>{{ money(s.vat) }}</b>
                     </div>
                   }

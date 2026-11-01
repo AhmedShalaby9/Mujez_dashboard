@@ -157,6 +157,18 @@
                       }
                     </span>
                     <span class="co__sub" dir="ltr">{{ u.email }}</span>
+                    @if (u.createdAt) {
+                      <span class="co__sub"
+                        >{{ lang() === 'ar' ? 'تاريخ الإنشاء' : 'Created' }}:
+                        {{ u.createdAt?.slice(0, 10) }}</span
+                      >
+                    }
+                    @if (u.status === 'invited' && u.invitationExpiresAt) {
+                      <span class="co__sub"
+                        >{{ lang() === 'ar' ? 'تنتهي الدعوة' : 'Invitation expires' }}:
+                        {{ u.invitationExpiresAt }}</span
+                      >
+                    }
                   </span>
                 </div>
               </td>

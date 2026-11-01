@@ -6,10 +6,14 @@ import { AuthService } from '../../../auth.service';
 type RoleKey = string;
 interface Permission {
   key: string;
+  group?: string;
+  order?: number;
   labelEn: string;
   labelAr: string;
 }
 interface RoleDef {
+  descriptionEn?: string;
+  descriptionAr?: string;
   key: string;
   nameEn: string;
   nameAr: string;
@@ -191,6 +195,9 @@ export class RolesPermissions {
 
   readonly creatingRole = signal(false);
   readonly newRoleNameEn = signal('');
+  readonly baseRole = signal('');
+  readonly newDescriptionEn = signal('');
+  readonly newDescriptionAr = signal('');
   readonly newRoleNameAr = signal('');
   readonly newRoleError = signal(false);
 
@@ -199,6 +206,7 @@ export class RolesPermissions {
 
   /** Section for a permission key, derived from its prefix (the API has no group field). */
   private groupIndex(p: Permission): number {
+    if (p.order !== undefined) return p.order;
     const k = p.key;
     if (k.startsWith('co.')) return 0;
     if (['plans', 'sub.manage', 'billing'].includes(k)) return 1;
@@ -222,6 +230,8 @@ export class RolesPermissions {
     [...this.permissions()].sort((a, b) => this.groupIndex(a) - this.groupIndex(b)),
   );
   roleSub(r: RoleDef): string {
+    const description = this.lang() === 'ar' ? r.descriptionAr : r.descriptionEn;
+    if (description) return description;
     const ar = this.lang() === 'ar';
     if (r.locked) return ar ? 'تحكم كامل · مقفل' : 'full control · locked';
     if (r.system) return ar ? 'دور مدمج' : 'built-in role';
@@ -317,6 +327,9 @@ export class RolesPermissions {
       await this.mutate('', {
         nameEn: this.newRoleNameEn().trim(),
         nameAr: this.newRoleNameAr().trim(),
+        ...(this.baseRole() ? { baseRole: this.baseRole() } : {}),
+        descriptionEn: this.newDescriptionEn().trim(),
+        descriptionAr: this.newDescriptionAr().trim(),
       })
     ) {
       this.creatingRole.set(false);

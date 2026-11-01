@@ -1,3 +1,4 @@
+import { NotificationsApi } from '../../notifications-api.service';
 import { OverviewApi, overviewAlertText } from '../../overview-api.service';
 import { PlatformConfig } from '../../platform-config.service';
 import { SupportApi } from '../../support-api.service';
@@ -195,19 +196,29 @@ const COPY: Record<Lang, Copy> = {
 })
 export class AdminShell {
   readonly overview = inject(OverviewApi);
+  readonly notificationFeed = inject(NotificationsApi);
   readonly notifications = computed(() =>
-    this.overview.alerts().map((a) => ({
-      id: a.id,
-      path: a.path,
-      title: overviewAlertText(a, this.ui.lang()),
-      time: this.ui.lang() === 'ar' ? 'الحالة الحالية' : 'Current condition',
-      attention: a.severity !== 'low',
-    })),
+    this.notificationFeed
+      .items()
+      .slice(0, 10)
+      .map((n) => ({
+        id: n.id,
+        path: n.route,
+        title: n.title,
+        time: new Date(n.createdAt).toLocaleString(this.ui.lang() === 'ar' ? 'ar-EG' : 'en-GB'),
+        attention: !n.readAt,
+      })),
   );
+  async readNotification(id: string) {
+    try {
+      await this.notificationFeed.mark(id);
+    } catch {}
+  }
   readonly config = inject(PlatformConfig);
   readonly supportApi = inject(SupportApi);
   constructor() {
     void this.overview.refreshAlerts();
+    void this.notificationFeed.refresh();
     if (this.auth.user()?.permissions.includes('support')) void this.supportApi.summary();
     void this.loadHealth();
   }
@@ -390,7 +401,7 @@ export class AdminShell {
 
   readonly sideProfileOpen = signal(false);
 
-  readonly unreadCount = computed(() => this.notifications().length);
+  readonly unreadCount = this.notificationFeed.unread;
 
   toggleLang(): void {
     this.ui.toggleLang();
@@ -405,7 +416,10 @@ export class AdminShell {
   }
 
   toggleNotif(): void {
-    if (!this.notifOpen()) void this.overview.refreshAlerts();
+    if (!this.notifOpen()) {
+      void this.overview.refreshAlerts();
+      void this.notificationFeed.refresh();
+    }
     this.notifOpen.set(!this.notifOpen());
     this.profileOpen.set(false);
     this.sideProfileOpen.set(false);

@@ -72,6 +72,7 @@ function mockApi() {
       calls.push({ form });
       return doc;
     },
+    previewUrl: (id: string) => 'https://api.example.test/api/v1/documents/' + id + '/preview',
     downloadUrl: (id: string) => 'https://api.example.test/api/v1/documents/' + id + '/download',
     money: (v: string) =>
       'EGP ' + (BigInt(v) / 100n).toString() + '.' + (BigInt(v) % 100n).toString().padStart(2, '0'),

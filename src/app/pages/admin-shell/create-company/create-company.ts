@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { CompaniesApi } from '../../../companies-api.service';
 import { SubscriptionsApi } from '../../../subscriptions-api.service';
 import { AdminUiState } from '../admin-ui-state';
@@ -12,6 +12,7 @@ interface PlanInfo {
   nameEn: string;
   nameAr: string;
   monthlyMinor: number | null;
+  annualMinor: number | null;
   users: number | null;
   listings: number | null;
   projects: number | null;
@@ -84,6 +85,12 @@ const slugify = (v: string) =>
   styleUrls: ['../admin-ui.scss', './create-company.scss'],
 })
 export class CreateCompany {
+  private readonly route=inject(ActivatedRoute);
+  readonly draftId=signal<string|null>(null);
+  readonly draftVersion=signal(0);
+  readonly drafts=signal<any[]>([]);
+  readonly quote=signal<any>(null);
+  private quoteGeneration=0;
   private readonly api = inject(CompaniesApi);
   private readonly subsApi = inject(SubscriptionsApi);
   private readonly router = inject(Router);
@@ -140,6 +147,7 @@ export class CreateCompany {
       nameEn: PLAN_NAMES[key][0],
       nameAr: PLAN_NAMES[key][1],
       monthlyMinor: null,
+      annualMinor:null,
       users: null,
       listings: null,
       projects: null,
@@ -153,6 +161,8 @@ export class CreateCompany {
 
   constructor() {
     void this.loadPlans();
+    void this.loadDrafts();
+    const id=this.route.snapshot.queryParamMap.get('draft');if(id)void this.resumeDraft(id);
   }
   private async loadPlans() {
     for (const options of [false, true]) {
@@ -169,6 +179,7 @@ export class CreateCompany {
               key,
               nameEn: p.nameEn ?? PLAN_NAMES[key][0],
               nameAr: p.nameAr ?? PLAN_NAMES[key][1],
+              annualMinor: typeof p.annualMinor==='number'?p.annualMinor:null,
               monthlyMinor: typeof p.monthlyMinor === 'number' ? p.monthlyMinor : null,
               users: p.users ?? null,
               listings: p.listings ?? null,
@@ -178,6 +189,7 @@ export class CreateCompany {
           }),
         );
         this.resetLimits();
+        await this.refreshQuote();
         return;
       } catch {}
     }
@@ -198,7 +210,7 @@ export class CreateCompany {
       if (k === 'nameEn' && !this.slugTouched()) next.slug = slugify(String(v));
       return next;
     });
-    if (k === 'plan') this.resetLimits();
+    if (k === 'plan') {this.resetLimits();void this.refreshQuote();}
   }
   setSlug(v: string) {
     this.slugTouched.set(true);
@@ -206,6 +218,7 @@ export class CreateCompany {
   }
   setX(k: string, v: string) {
     this.x.update((x) => ({ ...x, [k]: v }));
+    if(k==='cycle')void this.refreshQuote();
   }
 
   readonly errs = computed(() => {
@@ -277,15 +290,11 @@ export class CreateCompany {
   cancel() {
     void this.router.navigateByUrl('/admin/onboarding');
   }
-  saveDraft() {
-    this.toast.set(
-      this.t(
-        "Drafts aren't saved yet — finish the wizard to create the company.",
-        'المسودات غير محفوظة بعد — أكمل الخطوات لإنشاء الشركة.',
-      ),
-    );
-    setTimeout(() => this.toast.set(''), 4000);
-  }
+  private payload(){const f=this.f(),x=this.x();return {...f,country:x.country,address:x.address,companyEmail:x.companyEmail||undefined,taxNumber:x.tax,crNumber:x.cr,cycle:x.cycle,paymentMethod:['card','bank','instapay'].includes(x.pay)?x.pay:'bank',owner:x.aName.trim()?{name:x.aName.trim(),phone:x.aPhone,title:x.aTitle,lang:x.aLang}:undefined};}
+  async loadDrafts(){try{this.drafts.set((await this.api.drafts()).items);}catch{}}
+  async resumeDraft(id:string){try{const d=await this.api.draft(id),p=d.payload;this.draftId.set(d.id);this.draftVersion.set(d.version);this.f.update(f=>({...f,...Object.fromEntries(Object.keys(f).filter(k=>p[k]!==undefined).map(k=>[k,p[k]]))}));this.x.update(x=>({...x,country:p.country??x.country,address:p.address??'',companyEmail:p.companyEmail??'',tax:p.taxNumber??'',cr:p.crNumber??'',cycle:p.cycle??'monthly',pay:p.paymentMethod??'bank',aName:p.owner?.name??'',aPhone:p.owner?.phone??'',aTitle:p.owner?.title??'',aLang:p.owner?.lang??'ar'}));this.slugTouched.set(true);await this.refreshQuote();}catch(e){this.error.set((e as Error).message);}}
+  async saveDraft(){if(this.saving())return;this.saving.set(true);this.error.set('');try{const payload=Object.fromEntries(Object.entries(this.payload()).filter(([,v])=>v!==''&&v!==undefined));const d=await this.api.saveDraft({...payload,...(this.draftId()?{version:this.draftVersion()}:{})},this.draftId()??undefined);this.draftId.set(d.id);this.draftVersion.set(d.version);this.toast.set(this.t('Draft saved. No owner or subscription created.','تم حفظ المسودة دون إنشاء حساب أو اشتراك.'));await this.router.navigate([], {relativeTo:this.route,queryParams:{draft:d.id},replaceUrl:true});await this.loadDrafts();}catch(e){this.error.set((e as Error).message);}finally{this.saving.set(false);}}
+  async refreshQuote(){const generation=++this.quoteGeneration;this.quote.set(null);try{const q=await this.api.quote({plan:this.f().plan,cycle:this.x().cycle});if(generation===this.quoteGeneration)this.quote.set(q);}catch(e){if(generation===this.quoteGeneration)this.error.set((e as Error).message);}}
 
   private async create() {
     if (this.saving()) return;
@@ -293,17 +302,9 @@ export class CreateCompany {
     this.error.set('');
     const f = this.f();
     try {
-      const created = await this.api.create({
-        nameEn: f.nameEn.trim(),
-        nameAr: f.nameAr.trim(),
-        slug: f.slug,
-        type: f.type,
-        city: f.city.trim(),
-        adminEmail: f.adminEmail.trim().toLowerCase(),
-        phone: f.phone.trim(),
-        website: f.website.trim(),
-        plan: f.plan,
-      });
+      await this.refreshQuote();
+      if(!this.quote())throw Error('Refresh the plan quote before creating the company');
+      const created = await this.api.create({...this.payload(),planVersionId:this.quote().planVersionId,...(this.draftId()?{draftId:this.draftId(),draftVersion:this.draftVersion()}:{})});
       this.done.set(created);
     } catch (e) {
       this.error.set((e as Error).message);
@@ -319,6 +320,7 @@ export class CreateCompany {
   }
   another() {
     this.done.set(null);
+    this.draftId.set(null);this.draftVersion.set(0);
     this.step.set(0);
     this.tried.set({});
     this.slugTouched.set(false);
@@ -352,15 +354,7 @@ export class CreateCompany {
         : p.listings.toLocaleString('en-US') + ' ' + this.t('listings', 'وحدة');
     return u + ' · ' + l;
   }
-  /** Preview only: discount/VAT are not applied by the backend yet. */
-  readonly summary = computed(() => {
-    const base = this.plan().monthlyMinor;
-    if (base === null) return null;
-    const disc = Math.round((base * Number(this.x().disc)) / 100);
-    const sub = base - disc;
-    const vat = this.x().country === 'EG' ? Math.round(sub * 0.14) : 0;
-    return { base, disc, vat, total: sub + vat };
-  });
+  readonly summary=computed(()=>{const q=this.quote();return q?{base:Number(q.baseMinor),disc:Number(q.discountMinor),vat:Number(q.taxMinor),taxRate:q.taxBps/100,total:Number(q.totalMinor)}:null;});
 
   // ---- limits (static overrides on top of real plan defaults) ----
   readonly limitRows = computed(() => {

@@ -28,6 +28,10 @@ export class CompaniesApi {
   detail(id: string) {
     return this.auth.request('/admin/api/v1/companies/' + encodeURIComponent(id));
   }
+  drafts(){return this.auth.request('/admin/api/v1/companies/drafts');}
+  draft(id:string){return this.auth.request('/admin/api/v1/companies/drafts/'+encodeURIComponent(id));}
+  saveDraft(body:unknown,id?:string){return this.auth.request('/admin/api/v1/companies/drafts'+(id?'/'+encodeURIComponent(id):''),body);}
+  quote(body:unknown){return this.auth.request('/admin/api/v1/companies/quote',body);}
   create(body: unknown) {
     return this.auth.request('/admin/api/v1/companies', body);
   }

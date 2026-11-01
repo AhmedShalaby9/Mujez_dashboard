@@ -156,7 +156,7 @@
               }
             </th>
             <th (click)="toggleSort('activity')">
-              {{ lang() === 'ar' ? 'آخر تحديث' : 'Last updated' }}
+              {{ lang() === 'ar' ? 'آخر نشاط فعلي' : 'Last active' }}
               @if (sortKey() === 'activity') {
                 <b>{{ sortDir() === 'asc' ? '↑' : '↓' }}</b>
               }
@@ -214,7 +214,7 @@
                 }
               </td>
               <td class="muted">{{ date(c.createdAt) }}</td>
-              <td class="muted">{{ date(c.lastActivity) }}</td>
+              <td class="muted">{{ date(c.lastActiveAt) }}</td>
               <td class="act" (click)="$event.stopPropagation()">
                 <button
                   type="button"
@@ -316,6 +316,8 @@
     </div>
 
     <div class="drawer__body">
+      <div class="kv"><span>{{lang()==='ar'?'مدير النجاح':'Success manager'}}</span><b>{{c.successManager?.name || '—'}}</b>
+      @if(auth.user()?.permissions?.includes('co.create')){<select [value]="c.successManager?.id || ''" (change)="assignManager(c,$any($event.target).value)"><option value="">{{lang()==='ar'?'غير مُسند':'Unassigned'}}</option>@for(m of successManagers();track m.id){<option [value]="m.id">{{m.name}}</option>}</select>}</div>
       @if (L().statusNote(c.status, c.statusReason ?? null); as note) {
         <p
           class="note"
@@ -404,8 +406,8 @@
           ><b>{{ date(c.createdAt) }}</b>
         </div>
         <div class="kv">
-          <span>{{ lang() === 'ar' ? 'آخر تحديث' : 'Last updated' }}</span
-          ><b>{{ date(c.lastActivity) }}</b>
+          <span>{{ lang() === 'ar' ? 'آخر نشاط فعلي' : 'Last active' }}</span
+          ><b>{{ date(c.lastActiveAt) }}</b>
         </div>
       </div>
 

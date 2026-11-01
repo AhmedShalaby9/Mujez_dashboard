@@ -19,6 +19,8 @@ interface OnboardingCompany {
   signedUp: string;
   completedSteps: number;
   stuckDays: number;
+  trialEndsAt?:string|null;
+  successManager?:{id:string;name:string}|null;
 }
 
 interface StepDef {
@@ -120,6 +122,7 @@ export class Onboarding {
   readonly auth = inject(AuthService);
   /** Trial end (subscription renewsOn) per company, for trialing subscriptions. Needs `sub.manage`. */
   readonly trialEnds = signal<Record<string, string>>({});
+  readonly onboardingMetrics=signal<any>(null);
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly error = signal('');
@@ -188,7 +191,9 @@ export class Onboarding {
     this.loading.set(true);
     this.error.set('');
     try {
-      this.companies.set(await this.api.list<OnboardingCompany>(true));
+      const [companies,metrics]=await Promise.all([this.api.list<OnboardingCompany>(true),this.auth.request('/admin/api/v1/companies/onboarding-summary')]);
+      this.companies.set(companies);this.onboardingMetrics.set(metrics);
+      this.trialEnds.set(Object.fromEntries(companies.filter(c=>!!c.trialEndsAt).map(c=>[c.id,c.trialEndsAt!])));
       const current = this.viewing();
       if (current) this.viewing.set(this.companies().find((c) => c.id === current.id) ?? null);
     } catch (error) {

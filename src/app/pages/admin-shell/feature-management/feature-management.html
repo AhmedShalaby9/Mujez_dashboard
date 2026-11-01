@@ -43,7 +43,7 @@
     <div class="kpi">
       <span>{{ lang() === 'ar' ? 'استثناءات الشركات' : 'Company overrides' }}</span
       ><b>{{ stats().overrides }}</b>
-      <small>{{ lang() === 'ar' ? 'مؤقتة حتى سنة' : 'temporary, up to 1 year' }}</small>
+      <small>{{ lang() === 'ar' ? 'مؤقتة أو دائمة' : 'temporary or permanent' }}</small>
     </div>
     <div class="kpi">
       <span>{{ lang() === 'ar' ? 'إطلاق تدريجي' : 'In gradual rollout' }}</span
@@ -61,13 +61,7 @@
       ><b [class.bad]="stats().off > 0">{{ stats().off }}</b>
       <small>{{ lang() === 'ar' ? 'مفتاح الإيقاف' : 'kill switch' }}</small>
     </div>
-    <div class="kpi kpi--static">
-      <span
-        >{{ lang() === 'ar' ? 'متوقفة' : 'Deprecated'
-        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
-      ><b>—</b>
-      <small>{{ lang() === 'ar' ? 'مخفية للباقات الجديدة' : 'hidden for new plans' }}</small>
-    </div>
+    <div class="kpi"><span>{{lang()==='ar'?'متوقفة':'Deprecated'}}</span><b>{{stats().deprecated}}</b><small>{{lang()==='ar'?'غير متاحة للباقات الجديدة':'Unavailable for new plans'}}</small></div>
   </div>
 
   <section class="card">
@@ -349,11 +343,11 @@
             lang() === 'ar'
               ? 'متوقفة (مخفية للباقات الجديدة)'
               : 'Deprecated (hidden for new plans)'
-          }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+          }}</span
         >
         <div class="segs">
-          <button type="button" class="seg seg--on">{{ lang() === 'ar' ? 'لا' : 'No' }}</button>
-          <button type="button" class="seg" (click)="deprecatedSoon()">
+          <button type="button" class="seg" [class.seg--on]="!deprecationDraft()" (click)="deprecationDraft.set(false)">{{ lang() === 'ar' ? 'لا' : 'No' }}</button>
+          <button type="button" class="seg" [class.seg--on]="deprecationDraft()" (click)="deprecationDraft.set(true)">
             {{ lang() === 'ar' ? 'نعم' : 'Yes' }}
           </button>
         </div>
@@ -449,14 +443,14 @@
               {{ d }} {{ lang() === 'ar' ? 'يوم' : 'days' }}
             </button>
           }
-          <button type="button" class="seg" disabled>
+          <button type="button" class="seg" [class.seg--on]="duration()==='permanent'" (click)="setDuration('permanent')">
             {{ lang() === 'ar' ? 'دائم' : 'Permanent'
-            }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+            }}
           </button>
         </div>
         <span class="muted"
           >{{ lang() === 'ar' ? 'ينتهي في ' : 'Ends on '
-          }}{{ date(draft.expiresAt + 'T12:00:00Z') }}</span
+          }}{{ duration()==='permanent'?(lang()==='ar'?'دائم':'Permanent'):date(draft.expiresAt + 'T12:00:00Z') }}</span
         >
       </div>
       <label class="field"

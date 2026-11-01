@@ -49,6 +49,10 @@ interface Company {
   mrr: number;
   createdAt: string;
   lastActivity: string;
+  lastActiveAt?: string|null;
+  subscriptionStatus?:SubStatus|null;
+  seatLimit?:number|null;
+  successManager?:{id:string;name:string}|null;
 }
 
 const CITY_AR: Record<string, string> = {
@@ -797,8 +801,8 @@ export class Companies {
           bv = b.mrr;
           break;
         case 'activity':
-          av = a.lastActivity;
-          bv = b.lastActivity;
+          av = a.lastActiveAt??'';
+          bv = b.lastActiveAt??'';
           break;
         case 'created':
           av = a.createdAt;
@@ -904,7 +908,7 @@ export class Companies {
   }
 
   inTab(c: Company, t: Tab) {
-    return t === 'all' || (t === 'pastdue' ? this.subs()[c.id] === 'past_due' : c.status === t);
+    return t === 'all' || (t === 'pastdue' ? (c.subscriptionStatus??this.subs()[c.id]) === 'past_due' : c.status === t);
   }
   readonly tabs = computed(() => {
     const ar = this.lang() === 'ar';
@@ -942,12 +946,12 @@ export class Companies {
     this.page.set(1);
   }
   subStatus(c: Company): { label: string; fg: string } | null {
-    const st = this.subs()[c.id];
+    const st = c.subscriptionStatus??this.subs()[c.id];
     return st ? { label: SUB_LABEL[st][this.lang() === 'ar' ? 1 : 0], fg: SUB_COLOR[st] } : null;
   }
   /** Seat usage bar for the Users column; null when no limit is known. */
   seats(c: Company): { limit: string; w: string; color: string } | null {
-    const u = this.usage()[c.id]?.users;
+    const u = this.usage()[c.id]?.users ?? (c.subscriptionStatus?{limit:c.seatLimit??null}:null);
     if (!u) return null;
     if (u.limit === null) return { limit: '∞', w: '12%', color: '#111113' };
     const p = u.limit ? c.users / u.limit : 1;
@@ -985,7 +989,8 @@ export class Companies {
       };
     });
   }
-  date(v: string): string {
+  date(v: string|null|undefined): string {
+    if(!v)return "—";
     const d = new Date(v);
     if (Number.isNaN(d.getTime())) return v;
     return new Intl.DateTimeFormat(this.lang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-US', {
@@ -1018,7 +1023,10 @@ export class Companies {
     this.page.set(Math.min(this.totalPages(), this.page() + 1));
   }
 
+  readonly successManagers=signal<Array<{id:string;name:string}>>([]);
+  async assignManager(c:Company,id:string){try{await this.api.change(c.id,'success-manager',{version:c.version,managerId:id||null});this.viewing.set(await this.api.detail(c.id));await this.reload();}catch(e){this.error.set((e as Error).message);}}
   openView(c: Company): void {
+    if(this.auth.user()?.permissions.includes('co.create'))void this.auth.request('/admin/api/v1/companies/success-managers').then(r=>this.successManagers.set(r.items)).catch(()=>{});
     this.viewing.set(c);
     void this.loadOwner(c);
     this.kebabFor.set(null);
@@ -1135,7 +1143,9 @@ export class Companies {
       await this.api.change(target.company.id, 'status', {
         action: target.kind,
         version: target.company.version,
-        reason: reason.slice(0, 500),
+        reason: note.slice(0,500),
+        reasonCode: ({payment:"non_payment",security:"security",terms:"terms",request:"customer_request"} as const)[this.reasonKind()],
+        acknowledged:this.ack(),
       });
       const name = this.companyName(target.company);
       this.confirming.set(null);
@@ -1183,7 +1193,7 @@ export class Companies {
         c.mrr,
         c.adminEmail,
         c.createdAt,
-        c.lastActivity,
+        c.lastActiveAt??'',
       ]
         .map(
           (v) =>

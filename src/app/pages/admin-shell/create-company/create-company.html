@@ -26,6 +26,8 @@
   </div>
 
   @if (!done()) {
+    @if(drafts().length){<div class="note"><b>{{t('Saved drafts','المسودات المحفوظة')}}</b> @for(d of drafts();track d.id){<button type="button" class="btn" (click)="resumeDraft(d.id)">{{d.payload.nameEn || d.payload.slug || t('Untitled draft','مسودة بلا عنوان')}}</button>}</div>}
+
     <div class="wiz">
       <nav class="rail">
         @for (s of steps(); track $index; let i = $index) {
@@ -115,7 +117,7 @@
                 <label class="field">
                   <span
                     >{{ t('Country', 'الدولة')
-                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                    }}</span
                   >
                   <select
                     [value]="x().country"
@@ -137,7 +139,7 @@
                 <label class="field full">
                   <span
                     >{{ t('Business address', 'عنوان الشركة')
-                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                    }}</span
                   >
                   <input
                     [placeholder]="
@@ -150,7 +152,7 @@
                 <label class="field">
                   <span
                     >{{ t('Company email', 'بريد الشركة')
-                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                    }}</span
                   >
                   <input
                     type="email"
@@ -192,7 +194,7 @@
                 <label class="field">
                   <span
                     >{{ t('Tax registration no.', 'رقم التسجيل الضريبي')
-                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                    }}</span
                   >
                   <input
                     dir="ltr"
@@ -203,7 +205,7 @@
                 <label class="field">
                   <span
                     >{{ t('Commercial registration no.', 'رقم السجل التجاري')
-                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                    }}</span
                   >
                   <input
                     dir="ltr"
@@ -218,7 +220,7 @@
                 <label class="field">
                   <span
                     >{{ t('Full name', 'الاسم بالكامل')
-                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                    }}</span
                   >
                   <input
                     [placeholder]="t('Karim Adel', 'كريم عادل')"
@@ -247,7 +249,7 @@
                 <label class="field">
                   <span
                     >{{ t('Mobile', 'الموبايل')
-                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                    }}</span
                   >
                   <input
                     dir="ltr"
@@ -259,14 +261,14 @@
                 <label class="field">
                   <span
                     >{{ t('Job title', 'المسمى الوظيفي')
-                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                    }}</span
                   >
                   <input [value]="x().aTitle" (input)="setX('aTitle', $any($event.target).value)" />
                 </label>
                 <div class="field full">
                   <span
                     >{{ t('Preferred language', 'اللغة المفضلة')
-                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
+                    }}</span
                   >
                   <div class="segs">
                     <button
@@ -333,7 +335,7 @@
                 <div class="field">
                   <span
                     >{{ t('Billing cycle', 'دورة الفوترة')
-                    }}<i class="soon">{{ t('Monthly only', 'شهري فقط') }}</i></span
+                    }}</span
                   >
                   <div class="segs">
                     <button
@@ -350,7 +352,7 @@
                       [class.seg--on]="x().cycle === 'annual'"
                       (click)="setX('cycle', 'annual')"
                     >
-                      {{ t('Annual · 2 months free', 'سنوي · شهران مجانًا') }}
+                      {{ t('Annual', 'سنوي') }}
                     </button>
                   </div>
                 </div>
@@ -363,18 +365,10 @@
                     <button
                       type="button"
                       class="seg"
-                      [class.seg--on]="x().mode === 'trial'"
-                      (click)="setX('mode', 'trial')"
-                    >
-                      {{ t('21-day trial', 'تجربة 21 يومًا') }}
-                    </button>
-                    <button
-                      type="button"
-                      class="seg"
                       [class.seg--on]="x().mode === 'paid'"
                       (click)="setX('mode', 'paid')"
                     >
-                      {{ t('Paid now', 'مدفوع الآن') }}
+                      {{ t('Active subscription', 'اشتراك فعّال') }}
                     </button>
                   </div>
                 </div>
@@ -437,7 +431,7 @@
                     }}<i class="soon">{{ t('Preview', 'معاينة') }}</i></span
                   >
                   <div>
-                    <span>{{ planName(plan()) }} · {{ t('monthly', 'شهري') }}</span
+                    <span>{{ planName(plan()) }} · {{ x().cycle==='annual'?t('annual','سنوي'):t('monthly','شهري') }}</span
                     ><b>{{ money(s.base) }}</b>
                   </div>
                   @if (s.disc) {
@@ -448,7 +442,7 @@
                   }
                   @if (s.vat) {
                     <div>
-                      <span>{{ t('VAT 14%', 'ضريبة 14%') }}</span
+                      <span>{{ t('Tax','الضريبة') }} {{ s.taxRate }}%</span
                       ><b>{{ money(s.vat) }}</b>
                     </div>
                   }
@@ -458,8 +452,8 @@
                   </div>
                   <small>{{
                     t(
-                      'Today the backend starts a monthly subscription at the plan price; discount, VAT and payment collection are not applied yet.',
-                      'حاليًا يبدأ الخادم اشتراكًا شهريًا بسعر الباقة؛ الخصم والضريبة والتحصيل غير مطبقة بعد.'
+                      'Server quote uses the selected billing cycle and configured tax rate. No invoice is issued and no payment is collected.',
+                      'عرض السعر من الخادم حسب دورة الفوترة والضريبة المحددة. لا يتم إصدار فاتورة أو تحصيل مبلغ.'
                     )
                   }}</small>
                 </div>
@@ -604,8 +598,8 @@
                   <p class="muted">
                     {{
                       t(
-                        'Country, address, company email, tax/CR numbers, administrator name/mobile/title/language, billing cycle, trial, start date, payment method, discount, currency, custom limits and feature overrides are shown for design only and are not sent.',
-                        'الدولة والعنوان وبريد الشركة والأرقام الضريبية/التجارية وبيانات المدير ودورة الفوترة والتجربة وتاريخ البدء وطريقة الدفع والخصم والعملة والحدود والميزات المخصصة للعرض فقط ولا تُرسل.'
+                        'Start dates, discounts, other currencies, custom limits and module overrides are pending. Company details, administrator details, cycle and payment method are saved. No free trial is offered.',
+                        'يتم حفظ بيانات الشركة والمدير ودورة الفوترة وطريقة الدفع. تواريخ البدء والخصومات والعملات الأخرى والحدود والميزات المخصصة قيد التطوير. لا توجد تجربة مجانية.'
                       )
                     }}
                   </p>
@@ -634,7 +628,7 @@
           }
           <div class="panel__btns">
             <button type="button" class="btn" (click)="saveDraft()">
-              {{ t('Save draft', 'حفظ كمسودة') }}<i class="soon">{{ t('Soon', 'قريبًا') }}</i>
+              {{ t('Save draft', 'حفظ كمسودة') }}
             </button>
             @if (step() > 0) {
               <button type="button" class="btn" (click)="back()">{{ t('Back', 'رجوع') }}</button>

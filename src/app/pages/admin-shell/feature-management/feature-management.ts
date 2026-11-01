@@ -7,6 +7,7 @@ import { AdminUiState, type Lang } from '../admin-ui-state';
 type PlanKey = string;
 
 interface FeatureDef {
+ deprecated:boolean;category:string;
   version: number;
   key: string;
   nameEn: string;
@@ -24,7 +25,9 @@ interface Override {
   companyAr: string;
   featureKey: string;
   value: boolean;
-  expires: string;
+  expires: string|null;
+  createdBy?:{id:string;name:string}|null;
+  createdAt?:string;
   reasonEn: string;
   reasonAr: string;
 }
@@ -171,7 +174,7 @@ export class FeatureManagement {
   readonly companies = signal<
     Array<{ id: string; nameEn: string; nameAr?: string; plan?: string }>
   >([]);
-  readonly duration = signal<'7' | '30' | '90' | '365'>('30');
+  readonly duration = signal<'7' | '30' | '90' | '365' | 'permanent'>('30');
   readonly effective = signal<any>(null);
   readonly adding = signal(false);
   draft = {
@@ -211,8 +214,9 @@ export class FeatureManagement {
     this.setDuration('30');
     this.adding.set(true);
   }
-  setDuration(d: '7' | '30' | '90' | '365') {
+  setDuration(d: '7' | '30' | '90' | '365' | 'permanent') {
     this.duration.set(d);
+    if(d==='permanent'){this.draft.expiresAt='';return;}
     this.draft.expiresAt = new Date(Date.now() + Number(d) * 86400000).toISOString().slice(0, 10);
   }
   async saveOverride() {
@@ -225,7 +229,7 @@ export class FeatureManagement {
         companyId: this.draft.companyId,
         featureKey: this.draft.featureKey,
         enabled: this.draft.enabled,
-        expiresAt: new Date(this.draft.expiresAt + 'T23:59:59Z').toISOString(),
+        expiresAt: this.duration()==='permanent'?null:new Date(this.draft.expiresAt + 'T23:59:59Z').toISOString(),
         reason: this.draft.reason,
         version: state.version,
       });
@@ -255,6 +259,7 @@ export class FeatureManagement {
   readonly flagAck = signal(false);
   readonly rolloutEditing = signal<FeatureDef | null>(null);
   readonly rolloutDraft = signal(0);
+  readonly deprecationDraft=signal(false);
   readonly removeConfirm = signal<Override | null>(null);
 
   readonly toast = signal<string | null>(null);
@@ -290,6 +295,7 @@ export class FeatureManagement {
     const f = this.features();
     return {
       total: f.length,
+      deprecated:f.filter(x=>x.deprecated).length,
       overrides: this.overrides().length,
       rolling: f.filter((x) => x.platformOn && x.rollout < 100),
       off: f.filter((x) => !x.platformOn).length,
@@ -337,7 +343,8 @@ export class FeatureManagement {
           : 'override beats plan',
     };
   }
-  date(iso: string) {
+  date(iso: string|null) {
+    if(!iso)return this.lang()==='ar'?'دائم':'Permanent';
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
     return new Intl.DateTimeFormat(this.lang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en-US', {
@@ -428,6 +435,7 @@ export class FeatureManagement {
   openRollout(f: FeatureDef): void {
     this.rolloutEditing.set(f);
     this.rolloutDraft.set(f.rollout);
+    this.deprecationDraft.set(!!f.deprecated);
   }
 
   closeRollout(): void {
@@ -443,6 +451,7 @@ export class FeatureManagement {
         action: 'rollout',
         version: f.version,
         rollout: Number(this.rolloutDraft()),
+        deprecated:this.deprecationDraft(),
         reason: 'Rollout updated by platform administrator',
       });
       this.rolloutEditing.set(null);

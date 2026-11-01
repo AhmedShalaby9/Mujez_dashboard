@@ -63,22 +63,8 @@
         }}</small>
       }
     </div>
-    <div class="stat stat--static">
-      <span
-        >{{ lang() === 'ar' ? 'متوسط الوقت لأول صفقة' : 'Median time to first deal'
-        }}<i class="soon">{{ lang() === 'ar' ? 'بيانات تجريبية' : 'Sample' }}</i></span
-      >
-      <b>11 {{ lang() === 'ar' ? 'يوم' : 'days' }}</b>
-      <small>{{ lang() === 'ar' ? 'آخر 90 يومًا' : 'last 90 days' }}</small>
-    </div>
-    <div class="stat stat--static">
-      <span
-        >{{ lang() === 'ar' ? 'تحويل التجربة للدفع' : 'Trial → paid'
-        }}<i class="soon">{{ lang() === 'ar' ? 'بيانات تجريبية' : 'Sample' }}</i></span
-      >
-      <b>58%</b>
-      <small>{{ lang() === 'ar' ? '18 من 31 تجربة' : '18 of 31 trials' }}</small>
-    </div>
+    <div class="stat"><span>{{lang()==='ar'?'المدة الوسيطة لأول صفقة':'Median time to first deal'}}</span><b>{{onboardingMetrics()?.medianDays===null || !onboardingMetrics()?'—':(onboardingMetrics().medianDays.toFixed(1)+' '+(lang()==='ar'?'يوم':'days'))}}</b><small>{{lang()==='ar'?'آخر ٩٠ يومًا':'Last 90 days'}}</small></div>
+    <div class="stat"><span>{{lang()==='ar'?'اكتمل أول تعامل':'First-deal completions'}}</span><b>{{onboardingMetrics()?.completed??'—'}}</b><small>{{lang()==='ar'?'لا توجد تجارب مجانية':'No free trials offered'}}</small></div>
   </div>
 
   <section class="card">
@@ -116,7 +102,7 @@
             <th>{{ lang() === 'ar' ? 'نهاية التجربة' : 'Trial ends' }}</th>
             <th>
               {{ lang() === 'ar' ? 'مدير النجاح' : 'Success manager'
-              }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+              }}
             </th>
             <th></th>
           </tr>
@@ -163,7 +149,7 @@
                 }
               </td>
               <td [class.late]="(daysLeft(c) ?? 99) <= 4">{{ trialEndLabel(c) }}</td>
-              <td class="muted">{{ lang() === 'ar' ? 'غير مُسند' : 'Unassigned' }}</td>
+              <td class="muted">{{c.successManager?.name || (lang() === 'ar' ? 'غير مُسند' : 'Unassigned')}}</td>
               <td (click)="$event.stopPropagation()">
                 @if (c.status === 'pending') {
                   <button type="button" class="btn btn--sm" (click)="openInvite(c)">
@@ -172,7 +158,7 @@
                 } @else {
                   <button type="button" class="btn btn--sm" (click)="sendReminder(c)">
                     {{ L().sendReminder
-                    }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+                    }}
                   </button>
                 }
               </td>
@@ -270,7 +256,7 @@
         </button>
       } @else {
         <button type="button" class="btn" (click)="sendReminder(c)">
-          {{ L().sendReminder }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+          {{ L().sendReminder }}
         </button>
       }
       <button type="button" class="btn" (click)="closeView()">{{ L().drawerClose }}</button>

@@ -46,7 +46,18 @@ export class ApiError extends Error {
 export class AuthService {
   private readonly config = inject(RUNTIME_CONFIG);
   readonly user = signal<User | null>(null);
+  /** Number of in-flight GET requests (excluding session checks). */
+  readonly pending = signal(0);
   async request(path: string, body?: unknown) {
+    const track = body === undefined && !path.includes('/auth/session');
+    if (track) this.pending.update((n) => n + 1);
+    try {
+      return await this.rawRequest(path, body);
+    } finally {
+      if (track) this.pending.update((n) => Math.max(0, n - 1));
+    }
+  }
+  private async rawRequest(path: string, body?: unknown) {
     const multipart = typeof FormData !== 'undefined' && body instanceof FormData;
     const response = await fetch(this.config.apiUrl + path, {
       method: body === undefined ? 'GET' : 'POST',

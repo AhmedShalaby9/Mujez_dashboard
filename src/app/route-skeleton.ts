@@ -1,53 +1,91 @@
-import { Component, Injectable, inject } from '@angular/core';
-import { NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Router } from '@angular/router';
-import { signal } from '@angular/core';
+import { Component, Injectable, effect, inject, signal } from '@angular/core';
+import {
+  NavigationCancel,
+  NavigationEnd,
+  NavigationError,
+  NavigationStart,
+  Router,
+} from '@angular/router';
+import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
+import { AuthService } from './auth.service';
 
-/** True while a route change is in flight (guards + lazy chunk loading). */
+/**
+ * True while a route change is in flight (guards + lazy chunks) and until the
+ * page's initial data requests have finished, so the shell can show a shimmer.
+ */
 @Injectable({ providedIn: 'root' })
 export class NavigationState {
-  readonly navigating = signal(false);
+  private readonly auth = inject(AuthService);
+  private readonly routing = signal(false);
+  private readonly dataLoading = signal(false);
+  private safety?: ReturnType<typeof setTimeout>;
+  readonly navigating = () => this.routing() || this.dataLoading();
+
   constructor() {
     inject(Router).events.subscribe((e) => {
-      if (e instanceof NavigationStart) this.navigating.set(true);
-      else if (
-        e instanceof NavigationEnd ||
-        e instanceof NavigationCancel ||
-        e instanceof NavigationError
-      )
-        this.navigating.set(false);
+      if (e instanceof NavigationStart) {
+        this.routing.set(true);
+      } else if (e instanceof NavigationEnd) {
+        this.routing.set(false);
+        // Page constructors fire their requests on activation; check right after.
+        setTimeout(() => {
+          if (this.auth.pending() > 0) {
+            this.dataLoading.set(true);
+            clearTimeout(this.safety);
+            this.safety = setTimeout(() => this.dataLoading.set(false), 10000);
+          }
+        });
+      } else if (e instanceof NavigationCancel || e instanceof NavigationError) {
+        this.routing.set(false);
+      }
+    });
+    effect(() => {
+      if (this.auth.pending() === 0 && this.dataLoading()) {
+        clearTimeout(this.safety);
+        this.dataLoading.set(false);
+      }
     });
   }
 }
 
 @Component({
   selector: 'app-route-skeleton',
+  imports: [NgxSkeletonLoaderModule],
   template: `
     <div class="sk" aria-busy="true" aria-live="polite">
-      <div class="sk__bar sk__title"></div>
+      <ngx-skeleton-loader
+        [theme]="{ width: '220px', height: '28px', margin: 0 }"
+        animation="progress"
+      />
       <div class="sk__row">
         @for (i of [1, 2, 3, 4]; track i) {
-          <div class="sk__bar sk__card"></div>
+          <ngx-skeleton-loader
+            [theme]="{ height: '92px', margin: 0, 'border-radius': '10px' }"
+            animation="progress"
+          />
         }
       </div>
-      <div class="sk__bar sk__panel"></div>
-      <div class="sk__bar sk__panel sk__panel--short"></div>
+      <ngx-skeleton-loader
+        [theme]="{ height: '260px', margin: 0, 'border-radius': '10px' }"
+        animation="progress"
+      />
+      <ngx-skeleton-loader
+        [theme]="{ height: '140px', margin: 0, 'border-radius': '10px' }"
+        animation="progress"
+      />
     </div>
   `,
   styles: `
-    .sk { display: flex; flex-direction: column; gap: 14px; }
-    .sk__row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
-    .sk__bar {
-      border-radius: 10px;
-      background: linear-gradient(90deg, rgba(128,128,128,.12) 25%, rgba(128,128,128,.24) 50%, rgba(128,128,128,.12) 75%);
-      background-size: 200% 100%;
-      animation: sk-shimmer 1.2s ease-in-out infinite;
+    .sk {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
     }
-    .sk__title { height: 28px; width: 220px; }
-    .sk__card { height: 92px; }
-    .sk__panel { height: 260px; }
-    .sk__panel--short { height: 140px; }
-    @keyframes sk-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-    @media (prefers-reduced-motion: reduce) { .sk__bar { animation: none; } }
+    .sk__row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+    }
   `,
 })
 export class RouteSkeleton {}

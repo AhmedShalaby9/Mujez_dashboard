@@ -644,11 +644,17 @@ export class Subscriptions {
   readonly staticForm = signal<{ kind: StaticKind; sub: Subscription | null } | null>(null);
   readonly cancelReason = signal('price');
   readonly cancelNote = signal('');
+  readonly cycleDraft=signal<'monthly'|'annual'>('monthly');
+  readonly changeTiming=signal<'now'|'renewal'>('now');
+  readonly cancelTiming=signal<'now'|'renewal'>('renewal');
+  readonly history=signal<any[]>([]);
   openStatic(kind: StaticKind, sub: Subscription | null = null) {
     this.kebabFor.set(null);
     this.staticForm.set({ kind, sub });
+    this.cycleDraft.set(sub?.cycle==='annual'?'monthly':'annual');
   }
-  submitStatic() {
+  async submitStatic() {
+    const target=this.staticForm();if(target?.kind==='cycle'&&target.sub){try{await this.api.action(target.sub.subId,'cycle',{version:target.sub.version,cycle:this.cycleDraft()});this.staticForm.set(null);this.viewing.set(null);await this.reload();this.showToast(this.lang()==='ar'?'تم جدولة دورة الفوترة للتجديد':'Billing cycle scheduled for renewal');}catch(e){this.error.set((e as Error).message);}return;}
     const ar = this.lang() === 'ar';
     this.staticForm.set(null);
     this.showToast(
@@ -677,6 +683,7 @@ export class Subscriptions {
 
   openView(s: Subscription): void {
     this.viewing.set(s);
+    this.history.set([]);void this.api.history(s.subId).then(r=>{if(this.viewing()?.subId===s.subId)this.history.set(r.items);}).catch(e=>this.error.set(e.message));
     this.kebabFor.set(null);
   }
 
@@ -695,6 +702,7 @@ export class Subscriptions {
   openChangePlan(s: Subscription): void {
     this.changingPlan.set(s);
     this.newPlan.set(s.plan);
+    this.changeTiming.set('now');
     this.kebabFor.set(null);
   }
 
@@ -714,6 +722,7 @@ export class Subscriptions {
         version: target.version,
         plan: plan.key,
         planVersionId: plan.planVersionId,
+        when:this.changeTiming(),
       });
       this.changingPlan.set(null);
       this.viewing.set(null);
@@ -728,6 +737,7 @@ export class Subscriptions {
 
   askConfirm(s: Subscription, kind: 'cancel' | 'renew'): void {
     this.cancelReason.set('price');
+    this.cancelTiming.set('renewal');
     this.cancelNote.set('');
     this.confirming.set({ sub: s, kind });
     this.kebabFor.set(null);
@@ -743,7 +753,7 @@ export class Subscriptions {
     this.saving.set(true);
     this.error.set('');
     try {
-      await this.api.action(target.sub.subId, target.kind, { version: target.sub.version });
+      await this.api.action(target.sub.subId, target.kind, { version: target.sub.version,...(target.kind==='cancel'?{when:this.cancelTiming(),reason:this.cancelReason(),note:this.cancelNote()}: {}) });
       this.confirming.set(null);
       this.viewing.set(null);
       await this.reload();

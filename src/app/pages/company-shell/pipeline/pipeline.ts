@@ -79,6 +79,9 @@ export class Pipeline {
       this.optionsSerial++;
     });
   }
+  readonly segmentFilter=signal<'all'|'res'|'com'>('all');
+  setSegment(s:'all'|'res'|'com'){this.segmentFilter.set(s);void this.reload();}
+  daysInStage(d:SalesDeal){return d.stageChangedAt?Math.max(0,Math.floor((Date.now()-new Date(d.stageChangedAt).getTime())/86400000)):null;}
   async reload(page = 1) {
     const serial = ++this.serial;
     this.loading.set(true);
@@ -87,6 +90,7 @@ export class Pipeline {
       const r = await this.api.get('pipeline', {
         page: String(page),
         limit: '100',
+        ...(this.segmentFilter()!=='all'?{segment:this.segmentFilter()}:{}),
         ...(this.q().trim() ? { q: this.q().trim() } : {}),
       });
       if (serial === this.serial) {

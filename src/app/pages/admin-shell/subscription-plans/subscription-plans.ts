@@ -430,7 +430,7 @@ export class SubscriptionPlans {
     this.saving.set(true);
     this.error.set('');
     try {
-      await this.api.archive(target.plan.key, target.plan.version, target.kind === 'archive');
+      await this.api.archive(target.plan.key, target.plan.version, target.kind === 'archive',this.archiveNote());
       this.confirming.set(null);
       await this.reload();
     } catch (error) {

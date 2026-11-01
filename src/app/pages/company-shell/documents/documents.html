@@ -140,7 +140,7 @@
             [style.color]="extTone(d)[1]"
             >{{ ext(d) }}</span
           >
-          <span>{{ t('Preview not available', 'المعاينة غير متاحة') }}</span>
+          <a class="btn" [href]="preview(d)" target="_blank" rel="noopener noreferrer">{{t('Open preview','فتح المعاينة')}}</a>
         </div>
         <div class="p-head">
           <div class="p-row">
@@ -191,20 +191,8 @@
           ><b class="mono hash" [title]="d.sha256">{{ (d.sha256 || '—').slice(0, 16) }}…</b>
         </div>
         <div class="p-acts">
-          <button
-            type="button"
-            class="btn btn--sm btn--dark"
-            (click)="
-              soon(
-                t(
-                  'Document review is not available from the API yet.',
-                  'مراجعة المستندات غير متاحة من الخادم بعد.'
-                )
-              )
-            "
-          >
-            {{ t('Mark verified', 'توثيق') }}<i class="soon">{{ t('Soon', 'قريبًا') }}</i>
-          </button>
+          <span>{{d.reviewStatus || 'pending'}}</span>
+          @if(canManage() && auth.user()?.pool==='company_admin' && !d.archivedAt){<input class="input" [value]="reviewReason()" (input)="reviewReason.set($any($event.target).value)" [placeholder]="t('Review reason','سبب المراجعة')"><button type="button" class="btn btn--sm btn--dark" [disabled]="busy()" (click)="review(d,'verified')">{{t('Mark verified','توثيق')}}</button><button type="button" class="btn btn--sm" [disabled]="busy()" (click)="review(d,'rejected')">{{t('Reject','رفض')}}</button>}
           <a class="btn btn--sm" [href]="download(d)" target="_blank" rel="noopener">{{
             t('Download', 'تنزيل')
           }}</a>
@@ -242,7 +230,8 @@
       }}</span>
     </div>
     <div class="dialog__main">
-      @if (error()) {
+      <div class="note"><span>{{t('Pending review','بانتظار المراجعة')}}: {{summary()?.pendingReview??'—'}} · {{t('Expired','منتهية')}}: {{summary()?.expired??'—'}}</span><select [value]="statusFilter()" (change)="statusFilter.set($any($event.target).value);reload()"><option value="">{{t('All statuses','كل الحالات')}}</option>@for(s of ['pending','verified','rejected','expired','expiring','current'];track s){<option [value]="s">{{s}}</option>}</select></div>
+  @if (error()) {
         <p role="alert" class="note note--bad">{{ error() }}</p>
       }
       <label class="drop">

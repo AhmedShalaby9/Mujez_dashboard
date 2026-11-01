@@ -151,6 +151,9 @@ const COPY: Record<Lang, Copy> = {
   styleUrl: './company-shell.scss',
 })
 export class CompanyShell {
+ readonly announcements=signal<Array<{id:string;title:string;body:string;type:string;priority:string}>>([]);
+ private async loadAnnouncements(){try{const list=await this.auth.request('/api/v1/announcements?lang='+this.lang());this.announcements.set(list);}catch{this.announcements.set([]);}}
+
   private readonly ui = inject(CompanyUiState);
 
   readonly dir = this.ui.dir;
@@ -350,9 +353,10 @@ export class CompanyShell {
   }
   private readonly navSub = this.router.events
     .pipe(filter((e) => e instanceof NavigationEnd))
-    .subscribe(() => void this.loadAlerts());
+    .subscribe(() => {void this.loadAlerts();void this.loadAnnouncements();});
   private readonly navCleanup = inject(DestroyRef).onDestroy(() => this.navSub.unsubscribe());
   private readonly initAlerts = void this.loadAlerts();
+  private readonly initAnnouncements=void this.loadAnnouncements();
 
   readonly canSearchLeads = computed(
     () => this.auth.user()?.permissions.includes('leads.read') ?? false,

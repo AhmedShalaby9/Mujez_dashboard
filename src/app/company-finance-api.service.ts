@@ -3,6 +3,7 @@ import { InventoryApi } from './inventory-api.service';
 import { AuthService } from './auth.service';
 import { RUNTIME_CONFIG } from './runtime-config';
 export interface CompanyDocument {
+ reviewStatus?:'pending'|'verified'|'rejected';reviewedBy?:string|null;reviewedAt?:string|null;reviewReason?:string|null;
   id: string;
   kind: string;
   title: string;
@@ -73,6 +74,7 @@ export class CompanyFinanceApi {
   upload(form: FormData) {
     return this.auth.request('/api/v1/documents', form) as Promise<CompanyDocument>;
   }
+  previewUrl(id:string){return this.config.apiUrl+'/api/v1/documents/'+encodeURIComponent(id)+'/preview';}
   downloadUrl(id: string) {
     return this.config.apiUrl + '/api/v1/documents/' + encodeURIComponent(id) + '/download';
   }

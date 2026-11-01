@@ -39,6 +39,7 @@ export class Tasks {
   readonly today = signal('');
   readonly asOf = signal('');
   readonly summary = signal<Record<string, number>>({});
+  readonly workloadRows=signal<Array<{id:string|null;name:string|null;open:number}>>([]);
   readonly groups = TASK_GROUPS;
   readonly groupFilter = signal('all');
   readonly statusFilter = signal('open');
@@ -192,6 +193,7 @@ export class Tasks {
         this.tasks.set(r.items);
         this.total.set(r.total);
         this.summary.set(r.summary);
+        this.workloadRows.set(r.summary.byAssignee??[]);
         this.today.set(r.today);
         this.asOf.set(r.asOf);
         this.page.set(page);
@@ -425,18 +427,9 @@ export class Tasks {
   }
   /** Assignee load among the loaded tasks (shown when the user can see others' tasks). */
   readonly byAssignee = computed(() => {
-    const m = new Map<string, number>();
-    for (const t of this.tasks())
-      if (t.status === 'open')
-        m.set(
-          t.assignee?.name ?? this.t('Unassigned', 'دون مسؤول'),
-          (m.get(t.assignee?.name ?? this.t('Unassigned', 'دون مسؤول')) ?? 0) + 1,
-        );
-    const max = Math.max(1, ...m.values());
-    return [...m.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, n]) => ({ name, n, pct: (n / max) * 100 + '%' }));
+    const rows=this.workloadRows(),max=Math.max(1,...rows.map(r=>r.open));return rows.map(r=>({name:r.name??this.t('Unassigned','دون مسؤول'),n:r.open,pct:(r.open/max)*100+'%'}));
   });
+
   async toggle(t: CompanyTask) {
     if (!this.canManage() || t.status === 'cancelled') return;
     await this.action(t, t.status === 'done' ? 'reopen' : 'complete');

@@ -131,6 +131,9 @@ export class Documents implements OnDestroy {
   total = signal(0);
   page = signal(1);
   storageBytes = signal('0');
+  readonly summary=signal<any>(null);
+  readonly statusFilter=signal('');
+  readonly reviewReason=signal('');
   search = '';
   archived = false;
   contractFilter = signal('');
@@ -185,6 +188,8 @@ export class Documents implements OnDestroy {
   uploadedBy(d: Doc) {
     return d.uploadedBy?.name ?? this.t('System seed', 'بيانات أولية');
   }
+  preview(d:Doc){return this.api.previewUrl(d.id);}
+  async review(d:Doc,status:'verified'|'rejected'){if(this.busy())return;const reason=this.reviewReason().trim();if(reason.length<5){this.error.set(this.t('Enter a review reason of at least 5 characters','أدخل سبب المراجعة بطول خمسة أحرف على الأقل'));return;}this.busy.set(true);try{await this.api.write('documents/'+d.id+'/review',{requestId:crypto.randomUUID(),version:d.version,status,reason});this.reviewReason.set('');await this.reload();this.selected.set(await this.api.get<Doc>('documents/'+d.id));}catch(e){this.error.set((e as Error).message);}finally{this.busy.set(false);}}
   download(d: Doc) {
     return this.api.downloadUrl(d.id);
   }
@@ -255,7 +260,8 @@ export class Documents implements OnDestroy {
       limit: '30',
       archived: this.archived ? 'all' : 'active',
     };
-    if (this.kindFilter() !== 'all') q['kind'] = this.kindFilter();
+    if(this.statusFilter())q['status']=this.statusFilter();
+      if (this.kindFilter() !== 'all') q['kind'] = this.kindFilter();
     if (this.contractFilter()) q['contractId'] = this.contractFilter();
     try {
       const r = await this.api.get<{ items: Doc[]; total: number; storageBytes: string }>(
@@ -266,6 +272,7 @@ export class Documents implements OnDestroy {
       this.docs.set(r.items);
       this.total.set(r.total);
       this.storageBytes.set(r.storageBytes);
+      this.summary.set(r.summary);
       // Design: the detail panel always shows a file — keep the selection or default to the first row.
       const cur = this.selected();
       const same = cur && r.items.find((d) => d.id === cur.id);

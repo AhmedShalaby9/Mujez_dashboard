@@ -15,6 +15,9 @@ export interface SalesLead {
   reference: string;
   name: { en: string; ar: string };
   phone: string;
+  email?:string|null;
+  lastActivityAt?:string|null;
+  stageChangedAt?:string|null;
   segment: 'res' | 'com';
   want: { en: string; ar: string };
   budgetMinor: string | null;
@@ -50,6 +53,7 @@ export interface SalesLead {
   }>;
 }
 export interface SalesDeal {
+ segment?:'res'|'com';stageChangedAt?:string|null;
   id: string;
   reference: string;
   leadId: string;

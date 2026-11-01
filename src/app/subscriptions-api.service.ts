@@ -25,12 +25,13 @@ export class SubscriptionsApi {
   savePlan(body: unknown, key?: string) {
     return this.auth.request('/admin/api/v1/plans' + (key ? '/' + key + '/update' : ''), body);
   }
-  archive(key: string, version: number, archived: boolean) {
-    return this.auth.request('/admin/api/v1/plans/' + key + '/archive', { version, archived });
+  archive(key: string, version: number, archived: boolean,reason?:string) {
+    return this.auth.request('/admin/api/v1/plans/' + key + '/archive', { version, archived,...(reason?.trim()?{reason:reason.trim()}: {}) });
   }
   create(body: unknown) {
     return this.auth.request('/admin/api/v1/subscriptions', body);
   }
+  history(id:string){return this.auth.request('/admin/api/v1/subscriptions/'+encodeURIComponent(id)+'/history');}
   action(id: string, action: string, body: unknown) {
     return this.auth.request(
       '/admin/api/v1/subscriptions/' + encodeURIComponent(id) + '/' + action,

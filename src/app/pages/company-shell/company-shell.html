@@ -319,6 +319,7 @@
       @if (error()) {
         <p role="alert">{{ error() }}</p>
       }
+      @for(a of announcements();track a.id){<section role="status" class="workspace-banner" [style.border-color]="a.priority==='high'?'#d99a28':null"><strong>{{a.title}}</strong><span>{{a.body}}</span></section>}
       <router-outlet />
     </div>
   </div>

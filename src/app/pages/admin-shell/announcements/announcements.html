@@ -166,7 +166,7 @@
                       </button>
                     }
                     @if (a.status === 'draft') {
-                      <button type="button" class="bad" (click)="deleteSoon()">
+                      <button type="button" class="bad" (click)="deleteDraft(a)">
                         {{ lang() === 'ar' ? 'حذف المسودة' : 'Delete draft'
                         }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
                       </button>

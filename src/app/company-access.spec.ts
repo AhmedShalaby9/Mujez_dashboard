@@ -75,7 +75,8 @@ describe('Company and platform login routing', () => {
     user.set({ ...owner, permissions: [] });
     expect(path(await check(companyGuard))).toBe('/');
     user.set({ ...owner, pool: 'company_user', role: 'agent' });
-    expect(path(await check(companyGuard))).toBe('/');
+    expect(await check(companyGuard)).toBe(true);
+    expect(path(await check(companyGuard,{data:{permission:'team.manage'}}))).toBe('/company/dashboard');
   });
 });
 describe('Company owner workspace identity', () => {

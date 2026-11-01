@@ -9,6 +9,8 @@ type Status = 'draft' | 'scheduled' | 'published' | 'expired';
 type AnnLang = 'both' | 'en' | 'ar';
 
 interface Announcement {
+  priority?:'normal'|'high';
+  audienceCount?:number|null;
   version: number;
   published: boolean;
   id: string;
@@ -145,6 +147,7 @@ const COPY: Record<Lang, Copy> = {
 type Draft = Omit<Announcement, 'id' | 'status' | 'version' | 'published'>;
 
 const EMPTY_DRAFT: Draft = {
+  priority:'normal',
   titleEn: '',
   titleAr: '',
   bodyEn: '',
@@ -247,7 +250,7 @@ export class Announcements {
   openEdit(a: Announcement): void {
     this.creating.set(false);
     this.editing.set(a);
-    const { id, status, version, published, ...rest } = a;
+    const { id, status, version, published, audienceCount, ...rest } = a;
     this.draft = { ...rest, from: this.localTime(a.from), to: this.localTime(a.to) };
   }
 
@@ -333,11 +336,8 @@ export class Announcements {
     await this.publish();
   }
   /** Row shortcut: "End now" withdraws the notice to draft, which hides it immediately. */
-  async endNow(a: Announcement) {
-    this.kebabFor.set(null);
-    this.openEdit(a);
-    await this.saveDraft();
-  }
+  async endNow(a:Announcement){try{await this.api.request('/admin/api/v1/announcements/'+a.id+'/end',{version:a.version});this.kebabFor.set(null);await this.load();}catch(e){this.error.set((e as Error).message);}}
+  async deleteDraft(a:Announcement){if(a.status!=='draft')return;try{await this.api.request('/admin/api/v1/announcements/'+a.id+'/delete',{version:a.version});this.kebabFor.set(null);await this.load();}catch(e){this.error.set((e as Error).message);}}
   deleteSoon() {
     this.kebabFor.set(null);
     this.showToast(

@@ -91,6 +91,9 @@ export class Leads {
   readonly duplicates = signal<any[]>([]);
   readonly duplicateId = signal('');
   readonly dupReason = signal('');
+  readonly segmentFilter=signal<'all'|'res'|'com'>('all');
+  readonly ownerFilter=signal('');
+  readonly callOutcome=signal('');
   readonly note = signal('');
   readonly reason = signal('');
   readonly actionStage = signal('');
@@ -99,6 +102,7 @@ export class Leads {
     name: '',
     nameAr: '',
     phone: '',
+    email:'',
     segment: 'res',
     want: '',
     wantAr: '',
@@ -156,6 +160,8 @@ export class Leads {
         limit: '50',
         archived: this.archived() ? 'all' : 'active',
       };
+      if(this.segmentFilter()!=='all')q['segment']=this.segmentFilter();
+      if(this.ownerFilter())q['ownerId']=this.ownerFilter();
       if (this.campaignFilter()) q['campaignId'] = this.campaignFilter();
       if (this.search().trim()) q['q'] = this.search().trim();
       if (this.stageFilter() !== 'all') q['stage'] = this.stageFilter();
@@ -362,6 +368,7 @@ export class Leads {
           name: l.name.en,
           nameAr: l.name.ar,
           phone: l.phone,
+          email:l.email??'',
           segment: l.segment,
           want: l.want.en,
           wantAr: l.want.ar,
@@ -375,6 +382,7 @@ export class Leads {
           name: '',
           nameAr: '',
           phone: '',
+          email:'',
           segment: 'res',
           want: '',
           wantAr: '',
@@ -406,6 +414,7 @@ export class Leads {
         name: this.draft.name.trim(),
         ...(this.draft.nameAr.trim() ? { nameAr: this.draft.nameAr.trim() } : {}),
         phone: this.draft.phone,
+        email:this.draft.email.trim()||null,
         segment: this.draft.segment,
         want: this.draft.want.trim(),
         wantAr: this.draft.wantAr.trim() || this.draft.want.trim(),
@@ -522,7 +531,7 @@ export class Leads {
         requestId: kind === 'notes' ? this.noteRequest : crypto.randomUUID(),
         version: l.version,
         ...(kind === 'notes'
-          ? { note: this.note().trim() }
+          ? { note: this.note().trim(),kind:this.actKind()==='meeting'?'viewing':this.actKind(),...(this.actKind()==='call'&&this.callOutcome()?{outcome:this.callOutcome()}: {}) }
           : kind === 'stage'
             ? {
                 stage: this.actionStage(),
@@ -598,7 +607,7 @@ export class Leads {
     const text = this.note().trim();
     if (!text) return;
     const k = this.actKinds.find((x) => x[0] === this.actKind())!;
-    if (this.actKind() !== 'note') this.note.set(`[${k[1]}] ${text}`);
+
     await this.mutate('notes');
     if (this.detailError()) this.note.set(text);
     else this.note.set('');
@@ -606,15 +615,7 @@ export class Leads {
   stageIndex(s: SalesStage) {
     return this.stages.indexOf(s);
   }
-  segmentSoon() {
-    this.toast.set(
-      this.t(
-        'Segment filtering is not available from the API yet.',
-        'التصفية حسب القطاع غير متاحة من الخادم بعد.',
-      ),
-    );
-    setTimeout(() => this.toast.set(''), 3500);
-  }
+  setSegment(s:'all'|'res'|'com'){this.segmentFilter.set(s);void this.reload();}
   showToast(msg: string) {
     this.toast.set(msg);
     setTimeout(() => this.toast.set(''), 3500);

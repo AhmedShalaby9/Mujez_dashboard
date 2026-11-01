@@ -5,10 +5,10 @@
       <h1>{{ t('Leads', 'العملاء المحتملون') }}</h1>
     </div>
     <div class="head__actions">
-      <div class="toggle" [title]="t('Segment filter — soon', 'تصفية القطاع — قريبًا')">
-        <button type="button" class="on">{{ t('All', 'الكل') }}</button>
-        <button type="button" (click)="segmentSoon()">{{ t('Residential', 'سكني') }}</button>
-        <button type="button" (click)="segmentSoon()">{{ t('Commercial', 'تجاري') }}</button>
+      <div class="toggle" >
+        <button type="button" [class.on]="segmentFilter()==='all'" (click)="setSegment('all')">{{ t('All', 'الكل') }}</button>
+        <button type="button" [class.on]="segmentFilter()==='res'" (click)="setSegment('res')">{{ t('Residential', 'سكني') }}</button>
+        <button type="button" [class.on]="segmentFilter()==='com'" (click)="setSegment('com')">{{ t('Commercial', 'تجاري') }}</button>
       </div>
       @if (canManage()) {
         <button type="button" class="btn btn--dark" (click)="openNew()">
@@ -18,6 +18,7 @@
     </div>
   </div>
 
+  <select class="input" [value]="ownerFilter()" (change)="ownerFilter.set($any($event.target).value);reload()"><option value="">{{t('All owners','كل المسؤولين')}}</option>@for(o of owners();track o.id){<option [value]="o.id">{{o.name}}</option>}</select>
   @if (error()) {
     <p class="note note--bad" role="alert">
       {{ error() }} · {{ t('Previous data may be stale', 'قد تكون البيانات السابقة قديمة') }}
@@ -98,7 +99,7 @@
             <th>{{ t('Stage', 'المرحلة') }}</th>
             <th>{{ t('Source', 'المصدر') }}</th>
             <th>{{ t('Owner', 'المسؤول') }}</th>
-            <th>{{ t('Last update', 'آخر تحديث') }}</th>
+            <th>{{ t('Last activity', 'آخر نشاط') }}</th>
             <th class="end">{{ t('Score', 'التقييم') }}</th>
           </tr>
         </thead>
@@ -140,7 +141,7 @@
               </td>
               <td class="muted">{{ source(l.source) }}</td>
               <td class="soft">{{ l.owner?.name || t('Unassigned', 'دون مسؤول') }}</td>
-              <td class="muted">{{ ago(l.updatedAt) }}</td>
+              <td class="muted">{{ ago(l.lastActivityAt || l.createdAt) }}</td>
               <td class="end mono strong" [style.color]="scoreColor(l.score)">
                 {{ l.score ?? '—' }}
               </td>
@@ -257,6 +258,8 @@
                 }
               </select>
               @if (actionStage() === 'lost' || actionStage() === 'reopen') {
+            @if(actKind()==='call'){<select class="input" [value]="callOutcome()" (change)="callOutcome.set($any($event.target).value)"><option value="">{{t('Call outcome','نتيجة المكالمة')}}</option><option value="interested">{{t('Interested','مهتم')}}</option><option value="call_back">{{t('Call back','إعادة الاتصال')}}</option><option value="no_answer">{{t('No answer','لا إجابة')}}</option><option value="not_interested">{{t('Not interested','غير مهتم')}}</option></select>}
+
                 <textarea
                   rows="2"
                   [placeholder]="t('Reason (10+ characters)', 'السبب (10 أحرف على الأقل)')"
@@ -286,8 +289,8 @@
           ><b class="mono">{{ money(l.budgetMinor) }}</b> <span>{{ t('Phone', 'الهاتف') }}</span
           ><b class="mono" dir="ltr">{{ l.phone }}</b>
           <span
-            >{{ t('Email', 'البريد') }}<i class="soon">{{ t('Soon', 'قريبًا') }}</i></span
-          ><b>—</b> <span>{{ t('Source', 'المصدر') }}</span
+            >{{ t('Email', 'البريد') }}</span
+          ><b>{{l.email || '—'}}</b> <span>{{ t('Source', 'المصدر') }}</span
           ><b
             >{{ source(l.source) }}
             @if (l.campaign) {
@@ -527,6 +530,7 @@
           ><span>{{ t('Arabic name (optional)', 'الاسم بالعربية (اختياري)') }}</span
           ><input dir="rtl" [(ngModel)]="draft.nameAr" name="nameAr" maxlength="160"
         /></label>
+        <label class="field"><span>{{t('Email','البريد')}}</span><input class="input" name="email" type="email" [(ngModel)]="draft.email" (ngModelChange)="formChanged()" maxlength="254"></label>
         <label class="field"
           ><span>{{ t('Phone', 'الهاتف') }}</span
           ><input

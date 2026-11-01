@@ -421,19 +421,14 @@
       <div class="sect">
         <span class="sect__label"
           >{{ lang() === 'ar' ? 'السجل' : 'HISTORY'
-          }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i></span
+          }}</span
         >
         <div class="kv">
           <span>{{ lang() === 'ar' ? 'بداية الفترة الحالية' : 'Current period started' }}</span
           ><b>{{ date(s.periodStart) }}</b>
         </div>
-        <p class="muted">
-          {{
-            lang() === 'ar'
-              ? 'سجل التغييرات الكامل متاح في سجل التدقيق.'
-              : 'The full change history is in Audit logs.'
-          }}
-        </p>
+        @for(e of history();track e.id){<div class="kv"><span>{{e.action}} · {{e.actor || '—'}}</span><b>{{date(e.at)}}</b></div>}
+
       </div>
     </div>
     <div class="drawer__foot">
@@ -495,12 +490,12 @@
       <div class="field">
         <span>{{ lang() === 'ar' ? 'التطبيق' : 'Takes effect' }}</span>
         <div class="segs">
-          <button type="button" class="seg seg--on">
+          <button type="button" class="seg" [class.seg--on]="changeTiming()==='now'" (click)="changeTiming.set('now')">
             {{ lang() === 'ar' ? 'فورًا' : 'Immediately' }}
           </button>
-          <button type="button" class="seg" disabled>
+          <button type="button" class="seg" [class.seg--on]="changeTiming()==='renewal'" (click)="changeTiming.set('renewal')">
             {{ lang() === 'ar' ? 'عند التجديد' : 'At renewal'
-            }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+            }}
           </button>
         </div>
       </div>
@@ -556,19 +551,19 @@
         <div class="field">
           <span>{{ lang() === 'ar' ? 'التوقيت' : 'When' }}</span>
           <div class="segs">
-            <button type="button" class="seg seg--on">
+            <button type="button" class="seg" [class.seg--on]="cancelTiming()==='renewal'" (click)="cancelTiming.set('renewal')">
               {{ lang() === 'ar' ? 'عند التجديد' : 'At renewal' }} · {{ date(cf.sub.renewsOn) }}
             </button>
-            <button type="button" class="seg" disabled>
+            <button type="button" class="seg" [class.seg--on]="cancelTiming()==='now'" (click)="cancelTiming.set('now')">
               {{ lang() === 'ar' ? 'فورًا' : 'Immediately'
-              }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+              }}
             </button>
           </div>
         </div>
         <label class="field">
           <span
             >{{ lang() === 'ar' ? 'السبب' : 'Reason'
-            }}<i class="soon">{{ lang() === 'ar' ? 'لا يُحفظ بعد' : 'Not saved yet' }}</i></span
+            }}</span
           >
           <select [value]="cancelReason()" (change)="cancelReason.set($any($event.target).value)">
             <option value="price">{{ lang() === 'ar' ? 'السعر' : 'Price' }}</option>
@@ -587,7 +582,7 @@
         <label class="field">
           <span
             >{{ lang() === 'ar' ? 'ملاحظة داخلية' : 'Internal note'
-            }}<i class="soon">{{ lang() === 'ar' ? 'لا يُحفظ بعد' : 'Not saved yet' }}</i></span
+            }}</span
           >
           <textarea
             rows="2"
@@ -674,10 +669,10 @@
           <div class="field">
             <span>{{ lang() === 'ar' ? 'الدورة الجديدة' : 'New cycle' }}</span>
             <div class="segs">
-              <button type="button" class="seg" [class.seg--on]="sf.sub?.cycle !== 'monthly'">
+              <button type="button" class="seg" [class.seg--on]="cycleDraft()==='monthly'" (click)="cycleDraft.set('monthly')">
                 {{ L().cycleLabel.monthly }}
               </button>
-              <button type="button" class="seg" [class.seg--on]="sf.sub?.cycle !== 'annual'">
+              <button type="button" class="seg" [class.seg--on]="cycleDraft()==='annual'" (click)="cycleDraft.set('annual')">
                 {{ L().cycleLabel.annual }}
               </button>
             </div>

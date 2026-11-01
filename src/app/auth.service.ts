@@ -62,7 +62,11 @@ export class AuthService {
     }
     return response.json();
   }
-  async restore() {
+  async restore(allowCached = false) {
+    if (allowCached && this.user()) {
+      void this.restore(); // refresh in background
+      return true;
+    }
     try {
       const user = await this.request('/api/v1/auth/session');
       if (!['platform', 'company_admin', 'company_user'].includes(user.pool))
@@ -93,7 +97,7 @@ export class AuthService {
 export const adminGuard: CanActivateFn = async (route) => {
   const auth = inject(AuthService),
     router = inject(Router);
-  if (!(await auth.restore())) return router.createUrlTree(['/']);
+  if (!(await auth.restore(true))) return router.createUrlTree(['/']);
   if (auth.user()?.mustChangePassword) return router.createUrlTree(['/change-password']);
   if (auth.user()?.pool !== 'platform') return router.createUrlTree(['/company/dashboard']);
   const permission = route.data['permission'];
@@ -105,7 +109,7 @@ export const adminGuard: CanActivateFn = async (route) => {
 export const companyGuard: CanActivateFn = async (route) => {
   const auth = inject(AuthService),
     router = inject(Router);
-  if (!(await auth.restore())) return router.createUrlTree(['/']);
+  if (!(await auth.restore(true))) return router.createUrlTree(['/']);
   if (auth.user()?.mustChangePassword) return router.createUrlTree(['/change-password']);
   const u = auth.user();
   if (u?.pool === 'platform' && !u?.workspace) return router.createUrlTree(['/admin/dashboard']);

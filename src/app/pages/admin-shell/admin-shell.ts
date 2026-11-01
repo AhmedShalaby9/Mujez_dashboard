@@ -1,3 +1,4 @@
+import { NavigationState, RouteSkeleton } from '../../route-skeleton';
 import { NotificationsApi } from '../../notifications-api.service';
 import { OverviewApi, overviewAlertText } from '../../overview-api.service';
 import { PlatformConfig } from '../../platform-config.service';
@@ -190,11 +191,12 @@ const COPY: Record<Lang, Copy> = {
 
 @Component({
   selector: 'app-admin-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, RouteSkeleton],
   templateUrl: './admin-shell.html',
   styleUrls: ['./admin-sidebar.scss', './admin-shell.scss'],
 })
 export class AdminShell {
+  readonly nav = inject(NavigationState);
   readonly overview = inject(OverviewApi);
   readonly notificationFeed = inject(NotificationsApi);
   readonly notifications = computed(() =>

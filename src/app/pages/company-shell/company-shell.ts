@@ -1,3 +1,4 @@
+import { NavigationState, RouteSkeleton } from '../../route-skeleton';
 import { NotificationsApi } from '../../notifications-api.service';
 import { AuthService } from '../../auth.service';
 import { Router } from '@angular/router';
@@ -147,11 +148,12 @@ const COPY: Record<Lang, Copy> = {
 
 @Component({
   selector: 'app-company-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, RouteSkeleton],
   templateUrl: './company-shell.html',
   styleUrl: './company-shell.scss',
 })
 export class CompanyShell {
+  readonly nav = inject(NavigationState);
   readonly announcements = signal<
     Array<{ id: string; title: string; body: string; type: string; priority: string }>
   >([]);

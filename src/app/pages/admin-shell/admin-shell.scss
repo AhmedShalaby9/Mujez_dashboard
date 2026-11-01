@@ -377,3 +377,10 @@ input {
     display: none;
   }
 }
+
+.route-host {
+  display: contents;
+}
+.route-host--hidden {
+  display: none;
+}

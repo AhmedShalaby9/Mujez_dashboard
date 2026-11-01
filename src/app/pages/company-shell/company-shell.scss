@@ -828,3 +828,10 @@ input {
     top: 0;
   }
 }
+
+.route-host {
+  display: contents;
+}
+.route-host--hidden {
+  display: none;
+}

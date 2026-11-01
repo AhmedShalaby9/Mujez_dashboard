@@ -366,7 +366,12 @@
           }
         </section>
       }
-      <router-outlet />
+      @if (nav.navigating()) {
+        <app-route-skeleton />
+      }
+      <div class="route-host" [class.route-host--hidden]="nav.navigating()">
+        <router-outlet />
+      </div>
     </div>
   </div>
 </div>

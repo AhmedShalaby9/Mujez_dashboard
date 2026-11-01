@@ -25,22 +25,25 @@ export class NavigationState {
     inject(Router).events.subscribe((e) => {
       if (e instanceof NavigationStart) {
         this.routing.set(true);
+        this.auth.watching = true;
       } else if (e instanceof NavigationEnd) {
         this.routing.set(false);
         // Page constructors fire their requests on activation; check right after.
         setTimeout(() => {
-          if (this.auth.pending() > 0) {
+          this.auth.watching = false;
+          if (this.auth.watched() > 0) {
             this.dataLoading.set(true);
             clearTimeout(this.safety);
-            this.safety = setTimeout(() => this.dataLoading.set(false), 10000);
+            this.safety = setTimeout(() => this.dataLoading.set(false), 5000);
           }
         });
       } else if (e instanceof NavigationCancel || e instanceof NavigationError) {
         this.routing.set(false);
+        this.auth.watching = false;
       }
     });
     effect(() => {
-      if (this.auth.pending() === 0 && this.dataLoading()) {
+      if (this.auth.watched() === 0 && this.dataLoading()) {
         clearTimeout(this.safety);
         this.dataLoading.set(false);
       }

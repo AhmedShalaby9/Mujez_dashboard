@@ -48,13 +48,19 @@ export class AuthService {
   readonly user = signal<User | null>(null);
   /** Number of in-flight GET requests (excluding session checks). */
   readonly pending = signal(0);
+  /** Requests started while a navigation is being watched (page's initial data). */
+  readonly watched = signal(0);
+  watching = false;
   async request(path: string, body?: unknown) {
     const track = body === undefined && !path.includes('/auth/session');
+    const watch = track && this.watching;
     if (track) this.pending.update((n) => n + 1);
+    if (watch) this.watched.update((n) => n + 1);
     try {
       return await this.rawRequest(path, body);
     } finally {
       if (track) this.pending.update((n) => Math.max(0, n - 1));
+      if (watch) this.watched.update((n) => Math.max(0, n - 1));
     }
   }
   private async rawRequest(path: string, body?: unknown) {

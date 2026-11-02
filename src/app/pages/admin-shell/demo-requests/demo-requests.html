@@ -1,0 +1,283 @@
+<div class="pg" [attr.dir]="ui.dir()">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ t('Demo requests', 'طلبات الديمو') }}</h1>
+      <span>{{
+        t(
+          'Website enquiries, plan interest and follow-up status',
+          'طلبات الموقع والباقات المطلوبة وحالة المتابعة'
+        )
+      }}</span>
+    </div>
+    <div class="head__actions">
+      <button type="button" class="btn" [disabled]="loading() || saving()" (click)="load()">
+        {{ t('Refresh', 'تحديث') }}
+      </button>
+    </div>
+  </div>
+  @if (error()) {
+    <p role="alert" class="note note--bad">
+      {{ error() }}
+      <button type="button" class="link" [disabled]="loading() || saving()" (click)="load()">
+        {{ t('Refresh requests', 'تحديث الطلبات') }}
+      </button>
+    </p>
+  }
+  @if (toast()) {
+    <p role="status" class="note note--ok">{{ toast() }}</p>
+  }
+  <div class="kpis">
+    @for (s of statuses; track s) {
+      <button type="button" class="kpi" [disabled]="loading() || saving()" (click)="filter(s)">
+        <span>{{ statusName(s) }}</span
+        ><b>{{ summary()?.[s] ?? '—' }}</b
+        ><small>{{ t('Matching enquiries', 'الطلبات المطابقة للبحث') }}</small>
+      </button>
+    }
+  </div>
+  <div class="tabs" role="tablist" [attr.aria-label]="t('Request status', 'حالة الطلب')">
+    @for (s of statuses; track s) {
+      <button
+        type="button"
+        role="tab"
+        class="tab"
+        [class.tab--on]="status() === s"
+        [attr.aria-selected]="status() === s"
+        [disabled]="loading() || saving()"
+        (click)="filter(s)"
+      >
+        {{ statusName(s) }}<span class="tab__n">{{ summary()?.[s] ?? '—' }}</span>
+      </button>
+    }
+  </div>
+  <form class="filters" (ngSubmit)="applySearch()">
+    <div class="search">
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        aria-hidden="true"
+      >
+        <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" /></svg
+      ><input
+        type="search"
+        name="search"
+        [(ngModel)]="search"
+        maxlength="100"
+        [attr.aria-label]="t('Search demo requests', 'البحث في طلبات الديمو')"
+        [placeholder]="
+          t('Name, company, email or reference…', 'الاسم أو الشركة أو البريد أو رقم الطلب…')
+        "
+      />
+    </div>
+    <button type="submit" class="btn" [disabled]="loading() || saving()">
+      {{ t('Search', 'بحث') }}
+    </button>
+  </form>
+  @if (loading()) {
+    <p role="status" class="muted">{{ t('Loading requests…', 'جارٍ تحميل الطلبات…') }}</p>
+  }
+  <section class="card" [attr.aria-busy]="loading()">
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="nosort">{{ t('Requester / Company', 'مقدم الطلب / الشركة') }}</th>
+            <th class="nosort">{{ t('Contact', 'التواصل') }}</th>
+            <th class="nosort">{{ t('Plan interest', 'الباقة المطلوبة') }}</th>
+            <th class="nosort">{{ t('Status', 'الحالة') }}</th>
+            <th class="nosort">{{ t('Received · Cairo time', 'الاستلام · توقيت القاهرة') }}</th>
+            <th class="nosort">{{ t('Details', 'التفاصيل') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of items(); track r.id) {
+            <tr (click)="open(r)">
+              <td>
+                <span class="strong">{{ r.fullName }}</span
+                ><span class="sub">{{ r.companyName }}</span>
+              </td>
+              <td (click)="$event.stopPropagation()">
+                <a class="strong contact" dir="ltr" [href]="'mailto:' + r.email">{{ r.email }}</a
+                ><a class="sub contact" dir="ltr" [href]="'tel:' + r.phone">{{ r.phone }}</a>
+              </td>
+              <td>
+                <span class="strong">{{
+                  r.plan || t('Help me choose', 'المساعدة في اختيار باقة')
+                }}</span
+                ><span class="sub">{{ cycle(r.cycle) }}</span>
+              </td>
+              <td>
+                <span
+                  class="pill"
+                  [class.pill--new]="r.status === 'new'"
+                  [class.pill--contacted]="r.status === 'contacted'"
+                  ><span class="dot"></span>{{ statusName(r.status) }}</span
+                >
+              </td>
+              <td class="muted">{{ date(r.createdAt) }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="btn btn--sm"
+                  (click)="$event.stopPropagation(); open(r)"
+                >
+                  {{ t('View', 'عرض') }}
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="empty">
+                {{
+                  loading()
+                    ? t('Loading…', 'جارٍ التحميل…')
+                    : t('No demo requests match these filters.', 'لا توجد طلبات ديمو تطابق البحث.')
+                }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <span class="muted"
+        >{{ total() }} {{ t('requests', 'طلب') }} · {{ t('Page', 'صفحة') }} {{ page() }} /
+        {{ pages() }}</span
+      >
+      <div>
+        <button
+          type="button"
+          class="btn btn--sm"
+          [disabled]="page() === 1 || loading() || saving()"
+          (click)="paginate(-1)"
+        >
+          {{ t('Previous', 'السابق') }}</button
+        ><button
+          type="button"
+          class="btn btn--sm"
+          [disabled]="page() >= pages() || loading() || saving()"
+          (click)="paginate(1)"
+        >
+          {{ t('Next', 'التالي') }}
+        </button>
+      </div>
+    </div>
+  </section>
+</div>
+@if (selected(); as r) {
+  <div class="scrim" (click)="close()"></div>
+  <aside
+    class="drawer"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="demo-request-title"
+    [attr.dir]="ui.dir()"
+  >
+    <div class="drawer__head">
+      <div class="drawer__title">
+        <span class="muted">{{ t('Website enquiry', 'طلب من الموقع') }}</span
+        ><span id="demo-request-title" class="drawer__name">{{ r.companyName }}</span
+        ><span>{{ r.fullName }}</span>
+      </div>
+      <button
+        type="button"
+        class="x"
+        [disabled]="saving()"
+        [attr.aria-label]="t('Close details', 'إغلاق التفاصيل')"
+        (click)="close()"
+      >
+        ×
+      </button>
+    </div>
+    <div class="drawer__body">
+      <span
+        class="pill"
+        [class.pill--new]="r.status === 'new'"
+        [class.pill--contacted]="r.status === 'contacted'"
+        >{{ statusName(r.status) }}</span
+      >
+      <dl>
+        <dt>{{ t('Email', 'البريد الإلكتروني') }}</dt>
+        <dd>
+          <a class="contact" dir="ltr" [href]="'mailto:' + r.email">{{ r.email }}</a>
+        </dd>
+        <dt>{{ t('Phone', 'الهاتف') }}</dt>
+        <dd>
+          <a dir="ltr" [href]="'tel:' + r.phone">{{ r.phone }}</a>
+        </dd>
+        <dt>{{ t('Plan / Cycle', 'الباقة / الدورة') }}</dt>
+        <dd>{{ r.plan || t('Not selected', 'غير محددة') }} · {{ cycle(r.cycle) }}</dd>
+        <dt>{{ t('Received', 'تاريخ الاستلام') }}</dt>
+        <dd>{{ date(r.createdAt) }}</dd>
+        <dt>{{ t('Last updated', 'آخر تحديث') }}</dt>
+        <dd>{{ date(r.updatedAt) }}</dd>
+        <dt>{{ t('Request reference', 'رقم الطلب') }}</dt>
+        <dd class="mono reference">{{ r.reference }}</dd>
+      </dl>
+      <p class="note">
+        {{
+          t(
+            'This is an enquiry only. No meeting, account or subscription has been created.',
+            'هذا طلب تواصل فقط. لم يتم إنشاء موعد أو حساب أو اشتراك.'
+          )
+        }}
+      </p>
+      @if (error()) {
+        <p class="note note--bad" role="alert">
+          {{ error() }}
+          <button class="link" type="button" [disabled]="saving()" (click)="load()">
+            {{ t('Refresh', 'تحديث') }}
+          </button>
+        </p>
+      }
+      @if (!canManage()) {
+        <p class="note">
+          {{
+            t('You have read-only access to demo requests.', 'لديك صلاحية عرض طلبات الديمو فقط.')
+          }}
+        </p>
+      }
+    </div>
+    <div class="drawer__foot">
+      @if (canManage()) {
+        @if (r.status !== 'contacted') {
+          <button
+            type="button"
+            class="btn btn--dark"
+            [disabled]="saving() || loading()"
+            (click)="change(r, 'contacted')"
+          >
+            {{ t('Mark contacted', 'تم التواصل') }}
+          </button>
+        }
+        @if (r.status !== 'closed') {
+          <button
+            type="button"
+            class="btn"
+            [disabled]="saving() || loading()"
+            (click)="change(r, 'closed')"
+          >
+            {{ t('Close request', 'إغلاق الطلب') }}
+          </button>
+        }
+        @if (r.status !== 'new') {
+          <button
+            type="button"
+            class="btn"
+            [disabled]="saving() || loading()"
+            (click)="change(r, 'new')"
+          >
+            {{ t('Reopen as new', 'إعادة فتح كطلب جديد') }}
+          </button>
+        }
+      }
+      <button type="button" class="btn" [disabled]="saving()" (click)="close()">
+        {{ t('Done', 'تم') }}
+      </button>
+    </div>
+  </aside>
+}

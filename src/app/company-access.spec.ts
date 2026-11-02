@@ -76,7 +76,9 @@ describe('Company and platform login routing', () => {
     expect(path(await check(companyGuard))).toBe('/');
     user.set({ ...owner, pool: 'company_user', role: 'agent' });
     expect(await check(companyGuard)).toBe(true);
-    expect(path(await check(companyGuard,{data:{permission:'team.manage'}}))).toBe('/company/dashboard');
+    expect(path(await check(companyGuard, { data: { permission: 'team.manage' } }))).toBe(
+      '/company/dashboard',
+    );
   });
 });
 describe('Company owner workspace identity', () => {
@@ -85,7 +87,10 @@ describe('Company owner workspace identity', () => {
     const logout = vi.fn(async () => {});
     await TestBed.configureTestingModule({
       imports: [CompanyShell],
-      providers: [provideRouter([]), { provide: AuthService, useValue: { user, logout } }],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: { user, logout, watched: signal(0) } },
+      ],
     }).compileComponents();
     const router = TestBed.inject(Router);
     const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);

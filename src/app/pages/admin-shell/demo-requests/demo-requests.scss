@@ -1,0 +1,99 @@
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 18px;
+  text-align: start;
+  border: 1px solid #e7e7e2;
+  border-radius: 16px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.kpi span,
+.kpi small {
+  font-size: 12px;
+  color: #6e6e73;
+}
+.kpi b {
+  font-size: 28px;
+  font-weight: 600;
+}
+.kpi:disabled {
+  cursor: default;
+}
+.pill--new {
+  background: #eef6da;
+  color: #2f4a0a;
+}
+.pill--contacted {
+  background: #e7f5ec;
+  color: #1e6b3e;
+}
+.dot {
+  background: currentColor;
+}
+.contact {
+  display: block;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.contact:hover {
+  text-decoration: underline;
+}
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+}
+.pager > div {
+  display: flex;
+  gap: 8px;
+}
+.empty {
+  text-align: center;
+  padding: 32px;
+  white-space: normal;
+  color: #6e6e73;
+}
+.drawer__body > .pill {
+  align-self: flex-start;
+}
+dl {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+}
+dt {
+  font-size: 12px;
+  color: #6e6e73;
+}
+dd {
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+}
+.reference {
+  font-size: 12px;
+}
+@media (max-width: 700px) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pager {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+.filters input {
+  width: 100%;
+}

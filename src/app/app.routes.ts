@@ -30,6 +30,12 @@ export const routes: Routes = [
           import('./pages/admin-shell/companies/companies').then((m) => m.Companies),
       },
       {
+        path: 'demo-requests',
+        data: { permission: 'co.view' },
+        loadComponent: () =>
+          import('./pages/admin-shell/demo-requests/demo-requests').then((m) => m.DemoRequests),
+      },
+      {
         path: 'onboarding/new',
         data: { permission: 'co.create' },
         loadComponent: () =>

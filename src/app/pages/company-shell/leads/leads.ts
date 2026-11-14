@@ -48,9 +48,6 @@ export class Leads {
   campaignPage = 0;
   campaignQuery = '';
   readonly campaignFilter = signal('');
-  readonly contactNote = signal('');
-  readonly contactChannel = signal('phone');
-  private contactRequest = crypto.randomUUID();
   private campaignSerial = 0;
   readonly linkedTasks = signal<CompanyTask[]>([]);
   readonly linkedTaskTotal = signal(0);
@@ -239,8 +236,6 @@ export class Leads {
     this.reason.set('');
     this.actionStage.set('');
     this.noteRequest = crypto.randomUUID();
-    this.contactNote.set('');
-    this.contactRequest = crypto.randomUUID();
     this.linkedTasks.set([]);
     this.taskError.set('');
     try {
@@ -337,7 +332,6 @@ export class Leads {
       'task.seeded': ['Initial sample task', 'مهمة تجريبية أولية'],
       'lead.routed': ['Lead automatically assigned', 'تم توزيع العميل آلياً'],
       'lead.sla_reassigned': ['SLA reassignment', 'إعادة إسناد بسبب المهلة'],
-      'lead.contact_recorded': ['First contact recorded', 'تم تسجيل أول تواصل'],
       'reservation.created': ['Reservation created', 'تم إنشاء حجز'],
       'reservation.confirmed': ['Reservation confirmed', 'تم تأكيد الحجز'],
       'reservation.extended': ['Reservation extended', 'تم تمديد الحجز'],
@@ -522,29 +516,6 @@ export class Leads {
     this.campaignFilter.set('');
     void this.router?.navigate(['/company/leads']);
     void this.reload();
-  }
-  contactChanged() {
-    this.contactRequest = crypto.randomUUID();
-  }
-  async recordContact() {
-    const l = this.selected();
-    if (!l || this.saving()) return;
-    this.saving.set(true);
-    this.detailError.set('');
-    try {
-      await this.api.write('leads/' + l.id + '/contact', {
-        requestId: this.contactRequest,
-        version: l.version,
-        channel: this.contactChannel(),
-        note: this.contactNote().trim(),
-      });
-      await this.reload();
-      await this.open(l.id);
-    } catch (e: any) {
-      this.detailError.set(e.message);
-    } finally {
-      this.saving.set(false);
-    }
   }
   async useExisting() {
     const id = this.duplicateId();

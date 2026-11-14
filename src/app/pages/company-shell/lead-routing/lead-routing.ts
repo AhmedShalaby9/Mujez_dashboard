@@ -430,7 +430,7 @@ export class LeadRouting implements OnDestroy {
         fg: '#111113',
       },
       {
-        label: this.t('First-contact SLA', 'مهلة أول تواصل'),
+        label: this.t('Contact SLA', 'مهلة التواصل'),
         value: sla.length
           ? Math.min(...sla.map((r) => r.slaMinutes)) + ' ' + this.L().minutes
           : '—',

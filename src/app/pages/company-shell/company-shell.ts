@@ -90,7 +90,7 @@ const ALERT_NAMES: Record<string, [string, string]> = {
   'missing-evidence': ['Contracts missing required evidence', 'عقود ينقصها مستند مطلوب'],
   'expiring-reservations': ['Reservations expiring within 24 hours', 'حجوزات تنتهي خلال 24 ساعة'],
   'payable-commissions': ['Commissions ready for payment', 'عمولات جاهزة للصرف'],
-  'first-contact': ['Leads overdue for first contact', 'عملاء تجاوزوا مهلة التواصل الأول'],
+  'first-contact': ['Leads overdue for contact', 'عملاء تجاوزوا مهلة التواصل'],
   'routing-worker': ['Routing worker needs attention', 'عامل التوزيع يحتاج مراجعة'],
 };
 

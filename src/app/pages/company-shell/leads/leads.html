@@ -342,48 +342,6 @@
           </div>
         }
 
-        @if (!l.firstContactAt && canManage() && !l.archivedAt) {
-          <div class="content-panel content-panel--warn">
-            <span class="sect__label">{{ t('FIRST CONTACT', 'أول تواصل') }}</span>
-            <span>
-              {{ t('No first-contact record.', 'لا يوجد سجل لأول تواصل.') }}
-              @if (l.slaDueAt) {
-                {{ t('Due', 'الموعد') }}: {{ date(l.slaDueAt) }}
-              }
-            </span>
-            <div class="grid2">
-              <select
-                [ngModel]="contactChannel()"
-                (ngModelChange)="contactChannel.set($event); contactChanged()"
-              >
-                <option value="phone">{{ t('Phone', 'هاتف') }}</option>
-                <option value="email">{{ t('Email', 'بريد') }}</option>
-                <option value="meeting">{{ t('Meeting', 'اجتماع') }}</option>
-                <option value="other">{{ t('Other', 'أخرى') }}</option>
-              </select>
-              <button
-                type="button"
-                class="btn btn--sm"
-                [disabled]="saving() || contactNote().trim().length < 10"
-                (click)="recordContact()"
-              >
-                {{ t('Record first contact', 'تسجيل أول تواصل') }}
-              </button>
-            </div>
-            <textarea
-              rows="2"
-              maxlength="1000"
-              [placeholder]="t('What happened (10+ characters)', 'ماذا حدث (10 أحرف على الأقل)')"
-              [ngModel]="contactNote()"
-              (ngModelChange)="contactNote.set($event); contactChanged()"
-            ></textarea>
-          </div>
-        } @else if (l.firstContactAt) {
-          <p class="muted">
-            {{ t('First contact recorded', 'تم تسجيل أول تواصل') }}: {{ date(l.firstContactAt) }}
-          </p>
-        }
-
         <div class="sect">
           <span class="sect__label">{{ t('ACTIVITY', 'النشاط') }}</span>
           @if (canManage() && !l.archivedAt) {

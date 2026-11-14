@@ -157,7 +157,6 @@ const lead: any = {
   version: 0,
   archivedAt: null,
   campaign: null,
-  firstContactAt: null,
   createdAt: '2026-10-30T10:00Z',
   updatedAt: '2026-10-30T10:00Z',
 };
@@ -177,8 +176,6 @@ async function leadSetup() {
               : current,
     write: async (p: string, b: any) => {
       calls.push({ p, b });
-      if (p.endsWith('/contact'))
-        current = { ...current, firstContactAt: '2026-10-30T11:00Z', version: 1 };
       return current;
     },
   };
@@ -218,16 +215,5 @@ describe('Lead campaign attribution and contact recording', () => {
     expect(b.ownerId).toBeUndefined();
     expect(b.campaignId).toBe('c1');
     expect(b.source).toBe('website');
-  });
-  it('records explicit first contact through the backend and displays the returned timestamp', async () => {
-    const { f, calls } = await leadSetup(),
-      c = f.componentInstance;
-    await c.open('l1');
-    c.contactChannel.set('phone');
-    c.contactNote.set('Actual external call recorded for verification');
-    await c.recordContact();
-    expect(calls[0].p).toBe('leads/l1/contact');
-    expect(calls[0].b.channel).toBe('phone');
-    expect(c.selected()?.firstContactAt).toBe('2026-10-30T11:00Z');
   });
 });

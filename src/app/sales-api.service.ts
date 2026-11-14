@@ -15,9 +15,9 @@ export interface SalesLead {
   reference: string;
   name: { en: string; ar: string };
   phone: string;
-  email?:string|null;
-  lastActivityAt?:string|null;
-  stageChangedAt?:string|null;
+  email?: string | null;
+  lastActivityAt?: string | null;
+  stageChangedAt?: string | null;
   segment: 'res' | 'com';
   want: { en: string; ar: string };
   budgetMinor: string | null;
@@ -53,15 +53,17 @@ export interface SalesLead {
   }>;
 }
 export interface SalesDeal {
- segment?:'res'|'com';stageChangedAt?:string|null;
+  segment?: 'res' | 'com';
+  stageChangedAt?: string | null;
   id: string;
+  opportunityId?: string | null;
   reference: string;
   leadId: string;
   leadReference: string;
-  title: { en: string; ar: string };
+  title: { en: string; ar: string } | null;
   contact: { en: string; ar: string };
-  valueMinor: string;
-  type: 'sale' | 'lease';
+  valueMinor: string | null;
+  type: 'sale' | 'lease' | null;
   owner: { id: string; name: string } | null;
   stage: SalesStage;
   version: number;

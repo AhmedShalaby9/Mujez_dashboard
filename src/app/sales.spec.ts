@@ -239,3 +239,95 @@ describe('Company sales screens', () => {
     expect(c.error()).toContain('Lead changed');
   });
 });
+
+describe('Assigned leads in the pipeline', () => {
+  it('renders missing deal details as Not set and creates one deal using the current lead version', async () => {
+    const card: any = {
+      id: 'lead-card',
+      opportunityId: null,
+      reference: 'L-ASSIGNED',
+      leadId: 'lead-card',
+      leadReference: 'L-ASSIGNED',
+      title: null,
+      contact: { en: 'Assigned Buyer', ar: 'عميل مسند' },
+      valueMinor: null,
+      type: null,
+      owner: lead.owner,
+      stage: 'new',
+      version: 7,
+      leadVersion: 7,
+      sample: false,
+    };
+    const writes: any[] = [];
+    let stored: any = card;
+    const api = {
+      get: async () => ({
+        items: [stored],
+        total: 1,
+        stats: [
+          {
+            stage: 'new',
+            count: 1,
+            saleMinor: stored.valueMinor ?? '0',
+            unsetCount: stored.opportunityId === null ? 1 : 0,
+          },
+        ],
+      }),
+      write: async (path: string, body: any) => {
+        writes.push({ path, body });
+        stored = {
+          ...card,
+          id: 'deal-created',
+          opportunityId: 'deal-created',
+          title: { en: body.title, ar: body.title },
+          valueMinor: body.valueMinor,
+          type: body.type,
+        };
+        return {};
+      },
+    };
+    await TestBed.configureTestingModule({
+      imports: [Pipeline],
+      providers: [
+        { provide: SalesApi, useValue: api },
+        { provide: AuthService, useValue: { user: user() } },
+      ],
+    }).compileComponents();
+    const f = TestBed.createComponent(Pipeline);
+    await f.whenStable();
+    f.detectChanges();
+    expect(f.nativeElement.textContent).toContain('Assigned Buyer');
+    expect(f.nativeElement.textContent).toContain('Not set');
+    expect(f.nativeElement.textContent).toContain('Add deal details');
+    expect(f.nativeElement.querySelector('.cardx').textContent).not.toContain('EGP 0.00');
+    const c = f.componentInstance;
+    await c.openForm(c.deals()[0]);
+    expect(c.draft.value).toBe('');
+    expect(c.draft.type).toBe('');
+    expect(c.draft.title).toBe('');
+    c.draft.title = 'Buyer apartment';
+    c.draft.type = 'sale';
+    c.draft.value = '1234.56';
+    await c.save();
+    f.detectChanges();
+    expect(writes[0].path).toBe('pipeline');
+    expect(writes[0].body).toEqual(
+      expect.objectContaining({
+        leadId: 'lead-card',
+        version: 7,
+        valueMinor: '123456',
+        type: 'sale',
+      }),
+    );
+    expect(c.deals()).toHaveLength(1);
+    expect(c.deals()[0].opportunityId).toBe('deal-created');
+    expect(f.nativeElement.querySelector('.cardx').textContent).toContain('EGP 1,234.56');
+    TestBed.inject(
+      (await import('./pages/company-shell/company-ui-state')).CompanyUiState,
+    ).lang.set('ar');
+    stored = card;
+    await c.reload();
+    f.detectChanges();
+    expect(f.nativeElement.textContent).toContain('غير محدد');
+  });
+});

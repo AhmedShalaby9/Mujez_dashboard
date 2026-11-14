@@ -37,7 +37,9 @@ export class Pipeline {
   readonly stageNames = computed(() => STAGE_NAMES[this.lang()]);
   readonly money = salesMoney;
   readonly deals = signal<SalesDeal[]>([]);
-  readonly stats = signal<Array<{ stage: SalesStage; count: number; saleMinor: string }>>([]);
+  readonly stats = signal<
+    Array<{ stage: SalesStage; count: number; saleMinor: string; unsetCount?: number }>
+  >([]);
   readonly total = signal(0);
   readonly page = signal(1);
   readonly q = signal('');
@@ -54,6 +56,7 @@ export class Pipeline {
       items: this.deals().filter((d) => d.stage === stage),
       count: this.stats().find((s) => s.stage === stage)?.count ?? 0,
       total: this.stats().find((s) => s.stage === stage)?.saleMinor ?? '0',
+      unsetCount: this.stats().find((s) => s.stage === stage)?.unsetCount ?? 0,
     })),
   );
   readonly dialog = signal(false);
@@ -79,9 +82,16 @@ export class Pipeline {
       this.optionsSerial++;
     });
   }
-  readonly segmentFilter=signal<'all'|'res'|'com'>('all');
-  setSegment(s:'all'|'res'|'com'){this.segmentFilter.set(s);void this.reload();}
-  daysInStage(d:SalesDeal){return d.stageChangedAt?Math.max(0,Math.floor((Date.now()-new Date(d.stageChangedAt).getTime())/86400000)):null;}
+  readonly segmentFilter = signal<'all' | 'res' | 'com'>('all');
+  setSegment(s: 'all' | 'res' | 'com') {
+    this.segmentFilter.set(s);
+    void this.reload();
+  }
+  daysInStage(d: SalesDeal) {
+    return d.stageChangedAt
+      ? Math.max(0, Math.floor((Date.now() - new Date(d.stageChangedAt).getTime()) / 86400000))
+      : null;
+  }
   async reload(page = 1) {
     const serial = ++this.serial;
     this.loading.set(true);
@@ -90,7 +100,7 @@ export class Pipeline {
       const r = await this.api.get('pipeline', {
         page: String(page),
         limit: '100',
-        ...(this.segmentFilter()!=='all'?{segment:this.segmentFilter()}:{}),
+        ...(this.segmentFilter() !== 'all' ? { segment: this.segmentFilter() } : {}),
         ...(this.q().trim() ? { q: this.q().trim() } : {}),
       });
       if (serial === this.serial) {
@@ -125,6 +135,20 @@ export class Pipeline {
       .reduce((n, x) => n + BigInt(x.saleMinor), 0n)
       .toString(),
   );
+  readonly openUnsetCount = computed(() =>
+    this.stats()
+      .filter((x) => x.stage !== 'won' && x.stage !== 'lost')
+      .reduce((n, x) => n + (x.unsetCount ?? 0), 0),
+  );
+  notSet() {
+    return this.t('Not set', 'غير محدد');
+  }
+  pending(d: SalesDeal) {
+    return d.opportunityId === null;
+  }
+  displayMoney(value: string | null) {
+    return value === null ? this.notSet() : this.money(value);
+  }
   readonly openCount = computed(() =>
     this.stats()
       .filter((x) => x.stage !== 'won' && x.stage !== 'lost')
@@ -224,10 +248,10 @@ export class Pipeline {
     this.draft = d
       ? {
           leadId: d.leadId,
-          title: d.title.en,
-          titleAr: d.title.ar,
-          type: d.type,
-          value: majorAmount(d.valueMinor),
+          title: d.title?.en ?? '',
+          titleAr: d.title?.ar ?? '',
+          type: d.type ?? '',
+          value: d.valueMinor === null ? '' : majorAmount(d.valueMinor),
         }
       : { leadId: '', title: '', titleAr: '', type: 'sale', value: '' };
     if (!d) {
@@ -262,15 +286,18 @@ export class Pipeline {
     try {
       const d = this.editing();
       const lead = this.leadOptions().find((x) => x.id === this.draft.leadId);
+      const existing = d && !this.pending(d);
+      if (!['sale', 'lease'].includes(this.draft.type))
+        throw Error(this.t('Choose a deal type', 'اختر نوع الفرصة'));
       if (!d && !lead) throw Error(this.t('Choose an available lead', 'اختر عميلًا متاحًا'));
-      await this.api.write(d ? 'pipeline/' + d.id + '/update' : 'pipeline', {
+      await this.api.write(existing ? 'pipeline/' + d.id + '/update' : 'pipeline', {
         requestId: this.formRequest,
         title: this.draft.title.trim(),
         ...(this.draft.titleAr.trim() ? { titleAr: this.draft.titleAr.trim() } : {}),
         type: this.draft.type,
         valueMinor: minorAmount(this.draft.value),
-        version: d ? d.version : lead!.version,
-        ...(!d ? { leadId: lead!.id } : {}),
+        version: d ? (existing ? d.version : d.leadVersion) : lead!.version,
+        ...(!existing ? { leadId: d?.leadId ?? lead!.id } : {}),
       });
       this.dialog.set(false);
       await this.reload();

@@ -157,3 +157,10 @@
   display: flex;
   gap: 6px;
 }
+
+.col__pending {
+  display: block;
+  margin: 0 12px 8px;
+  color: var(--ink-muted);
+  font-size: 11.5px;
+}

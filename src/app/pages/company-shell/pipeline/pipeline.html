@@ -2,7 +2,8 @@
   <div class="head">
     <div class="head__text">
       <span
-        >{{ openCount() }} {{ t('open deals', 'فرصة مفتوحة') }} · {{ money(openValue()) }}
+        >{{ openCount() }} {{ t('open leads / deals', 'عميل / فرصة مفتوحة') }} ·
+        {{ openCount() > 0 && openUnsetCount() === openCount() ? notSet() : money(openValue()) }}
         {{ t('sale value', 'قيمة البيع') }}</span
       >
       <h1>{{ t('Pipeline', 'الصفقات') }}</h1>
@@ -71,8 +72,15 @@
             <b>{{ stageNames()[col.stage] }}</b>
             <span class="count mono">{{ col.count }}</span>
           </div>
-          <span class="mono col__total">{{ money(col.total) }}</span>
+          <span class="mono col__total">{{
+            col.count > 0 && col.unsetCount === col.count ? notSet() : money(col.total)
+          }}</span>
         </div>
+        @if (col.unsetCount > 0) {
+          <span class="col__pending"
+            >{{ col.unsetCount }} {{ t('awaiting deal details', 'بانتظار تفاصيل الفرصة') }}</span
+          >
+        }
         @for (d of col.items; track d.id) {
           <article
             class="cardx"
@@ -83,7 +91,11 @@
           >
             <div class="cardx__top">
               <span class="seg-tag" [class.seg-tag--com]="d.type === 'lease'">{{
-                d.type === 'lease' ? t('Lease', 'إيجار') : t('Sale', 'بيع')
+                d.type === null
+                  ? notSet()
+                  : d.type === 'lease'
+                    ? t('Lease', 'إيجار')
+                    : t('Sale', 'بيع')
               }}</span>
               @if (d.sample) {
                 <i class="soon">{{ t('Sample', 'تجريبي') }}</i>
@@ -115,12 +127,12 @@
               >{{ daysInStage(d) ?? '—' }} {{ t('days in stage', 'أيام في المرحلة') }} ·
               {{ d.segment === 'com' ? t('Commercial', 'تجاري') : t('Residential', 'سكني') }}</span
             >
-            <span class="cardx__title">{{ d.title[lang()] }}</span>
+            <span class="cardx__title">{{ d.title?.[lang()] || d.contact[lang()] }}</span>
             <span class="cardx__client"
               >{{ d.contact[lang()] }} · <span class="mono">{{ d.reference }}</span></span
             >
             <div class="cardx__foot">
-              <span class="mono strong">{{ money(d.valueMinor) }}</span>
+              <span class="mono strong">{{ displayMoney(d.valueMinor) }}</span>
               <span
                 class="avatar avatar--sm"
                 [title]="d.owner?.name || t('Unassigned', 'دون مسؤول')"
@@ -130,7 +142,9 @@
             @if (canManage()) {
               <div class="cardx__acts">
                 <button type="button" class="link" [disabled]="saving()" (click)="openForm(d)">
-                  {{ t('Edit', 'تعديل') }}
+                  {{
+                    pending(d) ? t('Add deal details', 'إضافة تفاصيل الفرصة') : t('Edit', 'تعديل')
+                  }}
                 </button>
                 @if (d.stage !== 'won' && d.stage !== 'lost') {
                   <button
@@ -168,8 +182,8 @@
   }
   <span class="muted">{{
     t(
-      'Drag a card to the next stage, or use the arrow. Column totals are sale values from the server across all deals; leases are excluded.',
-      'اسحب البطاقة للمرحلة التالية أو استخدم السهم. إجمالي كل عمود قيمة البيع من الخادم لكل الفرص، دون الإيجارات.'
+      'Assigned leads appear automatically. Add deal details when known. Totals include recorded sale values only; unknown values and leases are excluded.',
+      'يظهر العملاء المسندون تلقائيًا. أضف تفاصيل الفرصة عند توفرها. الإجماليات لقيم البيع المسجلة فقط، دون القيم غير المحددة والإيجارات.'
     )
   }}</span>
 </div>
@@ -179,7 +193,11 @@
   <div class="dialog" role="dialog" aria-label="Pipeline deal" aria-modal="true">
     <div class="dialog__head">
       <span class="dialog__title">{{
-        editing() ? t('Edit deal', 'تعديل الفرصة') : t('New deal', 'فرصة جديدة')
+        editing() && !pending(editing()!)
+          ? t('Edit deal', 'تعديل الفرصة')
+          : editing()
+            ? t('Add deal details', 'إضافة تفاصيل الفرصة')
+            : t('New deal', 'فرصة جديدة')
       }}</span>
       @if (!editing()) {
         <span class="dialog__body">{{
@@ -294,7 +312,7 @@
         >{{
           c.stage === 'lost' ? t('Mark lost', 'تسجيل خسارة') : t('Reopen as new', 'إعادة فتح كجديد')
         }}
-        · {{ c.deal.title[lang()] }}</span
+        · {{ c.deal.title?.[lang()] || c.deal.contact[lang()] }}</span
       >
     </div>
     <div class="dialog__main">

@@ -19,6 +19,43 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
+        path: 'developers',
+        data: { permission: 'co.view', view: 'devs' },
+        loadComponent: () =>
+          import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
+      },
+      {
+        path: 'developers/:id',
+        data: { permission: 'co.view', view: 'dev' },
+        loadComponent: () =>
+          import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
+      },
+      {
+        path: 'compounds',
+        data: { permission: 'co.view', view: 'cos' },
+        loadComponent: () =>
+          import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
+      },
+      {
+        path: 'compounds/:id',
+        data: { permission: 'co.view', view: 'co' },
+        loadComponent: () =>
+          import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
+      },
+      {
+        path: 'units',
+        data: { permission: 'co.view', view: 'units' },
+        loadComponent: () =>
+          import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
+      },
+      {
+        path: 'units/:id',
+        data: { permission: 'co.view', view: 'unit' },
+        loadComponent: () =>
+          import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
+      },
+
+      {
         path: 'dashboard',
         loadComponent: () =>
           import('./pages/admin-shell/dashboard/dashboard').then((m) => m.Dashboard),

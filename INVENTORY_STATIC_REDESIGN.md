@@ -1,3 +1,5 @@
+> Historical design reference. These screens now use the shared platform catalog API. See `docs/shared-inventory-catalog.md` for current behavior. Static records below are no longer runtime data.
+
 # Inventory section: static redesign (Developers, Compounds, Units)
 
 The Inventory section now follows the "Mujez Inventory" design (Developers, Compounds & Units). It uses static demo data only. It makes no API calls.

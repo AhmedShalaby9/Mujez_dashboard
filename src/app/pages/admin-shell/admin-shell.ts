@@ -25,6 +25,9 @@ const ICONS: Record<string, string> = {
   dashboard: 'M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z',
   companies: 'M3 21h18M5 21V5l7-2v18M12 9h7v12M8 8h1M8 12h1M8 16h1M15 13h1M15 17h1',
   'demo-requests': 'M4 5h16v14H4zM4 6l8 6 8-6',
+  developers: 'M3 21h18M5 21V5l7-2v18M12 9h7v12',
+  compounds: 'M3 21h18M5 21V5l7-2v18M12 9h7v12',
+  units: 'M3 10l9-7 9 7v11H3z',
   onboarding:
     'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6',
   'subscription-plans': 'M12 3l9 5-9 5-9-5zM3 13l9 5 9-5',
@@ -89,6 +92,9 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Companies', path: 'companies', count: '24', enabled: true },
   { kind: 'item', label: 'Onboarding', path: 'onboarding', count: '5', enabled: true },
   { kind: 'item', label: 'Demo requests', path: 'demo-requests', enabled: true },
+  { kind: 'item', label: 'Developers', path: 'developers', enabled: true },
+  { kind: 'item', label: 'Compounds', path: 'compounds', enabled: true },
+  { kind: 'item', label: 'Units', path: 'units', enabled: true },
   { kind: 'head', label: 'Revenue' },
   { kind: 'item', label: 'Subscription plans', path: 'subscription-plans', enabled: true },
   { kind: 'item', label: 'Subscriptions', path: 'subscriptions', count: '23', enabled: true },
@@ -116,6 +122,9 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'الشركات', path: 'companies', count: '24', enabled: true },
   { kind: 'item', label: 'التهيئة', path: 'onboarding', count: '5', enabled: true },
   { kind: 'item', label: 'طلبات الديمو', path: 'demo-requests', enabled: true },
+  { kind: 'item', label: 'المطوّرون', path: 'developers', enabled: true },
+  { kind: 'item', label: 'الكمباوندات', path: 'compounds', enabled: true },
+  { kind: 'item', label: 'الوحدات', path: 'units', enabled: true },
   { kind: 'head', label: 'الإيرادات' },
   { kind: 'item', label: 'باقات الاشتراك', path: 'subscription-plans', enabled: true },
   { kind: 'item', label: 'الاشتراكات', path: 'subscriptions', count: '23', enabled: true },
@@ -305,6 +314,9 @@ export class AdminShell {
   }
   canView(path?: string) {
     const permissions: Record<string, string> = {
+      developers: 'co.view',
+      compounds: 'co.view',
+      units: 'co.view',
       companies: 'co.view',
       'demo-requests': 'co.view',
       onboarding: 'co.create',

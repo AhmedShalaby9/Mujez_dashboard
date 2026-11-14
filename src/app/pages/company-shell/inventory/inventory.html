@@ -1,538 +1,1039 @@
-<div class="iv-root" [attr.dir]="dir()" (click)="alOpen.set(false)">
-  @let l = this.l();
-
-  <ng-template #unitCard let-u>
-    <div class="iv-card iv-ccard" (click)="openUnit(u.i)" [style.opacity]="u.op">
-      <div class="iv-img">
-        <app-inv-scene [sc]="u.sc" />
-        <div class="iv-ubadges top">
-          <span class="iv-st inl" [style.background]="u.listBg" [style.color]="u.listFg">{{ u.list }}</span>
-          @for (b of u.badges; track b.t) { <span class="iv-st inl" [style.background]="b.bg" [style.color]="b.fg">{{ b.t }}</span> }
-        </div>
-        <button type="button" class="iv-heart" (click)="toggleFav(u.i, $event)" [style.background]="u.hBg" [style.color]="u.hFg"><span style="font-size:14px">{{ u.heart }}</span></button>
-        <span class="iv-refb mono">{{ u.ref }}</span>
-      </div>
-      <div class="iv-cb">
-        <div class="iv-pricerow"><b>{{ u.price }}</b>@if (u.hasWas) { <s>{{ u.was }}</s> }</div>
-        <div class="iv-ppm">{{ u.ppm }}</div>
-        <div class="iv-cn sm">{{ u.title }}</div>
-        <div class="iv-devrow"><span class="iv-logo xs" [style.background]="u.devC">{{ u.devInit }}</span>{{ u.co }} · {{ u.area }}</div>
-        <div class="iv-uspecs">
-          @if (u.hasBeds) { <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4M2 17h20"/></svg>{{ u.beds }}</span> }
-          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16a1 1 0 0 1 1 1v2a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5v-2a1 1 0 0 1 1-1zM6 12V5a2 2 0 0 1 2-2h1"/></svg>{{ u.baths }}</span>
-          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3zM3 9h18M9 21V9"/></svg>{{ u.size }}</span>
-        </div>
-        <div class="iv-cfoot"><span [style.color]="u.delC">{{ u.del }}</span><span class="iv-pay">{{ u.pay }}</span></div>
-      </div>
-    </div>
-  </ng-template>
-
-  @if (crumbs().length) {
-    <div class="iv-crumbs">
-      @for (cr of crumbs(); track $index; let last = $last) {
-        @if ($index > 0) { <span class="iv-sep" [style.transform]="flip()">›</span> }
-        <button type="button" class="iv-crumb" [attr.data-last]="last" (click)="cr.go()">{{ cr.label }}</button>
-      }
-    </div>
-  }
-
-  @if (notFound()) {
-    <div class="iv-empty">
-      <p>{{ X('This record was not found.', 'لم يتم العثور على هذا السجل.') }}</p>
-      <button type="button" class="iv-btn dark" (click)="go(view === 'dev' ? 'developers' : 'compounds')">
-        {{ view === 'dev' ? l.devs : l.cos }}
+<div class="iv-root" [attr.dir]="dir()">
+  @if (error()) {
+    <div class="note note--bad" role="alert">
+      {{ error() }}
+      <button type="button" class="link" (click)="load()">
+        {{ X('Retry', 'إعادة المحاولة') }}
       </button>
     </div>
-  } @else {
-
-  <!-- ===================== DEVELOPERS LIST ===================== -->
-  @if (view === 'devs') {
+  }
+  @if (notice()) {
+    <p class="note" role="status">{{ notice() }}</p>
+  }
+  @if (detail) {
+    <nav class="iv-crumbs" aria-label="Breadcrumb">
+      <a class="iv-crumb" [routerLink]="[base(), kind]">{{ title() }}</a>
+      @if (item()?.parent; as parent) {
+        <span>›</span
+        ><a class="iv-crumb" [routerLink]="[base(), parent.kind, parent.id]">{{
+          label(parent.name)
+        }}</a>
+      }
+      <span>›</span><span>{{ label(item()?.name) }}</span>
+    </nav>
+  }
+  @if (loading()) {
+    <div class="iv-empty" role="status">{{ X('Loading catalog…', 'جارٍ تحميل الكتالوج…') }}</div>
+  } @else if (legacy(); as u) {
     <div class="iv-head">
-      <div><h1 class="iv-h1">{{ l.devs }}</h1><div class="iv-meta">{{ devMeta() }}</div></div>
-      <button type="button" class="iv-btn dark" (click)="addDev()">{{ l.devs }} +</button>
+      <div>
+        <h1 class="iv-h1">{{ u.code }}</h1>
+        <p class="iv-meta">
+          {{ X('Company inventory · reservation record', 'مخزون الشركة · سجل الحجز') }}
+        </p>
+      </div>
+      <a class="iv-btn" [routerLink]="[base(), 'units']">{{
+        X('Shared catalog', 'الكتالوج المشترك')
+      }}</a>
+    </div>
+    <section class="iv-card iv-sec">
+      <div class="iv-prow">
+        <span>{{ X('Project', 'المشروع') }}</span
+        ><b>{{ label(u.project) }}</b>
+      </div>
+      <div class="iv-prow">
+        <span>{{ X('Status', 'الحالة') }}</span
+        ><b>{{ statusLabel(u.status) }}</b>
+      </div>
+      <div class="iv-prow">
+        <span>{{ X('Price', 'السعر') }}</span
+        ><b>{{ money(u.priceMinor) }}</b>
+      </div>
+      <div class="iv-prow">
+        <span>{{ X('Area', 'المساحة') }}</span
+        ><b>{{ u.area }} m²</b>
+      </div>
+      <div class="iv-prow">
+        <span>{{ X('Location', 'الموقع') }}</span
+        ><b>{{ label(u.location) }}</b>
+      </div>
+      <a
+        class="iv-btn dark"
+        [routerLink]="[base(), 'reservations']"
+        [queryParams]="{ unitId: u.id }"
+        >{{ X('Reservations', 'الحجوزات') }}</a
+      >
+    </section>
+  } @else if (!detail) {
+    <div class="iv-head">
+      <div>
+        <h1 class="iv-h1">{{ title() }}</h1>
+        <div class="iv-meta">
+          {{ total() }} {{ X('records in the shared catalog', 'سجل في الكتالوج المشترك') }}
+        </div>
+      </div>
+      @if (canManage()) {
+        <button class="iv-btn dark" type="button" (click)="openEditor()">
+          {{ X('+ Add record', '+ إضافة سجل') }}
+        </button>
+      }
     </div>
     <div class="iv-tools">
-      <label class="iv-search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></svg><input [value]="q()" (input)="onInput($event)" [placeholder]="l.search" /></label>
+      <label class="iv-search"
+        ><span aria-hidden="true">⌕</span
+        ><input
+          [attr.aria-label]="X('Search catalog', 'بحث في الكتالوج')"
+          [placeholder]="X('Search…', 'بحث…')"
+          [ngModel]="q()"
+          (ngModelChange)="search($event)"
+      /></label>
       <div class="iv-chips">
-        @for (ch of devChips(); track ch.k) {
-          <button type="button" class="iv-chip" (click)="devF.set(ch.k)" [style.background]="ch.bg" [style.color]="ch.fg" [style.border-color]="ch.bd">{{ ch.label }}</button>
+        @for (f of ['all', 'following', 'favorites']; track f) {
+          <button
+            type="button"
+            class="iv-chip"
+            [style.background]="filter() === f ? '#111113' : '#fff'"
+            [style.color]="filter() === f ? '#fff' : '#111113'"
+            (click)="setFilter(f)"
+          >
+            {{
+              f === 'all'
+                ? X('All', 'الكل')
+                : f === 'following'
+                  ? X('Following', 'المتابَعون')
+                  : X('Favorites', 'المفضلة')
+            }}
+          </button>
+        }
+        @if (kind === 'developers') {
+          @for (f of ['top', 'verified']; track f) {
+            <button
+              type="button"
+              class="iv-chip"
+              [attr.aria-pressed]="filter() === f"
+              (click)="setFilter(f)"
+            >
+              {{ f === 'top' ? X('Top developers', 'مطوّرون مميزون') : X('Verified', 'موثّقون') }}
+            </button>
+          }
         }
       </div>
-      <select class="iv-select" [value]="sort()" (change)="onSel($event, 'sort')">
-        @for (o of sorts(); track o.v) { <option [value]="o.v" [selected]="o.v === sort()">{{ o.l }}</option> }
+      <select
+        class="iv-select"
+        [attr.aria-label]="X('Sort', 'ترتيب')"
+        [ngModel]="sort()"
+        (ngModelChange)="sort.set($event); changed()"
+      >
+        <option value="new">{{ X('Newest first', 'الأحدث أولًا') }}</option>
+        <option value="name">{{ X('Name A–Z', 'الاسم') }}</option>
+        <option value="followers">{{ X('Most followed', 'الأكثر متابعة') }}</option>
+        @if (kind === 'units') {
+          <option value="price_asc">{{ X('Lowest price', 'أقل سعر') }}</option>
+          <option value="price_desc">{{ X('Highest price', 'أعلى سعر') }}</option>
+          <option value="area">{{ X('Largest area', 'أكبر مساحة') }}</option>
+        }
       </select>
     </div>
-    <div class="iv-grid dev">
-      @for (d of devList(); track d.i) {
-        <div class="iv-card iv-dcard" (click)="openDev(d.i)">
-          <div class="iv-dtop">
-            <div class="iv-logo lg" [style.background]="d.c">{{ d.init }}</div>
-            <div class="iv-dnames"><div class="iv-dn">{{ d.name }}</div><div class="iv-dn2">{{ d.name2 }}</div></div>
+    @if (kind !== 'developers') {
+      <div class="iv-tools">
+        <label class="iv-search"
+          ><input
+            [attr.aria-label]="
+              kind === 'units'
+                ? X('Search compounds', 'بحث في الكمباوندات')
+                : X('Search developers', 'بحث في المطوّرين')
+            "
+            [placeholder]="
+              kind === 'units'
+                ? X('Find compound…', 'ابحث عن كمباوند…')
+                : X('Find developer…', 'ابحث عن مطوّر…')
+            "
+            [ngModel]="''"
+            (ngModelChange)="searchParents($event)"
+            (focus)="searchParents('')"
+        /></label>
+        <select
+          class="iv-select"
+          [attr.aria-label]="X('Filter by parent', 'تصفية حسب السجل الرئيسي')"
+          [ngModel]="parentId()"
+          (ngModelChange)="parentId.set($event); changed()"
+        >
+          <option value="">
+            {{
+              kind === 'units'
+                ? X('All compounds', 'كل الكمباوندات')
+                : X('All developers', 'كل المطوّرين')
+            }}
+          </option>
+          @if (parentId()) {
+            <option [value]="parentId()">{{ X('Selected parent', 'السجل المحدد') }}</option>
+          }
+          @for (p of parents(); track p.id) {
+            <option [value]="p.id">{{ label(p.name) }}</option>
+          }
+        </select>
+        <select
+          class="iv-select"
+          [attr.aria-label]="X('Status', 'الحالة')"
+          [ngModel]="status()"
+          (ngModelChange)="status.set($event); changed()"
+        >
+          <option value="">{{ X('All statuses', 'كل الحالات') }}</option>
+          @for (s of statuses(); track s) {
+            <option [value]="s">{{ statusLabel(s) }}</option>
+          }
+        </select>
+        @if (parentId()) {
+          <button class="iv-btn sm" type="button" (click)="parentId.set(''); changed()">
+            {{ X('Clear parent filter', 'إلغاء تصفية المشروع') }}
+          </button>
+        }
+        @if (kind === 'units') {
+          <select
+            class="iv-select"
+            aria-label="Unit type"
+            [ngModel]="type()"
+            (ngModelChange)="type.set($event); changed()"
+          >
+            <option value="">{{ X('All types', 'كل الأنواع') }}</option>
+            @for (t of types; track t) {
+              <option [value]="t">{{ statusLabel(t) }}</option>
+            }</select
+          ><select
+            class="iv-select"
+            aria-label="Listing"
+            [ngModel]="listing()"
+            (ngModelChange)="listing.set($event); changed()"
+          >
+            <option value="">{{ X('All listings', 'كل الوحدات') }}</option>
+            @for (t of ['primary', 'resale', 'rental']; track t) {
+              <option [value]="t">{{ statusLabel(t) }}</option>
+            }</select
+          ><select
+            class="iv-select"
+            aria-label="Bedrooms"
+            [ngModel]="bedrooms()"
+            (ngModelChange)="bedrooms.set($event); changed()"
+          >
+            <option value="">{{ X('Any bedrooms', 'كل غرف النوم') }}</option>
+            @for (n of [0, 1, 2, 3, 4, 5, 6]; track n) {
+              <option [value]="n">{{ n }} {{ X('bedrooms', 'غرف') }}</option>
+            }
+          </select>
+        }
+      </div>
+    }
+    <div class="iv-grid" [class.dev]="kind === 'developers'" [class.co]="kind !== 'developers'">
+      @for (i of items(); track i.id) {
+        <article
+          class="iv-card"
+          [class.iv-dcard]="kind === 'developers'"
+          [class.iv-ccard]="kind !== 'developers'"
+        >
+          @if (kind === 'developers') {
+            <a class="iv-record-link" [routerLink]="path(i)"
+              ><div class="iv-dtop">
+                <div class="iv-logo lg">
+                  @if (i.data.logo) {
+                    <img class="iv-logo-image" [src]="i.data.logo" alt="" />
+                  } @else {
+                    {{ nameInitial(i) }}
+                  }
+                </div>
+                <div class="iv-dnames">
+                  <div class="iv-dn">{{ label(i.name) }}</div>
+                  <div class="iv-dn2">{{ ar() ? i.name.en : i.name.ar }}</div>
+                </div>
+              </div></a
+            >
+            <div class="iv-badges">
+              @if (i.data.top) {
+                <span class="iv-badge top">{{ X('Top developer', 'مطوّر مميز') }}</span>
+              }
+              @if (i.data.verified) {
+                <span class="iv-badge ver">{{ X('Verified', 'موثّق') }}</span>
+              }
+              @if (i.data.founded) {
+                <span class="iv-badge plain">{{ X('Since', 'منذ') }} {{ i.data.founded }}</span>
+              }
+            </div>
+            <div class="iv-dstats">
+              <div>
+                <b>{{ i.children }}</b
+                ><span>{{ X('Compounds', 'كمباوندات') }}</span>
+              </div>
+              <div>
+                <b>{{ i.followers }}</b
+                ><span>{{ X('Followers', 'متابعون') }}</span>
+              </div>
+              <div>
+                <b>{{ num(i.data.delivered) }}</b
+                ><span>{{ X('Units delivered', 'وحدات مسلّمة') }}</span>
+              </div>
+            </div>
+          } @else {
+            <a class="iv-record-link" [routerLink]="path(i)"
+              ><div class="iv-img">
+                @if (image(i); as src) {
+                  <img class="iv-real-image" [src]="src" [alt]="label(i.name)" loading="lazy" />
+                } @else {
+                  <span class="iv-no-image">{{ X('No image available', 'لا توجد صورة') }}</span>
+                }
+                <span class="iv-st">{{ statusLabel(i.status) }}</span>
+              </div>
+              <div class="iv-cb">
+                <div class="iv-cn">{{ label(i.name) }}</div>
+                <div class="iv-devrow">{{ label(i.data.location) }}</div>
+                <div class="iv-pricerow">
+                  <b>{{ money(kind === 'units' ? i.priceMinor : i.fromPriceMinor) }}</b>
+                </div>
+                @if (kind === 'units') {
+                  <div class="iv-uspecs">
+                    <span>{{ num(i.bedrooms) }} {{ X('beds', 'غرف') }}</span
+                    ><span>{{ num(i.data.bathrooms) }} {{ X('baths', 'حمامات') }}</span
+                    ><span>{{ num(i.area) }} m²</span>
+                  </div>
+                } @else {
+                  <div class="iv-cfoot">
+                    <span>{{ i.children }} {{ X('units', 'وحدة') }}</span
+                    ><span>{{ i.available }} {{ X('available', 'متاحة') }}</span>
+                  </div>
+                }
+              </div></a
+            >
+          }
+          <div class="iv-card-actions">
+            <button
+              type="button"
+              class="iv-btn sm"
+              [disabled]="busy()"
+              [attr.aria-pressed]="i.preference.followed"
+              (click)="preference(i, { followed: !i.preference.followed })"
+            >
+              {{
+                i.preference.followed ? X('Following', 'تتابعه') : X('+ Follow', '+ متابعة')
+              }}</button
+            ><button
+              type="button"
+              class="iv-btn sm"
+              [disabled]="busy()"
+              [attr.aria-pressed]="i.preference.favorite"
+              (click)="preference(i, { favorite: !i.preference.favorite })"
+            >
+              {{ i.preference.favorite ? X('♥ Saved', '♥ محفوظ') : X('♡ Save', '♡ حفظ') }}
+            </button>
           </div>
-          <div class="iv-badges">
-            @if (d.top) { <span class="iv-badge top"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>{{ l.top }}</span> }
-            @if (d.ver) { <span class="iv-badge ver"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>{{ l.ver }}</span> }
-            <span class="iv-badge plain">{{ d.sinceT }}</span>
-          </div>
-          <div class="iv-dstats">
-            <div><b>{{ d.cos }}</b><span>{{ l.compounds }}</span></div>
-            <div><b>{{ d.fol }}</b><span>{{ l.followers }}</span></div>
-            <div><b>{{ d.del }}</b><span>{{ l.delivered }}</span></div>
-          </div>
-          <button type="button" class="iv-btn sm full" (click)="toggleFol('d' + d.i, d.name, $event)" [style.background]="d.fBg" [style.color]="d.fFg" [style.border-color]="d.fBd">{{ d.fLbl }}</button>
+        </article>
+      } @empty {
+        <div class="iv-empty">
+          {{ X('No catalog records match your filters.', 'لا توجد سجلات مطابقة.') }}
+          @if (!error()) {
+            <p>
+              {{
+                X(
+                  'The shared catalog has no matching published inventory yet.',
+                  'لم يُنشر مخزون مطابق في الكتالوج المشترك بعد.'
+                )
+              }}
+            </p>
+          }
         </div>
-      } @empty { <div class="iv-empty">—</div> }
+      }
     </div>
-  }
-
-  <!-- ===================== DEVELOPER PROFILE ===================== -->
-  @if (view === 'dev' && dv(); as dv) {
+    <div class="iv-pagination">
+      <button class="iv-btn" type="button" [disabled]="page() <= 1" (click)="turn(-1)">
+        {{ X('Previous', 'السابق') }}</button
+      ><span>{{ X('Page', 'صفحة') }} {{ page() }} · {{ total() }} {{ X('records', 'سجل') }}</span
+      ><button
+        class="iv-btn"
+        type="button"
+        [disabled]="page() * limit >= total()"
+        (click)="turn(1)"
+      >
+        {{ X('Next', 'التالي') }}
+      </button>
+    </div>
+  } @else if (item(); as i) {
     <div class="iv-cover">
-      <app-inv-scene [sc]="dv.cover" />
-      <div class="iv-coverfade"></div>
+      @if (image(i); as src) {
+        <img class="iv-real-image" [src]="src" [alt]="label(i.name)" />
+      } @else {
+        <span class="iv-no-image">{{ X('No image available', 'لا توجد صورة') }}</span>
+      }
     </div>
     <div class="iv-phead">
-      <div class="iv-logo xl" [style.background]="dv.c">{{ dv.init }}</div>
+      <div class="iv-logo xl">
+        @if (i.data.logo) {
+          <img class="iv-logo-image" [src]="i.data.logo" alt="" />
+        } @else {
+          {{ nameInitial(i) }}
+        }
+      </div>
       <div class="iv-pnames">
-        <h1 class="iv-h1">{{ dv.name }}</h1>
-        <div class="iv-dn2 lg">{{ dv.name2 }}</div>
+        <h1 class="iv-h1 big">{{ label(i.name) }}</h1>
+        <div class="iv-dn2">{{ ar() ? i.name.en : i.name.ar }}</div>
         <div class="iv-badges">
-          @if (dv.top) { <span class="iv-badge top"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>{{ l.top }}</span> }
-          @if (dv.ver) { <span class="iv-badge ver"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>{{ l.ver }}</span> }
-          @if (dv.hasStock) { <span class="iv-badge stock"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6l-9.5 9.5-5-5L1 18M17 6h6v6"/></svg>{{ dv.stock }}</span> }
+          <span class="iv-badge plain">{{ statusLabel(i.status) }}</span>
+          @if (i.data.verified) {
+            <span class="iv-badge ver">{{ X('Verified', 'موثّق') }}</span>
+          }
         </div>
       </div>
       <div class="iv-pact">
-        <div class="iv-folc"><b>{{ dv.folN }}</b><span>{{ l.followers }}</span></div>
-        <button type="button" class="iv-btn" (click)="toggleFol('d' + dv.i, dv.name)" [style.background]="dv.fBg" [style.color]="dv.fFg" [style.border-color]="dv.fBd">{{ dv.fLbl }}</button>
-      </div>
-    </div>
-
-    <div class="iv-kpis">
-      <div class="iv-kpi"><span>{{ l.compounds }}</span><b>{{ dv.cos }}</b></div>
-      <div class="iv-kpi wide"><span>{{ l.delivered }}</span><b>{{ dv.delBig }}</b><em>{{ dv.delSub }}</em></div>
-      <div class="iv-kpi"><span>{{ l.founded }}</span><b>{{ dv.yr }}</b></div>
-      <div class="iv-kpi"><span>{{ l.followers }}</span><b>{{ dv.folN }}</b></div>
-      <div class="iv-kpi"><span>{{ dv.unitsL }}</span><b>{{ dv.unitsN }}</b></div>
-    </div>
-
-    <div class="iv-cols">
-      <div class="iv-main">
-        <section class="iv-card iv-sec">
-          <div class="iv-sech"><h2>{{ l.about }}</h2>
-            <div class="iv-seg"><span class="iv-segl">{{ l.contentL }}</span>
-              @for (sg of clSeg(); track sg.k) { <button type="button" (click)="cl.set(sg.k)" [style.background]="sg.bg" [style.color]="sg.fg" [style.font-weight]="sg.fw">{{ sg.label }}</button> }
-            </div>
-          </div>
-          <p class="iv-p" [attr.dir]="dv.bioDir">{{ dv.bio }}</p>
-        </section>
-
-        @if (dv.hasTrust) {
-          <section class="iv-card iv-sec">
-            <div class="iv-sech"><h2>{{ l.trust }}</h2><span class="iv-badge ver"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>{{ l.ver }}</span></div>
-            <div class="iv-trust">
-              @for (tr of dv.trust; track $index) {
-                <div class="iv-tr"><span class="iv-trI"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4"/></svg></span>{{ tr }}</div>
-              }
-            </div>
-          </section>
-        }
-
-        <section class="iv-sec2">
-          <div class="iv-sech"><h2>{{ l.theirCos }}</h2><span class="iv-meta">{{ dv.cos }}</span></div>
-          <div class="iv-grid mini">
-            @for (c of dv.devCos; track c.i) {
-              <div class="iv-card iv-mini" (click)="openCo(c.i)">
-                <div class="iv-img sm"><app-inv-scene [sc]="c.sc" /><span class="iv-st" [style.background]="c.stBg" [style.color]="c.stFg">{{ c.st }}</span></div>
-                <div class="iv-mb">
-                  <div class="iv-cn">{{ c.name }}</div>
-                  <div class="iv-area"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"/></svg>{{ c.area }}</div>
-                  <div class="iv-mrow"><b>{{ c.from }}</b><span>{{ c.units }}</span></div>
-                </div>
-              </div>
-            }
-          </div>
-        </section>
-      </div>
-
-      <aside class="iv-side">
-        <section class="iv-card iv-sec">
-          <h2 class="iv-h2s">{{ l.contact }}</h2>
-          @for (ct of dv.contacts; track $index) {
-            <button type="button" class="iv-contact" (click)="copy(ct.v)"><span class="iv-cI"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path [attr.d]="ct.ic"/></svg></span><span class="iv-cv" [attr.dir]="ct.dir">{{ ct.v }}</span></button>
-          }
-        </section>
-        <section class="iv-card iv-sec">
-          <h2 class="iv-h2s">{{ l.social }}</h2>
-          <div class="iv-socials">
-            @for (so of dv.socials; track so.label) {
-              <button type="button" class="iv-soc" (click)="openSocial(so.label)" [title]="so.label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path [attr.d]="so.ic"/></svg><span>{{ so.label }}</span></button>
-            }
-          </div>
-        </section>
-      </aside>
-    </div>
-  }
-
-  <!-- ===================== COMPOUNDS LIST ===================== -->
-  @if (view === 'cos') {
-    <div class="iv-head">
-      <div><h1 class="iv-h1">{{ l.cos }}</h1><div class="iv-meta">{{ coMeta() }}</div></div>
-      <button type="button" class="iv-btn dark" (click)="addCo()">{{ l.cos }} +</button>
-    </div>
-    <div class="iv-tools">
-      <label class="iv-search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></svg><input [value]="q()" (input)="onInput($event)" [placeholder]="l.search" /></label>
-      <select class="iv-select" [value]="devSel()" (change)="onSel($event, 'dev')">
-        @for (o of devOpts(); track o.v) { <option [value]="o.v" [selected]="o.v === devSel()">{{ o.l }}</option> }
-      </select>
-    </div>
-    <div class="iv-chips wrap">
-      @for (ch of stChips(); track ch.k) {
-        <button type="button" class="iv-chip" (click)="stF.set(ch.k)" [style.background]="ch.bg" [style.color]="ch.fg" [style.border-color]="ch.bd"><i [style.background]="ch.dot"></i>{{ ch.label }}</button>
-      }
-    </div>
-    <div class="iv-grid co">
-      @for (c of coList(); track c.i) {
-        <div class="iv-card iv-ccard" (click)="openCo(c.i)">
-          <div class="iv-img">
-            <app-inv-scene [sc]="c.sc" />
-            <span class="iv-st" [style.background]="c.stBg" [style.color]="c.stFg">{{ c.st }}</span>
-            <button type="button" class="iv-heart" (click)="toggleFol('c' + c.i, c.name, $event)" [style.background]="c.hBg" [style.color]="c.hFg"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>{{ c.fol }}</button>
-          </div>
-          <div class="iv-cb">
-            <div class="iv-cn">{{ c.name }}</div>
-            <div class="iv-cn2">{{ c.name2 }}</div>
-            <div class="iv-devrow"><span class="iv-logo xs" [style.background]="c.devC">{{ c.devInit }}</span>{{ c.dev }}@if (c.ver) { <span class="iv-vdot"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> }</div>
-            <div class="iv-area"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"/></svg>{{ c.area }}</div>
-            <div class="iv-cfoot"><b>{{ c.from }}</b><span [style.color]="c.avC">{{ c.avail }}</span></div>
-          </div>
-        </div>
-      } @empty { <div class="iv-empty">—</div> }
-    </div>
-  }
-
-  <!-- ===================== COMPOUND DETAIL ===================== -->
-  @if (view === 'co' && co(); as co) {
-    @if (co.promo; as promo) {
-      <div class="iv-promo">
-        <div class="iv-pmedia">
-          <app-inv-scene [sc]="promo.sc" />
-          @if (promo.video) {
-            <span class="iv-play"><svg width="18" height="18" viewBox="0 0 24 24" fill="#111113"><path d="M8 5v14l11-7z"/></svg></span><span class="iv-dur mono">0:42</span>
-          }
-        </div>
-        <div class="iv-ptext">
-          <span class="iv-pkind">{{ promo.kind }}</span>
-          <div class="iv-pt">{{ promo.t }}</div>
-          <div class="iv-ps">{{ promo.s }}</div>
-          <div class="iv-pdates mono"><span>{{ promo.start }} → {{ promo.end }}</span><b>{{ promo.left }}</b></div>
-        </div>
-        <button type="button" class="iv-btn lime" (click)="info('Offer shared on WhatsApp', 'تمت مشاركة العرض على واتساب')">{{ l.share }}</button>
-      </div>
-    }
-
-    <div class="iv-cohead">
-      <div class="iv-coinfo">
-        <div class="iv-badges"><span class="iv-st inl" [style.background]="co.stBg" [style.color]="co.stFg">{{ co.st }}</span><span class="iv-area"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"/></svg>{{ co.areaName }}</span></div>
-        <h1 class="iv-h1 big">{{ co.name }}</h1>
-        <div class="iv-dn2 lg">{{ co.name2 }}</div>
-        <button type="button" class="iv-devlink" (click)="openDev(COS[idx()].d)">
-          <span class="iv-logo sm" [style.background]="co.devC">{{ co.devInit }}</span>
-          <span><b>{{ co.devName }}</b>@if (co.devVer) { <span class="iv-vdot"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> }<em>{{ co.devCos }} · {{ co.devFol }}</em></span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="flip()"><path d="M9 18l6-6-6-6"/></svg>
-        </button>
-      </div>
-      <div class="iv-coact">
-        <button type="button" class="iv-btn ghost" (click)="info('Compound link copied', 'تم نسخ رابط الكمباوند')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>{{ l.share }}</button>
-        <div class="iv-belw">
-          <button type="button" class="iv-bell" (click)="toggleAl($event)" [style.background]="co.bellBg"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path [attr.d]="co.bellIc"/></svg></button>
-          @if (alOpen()) {
-            <div class="iv-alpop" (click)="$event.stopPropagation()">
-              <div class="iv-alh">{{ l.alertsT }}</div>
-              <div class="iv-alhint">{{ co.alHint }}</div>
-              @for (a of co.alerts; track a.k) {
-                <button type="button" class="iv-alrow" (click)="togglePref(a.k)" [style.opacity]="a.op"><span class="iv-ck" [style.background]="a.ckBg" [style.border-color]="a.ckBd">{{ a.ck }}</span>{{ a.l }}</button>
-              }
-              <button type="button" class="iv-alrow mute" (click)="toggleMute()"><span>{{ l.mute }}</span><span class="iv-sw" [style.background]="co.muteSw.bg" [style.justify-content]="co.muteSw.j"><i></i></span></button>
-            </div>
-          }
-        </div>
-        <div class="iv-folc"><b>{{ co.folN }}</b><span>{{ l.followers }}</span></div>
-        <button type="button" class="iv-btn" (click)="toggleFol('c' + idx(), co.name)" [style.background]="co.folBg" [style.color]="co.folFg" [style.border-color]="co.folBd">{{ co.folLbl }}</button>
-      </div>
-    </div>
-
-    <div class="iv-gallery">
-      <div class="iv-gmain"><app-inv-scene [sc]="co.mainSc" /><span class="iv-glbl">{{ co.mainLbl }}</span><span class="iv-gn mono">{{ co.galN }}</span></div>
-      <div class="iv-gthumbs">
-        @for (g of co.gal; track $index; let k = $index) {
-          <button type="button" class="iv-gth" (click)="setGal(k)" [style.outline-color]="g.bd" style="position:relative"><app-inv-scene [sc]="g.sc" /></button>
-        }
-      </div>
-    </div>
-
-    <div class="iv-stats">
-      @for (s of co.stats; track $index) {
-        <div class="iv-stat"><span>{{ s.k }}</span><b [style.color]="s.c">{{ s.v }}</b>@if (s.s) { <em>{{ s.s }}</em> }</div>
-      }
-    </div>
-    <div class="iv-split"><i [style.width]="co.primW" style="background:#111113"></i><i [style.width]="co.resW" style="background:#7FA6DA"></i></div>
-
-    <div class="iv-cols">
-      <div class="iv-main">
-        <section class="iv-card iv-sec">
-          <div class="iv-sech"><h2>{{ l.overview }}</h2>
-            <div class="iv-seg"><span class="iv-segl">{{ l.contentL }}</span>
-              @for (sg of clSeg(); track sg.k) { <button type="button" (click)="cl.set(sg.k)" [style.background]="sg.bg" [style.color]="sg.fg" [style.font-weight]="sg.fw">{{ sg.label }}</button> }
-            </div>
-          </div>
-          <p class="iv-p" [attr.dir]="co.descDir">{{ co.desc }}</p>
-          <div class="iv-hls" [attr.dir]="co.descDir">@for (h of co.hl; track $index) { <span class="iv-hl">{{ h }}</span> }</div>
-          <div class="iv-facts">
-            <div class="iv-fact"><span class="iv-fI"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7a2 2 0 0 1 2 2M21 9a6 6 0 0 1-7.7 5.7L11 17H9v2H7v2H3v-3.6l6.3-6.3A6 6 0 1 1 21 9z"/></svg></span><div><span>{{ l.delivery }}</span><b>{{ co.delivery }}</b><em>{{ co.deliverySub }}</em></div></div>
-            <div class="iv-fact"><span class="iv-fI"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 11V4a1 1 0 0 0-1-1H6a1 1 0 0 0-1 1v7M5 11h14v3a2 2 0 0 1-2 2h-3v5h-4v-5H7a2 2 0 0 1-2-2z"/></svg></span><div><span>{{ l.finishing }}</span><b>{{ co.finishing }}</b><em>{{ co.finishingSub }}</em></div></div>
-            <div class="iv-fact"><span class="iv-fI"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><div><span>{{ l.payment }}</span><b>{{ co.paySum }}</b><em>{{ co.from }}</em></div></div>
-          </div>
-        </section>
-
-        <section class="iv-card iv-sec">
-          <div class="iv-sech"><h2>{{ l.payment }}</h2></div>
-          <div class="iv-plans">
-            @for (p of co.plans; track $index) {
-              <div class="iv-plan" [style.border-color]="p.bd">
-                @if (p.tag) { <span class="iv-ptag">{{ p.tag }}</span> }
-                <b>{{ p.t }}</b><span>{{ p.s }}</span>
-                @if (p.m) { <em class="mono">{{ p.m }}</em> }
-              </div>
-            }
-          </div>
-        </section>
-
-        <section class="iv-card iv-sec">
-          <div class="iv-sech"><h2>{{ l.phases }}</h2></div>
-          <div class="iv-phases">
-            @for (ph of co.phases; track $index) {
-              <div class="iv-ph">
-                <div class="iv-phn"><b>{{ ph.n }}</b><span class="iv-st inl" [style.background]="ph.stBg" [style.color]="ph.stFg">{{ ph.st }}</span></div>
-                <div class="iv-pha"><span>{{ ph.avail }}</span><div class="iv-bar"><i [style.width]="ph.w"></i></div></div>
-                <div class="iv-php"><span>{{ l.price }}</span><b>{{ ph.price }}</b></div>
-                <div class="iv-php"><span>{{ l.delivery }}</span><b>{{ ph.dl }}</b></div>
-                @if (ph.canStack) { <button type="button" class="iv-btn sm ghost" (click)="stackSoon()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l10 5-10 5L2 7zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>{{ l.stack }}</button> }
-              </div>
-            }
-          </div>
-        </section>
-
-        <section class="iv-card iv-sec">
-          <div class="iv-sech"><h2>{{ l.types }}</h2></div>
-          <div class="iv-types">
-            <div class="iv-trow head"><span></span><span>{{ l.size }}</span><span>{{ l.units }}</span><span>{{ l.price }}</span></div>
-            @for (ty of co.types; track $index) {
-              <div class="iv-trow"><span class="iv-tt"><b>{{ ty.t }}</b><i [style.width]="ty.w"></i></span><span class="mono">{{ ty.size }}</span><span class="mono">{{ ty.n }}</span><span>{{ ty.price }}</span></div>
-            }
-          </div>
-        </section>
-
-        <section class="iv-card iv-sec">
-          <div class="iv-sech"><h2>{{ l.facilities }}</h2></div>
-          <div class="iv-fac">@for (f of co.facilities; track $index) { <div class="iv-fc"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path [attr.d]="f.ic"/></svg>{{ f.t }}</div> }</div>
-        </section>
-
-        <section class="iv-card iv-sec">
-          <div class="iv-sech"><h2>{{ l.faqs }}</h2></div>
-          <div [attr.dir]="co.faqDir">
-            @for (fq of co.faqs; track fq.k) {
-              <div class="iv-faq" [style.background]="fq.bg">
-                <button type="button" class="iv-fq" (click)="toggleFaq(fq.k)"><span>{{ fq.q }}</span><span class="iv-plus" [style.transform]="'rotate(' + fq.rot + ')'">+</span></button>
-                @if (fq.open) { <p class="iv-fa">{{ fq.a }}</p> }
-              </div>
-            }
-          </div>
-        </section>
-
-        @if (co.coUnits.length) {
-          <section class="iv-sec2">
-            <div class="iv-sech"><h2>{{ co.coUnitsT }}</h2><button type="button" class="iv-link" (click)="viewAllUnits(idx())">{{ X('View all units', 'عرض كل الوحدات') }} →</button></div>
-            <div class="iv-grid co">@for (u of co.coUnits; track u.i) { <ng-container [ngTemplateOutlet]="unitCard" [ngTemplateOutletContext]="{ $implicit: u }" /> }</div>
-          </section>
-        }
-      </div>
-
-      <aside class="iv-side">
-        <section class="iv-card iv-sec">
-          <div class="iv-sech"><h2 class="iv-h2s">{{ l.location }}</h2><button type="button" class="iv-link" (click)="info('Opening Google Maps…', 'جارٍ فتح الخرائط…')">{{ l.openMap }}</button></div>
-          <div class="iv-map">
-            <svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice" class="fillsvg">
-<rect width="320" height="200" fill="#EDEFE6"/>
-<path d="M0 150 C60 140 90 170 160 160 S260 120 320 135" stroke="#fff" stroke-width="10" fill="none"/>
-<path d="M60 0 L90 200" stroke="#fff" stroke-width="7"/>
-<path d="M230 0 C220 60 250 120 240 200" stroke="#fff" stroke-width="5"/>
-<rect x="10" y="20" width="40" height="30" rx="4" fill="#E2E5DA"/><rect x="250" y="160" width="56" height="30" rx="4" fill="#E2E5DA"/><rect x="100" y="12" width="60" height="22" rx="4" fill="#E2E5DA"/>
-<path d="M112 60 L208 52 L226 110 L190 148 L118 140 L98 98 Z" fill="rgba(200,241,105,0.35)" stroke="#5B7F12" stroke-width="2" stroke-dasharray="6 4"/>
-<g transform="translate(160 96)"><path d="M0 0 C-12 -14 -14 -20 -14 -26 A14 14 0 0 1 14 -26 C14 -20 12 -14 0 0Z" fill="#111113"/><circle cy="-26" r="5" fill="#C8F169"/></g>
-</svg>
-            <span class="iv-mapl">{{ co.areaName }}</span>
-          </div>
-        </section>
-        <section class="iv-card iv-sec">
-          <div class="iv-sech"><h2 class="iv-h2s">{{ l.masterplan }}</h2><button type="button" class="iv-link" (click)="info('Opening the master plan…', 'جارٍ فتح المخطط العام…')">↗</button></div>
-          <div class="iv-plan2" (click)="info('Opening the master plan…', 'جارٍ فتح المخطط العام…')">
-            <svg viewBox="0 0 320 200" class="fillsvg">
-<rect width="320" height="200" fill="#F4F6EE"/>
-<path d="M20 30 L300 20 L310 180 L14 186 Z" fill="#fff" stroke="#C9CDBE" stroke-width="1.5"/>
-<ellipse cx="160" cy="104" rx="46" ry="30" fill="#BFE0EC"/>
-<path d="M160 20 V186 M14 104 H310" stroke="#E2E4DA" stroke-width="8"/>
-<g fill="#E4F5C0" stroke="#8BB33A" stroke-width="1"><rect x="34" y="38" width="44" height="26" rx="3"/><rect x="86" y="38" width="44" height="26" rx="3"/><rect x="34" y="72" width="44" height="22" rx="3"/><rect x="34" y="116" width="44" height="26" rx="3"/><rect x="34" y="150" width="44" height="26" rx="3"/></g>
-<g fill="#FDF3DC" stroke="#C99A4A" stroke-width="1"><rect x="190" y="34" width="46" height="26" rx="3"/><rect x="244" y="34" width="46" height="26" rx="3"/><rect x="244" y="68" width="46" height="26" rx="3"/></g>
-<g fill="#E4E4DF" stroke="#A6A6A0" stroke-width="1"><rect x="190" y="118" width="46" height="26" rx="3"/><rect x="244" y="118" width="46" height="26" rx="3"/><rect x="244" y="152" width="46" height="24" rx="3"/><rect x="86" y="150" width="44" height="26" rx="3"/></g>
-<circle cx="160" cy="104" r="9" fill="#111113"/>
-</svg>
-          </div>
-          <div class="iv-legend"><span><i style="background:#E4F5C0;border-color:#8BB33A"></i>{{ l.avail }}</span><span><i style="background:#FDF3DC;border-color:#C99A4A"></i>{{ l.next }}</span><span><i style="background:#E4E4DF;border-color:#A6A6A0"></i>{{ l.sold }}</span></div>
-        </section>
-        <section class="iv-card iv-sec">
-          <h2 class="iv-h2s">{{ l.brochure }}</h2>
-          <button type="button" class="iv-file" (click)="info('Brochure downloaded', 'تم تحميل الكتيّب')"><span class="iv-fileI"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"/></svg></span><span class="iv-filet">{{ co.brochure }}</span><span class="iv-dl"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></span></button>
-        </section>
-        @if (co.news; as news) {
-          <section class="iv-card iv-sec">
-            <h2 class="iv-h2s">{{ l.news }}</h2>
-            <div class="iv-news"><span class="mono">{{ news.date }}</span><b>{{ news.t }}</b><p>{{ news.b }}</p></div>
-          </section>
-        }
-      </aside>
-    </div>
-  }
-  <!-- ===================== UNITS LIST ===================== -->
-  @if (view === 'units') {
-    <div class="iv-head">
-      <div><h1 class="iv-h1">{{ l.unitsT }}</h1><div class="iv-meta">{{ uMeta() }}</div></div>
-      <button type="button" class="iv-btn dark" (click)="addUnit()">{{ l.unitsT }} +</button>
-    </div>
-    <div class="iv-tools">
-      <label class="iv-search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></svg><input [value]="q()" (input)="onInput($event)" [placeholder]="l.search" /></label>
-      <select class="iv-select" (change)="setSel($event, 'uc')">@for (o of uCoOpts(); track o.v) { <option [value]="o.v" [selected]="o.v === uc()">{{ o.l }}</option> }</select>
-      <select class="iv-select" (change)="setSel($event, 'ut')">@for (o of uTypeOpts(); track o.v) { <option [value]="o.v" [selected]="o.v === ut()">{{ o.l }}</option> }</select>
-      <select class="iv-select" (change)="setSel($event, 'us')">@for (o of uSorts(); track o.v) { <option [value]="o.v" [selected]="o.v === us()">{{ o.l }}</option> }</select>
-    </div>
-    <div class="iv-ufil">
-      <div class="iv-chips">@for (ch of uListChips(); track ch.k) { <button type="button" class="iv-chip" (click)="ch.go()" [style.background]="ch.bg" [style.color]="ch.fg" [style.border-color]="ch.bd">{{ ch.label }}</button> }</div>
-      <div class="iv-chips"><span class="iv-segl">{{ X('Bedrooms', 'غرف النوم') }}</span>@for (ch of uBedChips(); track ch.k) { <button type="button" class="iv-chip sq" (click)="ch.go()" [style.background]="ch.bg" [style.color]="ch.fg" [style.border-color]="ch.bd">{{ ch.label }}</button> }</div>
-    </div>
-    <div class="iv-rescount"><b>{{ uCount() }}</b>@if (hasUFilter()) { <button type="button" class="iv-link" (click)="clearU()">{{ X('Clear filters', 'مسح الفلاتر') }}</button> }</div>
-    <div class="iv-grid co">
-      @for (u of unitList(); track u.i) { <ng-container [ngTemplateOutlet]="unitCard" [ngTemplateOutletContext]="{ $implicit: u }" /> }
-      @empty { <div class="iv-empty">—</div> }
-    </div>
-  }
-
-  <!-- ===================== UNIT DETAIL ===================== -->
-  @if (view === 'unit' && un(); as un) {
-    @if (un.hasOffer) { <div class="iv-uoffer"><span class="iv-pkind">%</span><div><b>{{ un.offerT }}</b><span>{{ un.offerS }}</span></div></div> }
-    @if (un.isLaunch) { <div class="iv-uoffer lime"><span class="iv-pkind">★</span><div><b>{{ un.launchT }}</b></div></div> }
-    <div class="iv-ugal">
-      <div class="iv-umain">
-        @if (un.mPhotos) { <app-inv-scene [sc]="un.mainSc" /><span class="iv-gn mono">{{ un.galN }}</span> }
-        @if (un.mPlan) {
-          <div class="iv-fplan">
-            <div class="iv-fpgrid">@for (rm of un.rooms; track $index) { <div class="iv-room" [style.background]="rm.bg">{{ rm.n }}</div> }</div>
-            <div class="iv-fpmeta"><span class="mono">{{ un.planSize }}</span><span class="iv-north">{{ un.uL.north }} ↑</span></div>
-          </div>
-        }
-        @if (un.mVideo) {
-          <app-inv-scene [sc]="un.coSc" /><div class="iv-vshade"></div>
-          <span class="iv-play big"><svg width="22" height="22" viewBox="0 0 24 24" fill="#111113"><path d="M8 5v14l11-7z"/></svg></span><span class="iv-glbl">{{ un.uL.vid }}</span>
-        }
-        <div class="iv-mtabs">@for (m of un.media; track m.k) { <button type="button" (click)="mt.set(m.k); gal.set(0)" [style.background]="m.bg" [style.color]="m.fg">{{ m.l }}</button> }</div>
-        <div class="iv-ubadges">
-          <span class="iv-st inl" [style.background]="un.listBg" [style.color]="un.listFg">{{ un.list }}</span>
-          @for (b of un.badges; track b.t) { <span class="iv-st inl" [style.background]="b.bg" [style.color]="b.fg">{{ b.t }}</span> }
-        </div>
-      </div>
-      <div class="iv-uthumbs">@for (g of un.thumbs; track g.k) { <button type="button" class="iv-gth" (click)="setGal(g.k)" [style.outline-color]="g.bd"><app-inv-scene [sc]="g.sc" /></button> }</div>
-    </div>
-
-    <div class="iv-cols">
-      <div class="iv-main">
-        <div class="iv-uhead">
-          <div class="iv-coinfo">
-            <span class="iv-ref mono">{{ un.ref }}</span>
-            <h1 class="iv-h1 big">{{ un.title }}</h1>
-            <div class="iv-dn2 lg">{{ un.title2 }}</div>
-            <div class="iv-uspecs big">
-              @if (un.hasBeds) { <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4M2 17h20"/></svg>{{ un.beds }}</span> }
-              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16a1 1 0 0 1 1 1v2a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5v-2a1 1 0 0 1 1-1zM6 12V5a2 2 0 0 1 2-2h1"/></svg>{{ un.baths }}</span>
-              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3zM3 9h18M9 21V9"/></svg>{{ un.size }}</span>
-              <span [style.color]="un.delC"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7a2 2 0 0 1 2 2M21 9a6 6 0 0 1-7.7 5.7L11 17H9v2H7v2H3v-3.6l6.3-6.3A6 6 0 1 1 21 9z"/></svg>{{ un.del }}</span>
-            </div>
-            <div class="iv-meta">{{ un.listed }}</div>
-          </div>
-        </div>
-
-        <section class="iv-card iv-sec">
-          <div class="iv-sech"><h2>{{ un.uL.calc }}</h2></div>
-          <div class="iv-chips">@for (pt of un.planTabs; track pt.k) { <button type="button" class="iv-chip" (click)="pl.set(pt.k)" [style.background]="pt.bg" [style.color]="pt.fg" [style.border-color]="pt.bd">{{ pt.l }}</button> }</div>
-          <div class="iv-payrows">@for (r of un.payRows; track $index) { <div class="iv-prow"><span>{{ r.k }}</span><div><b>{{ r.v }}</b>@if (r.s) { <em>{{ r.s }}</em> }</div></div> }</div>
-          <div class="iv-maint">{{ un.maintRow }}</div>
-        </section>
-
-        <section class="iv-card iv-sec">
-          <div class="iv-sech"><h2>{{ un.uL.specs }}</h2></div>
-          <div class="iv-spec">@for (s of un.spec; track $index) { <div><span>{{ s.k }}</span><b>{{ s.v }}</b></div> }</div>
-        </section>
-
-        <section class="iv-card iv-sec">
-          <div class="iv-sech"><h2>{{ un.uL.desc }}</h2>
-            <div class="iv-seg"><span class="iv-segl">{{ l.contentL }}</span>
-              @for (sg of clSeg(); track sg.k) { <button type="button" (click)="cl.set(sg.k)" [style.background]="sg.bg" [style.color]="sg.fg" [style.font-weight]="sg.fw">{{ sg.label }}</button> }
-            </div>
-          </div>
-          <p class="iv-p" [attr.dir]="un.descDir">{{ un.desc }}</p>
-        </section>
-
-        @if (un.similar.length) {
-          <section class="iv-sec2">
-            <div class="iv-sech"><h2>{{ un.uL.similar }}</h2></div>
-            <div class="iv-grid co">@for (u of un.similar; track u.i) { <ng-container [ngTemplateOutlet]="unitCard" [ngTemplateOutletContext]="{ $implicit: u }" /> }</div>
-          </section>
-        }
-      </div>
-
-      <aside class="iv-side">
-        <section class="iv-card iv-sec iv-pricebox">
-          <span class="iv-segl0">{{ un.uL.price }}</span>
-          <div class="iv-bigp">{{ un.price }}</div>
-          @if (un.hasWas) { <s class="iv-was">{{ un.was }}</s> }
-          <div class="iv-meta">{{ un.ppmBig }} · {{ un.pay }}</div>
-          <button type="button" class="iv-btn dark full" (click)="reserve()">{{ un.reserveL }}</button>
-          <div class="iv-row2">
-            <button type="button" class="iv-btn ghost" (click)="stackSoon()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l10 5-10 5L2 7zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>{{ un.uL.stack }}</button>
-            <button type="button" class="iv-btn ghost" (click)="toggleFav(un.i)"><span style="font-size:16px">{{ un.heart }}</span></button>
-            <button type="button" class="iv-btn ghost" (click)="info('Unit link copied', 'تم نسخ رابط الوحدة')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
-          </div>
-        </section>
-
-        <section class="iv-card iv-sec">
-          <h2 class="iv-h2s">{{ un.uL.seller }}</h2>
-          <div class="iv-agent"><span class="iv-av">{{ un.ag.init }}</span><div><b>{{ un.ag.n }}</b><span>{{ un.ag.role }}</span><em><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>{{ un.sellerV }}</em></div></div>
-          <div class="iv-row2 two">
-            <button type="button" class="iv-btn ghost" (click)="info('Calling the seller…', 'جارٍ الاتصال بالمعلن…')">{{ un.uL.call }}</button>
-            <button type="button" class="iv-btn wa" (click)="info('Unit details sent on WhatsApp', 'تم إرسال تفاصيل الوحدة على واتساب')">{{ un.uL.wa }}</button>
-          </div>
-        </section>
-
-        <section class="iv-card iv-sec">
-          <h2 class="iv-h2s">{{ un.uL.compound }}</h2>
-          <button type="button" class="iv-cobox" (click)="openCo(un.coIdx)">
-            <div class="iv-img sm"><app-inv-scene [sc]="un.coSc" /><span class="iv-st" [style.background]="un.coStBg" [style.color]="un.coStFg">{{ un.coSt }}</span></div>
-            <div class="iv-mb"><div class="iv-cn">{{ un.co }}</div><div class="iv-area">{{ un.area }}</div><div class="iv-mrow"><b>{{ un.coFrom }}</b><span>{{ un.coUnits }}</span></div></div>
+        <button
+          type="button"
+          class="iv-btn"
+          [disabled]="busy()"
+          (click)="preference(i, { followed: !i.preference.followed })"
+        >
+          {{ i.preference.followed ? X('Following', 'تتابعه') : X('+ Follow', '+ متابعة') }}</button
+        ><button
+          class="iv-btn"
+          type="button"
+          [disabled]="busy()"
+          (click)="preference(i, { favorite: !i.preference.favorite })"
+        >
+          {{ i.preference.favorite ? X('♥ Saved', '♥ محفوظ') : X('♡ Save', '♡ حفظ') }}</button
+        ><button class="iv-btn" type="button" (click)="share()">{{ X('Share', 'مشاركة') }}</button>
+        @if (canManage()) {
+          <button class="iv-btn dark" type="button" (click)="openEditor(i)">
+            {{ X('Edit', 'تعديل') }}</button
+          ><button class="iv-btn" type="button" (click)="archiveConfirm.set(true)">
+            {{ X('Archive', 'أرشفة') }}
           </button>
-          <button type="button" class="iv-devlink wide" (click)="openDev(un.devIdx)"><span class="iv-logo sm" [style.background]="un.devC">{{ un.devInit }}</span><span><b>{{ un.dev }}</b>@if (un.devVer) { <span class="iv-vdot"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> }<em>{{ un.devUnits }}</em></span></button>
+        }
+      </div>
+    </div>
+    <div class="iv-kpis">
+      <div class="iv-kpi">
+        <span>{{ X('Followers', 'المتابعون') }}</span
+        ><b>{{ i.followers }}</b>
+      </div>
+      @if (kind === 'developers') {
+        <div class="iv-kpi">
+          <span>{{ X('Compounds', 'الكمباوندات') }}</span
+          ><b>{{ i.children }}</b>
+        </div>
+        <div class="iv-kpi wide">
+          <span>{{ X('Units delivered', 'الوحدات المسلّمة') }}</span
+          ><b>{{ num(i.data.delivered) }}</b>
+        </div>
+        <div class="iv-kpi">
+          <span>{{ X('Founded', 'سنة التأسيس') }}</span
+          ><b>{{ num(i.data.founded) }}</b>
+        </div>
+      } @else if (kind === 'compounds') {
+        <div class="iv-kpi">
+          <span>{{ X('Total units', 'الوحدات') }}</span
+          ><b>{{ i.children }}</b>
+        </div>
+        <div class="iv-kpi">
+          <span>{{ X('Available', 'متاحة') }}</span
+          ><b>{{ i.available }}</b>
+        </div>
+        <div class="iv-kpi wide">
+          <span>{{ X('Starting price', 'يبدأ السعر من') }}</span
+          ><b>{{ money(i.fromPriceMinor) }}</b>
+        </div>
+      } @else {
+        <div class="iv-kpi wide">
+          <span>{{ X('Price', 'السعر') }}</span
+          ><b>{{ money(i.priceMinor) }}</b>
+        </div>
+        <div class="iv-kpi">
+          <span>{{ X('Area', 'المساحة') }}</span
+          ><b>{{ num(i.area) }} m²</b>
+        </div>
+        <div class="iv-kpi">
+          <span>{{ X('Bedrooms', 'غرف النوم') }}</span
+          ><b>{{ num(i.bedrooms) }}</b>
+        </div>
+      }
+    </div>
+    <div class="iv-cols">
+      <main class="iv-main">
+        @if (pictures().length) {
+          <section class="iv-card iv-sec">
+            <div class="iv-sech">
+              <h2>{{ X('Gallery', 'الصور') }}</h2>
+              @if (i.data.floorPlan) {
+                <div class="iv-seg">
+                  <button type="button" (click)="media.set('photos')">
+                    {{ X('Photos', 'صور') }}</button
+                  ><button type="button" (click)="media.set('plan')">
+                    {{ X('Floor plan', 'المسقط') }}
+                  </button>
+                </div>
+              }
+            </div>
+            <img
+              class="iv-detail-image"
+              [src]="media() === 'plan' ? i.data.floorPlan : pictures()[gallery()]"
+              [alt]="label(i.name)"
+            />
+            <div class="iv-thumbnails">
+              @for (src of pictures(); track src; let n = $index) {
+                <button
+                  type="button"
+                  [attr.aria-label]="X('Show photo', 'عرض الصورة') + ' ' + (n + 1)"
+                  (click)="gallery.set(n); media.set('photos')"
+                >
+                  <img [src]="src" alt="" loading="lazy" />
+                </button>
+              }
+            </div>
+          </section>
+        }
+        <section class="iv-card iv-sec">
+          <div class="iv-sech">
+            <h2>{{ X('Overview', 'نظرة عامة') }}</h2>
+          </div>
+          <p class="iv-p">{{ label(i.data.description) }}</p>
+        </section>
+        @if (kind === 'units') {
+          <section class="iv-card iv-sec">
+            <div class="iv-sech">
+              <h2>{{ X('Unit details', 'تفاصيل الوحدة') }}</h2>
+            </div>
+            <div class="iv-prow">
+              <span>{{ X('Type', 'النوع') }}</span
+              ><b>{{ i.data.type ? statusLabel(i.data.type) : num(null) }}</b>
+            </div>
+            <div class="iv-prow">
+              <span>{{ X('Listing', 'نوع البيع') }}</span
+              ><b>{{ i.data.listing ? statusLabel(i.data.listing) : num(null) }}</b>
+            </div>
+            <div class="iv-prow">
+              <span>{{ X('Bathrooms', 'الحمامات') }}</span
+              ><b>{{ num(i.data.bathrooms) }}</b>
+            </div>
+            <div class="iv-prow">
+              <span>{{ X('Floor', 'الدور') }}</span
+              ><b>{{ num(i.data.floor) }}</b>
+            </div>
+            <div class="iv-prow">
+              <span>{{ X('Finishing', 'التشطيب') }}</span
+              ><b>{{ label(i.data.finishing) }}</b>
+            </div>
+            <div class="iv-prow">
+              <span>{{ X('Delivery', 'التسليم') }}</span
+              ><b>{{ num(i.data.deliveryYear) }}</b>
+            </div>
+          </section>
+        }
+        @if (i.data.paymentPlans?.length) {
+          <section class="iv-card iv-sec">
+            <div class="iv-sech">
+              <h2>{{ X('Payment plans', 'خطط السداد') }}</h2>
+            </div>
+            <div class="iv-chips">
+              @for (p of i.data.paymentPlans; track $index; let n = $index) {
+                <button
+                  class="iv-chip"
+                  type="button"
+                  [attr.aria-pressed]="plan() === n"
+                  (click)="plan.set(n)"
+                >
+                  {{ label(p.name) }} · {{ p.downPercent }}% / {{ p.years }}
+                  {{ X('years', 'سنوات') }}
+                </button>
+              }
+            </div>
+            @if (kind === 'units') {
+              <div class="iv-prow">
+                <span>{{ X('Estimated monthly installment', 'القسط الشهري التقريبي') }}</span
+                ><b>{{ monthly(i) }}</b>
+              </div>
+              <p class="iv-meta">
+                {{
+                  X(
+                    'Estimate excludes fees and interest; confirm the final terms with the seller.',
+                    'التقدير لا يشمل الرسوم والفوائد. تُراجع الشروط النهائية مع البائع.'
+                  )
+                }}
+              </p>
+            }
+          </section>
+        }
+        @if (i.data.facilities?.length) {
+          <section class="iv-card iv-sec">
+            <div class="iv-sech">
+              <h2>{{ X('Facilities & amenities', 'المرافق والخدمات') }}</h2>
+            </div>
+            <div class="iv-chips">
+              @for (f of i.data.facilities; track $index) {
+                <span class="iv-badge plain">{{ label(f) }}</span>
+              }
+            </div>
+          </section>
+        }
+        @if (i.data.phases?.length) {
+          <section class="iv-card iv-sec">
+            <div class="iv-sech">
+              <h2>{{ X('Phases', 'المراحل') }}</h2>
+            </div>
+            @for (p of i.data.phases; track $index) {
+              <div class="iv-prow">
+                <b>{{ label(p.name) }}</b
+                ><span>{{ num(p.deliveryYear) }}</span>
+              </div>
+            }
+          </section>
+        }
+        @if (i.data.faqs?.length) {
+          <section class="iv-card iv-sec">
+            <div class="iv-sech">
+              <h2>{{ X('FAQs', 'الأسئلة الشائعة') }}</h2>
+            </div>
+            @for (f of i.data.faqs; track $index) {
+              <details class="iv-faq">
+                <summary>{{ label(f.question) }}</summary>
+                <p class="iv-p">{{ label(f.answer) }}</p>
+              </details>
+            }
+          </section>
+        }
+        @if (kind !== 'units') {
+          <section class="iv-sec2">
+            <div class="iv-sech">
+              <h2>
+                {{
+                  kind === 'developers'
+                    ? X('Compounds by this developer', 'كمباوندات هذا المطوّر')
+                    : X('Units for sale', 'الوحدات المعروضة')
+                }}
+              </h2>
+              <a
+                class="iv-btn sm"
+                [routerLink]="[base(), kind === 'developers' ? 'compounds' : 'units']"
+                [queryParams]="{ parentId: i.id }"
+                >{{ X('View all', 'عرض الكل') }} · {{ relatedTotal() }}</a
+              >
+            </div>
+            <div class="iv-grid mini">
+              @for (c of related(); track c.id) {
+                <a class="iv-card iv-mini iv-record-link" [routerLink]="path(c)"
+                  ><div class="iv-img">
+                    @if (image(c); as src) {
+                      <img class="iv-real-image" [src]="src" [alt]="label(c.name)" loading="lazy" />
+                    } @else {
+                      <span class="iv-no-image">{{ X('No image available', 'لا توجد صورة') }}</span>
+                    }
+                  </div>
+                  <div class="iv-mb">
+                    <b>{{ label(c.name) }}</b
+                    ><span>{{ label(c.data.location) }}</span
+                    ><b>{{ money(c.kind === 'units' ? c.priceMinor : c.fromPriceMinor) }}</b
+                    ><span>{{ statusLabel(c.status) }}</span>
+                  </div></a
+                >
+              } @empty {
+                <p class="iv-meta">
+                  {{ X('No published records yet.', 'لا توجد سجلات منشورة بعد.') }}
+                </p>
+              }
+            </div>
+          </section>
+        }
+      </main>
+      <aside class="iv-side">
+        <section class="iv-card iv-sec">
+          <div class="iv-sech">
+            <h2>{{ X('Location', 'الموقع') }}</h2>
+          </div>
+          <p class="iv-p">{{ label(i.data.location) }}</p>
+          @if (i.data.map) {
+            <a class="iv-btn full" [href]="i.data.map" target="_blank" rel="noopener noreferrer">{{
+              X('Open in Maps', 'فتح في الخرائط')
+            }}</a>
+          }
+        </section>
+        <section class="iv-card iv-sec">
+          <div class="iv-sech">
+            <h2>{{ X('Contact', 'التواصل') }}</h2>
+          </div>
+          @if (i.data.seller) {
+            <p>{{ i.data.seller.name }}</p>
+            <a class="iv-btn full" [href]="'tel:' + i.data.seller.phone">{{
+              i.data.seller.phone
+            }}</a>
+          }
+          @if (i.data.phone) {
+            <a class="iv-btn full" [href]="'tel:' + i.data.phone">{{ i.data.phone }}</a>
+          }
+          @if (i.data.email) {
+            <p>
+              <a [href]="'mailto:' + i.data.email">{{ i.data.email }}</a>
+            </p>
+          }
+          @if (i.data.website) {
+            <a
+              class="iv-btn full"
+              [href]="i.data.website"
+              target="_blank"
+              rel="noopener noreferrer"
+              >{{ X('Website', 'الموقع الإلكتروني') }}</a
+            >
+          }
+          @if (!i.data.phone && !i.data.email && !i.data.website && !i.data.seller) {
+            <p class="iv-meta">
+              {{ X('Contact information not set.', 'بيانات التواصل غير محددة.') }}
+            </p>
+          }
+        </section>
+        @if (i.data.brochure || i.data.masterPlan || i.data.video || i.data.floorPlan) {
+          <section class="iv-card iv-sec">
+            <div class="iv-sech">
+              <h2>{{ X('Downloads & media', 'الملفات والوسائط') }}</h2>
+            </div>
+            @if (i.data.brochure) {
+              <a
+                class="iv-btn full"
+                [href]="i.data.brochure"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ X('Brochure', 'الكتيّب') }}</a
+              >
+            }
+            @if (i.data.masterPlan) {
+              <a
+                class="iv-btn full"
+                [href]="i.data.masterPlan"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ X('Master plan', 'المخطط العام') }}</a
+              >
+            }
+            @if (i.data.floorPlan) {
+              <a
+                class="iv-btn full"
+                [href]="i.data.floorPlan"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ X('Floor plan', 'المسقط') }}</a
+              >
+            }
+            @if (i.data.video) {
+              <a
+                class="iv-btn full"
+                [href]="i.data.video"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ X('Video', 'فيديو') }}</a
+              >
+            }
+          </section>
+        }
+        <section class="iv-card iv-sec">
+          <div class="iv-sech">
+            <h2>{{ X('Alert preferences', 'تفضيلات التنبيهات') }}</h2>
+          </div>
+          <p class="iv-meta">
+            {{
+              X(
+                'Save the updates you want to follow. External email alerts are not configured.',
+                'احفظ التحديثات التي ترغب بمتابعتها. التنبيهات الخارجية غير مفعلة.'
+              )
+            }}
+          </p>
+          <label class="iv-pref"
+            ><input
+              type="checkbox"
+              [checked]="i.preference.muted"
+              [disabled]="busy()"
+              (change)="preference(i, { muted: !i.preference.muted })"
+            />{{ X('Mute updates', 'كتم التحديثات') }}</label
+          >
+          @for (k of alertKeys; track k) {
+            <label class="iv-pref"
+              ><input
+                type="checkbox"
+                [checked]="i.preference.alerts[k]"
+                [disabled]="busy() || i.preference.muted"
+                (change)="toggleAlert(i, k)"
+              />{{
+                k === 'units'
+                  ? X('New units', 'وحدات جديدة')
+                  : k === 'price'
+                    ? X('Price changes', 'تغيّر الأسعار')
+                    : k === 'launch'
+                      ? X('Launches', 'الإطلاقات')
+                      : X('News', 'الأخبار')
+              }}</label
+            >
+          }
         </section>
       </aside>
     </div>
+  } @else if (!error()) {
+    <div class="iv-empty">{{ X('Record not found.', 'السجل غير موجود.') }}</div>
   }
+  @if (archiveConfirm()) {
+    <div class="scrim scrim--top" (click)="!busy() && archiveConfirm.set(false)"></div>
+    <section
+      class="dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="catalog-archive-title"
+      (keydown.escape)="!busy() && archiveConfirm.set(false)"
+    >
+      <header class="dialog__head">
+        <h2 id="catalog-archive-title">{{ X('Archive this record?', 'أرشفة هذا السجل؟') }}</h2>
+      </header>
+      <div class="dialog__main">
+        <p>
+          {{
+            X(
+              'It will be removed from the shared catalog for every company. Archive child records first.',
+              'سيتم إخفاؤه من كتالوج كل الشركات. يجب أرشفة السجلات التابعة أولًا.'
+            )
+          }}
+        </p>
+        @if (error()) {
+          <p role="alert" class="note note--bad">{{ error() }}</p>
+        }
+      </div>
+      <footer class="dialog__foot">
+        <button class="btn" type="button" [disabled]="busy()" (click)="archiveConfirm.set(false)">
+          {{ X('Cancel', 'إلغاء') }}</button
+        ><button class="btn btn--dark" type="button" [disabled]="busy()" (click)="archive()">
+          {{ X('Archive', 'أرشفة') }}
+        </button>
+      </footer>
+    </section>
   }
-
-  @if (toastMsg()) { <div class="iv-toast">{{ toastMsg() }}</div> }
+  @if (editor()) {
+    <div class="scrim scrim--top" (click)="!busy() && editor.set(false)"></div>
+    <section
+      class="dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="catalog-editor-title"
+      (keydown.escape)="!busy() && editor.set(false)"
+    >
+      <header class="dialog__head">
+        <div>
+          <h2 id="catalog-editor-title">
+            {{ editing() ? X('Edit record', 'تعديل سجل') : X('Add record', 'إضافة سجل') }} ·
+            {{ title() }}
+          </h2>
+          <p class="iv-meta">
+            {{ X('Published to the shared platform catalog.', 'يُنشر في كتالوج المنصة المشترك.') }}
+          </p>
+        </div>
+        <button
+          class="iconbtn"
+          type="button"
+          [disabled]="busy()"
+          [attr.aria-label]="X('Close', 'إغلاق')"
+          (click)="editor.set(false)"
+        >
+          ×
+        </button>
+      </header>
+      <form class="dialog__body dialog__main form" id="catalog-form" (ngSubmit)="save()">
+        @if (error()) {
+          <p class="note note--bad" role="alert">{{ error() }}</p>
+        }
+        <div class="grid">
+          <label class="field"
+            >{{ X('English name', 'الاسم بالإنجليزية')
+            }}<input name="name" required maxlength="240" [(ngModel)]="draft.name" /></label
+          ><label class="field"
+            >{{ X('Arabic name', 'الاسم بالعربية')
+            }}<input name="ar" maxlength="240" [(ngModel)]="draft.ar" dir="rtl"
+          /></label>
+        </div>
+        @if (kind !== 'developers') {
+          <label class="field"
+            >{{
+              kind === 'units'
+                ? X('Find compound', 'بحث عن كمباوند')
+                : X('Find developer', 'بحث عن مطوّر')
+            }}<input
+              name="parentSearch"
+              [ngModel]="''"
+              (ngModelChange)="searchParents($event)"
+              (focus)="searchParents('')" /></label
+          ><label class="field"
+            >{{ X('Parent record', 'السجل الرئيسي')
+            }}<select name="parent" required [(ngModel)]="draft.parentId">
+              <option value="">{{ X('Select…', 'اختر…') }}</option>
+              @if (draft.parentId) {
+                <option [value]="draft.parentId">
+                  {{
+                    draft.parentId === item()?.parentId
+                      ? label(item()?.parent?.name)
+                      : X('Selected parent', 'السجل المحدد')
+                  }}
+                </option>
+              }
+              @for (p of parents(); track p.id) {
+                <option [value]="p.id">{{ label(p.name) }}</option>
+              }
+            </select></label
+          >
+        }
+        <label class="field"
+          >{{ X('Status', 'الحالة')
+          }}<select name="status" [(ngModel)]="draft.status">
+            @for (s of statuses(); track s) {
+              <option [value]="s">{{ statusLabel(s) }}</option>
+            }
+          </select></label
+        >
+        <div class="grid">
+          <label class="field"
+            >{{ X('Description (English)', 'الوصف بالإنجليزية')
+            }}<textarea
+              name="description"
+              rows="4"
+              [(ngModel)]="draft.description"
+            ></textarea></label
+          ><label class="field"
+            >{{ X('Description (Arabic)', 'الوصف بالعربية')
+            }}<textarea
+              name="descriptionAr"
+              rows="4"
+              [(ngModel)]="draft.descriptionAr"
+              dir="rtl"
+            ></textarea>
+          </label>
+        </div>
+        <div class="grid">
+          <label class="field"
+            >{{ X('Location (English)', 'الموقع بالإنجليزية')
+            }}<input name="location" [(ngModel)]="draft.location" /></label
+          ><label class="field"
+            >{{ X('Location (Arabic)', 'الموقع بالعربية')
+            }}<input name="locationAr" [(ngModel)]="draft.locationAr"
+          /></label>
+        </div>
+        @if (kind === 'developers') {
+          <div class="grid">
+            <label class="field"
+              >{{ X('Founded', 'التأسيس')
+              }}<input
+                type="number"
+                min="1800"
+                max="2200"
+                name="founded"
+                [(ngModel)]="draft.founded" /></label
+            ><label class="field"
+              >{{ X('Units delivered', 'الوحدات المسلّمة')
+              }}<input type="number" min="0" name="delivered" [(ngModel)]="draft.delivered"
+            /></label>
+          </div>
+          <label class="iv-pref"
+            ><input name="top" type="checkbox" [(ngModel)]="draft.top" />{{
+              X('Top developer', 'مطوّر مميز')
+            }}</label
+          ><label class="iv-pref"
+            ><input name="verified" type="checkbox" [(ngModel)]="draft.verified" />{{
+              X('Verified', 'موثّق')
+            }}</label
+          >
+        } @else {
+          @if (kind === 'units') {
+            <div class="grid">
+              <label class="field"
+                >{{ X('Price (EGP), optional', 'السعر بالجنيه، اختياري')
+                }}<input name="price" inputmode="decimal" [(ngModel)]="draft.price" /></label
+              ><label class="field"
+                >{{ X('Area (m²), optional', 'المساحة، اختياري')
+                }}<input
+                  name="area"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  [(ngModel)]="draft.area" /></label
+              ><label class="field"
+                >{{ X('Bedrooms', 'غرف النوم')
+                }}<input
+                  name="bedrooms"
+                  type="number"
+                  min="0"
+                  [(ngModel)]="draft.bedrooms" /></label
+              ><label class="field"
+                >{{ X('Bathrooms', 'الحمامات')
+                }}<input
+                  name="bathrooms"
+                  type="number"
+                  min="0"
+                  [(ngModel)]="draft.bathrooms" /></label
+              ><label class="field"
+                >{{ X('Type', 'النوع')
+                }}<select name="type" [(ngModel)]="draft.type">
+                  @for (t of types; track t) {
+                    <option [value]="t">{{ statusLabel(t) }}</option>
+                  }
+                </select></label
+              ><label class="field"
+                >{{ X('Listing', 'نوع البيع')
+                }}<select name="listing" [(ngModel)]="draft.listing">
+                  @for (t of ['primary', 'resale', 'rental']; track t) {
+                    <option [value]="t">{{ statusLabel(t) }}</option>
+                  }
+                </select></label
+              >
+            </div>
+          }
+          <div class="grid">
+            <label class="field"
+              >{{ X('Delivery year', 'سنة التسليم')
+              }}<input name="deliveryYear" type="number" [(ngModel)]="draft.deliveryYear" /></label
+            ><label class="field"
+              >{{ X('Finishing', 'التشطيب')
+              }}<input name="finishing" [(ngModel)]="draft.finishing" /></label
+            ><label class="field"
+              >{{ X('Down payment (%)', 'المقدم (%)')
+              }}<input
+                name="down"
+                type="number"
+                min="0"
+                max="100"
+                [(ngModel)]="draft.down" /></label
+            ><label class="field"
+              >{{ X('Installment years', 'سنوات التقسيط')
+              }}<input name="years" type="number" min="1" max="30" [(ngModel)]="draft.years"
+            /></label>
+          </div>
+        }
+        <div class="grid">
+          <label class="field"
+            >{{ X('Phone', 'الهاتف') }}<input name="phone" [(ngModel)]="draft.phone" /></label
+          ><label class="field"
+            >{{ X('Email', 'البريد الإلكتروني')
+            }}<input name="email" type="email" [(ngModel)]="draft.email" /></label
+          ><label class="field"
+            >{{ X('Website (HTTPS)', 'الموقع الإلكتروني')
+            }}<input name="website" type="url" [(ngModel)]="draft.website" /></label
+          ><label class="field"
+            >{{ X('Cover image URL (HTTPS)', 'رابط صورة الغلاف')
+            }}<input name="cover" type="url" [(ngModel)]="draft.cover" /></label
+          ><label class="field"
+            >{{ X('Floor plan URL (HTTPS)', 'رابط المسقط')
+            }}<input name="floorPlan" type="url" [(ngModel)]="draft.floorPlan" /></label
+          ><label class="field"
+            >{{ X('Brochure URL (HTTPS)', 'رابط الكتيّب')
+            }}<input name="brochure" type="url" [(ngModel)]="draft.brochure" /></label
+          ><label class="field"
+            >{{ X('Map URL (HTTPS)', 'رابط الخريطة')
+            }}<input name="map" type="url" [(ngModel)]="draft.map"
+          /></label>
+        </div>
+        <label class="field"
+          >{{ X('Photo URLs (HTTPS, one per line)', 'روابط الصور، كل رابط في سطر')
+          }}<textarea name="photos" rows="4" [(ngModel)]="draft.photos"></textarea>
+        </label>
+      </form>
+      <footer class="dialog__foot">
+        <button type="button" class="btn" [disabled]="busy()" (click)="editor.set(false)">
+          {{ X('Cancel', 'إلغاء') }}</button
+        ><button type="submit" form="catalog-form" class="btn btn--dark" [disabled]="busy()">
+          {{ busy() ? X('Saving…', 'جارٍ الحفظ…') : X('Save', 'حفظ') }}
+        </button>
+      </footer>
+    </section>
+  }
 </div>

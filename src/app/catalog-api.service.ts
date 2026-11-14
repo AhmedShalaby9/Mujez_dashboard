@@ -33,13 +33,35 @@ export interface CatalogData {
   map?: string;
   bathrooms?: number;
   floor?: number;
+  floorLabel?: Bi;
   deliveryYear?: number;
   finishing?: Bi;
   acreage?: number;
   facilities?: Bi[];
   faqs?: { question: Bi; answer: Bi }[];
   phases?: { name: Bi; deliveryYear?: number }[];
-  paymentPlans?: { name: Bi; downPercent: number; years: number }[];
+  paymentPlans?: {
+    name: Bi;
+    downPercent: number;
+    years: number;
+    currency?: 'EGP' | 'EUR';
+    frequency?: string;
+    priceMinor?: string;
+    installmentMinor?: string;
+    downPaymentMinor?: string;
+    isCash?: boolean;
+  }[];
+  reference?: {
+    source: 'jeeran';
+    externalId: string;
+    code?: string;
+    sourceUrl?: string;
+    asOf?: string;
+    aiCover?: boolean;
+    originalType?: string;
+    isLaunch?: boolean;
+    hasOffer?: boolean;
+  };
   seller?: { name: string; phone: string };
 }
 export interface CatalogItem {

@@ -404,6 +404,17 @@
         }
       </div>
     </div>
+    @if (i.data.reference; as ref) {
+      <p class="iv-meta">
+        {{ X('Imported from Jeeran', 'مستورد من جييران') }} · {{ ref.code || ref.externalId }}
+        @if (ref.asOf) {
+          · {{ X('Source snapshot', 'لقطة المصدر') }} {{ ref.asOf }}
+        }
+        @if (ref.aiCover) {
+          · {{ X('AI-generated cover image', 'صورة غلاف مولّدة بالذكاء الاصطناعي') }}
+        }
+      </p>
+    }
     <div class="iv-kpis">
       <div class="iv-kpi">
         <span>{{ X('Followers', 'المتابعون') }}</span
@@ -509,7 +520,7 @@
             </div>
             <div class="iv-prow">
               <span>{{ X('Floor', 'الدور') }}</span
-              ><b>{{ num(i.data.floor) }}</b>
+              ><b>{{ i.data.floorLabel ? label(i.data.floorLabel) : num(i.data.floor) }}</b>
             </div>
             <div class="iv-prow">
               <span>{{ X('Finishing', 'التشطيب') }}</span
@@ -534,21 +545,40 @@
                   [attr.aria-pressed]="plan() === n"
                   (click)="plan.set(n)"
                 >
-                  {{ label(p.name) }} · {{ p.downPercent }}% / {{ p.years }}
-                  {{ X('years', 'سنوات') }}
+                  {{ label(p.name) }}
+                  @if (!p.isCash) {
+                    · {{ p.downPercent }}% / {{ p.years }} {{ X('years', 'سنوات') }}
+                  }
                 </button>
               }
             </div>
             @if (kind === 'units') {
+              @let selected = i.data.paymentPlans?.[plan()];
+              @if (selected?.priceMinor) {
+                <div class="iv-prow">
+                  <span>{{ X('Plan price', 'سعر الخطة') }}</span
+                  ><b>{{ money(selected?.priceMinor, selected?.currency) }}</b>
+                </div>
+              }
+              @if (selected?.downPaymentMinor) {
+                <div class="iv-prow">
+                  <span>{{ X('Down payment', 'المقدم') }}</span
+                  ><b>{{ money(selected?.downPaymentMinor, selected?.currency) }}</b>
+                </div>
+              }
               <div class="iv-prow">
-                <span>{{ X('Estimated monthly installment', 'القسط الشهري التقريبي') }}</span
+                <span>{{ paymentLabel(i) }}</span
                 ><b>{{ monthly(i) }}</b>
               </div>
               <p class="iv-meta">
                 {{
                   X(
-                    'Estimate excludes fees and interest; confirm the final terms with the seller.',
-                    'التقدير لا يشمل الرسوم والفوائد. تُراجع الشروط النهائية مع البائع.'
+                    i.data.reference
+                      ? 'Source snapshot; confirm current prices, availability and fees with the seller.'
+                      : 'Estimate excludes fees and interest; confirm the final terms with the seller.',
+                    i.data.reference
+                      ? 'لقطة من المصدر؛ تُراجع الأسعار الحالية والتوفر والرسوم مع البائع.'
+                      : 'التقدير لا يشمل الرسوم والفوائد. تُراجع الشروط النهائية مع البائع.'
                   )
                 }}
               </p>

@@ -200,4 +200,59 @@ describe('Shared inventory catalog', () => {
     await c.save();
     expect(api.save.mock.calls[0][1]['requestId']).toBe(api.save.mock.calls[1][1]['requestId']);
   });
+  it('shows imported installments in their actual currency and frequency, including fractional durations', async () => {
+    const r = row({
+      priceMinor: '1000000',
+      data: {
+        reference: { source: 'jeeran', externalId: '42', asOf: '2026-10-14' },
+        type: 'duplex',
+        paymentPlans: [
+          {
+            name: { en: 'Plan 1', ar: 'خطة 1' },
+            years: 7.5,
+            downPercent: 0,
+            currency: 'EUR',
+            frequency: 'quarterly',
+            installmentMinor: '400050',
+            priceMinor: '12000000',
+          },
+        ],
+      },
+    });
+    const { c, f } = await render('unit', [r]);
+    expect(c.monthly(r)).toBe('EUR 4,000.50');
+    expect(c.paymentLabel(r)).toBe('Quarterly installment');
+    expect(f.nativeElement.textContent).toContain('Imported from Jeeran');
+    expect(f.nativeElement.textContent).toContain('Plan price');
+    expect(f.nativeElement.textContent).toContain('Duplex');
+  });
+  it('preserves imported plan terms when saving unrelated changes', async () => {
+    const r = row({
+      data: {
+        paymentPlans: [
+          {
+            name: { en: 'Cash', ar: 'نقدًا' },
+            years: 0,
+            downPercent: 100,
+            currency: 'EGP',
+            frequency: 'one-time',
+            isCash: true,
+            priceMinor: '12000000',
+          },
+        ],
+      },
+    });
+    const { c, api } = await render('unit', [r], true);
+    await c.openEditor(r);
+    c.draft.parentId = id;
+    c.draft.description = 'Updated overview';
+    await c.save();
+    expect(api.save).toHaveBeenCalledWith(
+      'units',
+      expect.objectContaining({
+        data: expect.objectContaining({ paymentPlans: r.data.paymentPlans }),
+      }),
+      id,
+    );
+  });
 });

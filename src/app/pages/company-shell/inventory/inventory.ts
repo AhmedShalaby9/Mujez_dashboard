@@ -123,7 +123,7 @@ export class Inventory implements OnDestroy {
   readonly statuses = computed(() =>
     this.kind === 'units'
       ? ['available', 'hold', 'reserved', 'under_contract', 'sold', 'soon']
-      : ['launch', 'offer', 'selling', 'resale', 'sold', 'soon'],
+      : ['launch', 'offer', 'selling', 'resale', 'sold', 'soon', 'not_set'],
   );
   readonly alertKeys = ['units', 'price', 'launch', 'news'] as const;
   readonly types = [
@@ -136,6 +136,12 @@ export class Inventory implements OnDestroy {
     'office',
     'retail',
     'other',
+    'duplex',
+    'clinic',
+    'penthouse',
+    'loft',
+    'cabin',
+    'family_house',
   ];
   constructor() {
     this.sub = combineLatest([this.route.paramMap, this.route.queryParamMap]).subscribe(() => {
@@ -188,14 +194,22 @@ export class Inventory implements OnDestroy {
       office: ['Office', 'مكتب'],
       retail: ['Retail', 'محل'],
       other: ['Other', 'أخرى'],
+      not_set: ['Not set', 'غير محدد'],
+      duplex: ['Duplex', 'دوبلكس'],
+      clinic: ['Clinic', 'عيادة'],
+      penthouse: ['Penthouse', 'بنتهاوس'],
+      loft: ['Loft', 'لوفت'],
+      cabin: ['Cabin', 'كابينة'],
+      family_house: ['Family house', 'منزل عائلي'],
     };
     return names[s] ? this.X(...names[s]) : s;
   }
-  money(v: string | null | undefined) {
+  money(v: string | null | undefined, currency = 'EGP') {
     if (v == null) return this.X('Not set', 'غير محدد');
     const n = BigInt(v);
     return (
-      'EGP ' +
+      currency +
+      ' ' +
       (n / 100n).toLocaleString(this.ar() ? 'ar-EG' : 'en-US') +
       '.' +
       String(n % 100n).padStart(2, '0')
@@ -317,12 +331,32 @@ export class Inventory implements OnDestroy {
       this.notice.set(location.href);
     }
   }
+  paymentLabel(i: CatalogItem) {
+    const p = i.data.paymentPlans?.[this.plan()];
+    if (p?.isCash) return this.X('Cash price', 'السعر النقدي');
+    if (!p?.frequency) return this.X('Estimated monthly installment', 'القسط الشهري التقريبي');
+    const labels: Record<string, [string, string]> = {
+      monthly: ['Monthly installment', 'القسط الشهري'],
+      quarterly: ['Quarterly installment', 'القسط ربع السنوي'],
+      annually: ['Annual installment', 'القسط السنوي'],
+      'semi-annually': ['Semiannual installment', 'القسط نصف السنوي'],
+      'one-time': ['One-time payment', 'دفعة واحدة'],
+      other: ['Installment', 'القسط'],
+    };
+    return this.X(...(labels[p.frequency] ?? labels['other']));
+  }
   monthly(i: CatalogItem) {
     const p = i.data.paymentPlans?.[this.plan()];
-    if (!p || i.priceMinor === null) return this.X('Not set', 'غير محدد');
+    if (!p) return this.X('Not set', 'غير محدد');
+    if (p.isCash) return this.money(p.priceMinor, p.currency);
+    if (p.frequency) return this.money(p.installmentMinor, p.currency);
+    const price = p.priceMinor ?? i.priceMinor;
+    if (price === null || p.years <= 0) return this.X('Not set', 'غير محدد');
+    const months = Math.round(p.years * 12);
+    if (months < 1) return this.X('Not set', 'غير محدد');
     const down = BigInt(Math.round(p.downPercent * 100));
-    const balance = (BigInt(i.priceMinor) * (10000n - down)) / 10000n;
-    return this.money(((balance + BigInt(p.years * 12) - 1n) / BigInt(p.years * 12)).toString());
+    const balance = (BigInt(price) * (10000n - down)) / 10000n;
+    return this.money(((balance + BigInt(months) - 1n) / BigInt(months)).toString(), p.currency);
   }
   blank(): Draft {
     return {
@@ -466,12 +500,20 @@ export class Inventory implements OnDestroy {
           if (this.hasValue(d[key])) data[key] = Number(d[key]);
           else delete data[key];
         }
-        if (d.finishing) data.finishing = { en: d.finishing, ar: d.finishing };
+        if (d.finishing)
+          data.finishing = {
+            en: d.finishing,
+            ar:
+              this.editing()?.data.finishing?.en === d.finishing
+                ? this.editing()!.data.finishing!.ar
+                : d.finishing,
+          };
         else delete data.finishing;
         if (this.hasValue(d.down) && this.hasValue(d.years))
           data.paymentPlans = [
             {
-              name: { en: 'Payment plan', ar: 'خطة السداد' },
+              ...data.paymentPlans?.[0],
+              name: data.paymentPlans?.[0]?.name ?? { en: 'Payment plan', ar: 'خطة السداد' },
               downPercent: Number(d.down),
               years: Number(d.years),
             },

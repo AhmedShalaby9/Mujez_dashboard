@@ -8,6 +8,6 @@ Saved alert preferences are retained across sessions. The UI states that externa
 
 The original Mujez inventory card/profile styles, bilingual layouts, lime/black palette and responsive grids are retained. Editors and archive confirmations use the common accessible admin form/modal styles, with scoped errors and sticky actions. Static design source files remain unreferenced historical fixtures.
 
-The catalog intentionally starts empty. Deployment does not import the uploaded Jeeran exports or copy tenant inventory into the platform catalog. No extra secrets or third-party integrations are required.
+Jeeran exports are imported through the backend’s explicit, audited import command. Deployment never runs the bulk import automatically or publishes private tenant inventory. No extra secrets or third-party integrations are required. Imported profiles show their source reference and snapshot date; payment schedules retain actual frequency, currency and fractional years. Repeated imports preserve UUIDs and personal preferences.
 
 Run `npm run check:overlays`, `npm test -- --watch=false`, and `npm run build`. `inventory.spec.ts` verifies real API rendering, direct UUID links, server filters, exact amounts and nulls, preference failures/success, language support, edit permissions and metadata preservation.

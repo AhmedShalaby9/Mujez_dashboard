@@ -722,7 +722,11 @@
         ×
       </button>
     </div>
-    <form class="drawer__body" (submit)="$event.preventDefault(); createInvoice()">
+    <form
+      class="drawer__body"
+      (submit)="$event.preventDefault(); createInvoice()"
+      id="form-billing-editor"
+    >
       <label class="field"
         ><span>{{ lang() === 'ar' ? 'الشركة' : 'Company' }}</span
         ><select [(ngModel)]="draft.companyId" name="company" required>
@@ -780,10 +784,12 @@
       @if (error()) {
         <p class="note note--bad" role="alert">{{ error() }}</p>
       }
-      <button class="btn btn--dark" [disabled]="saving()">
+    </form>
+    <div class="drawer__foot">
+      <button form="form-billing-editor" type="submit" class="btn btn--dark" [disabled]="saving()">
         {{ lang() === 'ar' ? 'حفظ المسودة' : 'Save draft' }}
       </button>
-    </form>
+    </div>
   </aside>
 }
 

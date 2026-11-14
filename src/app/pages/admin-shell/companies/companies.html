@@ -844,7 +844,11 @@
         ×
       </button>
     </div>
-    <form class="drawer__body form" (submit)="$event.preventDefault(); saveCompany()">
+    <form
+      class="drawer__body form"
+      (submit)="$event.preventDefault(); saveCompany()"
+      id="form-companies-editor"
+    >
       <label class="field"
         ><span>{{ lang() === 'ar' ? 'الاسم بالإنجليزية' : 'English name' }}</span
         ><input
@@ -925,10 +929,17 @@
       @if (error()) {
         <p class="note note--bad" role="alert">{{ error() }}</p>
       }
-      <button class="btn btn--dark" type="submit" [disabled]="saving()">
+    </form>
+    <div class="drawer__foot">
+      <button
+        form="form-companies-editor"
+        class="btn btn--dark"
+        type="submit"
+        [disabled]="saving()"
+      >
         {{ lang() === 'ar' ? 'حفظ' : 'Save company' }}
       </button>
-    </form>
+    </div>
   </aside>
 }
 

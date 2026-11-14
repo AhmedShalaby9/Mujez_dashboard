@@ -544,7 +544,11 @@
         ×
       </button>
     </div>
-    <form class="drawer__body" (submit)="$event.preventDefault(); createTicket()">
+    <form
+      class="drawer__body"
+      (submit)="$event.preventDefault(); createTicket()"
+      id="form-support-tickets-editor"
+    >
       <label class="field"
         ><span>{{ L().colCompany }}</span
         ><select name="companyId" [(ngModel)]="draft.companyId" required>
@@ -591,10 +595,17 @@
       @if (error()) {
         <p class="note note--bad" role="alert">{{ error() }}</p>
       }
-      <button class="btn btn--dark" [disabled]="saving()">
+    </form>
+    <div class="drawer__foot">
+      <button
+        form="form-support-tickets-editor"
+        type="submit"
+        class="btn btn--dark"
+        [disabled]="saving()"
+      >
         {{ lang() === 'ar' ? 'إنشاء التذكرة' : 'Create ticket' }}
       </button>
-    </form>
+    </div>
   </aside>
 }
 

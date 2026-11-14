@@ -40,6 +40,25 @@ for (const file of files('src/app/pages').filter((path) => path.endsWith('.html'
         hasName(node, 'aria-label') || hasName(node, 'aria-labelledby'),
         file + ': overlay needs an accessible name',
       );
+      const forms = new Set();
+      const associatedButtons = [];
+      function associations(child) {
+        if (child.name === 'form' && attribute(child, 'id')) forms.add(attribute(child, 'id'));
+        if (child.name === 'button' && attribute(child, 'form')) associatedButtons.push(child);
+        children(child).forEach(associations);
+      }
+      children(node).forEach(associations);
+      for (const button of associatedButtons) {
+        assert.ok(
+          forms.has(attribute(button, 'form')),
+          file + ': footer submit button must target its form',
+        );
+        assert.equal(
+          attribute(button, 'type'),
+          'submit',
+          file + ': associated footer action must submit',
+        );
+      }
       const label = attribute(node, 'aria-labelledby');
       if (label) {
         const ids = new Set();

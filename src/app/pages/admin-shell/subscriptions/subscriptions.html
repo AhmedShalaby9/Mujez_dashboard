@@ -816,7 +816,11 @@
         ×
       </button>
     </div>
-    <form class="drawer__body" (submit)="$event.preventDefault(); createSubscription()">
+    <form
+      class="drawer__body"
+      (submit)="$event.preventDefault(); createSubscription()"
+      id="form-subscriptions-editor"
+    >
       <label class="field"
         ><span>{{ lang() === 'ar' ? 'الشركة' : 'Company' }}</span
         ><select name="company" [(ngModel)]="draft.companyId" required>
@@ -875,10 +879,17 @@
       @if (error()) {
         <p class="note note--bad" role="alert">{{ error() }}</p>
       }
-      <button class="btn btn--dark" [disabled]="saving()">
+    </form>
+    <div class="drawer__foot">
+      <button
+        form="form-subscriptions-editor"
+        type="submit"
+        class="btn btn--dark"
+        [disabled]="saving()"
+      >
         {{ lang() === 'ar' ? 'حفظ' : 'Save subscription' }}
       </button>
-    </form>
+    </div>
   </aside>
 }
 

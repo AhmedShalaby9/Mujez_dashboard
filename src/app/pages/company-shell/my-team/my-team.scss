@@ -1,0 +1,69 @@
+.team-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 12px 0 20px;
+  .card {
+    padding: 16px;
+  }
+  span {
+    display: block;
+    color: #6e6e73;
+    font-size: 12px;
+  }
+  strong {
+    display: block;
+    margin-top: 10px;
+    font-size: 23px;
+  }
+}
+.tools {
+  margin: 14px 0;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  input {
+    flex: 1;
+    min-width: 180px;
+  }
+  select {
+    max-width: 240px;
+  }
+}
+.team-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px;
+  gap: 10px;
+  color: #6e6e73;
+  font-size: 12px;
+  div {
+    display: flex;
+    gap: 8px;
+  }
+}
+.metric-note {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.late {
+  color: #a13b2d;
+}
+@media (max-width: 800px) {
+  .team-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .team-kpis {
+    grid-template-columns: 1fr;
+  }
+  .tools select {
+    max-width: 100%;
+  }
+  .team-pagination {
+    flex-wrap: wrap;
+  }
+}

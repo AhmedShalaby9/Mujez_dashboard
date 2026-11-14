@@ -28,6 +28,61 @@ export interface SalesTeamInput {
   memberUserIds: string[];
   version?: number;
 }
+export interface TeamWorkLead {
+  id: string;
+  reference: string;
+  name: { en: string; ar: string };
+  phone: string;
+  email: string | null;
+  stage: string;
+  version: number;
+  owner: { id: string; name: string };
+}
+export interface TeamWorkTask {
+  id: string;
+  reference: string;
+  title: { en: string; ar: string };
+  status: string;
+  priority: string;
+  dueDate: string;
+  overdue: boolean;
+  assignee: { id: string; name: string };
+}
+export interface TeamMetrics {
+  leads: number;
+  openLeads: number;
+  newLeads: number;
+  won: number;
+  lost: number;
+  wonSalesMinor: string;
+  openTasks: number;
+  overdueTasks: number;
+  completedTasks: number;
+}
+export interface TeamPerformance {
+  team: { id: string; name: string };
+  items: (TeamMetrics & {
+    id: string;
+    name: string;
+    email: string;
+    role: TeamRole;
+    status: string;
+    canAssign: boolean;
+  })[];
+  summary: TeamMetrics;
+  days: number;
+  from: string;
+  to: string;
+  asOf: string;
+  timeZone: string;
+  canAssign: boolean;
+}
+export interface TeamWorkPage<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
 @Injectable({ providedIn: 'root' })
 export class TeamApi {
   private readonly auth = inject(AuthService);
@@ -39,6 +94,27 @@ export class TeamApi {
   }
   myTeam() {
     return this.auth.request('/api/v1/team/my-team') as Promise<{ items: SalesTeam[] }>;
+  }
+  performance(days = 30) {
+    return this.auth.request(
+      '/api/v1/team/my-team/performance?days=' + days,
+    ) as Promise<TeamPerformance>;
+  }
+  workLeads(query: Record<string, string>) {
+    return this.auth.request('/api/v1/team/my-team/leads?' + new URLSearchParams(query)) as Promise<
+      TeamWorkPage<TeamWorkLead>
+    >;
+  }
+  workTasks(query: Record<string, string>) {
+    return this.auth.request('/api/v1/team/my-team/tasks?' + new URLSearchParams(query)) as Promise<
+      TeamWorkPage<TeamWorkTask>
+    >;
+  }
+  assignLead(id: string, body: { requestId: string; version: number; ownerId: string }) {
+    return this.auth.request(
+      '/api/v1/team/my-team/leads/' + encodeURIComponent(id) + '/assign',
+      body,
+    );
   }
   saveGroup(body: SalesTeamInput, id?: string) {
     return this.auth.request(

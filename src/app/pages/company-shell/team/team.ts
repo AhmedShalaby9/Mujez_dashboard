@@ -1,8 +1,15 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
+import { AuthService } from '../../../auth.service';
 import { CompanyUiState } from '../company-ui-state';
-import { TeamApi, TEAM_ROLES, type TeamMember, type TeamRole } from '../../../team-api.service';
+import {
+  TeamApi,
+  TEAM_ROLES,
+  type TeamMember,
+  type TeamRole,
+  type SalesTeam,
+} from '../../../team-api.service';
 
 @Component({
   selector: 'app-team',
@@ -27,6 +34,7 @@ export class Team {
   readonly roles = TEAM_ROLES;
   readonly roleNames: Record<TeamRole, { en: string; ar: string }> = {
     agent: { en: 'Sales Agent', ar: 'وكيل المبيعات' },
+    team_lead: { en: 'Team Lead', ar: 'قائد الفريق' },
   };
   readonly statusNames: Record<TeamMember['status'], { en: string; ar: string }> = {
     invited: { en: 'Invited', ar: 'تمت الدعوة' },
@@ -34,6 +42,82 @@ export class Team {
     disabled: { en: 'Disabled', ar: 'معطّل' },
   };
 
+  private readonly auth = inject(AuthService);
+  readonly canManage = computed(
+    () =>
+      (this.auth.user()?.permissions ?? []).includes('team.manage') &&
+      this.auth.user()?.workspace?.mode !== 'read',
+  );
+  readonly tab = signal<'members' | 'teams'>('members');
+  readonly groups = signal<SalesTeam[]>([]);
+  readonly editing = signal<SalesTeam | null>(null);
+  readonly teamOpen = signal(false);
+  readonly teamSaving = signal(false);
+  readonly teamError = signal('');
+  teamName = '';
+  teamLead = '';
+  memberIds: string[] = [];
+  readonly eligible = computed(() =>
+    this.items().filter(
+      (m) =>
+        (['active', 'invited'].includes(m.status) && !m.teamId) ||
+        (!!this.editing() && m.teamId === this.editing()?.id),
+    ),
+  );
+  leadName(team: SalesTeam) {
+    return team.members.find((m) => m.id === team.leadUserId)?.name ?? '—';
+  }
+  openTeam(team?: SalesTeam) {
+    this.editing.set(team ?? null);
+    this.teamName = team?.name ?? '';
+    this.teamLead = team?.leadUserId ?? '';
+    this.memberIds = team?.members.map((m) => m.id) ?? [];
+    this.teamError.set('');
+    this.teamOpen.set(true);
+  }
+  toggleMember(id: string, checked: boolean) {
+    this.memberIds = checked
+      ? [...this.memberIds.filter((x) => x !== id), id]
+      : this.memberIds.filter((x) => x !== id);
+  }
+  async saveTeam() {
+    if (this.teamSaving() || !this.canManage()) return;
+    this.teamSaving.set(true);
+    this.teamError.set('');
+    try {
+      await this.api.saveGroup(
+        {
+          name: this.teamName.trim(),
+          leadUserId: this.teamLead,
+          memberUserIds: this.memberIds,
+          ...(this.editing() ? { version: this.editing()!.version } : {}),
+        },
+        this.editing()?.id,
+      );
+      this.teamOpen.set(false);
+      await this.reload();
+      this.toast.set(this.t('Team saved', 'تم حفظ الفريق'));
+    } catch (e) {
+      this.teamError.set((e as Error).message);
+    } finally {
+      this.teamSaving.set(false);
+    }
+  }
+  async changeRole(m: TeamMember, role: TeamRole) {
+    if (this.busy() || !this.canManage()) return;
+    this.busy.set(m.id);
+    this.error.set('');
+    try {
+      await this.api.role(m.id, role);
+      await this.reload();
+    } catch (e) {
+      const message = (e as Error).message;
+      await this.reload();
+      this.error.set(message);
+    } finally {
+      this.busy.set(null);
+    }
+  }
   readonly items = signal<TeamMember[]>([]);
   /** The API returns the whole team (no paging), so search / status filter on the client. */
   readonly search = signal('');
@@ -94,8 +178,9 @@ export class Team {
     this.loading.set(true);
     this.error.set('');
     try {
-      const r = await this.api.list();
+      const [r, groups] = await Promise.all([this.api.list(), this.api.groups()]);
       this.items.set(r.items);
+      this.groups.set(groups.items);
     } catch (e) {
       this.error.set((e as Error).message);
     } finally {

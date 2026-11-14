@@ -64,3 +64,32 @@ tr.off td {
     font-size: 12px;
   }
 }
+
+.team-members {
+  border: 1px solid #e2e2dc;
+  border-radius: 10px;
+  max-height: 250px;
+  overflow: auto;
+  padding: 12px;
+}
+.member-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+}
+.member-option input {
+  width: auto;
+}
+.member-option small {
+  display: block;
+  color: #6e6e73;
+}
+
+.team-heading {
+  padding: 16px;
+}
+.team-heading h2 {
+  margin: 0;
+  font-size: 16px;
+}

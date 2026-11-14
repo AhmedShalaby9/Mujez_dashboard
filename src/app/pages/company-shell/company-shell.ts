@@ -29,6 +29,7 @@ const NAV_PERMISSION: Record<string, string> = {
   'lead-routing': 'routing.read',
   'audit-log': 'audit.read',
   team: 'team.read',
+  'my-team': 'team.self.read',
 };
 
 interface NavHead {
@@ -81,6 +82,7 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Contacts', path: 'contacts' },
   { kind: 'item', label: 'Calendar', path: 'calendar' },
   { kind: 'item', label: 'Tasks', path: 'tasks' },
+  { kind: 'item', label: 'My team', path: 'my-team' },
   { kind: 'head', label: 'Inventory' },
   { kind: 'item', label: 'Projects', path: 'projects' },
   { kind: 'item', label: 'Units', path: 'units' },
@@ -106,6 +108,7 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'جهات الاتصال', path: 'contacts' },
   { kind: 'item', label: 'التقويم', path: 'calendar' },
   { kind: 'item', label: 'المهام', path: 'tasks' },
+  { kind: 'item', label: 'فريقي', path: 'my-team' },
   { kind: 'head', label: 'المخزون' },
   { kind: 'item', label: 'المشروعات', path: 'projects' },
   { kind: 'item', label: 'الوحدات', path: 'units' },

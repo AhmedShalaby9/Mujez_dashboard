@@ -1,4 +1,4 @@
-<div class="pg">
+<div class="pg" [attr.dir]="ar() ? 'rtl' : 'ltr'">
   <div class="head">
     <div class="head__text">
       <span
@@ -8,152 +8,251 @@
       <h1>{{ t('Team', 'الفريق') }}</h1>
     </div>
     <div class="head__actions">
-      <button type="button" class="btn btn--dark" (click)="openInvite()">
-        {{ t('+ Invite member', '+ دعوة عضو') }}
-      </button>
+      @if (canManage()) {
+        <button type="button" class="btn" (click)="openTeam()">
+          {{ t('+ Create team', '+ إنشاء فريق') }}
+        </button>
+        <button type="button" class="btn btn--dark" (click)="openInvite()">
+          {{ t('+ Invite member', '+ دعوة عضو') }}
+        </button>
+      }
     </div>
   </div>
 
   <div class="tools">
-    <div class="chips">
+    <div class="toggle" role="tablist" [attr.aria-label]="t('Team views', 'عرض الفريق')">
       <button
-        type="button"
-        class="chip"
-        [class.on]="statusFilter() === 'all'"
-        (click)="statusFilter.set('all')"
+        role="tab"
+        [attr.aria-selected]="tab() === 'members'"
+        [class.on]="tab() === 'members'"
+        (click)="tab.set('members')"
       >
-        {{ t('All', 'الكل') }} · {{ count().all }}
+        {{ t('Employees', 'الموظفون') }}
       </button>
-      @for (s of statuses; track s) {
+      <button
+        role="tab"
+        [attr.aria-selected]="tab() === 'teams'"
+        [class.on]="tab() === 'teams'"
+        (click)="tab.set('teams')"
+      >
+        {{ t('Teams', 'الفرق') }} · {{ groups().length }}
+      </button>
+    </div>
+    <button class="btn" [disabled]="loading()" (click)="reload()">
+      {{ t('Refresh', 'تحديث') }}
+    </button>
+  </div>
+  @if (tab() === 'members') {
+    <div class="tools">
+      <div class="chips">
         <button
           type="button"
           class="chip"
-          [class.on]="statusFilter() === s"
-          (click)="statusFilter.set(s)"
+          [class.on]="statusFilter() === 'all'"
+          (click)="statusFilter.set('all')"
         >
-          {{ statusNames[s][lang()] }} · {{ count()[s] }}
+          {{ t('All', 'الكل') }} · {{ count().all }}
         </button>
-      }
+        @for (s of statuses; track s) {
+          <button
+            type="button"
+            class="chip"
+            [class.on]="statusFilter() === s"
+            (click)="statusFilter.set(s)"
+          >
+            {{ statusNames[s][lang()] }} · {{ count()[s] }}
+          </button>
+        }
+      </div>
+      <input
+        class="q"
+        type="search"
+        [placeholder]="t('Search name or email', 'ابحث بالاسم أو البريد')"
+        [value]="search()"
+        (input)="search.set($any($event.target).value)"
+      />
     </div>
-    <input
-      class="q"
-      type="search"
-      [placeholder]="t('Search name or email', 'ابحث بالاسم أو البريد')"
-      [value]="search()"
-      (input)="search.set($any($event.target).value)"
-    />
-  </div>
-
+  }
   @if (error()) {
     <p class="note note--bad" role="alert">{{ error() }}</p>
   }
 
-  <section class="card">
-    <div class="scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>{{ t('Member', 'العضو') }}</th>
-            <th>{{ t('Role', 'الدور') }}</th>
-            <th>{{ t('Status', 'الحالة') }}</th>
-            <th>{{ t('Last login', 'آخر دخول') }}</th>
-            <th>{{ t('Added', 'تاريخ الإضافة') }}</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (m of visible(); track m.id) {
-            <tr [class.off]="m.status === 'disabled'">
-              <td>
-                <span class="who">
-                  <span class="avatar">{{ initials(m.name) }}</span>
-                  <span class="cell">
-                    <b class="name">{{ m.name }}</b>
-                    <span class="sub mono">{{ m.email }}</span>
+  @if (tab() === 'members') {
+    <section class="card">
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('Member', 'العضو') }}</th>
+              <th>{{ t('Role', 'الدور') }}</th>
+              <th>{{ t('Status', 'الحالة') }}</th>
+              <th>{{ t('Last login', 'آخر دخول') }}</th>
+              <th>{{ t('Added', 'تاريخ الإضافة') }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of visible(); track m.id) {
+              <tr [class.off]="m.status === 'disabled'">
+                <td>
+                  <span class="who">
+                    <span class="avatar">{{ initials(m.name) }}</span>
+                    <span class="cell">
+                      <b class="name">{{ m.name }}</b>
+                      <span class="sub mono">{{ m.email }}</span>
+                    </span>
                   </span>
-                </span>
-              </td>
-              <td class="soft">{{ roleNames[m.role]?.[lang()] ?? m.roleName[lang()] }}</td>
-              <td>
-                <span
-                  class="st"
-                  [style.background]="statusTone[m.status][0]"
-                  [style.color]="statusTone[m.status][1]"
-                  >{{ statusNames[m.status][lang()] }}</span
-                >
-                @if (m.status === 'invited' && m.invitationExpiresAt) {
-                  <span class="sub" [class.late]="expired(m)"
-                    >{{ expired(m) ? t('Link expired', 'انتهى الرابط') : t('Expires', 'ينتهي') }}
-                    {{ m.invitationExpiresAt | date: 'MMM d, HH:mm' }}</span
-                  >
-                }
-              </td>
-              <td class="soft">
-                {{ m.lastLoginAt ? (m.lastLoginAt | date: 'MMM d, y, HH:mm') : '—' }}
-              </td>
-              <td class="soft">{{ m.createdAt | date: 'MMM d, y' }}</td>
-              <td class="end">
-                <span class="acts">
-                  @if (m.status === 'invited') {
-                    <button
-                      type="button"
-                      class="btn btn--sm"
-                      [disabled]="busy() === m.id"
-                      (click)="resend(m)"
+                </td>
+                <td class="soft">
+                  @if (canManage()) {
+                    <select
+                      [attr.aria-label]="t('Role for ', 'دور ') + m.name"
+                      [ngModel]="m.role"
+                      (ngModelChange)="changeRole(m, $event)"
+                      [disabled]="!!busy() || loading()"
                     >
-                      {{ expired(m) ? t('New link', 'رابط جديد') : t('Resend', 'إعادة الإرسال') }}
-                    </button>
-                    <button
-                      type="button"
-                      class="btn btn--sm btn--badText"
-                      [disabled]="busy() === m.id"
-                      (click)="revoke(m)"
-                    >
-                      {{ t('Revoke', 'إلغاء') }}
-                    </button>
+                      @for (r of roles; track r) {
+                        <option [value]="r">{{ roleNames[r][lang()] }}</option>
+                      }
+                    </select>
                   } @else {
-                    <button
-                      type="button"
-                      class="btn btn--sm"
-                      [class.btn--badText]="m.status === 'active'"
-                      [disabled]="busy() === m.id"
-                      (click)="toggle(m)"
+                    {{ roleNames[m.role]?.[lang()] ?? m.roleName[lang()] }}
+                  }
+                </td>
+                <td>
+                  <span
+                    class="st"
+                    [style.background]="statusTone[m.status][0]"
+                    [style.color]="statusTone[m.status][1]"
+                    >{{ statusNames[m.status][lang()] }}</span
+                  >
+                  @if (m.status === 'invited' && m.invitationExpiresAt) {
+                    <span class="sub" [class.late]="expired(m)"
+                      >{{ expired(m) ? t('Link expired', 'انتهى الرابط') : t('Expires', 'ينتهي') }}
+                      {{ m.invitationExpiresAt | date: 'MMM d, HH:mm' }}</span
                     >
-                      {{ m.status === 'active' ? t('Disable', 'تعطيل') : t('Enable', 'تفعيل') }}
+                  }
+                </td>
+                <td class="soft">
+                  {{ m.lastLoginAt ? (m.lastLoginAt | date: 'MMM d, y, HH:mm') : '—' }}
+                </td>
+                <td class="soft">{{ m.createdAt | date: 'MMM d, y' }}</td>
+                <td class="end">
+                  @if (canManage()) {
+                    <span class="acts">
+                      @if (m.status === 'invited') {
+                        <button
+                          type="button"
+                          class="btn btn--sm"
+                          [disabled]="busy() === m.id"
+                          (click)="resend(m)"
+                        >
+                          {{
+                            expired(m) ? t('New link', 'رابط جديد') : t('Resend', 'إعادة الإرسال')
+                          }}
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn--sm btn--badText"
+                          [disabled]="busy() === m.id"
+                          (click)="revoke(m)"
+                        >
+                          {{ t('Revoke', 'إلغاء') }}
+                        </button>
+                      } @else {
+                        <button
+                          type="button"
+                          class="btn btn--sm"
+                          [class.btn--badText]="m.status === 'active'"
+                          [disabled]="busy() === m.id"
+                          (click)="toggle(m)"
+                        >
+                          {{ m.status === 'active' ? t('Disable', 'تعطيل') : t('Enable', 'تفعيل') }}
+                        </button>
+                      }
+                    </span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (loading() && !items().length) {
+        <p class="muted pad" role="status">{{ t('Loading…', 'جارٍ التحميل…') }}</p>
+      } @else if (!items().length) {
+        <div class="empty">
+          <strong>{{ t('No team members yet', 'لا يوجد أعضاء بعد') }}</strong>
+          <span>{{
+            t(
+              'Invite agents to work their own leads and deals.',
+              'ادعُ وكلاء للعمل على عملائهم وصفقاتهم.'
+            )
+          }}</span>
+          @if (canManage()) {
+            <button type="button" class="btn btn--dark" (click)="openInvite()">
+              {{ t('+ Invite member', '+ دعوة عضو') }}
+            </button>
+          }
+        </div>
+      } @else if (!visible().length) {
+        <p class="muted pad">
+          {{ t('No members match these filters.', 'لا يوجد أعضاء مطابقون.') }}
+        </p>
+      }
+    </section>
+  } @else {
+    <section class="card">
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('Team', 'الفريق') }}</th>
+              <th>{{ t('Team lead', 'قائد الفريق') }}</th>
+              <th>{{ t('Members', 'الأعضاء') }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (g of groups(); track g.id) {
+              <tr>
+                <td>
+                  <b>{{ g.name }}</b>
+                </td>
+                <td>{{ leadName(g) }}</td>
+                <td>{{ g.members.length }}</td>
+                <td class="end">
+                  @if (canManage()) {
+                    <button class="btn btn--sm" (click)="openTeam(g)">
+                      {{ t('Edit team', 'تعديل الفريق') }}
                     </button>
                   }
-                </span>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-    @if (loading() && !items().length) {
-      <p class="muted pad" role="status">{{ t('Loading…', 'جارٍ التحميل…') }}</p>
-    } @else if (!items().length) {
-      <div class="empty">
-        <strong>{{ t('No team members yet', 'لا يوجد أعضاء بعد') }}</strong>
-        <span>{{
-          t(
-            'Invite agents to work their own leads and deals.',
-            'ادعُ وكلاء للعمل على عملائهم وصفقاتهم.'
-          )
-        }}</span>
-        <button type="button" class="btn btn--dark" (click)="openInvite()">
-          {{ t('+ Invite member', '+ دعوة عضو') }}
-        </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
       </div>
-    } @else if (!visible().length) {
-      <p class="muted pad">{{ t('No members match these filters.', 'لا يوجد أعضاء مطابقون.') }}</p>
-    }
-  </section>
-
+      @if (loading()) {
+        <p class="muted pad" role="status">{{ t('Loading…', 'جارٍ التحميل…') }}</p>
+      } @else if (!groups().length) {
+        <div class="empty">
+          <strong>{{ t('No teams yet', 'لا توجد فرق بعد') }}</strong
+          ><span>{{
+            t(
+              'Create a team, choose its lead and assign employees.',
+              'أنشئ فريقًا واختر قائده وحدد الأعضاء.'
+            )
+          }}</span>
+        </div>
+      }
+    </section>
+  }
   <p class="muted small">
     {{
       t(
-        'Agents see and work only their own leads and deals. Disabling a member signs them out and keeps their records.',
-        'يرى الوكلاء عملاءهم وصفقاتهم فقط. تعطيل العضو يسجل خروجه ويحتفظ بسجلاته.'
+        'Agents and team leads work their own leads and deals. Team leads also see their assigned roster in My team. Disabling a member signs them out and keeps their records.',
+        'يرى الوكلاء وقادة الفرق عملاءهم وصفقاتهم فقط. يرى قائد الفريق أعضاء فريقه في «فريقي». تعطيل العضو يسجل خروجه ويحتفظ بسجلاته.'
       )
     }}
   </p>
@@ -259,4 +358,92 @@
 
 @if (toast()) {
   <div class="toast"><span></span>{{ toast() }}</div>
+}
+
+@if (teamOpen()) {
+  <div class="scrim scrim--top" (click)="!teamSaving() && teamOpen.set(false)"></div>
+  <section
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.dir]="ar() ? 'rtl' : 'ltr'"
+    [attr.aria-label]="t('Manage team', 'إدارة الفريق')"
+  >
+    <form (ngSubmit)="saveTeam()">
+      <div class="dialog__head">
+        <span class="dialog__title">{{
+          editing() ? t('Edit team', 'تعديل الفريق') : t('Create team', 'إنشاء فريق')
+        }}</span
+        ><span class="dialog__body">{{
+          t(
+            'Choosing a lead gives them the Team Lead role. Each employee belongs to one team.',
+            'اختيار القائد يمنحه دور قائد الفريق. ينتمي كل موظف إلى فريق واحد.'
+          )
+        }}</span>
+      </div>
+      <div class="dialog__main">
+        @if (teamError()) {
+          <p class="note note--bad" role="alert">{{ teamError() }}</p>
+        }
+        <label class="field"
+          ><span>{{ t('Team name', 'اسم الفريق') }}</span
+          ><input
+            name="teamName"
+            [(ngModel)]="teamName"
+            required
+            minlength="2"
+            maxlength="120"
+            [disabled]="teamSaving()"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Team lead', 'قائد الفريق') }}</span
+          ><select name="teamLead" [(ngModel)]="teamLead" required [disabled]="teamSaving()">
+            <option value="">{{ t('Choose an employee', 'اختر موظفًا') }}</option>
+            @for (m of eligible(); track m.userId) {
+              @if (m.status !== 'disabled') {
+                <option [value]="m.userId">{{ m.name }} · {{ roleNames[m.role][lang()] }}</option>
+              }
+            }
+          </select></label
+        >
+        <fieldset class="team-members" [disabled]="teamSaving()">
+          <legend>{{ t('Team members', 'أعضاء الفريق') }}</legend>
+          @for (m of eligible(); track m.userId) {
+            <label class="member-option"
+              ><input
+                type="checkbox"
+                [checked]="memberIds.includes(m.userId) || teamLead === m.userId"
+                [disabled]="teamLead === m.userId"
+                (change)="toggleMember(m.userId, $any($event.target).checked)"
+              /><span
+                >{{ m.name
+                }}<small>{{ m.email }} · {{ statusNames[m.status][lang()] }}</small></span
+              ></label
+            >
+          }
+        </fieldset>
+        @if (!eligible().length) {
+          <p class="muted">
+            {{
+              t(
+                'Invite employees first. Employees assigned elsewhere must be removed from their current team before moving.',
+                'ادعُ الموظفين أولًا. انقل الموظف بإزالته من فريقه الحالي قبل إضافته هنا.'
+              )
+            }}
+          </p>
+        }
+      </div>
+      <div class="dialog__foot">
+        <button type="button" class="btn" [disabled]="teamSaving()" (click)="teamOpen.set(false)">
+          {{ t('Cancel', 'إلغاء') }}</button
+        ><button
+          class="btn btn--dark"
+          type="submit"
+          [disabled]="teamSaving() || !teamLead || teamName.trim().length < 2"
+        >
+          {{ teamSaving() ? t('Saving…', 'جارٍ الحفظ…') : t('Save team', 'حفظ الفريق') }}
+        </button>
+      </div>
+    </form>
+  </section>
 }

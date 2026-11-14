@@ -244,6 +244,11 @@ export const routes: Routes = [
           import('./pages/company-shell/audit-log/audit-log').then((m) => m.AuditLog),
       },
       {
+        path: 'my-team',
+        data: { permission: 'team.self.read' },
+        loadComponent: () => import('./pages/company-shell/my-team/my-team').then((m) => m.MyTeam),
+      },
+      {
         path: 'team',
         data: { permission: 'team.read' },
         loadComponent: () => import('./pages/company-shell/team/team').then((m) => m.Team),

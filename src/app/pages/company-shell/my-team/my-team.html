@@ -1,0 +1,74 @@
+<div class="pg" [attr.dir]="ar() ? 'rtl' : 'ltr'">
+  <div class="head">
+    <div class="head__text">
+      <span>{{ t('Your assigned team and members', 'فريقك والأعضاء المعينون') }}</span>
+      <h1>{{ t('My team', 'فريقي') }}</h1>
+    </div>
+    <div class="head__actions">
+      <button class="btn" [disabled]="loading()" (click)="reload()">
+        {{ t('Refresh', 'تحديث') }}
+      </button>
+    </div>
+  </div>
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+  @if (loading()) {
+    <p class="muted" role="status">{{ t('Loading your team…', 'جارٍ تحميل فريقك…') }}</p>
+  }
+  @for (team of teams(); track team.id) {
+    <section class="card">
+      <div class="team-heading">
+        <h2>{{ team.name }}</h2>
+        <p class="muted">
+          {{ team.members.length }}
+          {{ t('members, including the team lead', 'عضو، بما فيهم قائد الفريق') }}
+        </p>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('Member', 'العضو') }}</th>
+              <th>{{ t('Email', 'البريد الإلكتروني') }}</th>
+              <th>{{ t('Role', 'الدور') }}</th>
+              <th>{{ t('Status', 'الحالة') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (member of team.members; track member.id) {
+              <tr>
+                <td>{{ member.name }}</td>
+                <td>
+                  <a [href]="'mailto:' + member.email">{{ member.email }}</a>
+                </td>
+                <td>
+                  {{
+                    member.id === team.leadUserId
+                      ? t('Team Lead', 'قائد الفريق')
+                      : member.role === 'team_lead'
+                        ? t('Team Lead', 'قائد الفريق')
+                        : t('Sales Agent', 'وكيل المبيعات')
+                  }}
+                </td>
+                <td>{{ status(member.status) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  } @empty {
+    @if (!loading() && !error()) {
+      <section class="card empty">
+        <strong>{{ t('No team assigned yet', 'لم يتم تعيين فريق بعد') }}</strong
+        ><span>{{
+          t(
+            'Your company admin can create a team and assign you as its lead.',
+            'يمكن لمسؤول الشركة إنشاء فريق وتعيينك قائدًا له.'
+          )
+        }}</span>
+      </section>
+    }
+  }
+</div>

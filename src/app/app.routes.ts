@@ -186,16 +186,32 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/company-shell/tasks/tasks').then((m) => m.Tasks),
       },
       {
-        path: 'projects',
-        data: { permission: 'projects.read' },
+        path: 'developers',
+        data: { permission: 'projects.read', view: 'devs' },
         loadComponent: () =>
-          import('./pages/company-shell/projects/projects').then((m) => m.Projects),
+          import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
       },
       {
-        path: 'units',
-        data: { permission: 'units.read' },
-        loadComponent: () => import('./pages/company-shell/units/units').then((m) => m.Units),
+        path: 'developers/:id',
+        data: { permission: 'projects.read', view: 'dev' },
+        loadComponent: () =>
+          import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
       },
+      {
+        path: 'compounds',
+        data: { permission: 'projects.read', view: 'cos' },
+        loadComponent: () =>
+          import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
+      },
+      {
+        path: 'compounds/:id',
+        data: { permission: 'projects.read', view: 'co' },
+        loadComponent: () =>
+          import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
+      },
+      // Legacy inventory URLs (API-backed pages were replaced by the static Developers / Compounds tabs)
+      { path: 'projects', redirectTo: 'compounds', pathMatch: 'full' },
+      { path: 'units', redirectTo: 'compounds', pathMatch: 'full' },
       {
         path: 'reservations',
         data: { permission: 'reservations.read' },

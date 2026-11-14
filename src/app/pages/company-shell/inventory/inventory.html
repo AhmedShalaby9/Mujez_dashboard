@@ -1,0 +1,375 @@
+<div class="iv-root" [attr.dir]="dir()" (click)="alOpen.set(false)">
+  @let l = this.l();
+
+  @if (crumbs().length) {
+    <div class="iv-crumbs">
+      @for (cr of crumbs(); track $index; let last = $last) {
+        @if ($index > 0) { <span class="iv-sep" [style.transform]="flip()">›</span> }
+        <button type="button" class="iv-crumb" [attr.data-last]="last" (click)="cr.go()">{{ cr.label }}</button>
+      }
+    </div>
+  }
+
+  @if (notFound()) {
+    <div class="iv-empty">
+      <p>{{ X('This record was not found.', 'لم يتم العثور على هذا السجل.') }}</p>
+      <button type="button" class="iv-btn dark" (click)="go(view === 'dev' ? 'developers' : 'compounds')">
+        {{ view === 'dev' ? l.devs : l.cos }}
+      </button>
+    </div>
+  } @else {
+
+  <!-- ===================== DEVELOPERS LIST ===================== -->
+  @if (view === 'devs') {
+    <div class="iv-head">
+      <div><h1 class="iv-h1">{{ l.devs }}</h1><div class="iv-meta">{{ devMeta() }}</div></div>
+      <button type="button" class="iv-btn dark" (click)="addDev()">{{ l.devs }} +</button>
+    </div>
+    <div class="iv-tools">
+      <label class="iv-search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></svg><input [value]="q()" (input)="onInput($event)" [placeholder]="l.search" /></label>
+      <div class="iv-chips">
+        @for (ch of devChips(); track ch.k) {
+          <button type="button" class="iv-chip" (click)="devF.set(ch.k)" [style.background]="ch.bg" [style.color]="ch.fg" [style.border-color]="ch.bd">{{ ch.label }}</button>
+        }
+      </div>
+      <select class="iv-select" [value]="sort()" (change)="onSel($event, 'sort')">
+        @for (o of sorts(); track o.v) { <option [value]="o.v" [selected]="o.v === sort()">{{ o.l }}</option> }
+      </select>
+    </div>
+    <div class="iv-grid dev">
+      @for (d of devList(); track d.i) {
+        <div class="iv-card iv-dcard" (click)="openDev(d.i)">
+          <div class="iv-dtop">
+            <div class="iv-logo lg" [style.background]="d.c">{{ d.init }}</div>
+            <div class="iv-dnames"><div class="iv-dn">{{ d.name }}</div><div class="iv-dn2">{{ d.name2 }}</div></div>
+          </div>
+          <div class="iv-badges">
+            @if (d.top) { <span class="iv-badge top"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>{{ l.top }}</span> }
+            @if (d.ver) { <span class="iv-badge ver"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>{{ l.ver }}</span> }
+            <span class="iv-badge plain">{{ d.sinceT }}</span>
+          </div>
+          <div class="iv-dstats">
+            <div><b>{{ d.cos }}</b><span>{{ l.compounds }}</span></div>
+            <div><b>{{ d.fol }}</b><span>{{ l.followers }}</span></div>
+            <div><b>{{ d.del }}</b><span>{{ l.delivered }}</span></div>
+          </div>
+          <button type="button" class="iv-btn sm full" (click)="toggleFol('d' + d.i, d.name, $event)" [style.background]="d.fBg" [style.color]="d.fFg" [style.border-color]="d.fBd">{{ d.fLbl }}</button>
+        </div>
+      } @empty { <div class="iv-empty">—</div> }
+    </div>
+  }
+
+  <!-- ===================== DEVELOPER PROFILE ===================== -->
+  @if (view === 'dev' && dv(); as dv) {
+    <div class="iv-cover">
+      <app-inv-scene [sc]="dv.cover" />
+      <div class="iv-coverfade"></div>
+    </div>
+    <div class="iv-phead">
+      <div class="iv-logo xl" [style.background]="dv.c">{{ dv.init }}</div>
+      <div class="iv-pnames">
+        <h1 class="iv-h1">{{ dv.name }}</h1>
+        <div class="iv-dn2 lg">{{ dv.name2 }}</div>
+        <div class="iv-badges">
+          @if (dv.top) { <span class="iv-badge top"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>{{ l.top }}</span> }
+          @if (dv.ver) { <span class="iv-badge ver"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>{{ l.ver }}</span> }
+          @if (dv.hasStock) { <span class="iv-badge stock"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6l-9.5 9.5-5-5L1 18M17 6h6v6"/></svg>{{ dv.stock }}</span> }
+        </div>
+      </div>
+      <div class="iv-pact">
+        <div class="iv-folc"><b>{{ dv.folN }}</b><span>{{ l.followers }}</span></div>
+        <button type="button" class="iv-btn" (click)="toggleFol('d' + dv.i, dv.name)" [style.background]="dv.fBg" [style.color]="dv.fFg" [style.border-color]="dv.fBd">{{ dv.fLbl }}</button>
+      </div>
+    </div>
+
+    <div class="iv-kpis">
+      <div class="iv-kpi"><span>{{ l.compounds }}</span><b>{{ dv.cos }}</b></div>
+      <div class="iv-kpi wide"><span>{{ l.delivered }}</span><b>{{ dv.delBig }}</b><em>{{ dv.delSub }}</em></div>
+      <div class="iv-kpi"><span>{{ l.founded }}</span><b>{{ dv.yr }}</b></div>
+      <div class="iv-kpi"><span>{{ l.followers }}</span><b>{{ dv.folN }}</b></div>
+    </div>
+
+    <div class="iv-cols">
+      <div class="iv-main">
+        <section class="iv-card iv-sec">
+          <div class="iv-sech"><h2>{{ l.about }}</h2>
+            <div class="iv-seg"><span class="iv-segl">{{ l.contentL }}</span>
+              @for (sg of clSeg(); track sg.k) { <button type="button" (click)="cl.set(sg.k)" [style.background]="sg.bg" [style.color]="sg.fg" [style.font-weight]="sg.fw">{{ sg.label }}</button> }
+            </div>
+          </div>
+          <p class="iv-p" [attr.dir]="dv.bioDir">{{ dv.bio }}</p>
+        </section>
+
+        @if (dv.hasTrust) {
+          <section class="iv-card iv-sec">
+            <div class="iv-sech"><h2>{{ l.trust }}</h2><span class="iv-badge ver"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>{{ l.ver }}</span></div>
+            <div class="iv-trust">
+              @for (tr of dv.trust; track $index) {
+                <div class="iv-tr"><span class="iv-trI"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4"/></svg></span>{{ tr }}</div>
+              }
+            </div>
+          </section>
+        }
+
+        <section class="iv-sec2">
+          <div class="iv-sech"><h2>{{ l.theirCos }}</h2><span class="iv-meta">{{ dv.cos }}</span></div>
+          <div class="iv-grid mini">
+            @for (c of dv.devCos; track c.i) {
+              <div class="iv-card iv-mini" (click)="openCo(c.i)">
+                <div class="iv-img sm"><app-inv-scene [sc]="c.sc" /><span class="iv-st" [style.background]="c.stBg" [style.color]="c.stFg">{{ c.st }}</span></div>
+                <div class="iv-mb">
+                  <div class="iv-cn">{{ c.name }}</div>
+                  <div class="iv-area"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"/></svg>{{ c.area }}</div>
+                  <div class="iv-mrow"><b>{{ c.from }}</b><span>{{ c.units }}</span></div>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+
+      <aside class="iv-side">
+        <section class="iv-card iv-sec">
+          <h2 class="iv-h2s">{{ l.contact }}</h2>
+          @for (ct of dv.contacts; track $index) {
+            <button type="button" class="iv-contact" (click)="copy(ct.v)"><span class="iv-cI"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path [attr.d]="ct.ic"/></svg></span><span class="iv-cv" [attr.dir]="ct.dir">{{ ct.v }}</span></button>
+          }
+        </section>
+        <section class="iv-card iv-sec">
+          <h2 class="iv-h2s">{{ l.social }}</h2>
+          <div class="iv-socials">
+            @for (so of dv.socials; track so.label) {
+              <button type="button" class="iv-soc" (click)="openSocial(so.label)" [title]="so.label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path [attr.d]="so.ic"/></svg><span>{{ so.label }}</span></button>
+            }
+          </div>
+        </section>
+      </aside>
+    </div>
+  }
+
+  <!-- ===================== COMPOUNDS LIST ===================== -->
+  @if (view === 'cos') {
+    <div class="iv-head">
+      <div><h1 class="iv-h1">{{ l.cos }}</h1><div class="iv-meta">{{ coMeta() }}</div></div>
+      <button type="button" class="iv-btn dark" (click)="addCo()">{{ l.cos }} +</button>
+    </div>
+    <div class="iv-tools">
+      <label class="iv-search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></svg><input [value]="q()" (input)="onInput($event)" [placeholder]="l.search" /></label>
+      <select class="iv-select" [value]="devSel()" (change)="onSel($event, 'dev')">
+        @for (o of devOpts(); track o.v) { <option [value]="o.v" [selected]="o.v === devSel()">{{ o.l }}</option> }
+      </select>
+    </div>
+    <div class="iv-chips wrap">
+      @for (ch of stChips(); track ch.k) {
+        <button type="button" class="iv-chip" (click)="stF.set(ch.k)" [style.background]="ch.bg" [style.color]="ch.fg" [style.border-color]="ch.bd"><i [style.background]="ch.dot"></i>{{ ch.label }}</button>
+      }
+    </div>
+    <div class="iv-grid co">
+      @for (c of coList(); track c.i) {
+        <div class="iv-card iv-ccard" (click)="openCo(c.i)">
+          <div class="iv-img">
+            <app-inv-scene [sc]="c.sc" />
+            <span class="iv-st" [style.background]="c.stBg" [style.color]="c.stFg">{{ c.st }}</span>
+            <button type="button" class="iv-heart" (click)="toggleFol('c' + c.i, c.name, $event)" [style.background]="c.hBg" [style.color]="c.hFg"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>{{ c.fol }}</button>
+          </div>
+          <div class="iv-cb">
+            <div class="iv-cn">{{ c.name }}</div>
+            <div class="iv-cn2">{{ c.name2 }}</div>
+            <div class="iv-devrow"><span class="iv-logo xs" [style.background]="c.devC">{{ c.devInit }}</span>{{ c.dev }}@if (c.ver) { <span class="iv-vdot"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> }</div>
+            <div class="iv-area"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"/></svg>{{ c.area }}</div>
+            <div class="iv-cfoot"><b>{{ c.from }}</b><span [style.color]="c.avC">{{ c.avail }}</span></div>
+          </div>
+        </div>
+      } @empty { <div class="iv-empty">—</div> }
+    </div>
+  }
+
+  <!-- ===================== COMPOUND DETAIL ===================== -->
+  @if (view === 'co' && co(); as co) {
+    @if (co.promo; as promo) {
+      <div class="iv-promo">
+        <div class="iv-pmedia">
+          <app-inv-scene [sc]="promo.sc" />
+          @if (promo.video) {
+            <span class="iv-play"><svg width="18" height="18" viewBox="0 0 24 24" fill="#111113"><path d="M8 5v14l11-7z"/></svg></span><span class="iv-dur mono">0:42</span>
+          }
+        </div>
+        <div class="iv-ptext">
+          <span class="iv-pkind">{{ promo.kind }}</span>
+          <div class="iv-pt">{{ promo.t }}</div>
+          <div class="iv-ps">{{ promo.s }}</div>
+          <div class="iv-pdates mono"><span>{{ promo.start }} → {{ promo.end }}</span><b>{{ promo.left }}</b></div>
+        </div>
+        <button type="button" class="iv-btn lime" (click)="info('Offer shared on WhatsApp', 'تمت مشاركة العرض على واتساب')">{{ l.share }}</button>
+      </div>
+    }
+
+    <div class="iv-cohead">
+      <div class="iv-coinfo">
+        <div class="iv-badges"><span class="iv-st inl" [style.background]="co.stBg" [style.color]="co.stFg">{{ co.st }}</span><span class="iv-area"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"/></svg>{{ co.areaName }}</span></div>
+        <h1 class="iv-h1 big">{{ co.name }}</h1>
+        <div class="iv-dn2 lg">{{ co.name2 }}</div>
+        <button type="button" class="iv-devlink" (click)="openDev(COS[idx()].d)">
+          <span class="iv-logo sm" [style.background]="co.devC">{{ co.devInit }}</span>
+          <span><b>{{ co.devName }}</b>@if (co.devVer) { <span class="iv-vdot"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> }<em>{{ co.devCos }} · {{ co.devFol }}</em></span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [style.transform]="flip()"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+      <div class="iv-coact">
+        <button type="button" class="iv-btn ghost" (click)="info('Compound link copied', 'تم نسخ رابط الكمباوند')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>{{ l.share }}</button>
+        <div class="iv-belw">
+          <button type="button" class="iv-bell" (click)="toggleAl($event)" [style.background]="co.bellBg"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path [attr.d]="co.bellIc"/></svg></button>
+          @if (alOpen()) {
+            <div class="iv-alpop" (click)="$event.stopPropagation()">
+              <div class="iv-alh">{{ l.alertsT }}</div>
+              <div class="iv-alhint">{{ co.alHint }}</div>
+              @for (a of co.alerts; track a.k) {
+                <button type="button" class="iv-alrow" (click)="togglePref(a.k)" [style.opacity]="a.op"><span class="iv-ck" [style.background]="a.ckBg" [style.border-color]="a.ckBd">{{ a.ck }}</span>{{ a.l }}</button>
+              }
+              <button type="button" class="iv-alrow mute" (click)="toggleMute()"><span>{{ l.mute }}</span><span class="iv-sw" [style.background]="co.muteSw.bg" [style.justify-content]="co.muteSw.j"><i></i></span></button>
+            </div>
+          }
+        </div>
+        <div class="iv-folc"><b>{{ co.folN }}</b><span>{{ l.followers }}</span></div>
+        <button type="button" class="iv-btn" (click)="toggleFol('c' + idx(), co.name)" [style.background]="co.folBg" [style.color]="co.folFg" [style.border-color]="co.folBd">{{ co.folLbl }}</button>
+      </div>
+    </div>
+
+    <div class="iv-gallery">
+      <div class="iv-gmain"><app-inv-scene [sc]="co.mainSc" /><span class="iv-glbl">{{ co.mainLbl }}</span><span class="iv-gn mono">{{ co.galN }}</span></div>
+      <div class="iv-gthumbs">
+        @for (g of co.gal; track $index; let k = $index) {
+          <button type="button" class="iv-gth" (click)="setGal(k)" [style.outline-color]="g.bd" style="position:relative"><app-inv-scene [sc]="g.sc" /></button>
+        }
+      </div>
+    </div>
+
+    <div class="iv-stats">
+      @for (s of co.stats; track $index) {
+        <div class="iv-stat"><span>{{ s.k }}</span><b [style.color]="s.c">{{ s.v }}</b>@if (s.s) { <em>{{ s.s }}</em> }</div>
+      }
+    </div>
+    <div class="iv-split"><i [style.width]="co.primW" style="background:#111113"></i><i [style.width]="co.resW" style="background:#7FA6DA"></i></div>
+
+    <div class="iv-cols">
+      <div class="iv-main">
+        <section class="iv-card iv-sec">
+          <div class="iv-sech"><h2>{{ l.overview }}</h2>
+            <div class="iv-seg"><span class="iv-segl">{{ l.contentL }}</span>
+              @for (sg of clSeg(); track sg.k) { <button type="button" (click)="cl.set(sg.k)" [style.background]="sg.bg" [style.color]="sg.fg" [style.font-weight]="sg.fw">{{ sg.label }}</button> }
+            </div>
+          </div>
+          <p class="iv-p" [attr.dir]="co.descDir">{{ co.desc }}</p>
+          <div class="iv-hls" [attr.dir]="co.descDir">@for (h of co.hl; track $index) { <span class="iv-hl">{{ h }}</span> }</div>
+          <div class="iv-facts">
+            <div class="iv-fact"><span class="iv-fI"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7a2 2 0 0 1 2 2M21 9a6 6 0 0 1-7.7 5.7L11 17H9v2H7v2H3v-3.6l6.3-6.3A6 6 0 1 1 21 9z"/></svg></span><div><span>{{ l.delivery }}</span><b>{{ co.delivery }}</b><em>{{ co.deliverySub }}</em></div></div>
+            <div class="iv-fact"><span class="iv-fI"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 11V4a1 1 0 0 0-1-1H6a1 1 0 0 0-1 1v7M5 11h14v3a2 2 0 0 1-2 2h-3v5h-4v-5H7a2 2 0 0 1-2-2z"/></svg></span><div><span>{{ l.finishing }}</span><b>{{ co.finishing }}</b><em>{{ co.finishingSub }}</em></div></div>
+            <div class="iv-fact"><span class="iv-fI"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><div><span>{{ l.payment }}</span><b>{{ co.paySum }}</b><em>{{ co.from }}</em></div></div>
+          </div>
+        </section>
+
+        <section class="iv-card iv-sec">
+          <div class="iv-sech"><h2>{{ l.payment }}</h2></div>
+          <div class="iv-plans">
+            @for (p of co.plans; track $index) {
+              <div class="iv-plan" [style.border-color]="p.bd">
+                @if (p.tag) { <span class="iv-ptag">{{ p.tag }}</span> }
+                <b>{{ p.t }}</b><span>{{ p.s }}</span>
+                @if (p.m) { <em class="mono">{{ p.m }}</em> }
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="iv-card iv-sec">
+          <div class="iv-sech"><h2>{{ l.phases }}</h2></div>
+          <div class="iv-phases">
+            @for (ph of co.phases; track $index) {
+              <div class="iv-ph">
+                <div class="iv-phn"><b>{{ ph.n }}</b><span class="iv-st inl" [style.background]="ph.stBg" [style.color]="ph.stFg">{{ ph.st }}</span></div>
+                <div class="iv-pha"><span>{{ ph.avail }}</span><div class="iv-bar"><i [style.width]="ph.w"></i></div></div>
+                <div class="iv-php"><span>{{ l.price }}</span><b>{{ ph.price }}</b></div>
+                <div class="iv-php"><span>{{ l.delivery }}</span><b>{{ ph.dl }}</b></div>
+                @if (ph.canStack) { <button type="button" class="iv-btn sm ghost" (click)="stackSoon()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l10 5-10 5L2 7zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>{{ l.stack }}</button> }
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="iv-card iv-sec">
+          <div class="iv-sech"><h2>{{ l.types }}</h2></div>
+          <div class="iv-types">
+            <div class="iv-trow head"><span></span><span>{{ l.size }}</span><span>{{ l.units }}</span><span>{{ l.price }}</span></div>
+            @for (ty of co.types; track $index) {
+              <div class="iv-trow"><span class="iv-tt"><b>{{ ty.t }}</b><i [style.width]="ty.w"></i></span><span class="mono">{{ ty.size }}</span><span class="mono">{{ ty.n }}</span><span>{{ ty.price }}</span></div>
+            }
+          </div>
+        </section>
+
+        <section class="iv-card iv-sec">
+          <div class="iv-sech"><h2>{{ l.facilities }}</h2></div>
+          <div class="iv-fac">@for (f of co.facilities; track $index) { <div class="iv-fc"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path [attr.d]="f.ic"/></svg>{{ f.t }}</div> }</div>
+        </section>
+
+        <section class="iv-card iv-sec">
+          <div class="iv-sech"><h2>{{ l.faqs }}</h2></div>
+          <div [attr.dir]="co.faqDir">
+            @for (fq of co.faqs; track fq.k) {
+              <div class="iv-faq" [style.background]="fq.bg">
+                <button type="button" class="iv-fq" (click)="toggleFaq(fq.k)"><span>{{ fq.q }}</span><span class="iv-plus" [style.transform]="'rotate(' + fq.rot + ')'">+</span></button>
+                @if (fq.open) { <p class="iv-fa">{{ fq.a }}</p> }
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+
+      <aside class="iv-side">
+        <section class="iv-card iv-sec">
+          <div class="iv-sech"><h2 class="iv-h2s">{{ l.location }}</h2><button type="button" class="iv-link" (click)="info('Opening Google Maps…', 'جارٍ فتح الخرائط…')">{{ l.openMap }}</button></div>
+          <div class="iv-map">
+            <svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice" class="fillsvg">
+<rect width="320" height="200" fill="#EDEFE6"/>
+<path d="M0 150 C60 140 90 170 160 160 S260 120 320 135" stroke="#fff" stroke-width="10" fill="none"/>
+<path d="M60 0 L90 200" stroke="#fff" stroke-width="7"/>
+<path d="M230 0 C220 60 250 120 240 200" stroke="#fff" stroke-width="5"/>
+<rect x="10" y="20" width="40" height="30" rx="4" fill="#E2E5DA"/><rect x="250" y="160" width="56" height="30" rx="4" fill="#E2E5DA"/><rect x="100" y="12" width="60" height="22" rx="4" fill="#E2E5DA"/>
+<path d="M112 60 L208 52 L226 110 L190 148 L118 140 L98 98 Z" fill="rgba(200,241,105,0.35)" stroke="#5B7F12" stroke-width="2" stroke-dasharray="6 4"/>
+<g transform="translate(160 96)"><path d="M0 0 C-12 -14 -14 -20 -14 -26 A14 14 0 0 1 14 -26 C14 -20 12 -14 0 0Z" fill="#111113"/><circle cy="-26" r="5" fill="#C8F169"/></g>
+</svg>
+            <span class="iv-mapl">{{ co.areaName }}</span>
+          </div>
+        </section>
+        <section class="iv-card iv-sec">
+          <div class="iv-sech"><h2 class="iv-h2s">{{ l.masterplan }}</h2><button type="button" class="iv-link" (click)="info('Opening the master plan…', 'جارٍ فتح المخطط العام…')">↗</button></div>
+          <div class="iv-plan2" (click)="info('Opening the master plan…', 'جارٍ فتح المخطط العام…')">
+            <svg viewBox="0 0 320 200" class="fillsvg">
+<rect width="320" height="200" fill="#F4F6EE"/>
+<path d="M20 30 L300 20 L310 180 L14 186 Z" fill="#fff" stroke="#C9CDBE" stroke-width="1.5"/>
+<ellipse cx="160" cy="104" rx="46" ry="30" fill="#BFE0EC"/>
+<path d="M160 20 V186 M14 104 H310" stroke="#E2E4DA" stroke-width="8"/>
+<g fill="#E4F5C0" stroke="#8BB33A" stroke-width="1"><rect x="34" y="38" width="44" height="26" rx="3"/><rect x="86" y="38" width="44" height="26" rx="3"/><rect x="34" y="72" width="44" height="22" rx="3"/><rect x="34" y="116" width="44" height="26" rx="3"/><rect x="34" y="150" width="44" height="26" rx="3"/></g>
+<g fill="#FDF3DC" stroke="#C99A4A" stroke-width="1"><rect x="190" y="34" width="46" height="26" rx="3"/><rect x="244" y="34" width="46" height="26" rx="3"/><rect x="244" y="68" width="46" height="26" rx="3"/></g>
+<g fill="#E4E4DF" stroke="#A6A6A0" stroke-width="1"><rect x="190" y="118" width="46" height="26" rx="3"/><rect x="244" y="118" width="46" height="26" rx="3"/><rect x="244" y="152" width="46" height="24" rx="3"/><rect x="86" y="150" width="44" height="26" rx="3"/></g>
+<circle cx="160" cy="104" r="9" fill="#111113"/>
+</svg>
+          </div>
+          <div class="iv-legend"><span><i style="background:#E4F5C0;border-color:#8BB33A"></i>{{ l.avail }}</span><span><i style="background:#FDF3DC;border-color:#C99A4A"></i>{{ l.next }}</span><span><i style="background:#E4E4DF;border-color:#A6A6A0"></i>{{ l.sold }}</span></div>
+        </section>
+        <section class="iv-card iv-sec">
+          <h2 class="iv-h2s">{{ l.brochure }}</h2>
+          <button type="button" class="iv-file" (click)="info('Brochure downloaded', 'تم تحميل الكتيّب')"><span class="iv-fileI"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"/></svg></span><span class="iv-filet">{{ co.brochure }}</span><span class="iv-dl"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></span></button>
+        </section>
+        @if (co.news; as news) {
+          <section class="iv-card iv-sec">
+            <h2 class="iv-h2s">{{ l.news }}</h2>
+            <div class="iv-news"><span class="mono">{{ news.date }}</span><b>{{ news.t }}</b><p>{{ news.b }}</p></div>
+          </section>
+        }
+      </aside>
+    </div>
+  }
+  }
+
+  @if (toastMsg()) { <div class="iv-toast">{{ toastMsg() }}</div> }
+</div>

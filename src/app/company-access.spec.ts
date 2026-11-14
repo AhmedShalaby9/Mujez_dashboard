@@ -118,8 +118,6 @@ describe('Company navigation redesign', () => {
         'contacts',
         'calendar',
         'tasks',
-        'projects',
-        'units',
         'reservations',
         'contracts',
         'commissions',
@@ -127,6 +125,7 @@ describe('Company navigation redesign', () => {
       ];
       const permissions = [
         'workspace.view',
+        'projects.read',
         ...pages.map((page) => page + '.read'),
         ...(role === 'team_lead' ? ['team.self.read'] : []),
       ];
@@ -150,7 +149,13 @@ describe('Company navigation redesign', () => {
         a.getAttribute('href'),
       );
       expect(paths.sort()).toEqual(
-        ['dashboard', ...pages, ...(role === 'team_lead' ? ['my-team'] : [])]
+        [
+          'dashboard',
+          ...pages,
+          'developers',
+          'compounds',
+          ...(role === 'team_lead' ? ['my-team'] : []),
+        ]
           .map((p) => '/company/' + p)
           .sort(),
       );

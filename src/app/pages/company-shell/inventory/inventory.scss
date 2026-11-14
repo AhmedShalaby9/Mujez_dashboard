@@ -216,3 +216,6 @@
 .iv-root .btn--dark{color:#fff!important}.iv-root .iv-close{position:absolute;inset-inline-end:18px;top:18px;width:32px;height:32px;flex:none}.iv-root .dialog__head{padding-inline-end:62px}.iv-root .dialog__head h2{margin:0;font-size:18px}.iv-root .iv-dcard .iv-logo{background:#c8f169;color:#111113}
 
 .iv-root .iv-select{width:auto;max-width:100%}.iv-grid>.iv-empty{grid-column:1/-1}.iv-root .iv-btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* Keep the catalog grid independent of the shared admin .co table-cell class. */
+.iv-root .iv-grid{display:grid;align-items:stretch}.iv-root .iv-grid>.iv-card{min-width:0;display:flex;flex-direction:column;overflow:hidden}.iv-root .iv-card-actions{margin-top:auto}

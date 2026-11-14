@@ -50,4 +50,4 @@ The sidebar's **Inventory** group now has **Developers**, **Compounds** and **Re
 - Fonts: the design used Geist, but the page inherits the app font.
 
 ## Verification
-`ng build` (development and production) passes, `npm run check:overlays` passes and `ng test` passes (20 files, 93 tests). The new spec renders every list and profile in both languages. I haven't looked at the pages in a browser.
+`ng build` (development and production) passes (production needed the component-style error budget raised from 10 kB to 20 kB for `inventory.scss`, which is 18 kB), `npm run check:overlays` passes and `ng test` passes (20 files, 93 tests). The new spec renders every list and profile in both languages. I haven't looked at the pages in a browser.

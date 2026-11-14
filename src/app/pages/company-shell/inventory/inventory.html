@@ -813,7 +813,7 @@
     >
       <header class="dialog__head">
         <div>
-          <h2 id="catalog-editor-title">
+          <h2 class="dialog__title" id="catalog-editor-title">
             {{ editing() ? X('Edit record', 'تعديل سجل') : X('Add record', 'إضافة سجل') }} ·
             {{ title() }}
           </h2>
@@ -822,7 +822,7 @@
           </p>
         </div>
         <button
-          class="iconbtn"
+          class="x iv-close"
           type="button"
           [disabled]="busy()"
           [attr.aria-label]="X('Close', 'إغلاق')"

@@ -109,6 +109,65 @@ describe('Company owner workspace identity', () => {
   });
 });
 describe('Company navigation redesign', () => {
+  it.each(['agent', 'team_lead'])(
+    'keeps %s navigation limited to sales access after the redesign',
+    async (role) => {
+      const pages = [
+        'pipeline',
+        'leads',
+        'contacts',
+        'calendar',
+        'tasks',
+        'projects',
+        'units',
+        'reservations',
+        'contracts',
+        'commissions',
+        'documents',
+      ];
+      const permissions = [
+        'workspace.view',
+        ...pages.map((page) => page + '.read'),
+        ...(role === 'team_lead' ? ['team.self.read'] : []),
+      ];
+      await TestBed.configureTestingModule({
+        imports: [CompanyShell],
+        providers: [
+          provideRouter([]),
+          {
+            provide: AuthService,
+            useValue: {
+              user: signal({ ...owner, pool: 'company_user', role, permissions }),
+              logout: vi.fn(),
+              watched: signal(0),
+            },
+          },
+        ],
+      }).compileComponents();
+      const f = TestBed.createComponent(CompanyShell);
+      f.detectChanges();
+      const paths = [...f.nativeElement.querySelectorAll('.sidebar__item')].map((a: any) =>
+        a.getAttribute('href'),
+      );
+      expect(paths.sort()).toEqual(
+        ['dashboard', ...pages, ...(role === 'team_lead' ? ['my-team'] : [])]
+          .map((p) => '/company/' + p)
+          .sort(),
+      );
+      expect(f.nativeElement.textContent).not.toContain('Company Owner');
+      expect(f.nativeElement.textContent).toContain(
+        role === 'team_lead' ? 'Team Lead' : 'Sales Agent',
+      );
+      f.componentInstance.collapsed.set(true);
+      f.detectChanges();
+      expect(
+        [...f.nativeElement.querySelectorAll('.sidebar__item')].every(
+          (a: any) => !!a.getAttribute('aria-label'),
+        ),
+      ).toBe(true);
+    },
+  );
+
   it('preserves permission filtering when groups collapse and the sidebar switches to icons', async () => {
     const user = signal({ ...owner, permissions: ['workspace.view', 'leads.read', 'tasks.read'] });
     await TestBed.configureTestingModule({

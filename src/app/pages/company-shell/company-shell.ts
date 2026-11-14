@@ -292,11 +292,17 @@ export class CompanyShell {
     const u = this.auth.user();
     const ws = u?.workspace;
     const name = ws ? ws.platformUserName : (u?.name ?? '');
+    const roleLabels: Record<string, { en: string; ar: string }> = {
+      company_owner: { en: 'Company Owner', ar: 'مالك الشركة' },
+      team_lead: { en: 'Team Lead', ar: 'قائد الفريق' },
+      agent: { en: 'Sales Agent', ar: 'وكيل المبيعات' },
+    };
     const role = ws
       ? (ws.platformRoleName?.[this.ui.lang()] ??
         (this.ui.lang() === 'ar' ? 'مدير منصة' : 'Platform Admin'))
       : (u?.roleName?.[this.ui.lang()] ??
-        (this.ui.lang() === 'ar' ? 'مالك الشركة' : 'Company Owner'));
+        roleLabels[u?.role ?? '']?.[this.ui.lang()] ??
+        (this.ui.lang() === 'ar' ? 'مستخدم الشركة' : 'Company User'));
     return {
       name,
       role,

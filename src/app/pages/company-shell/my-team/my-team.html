@@ -34,22 +34,24 @@
     </div>
   }
   @if (performance(); as p) {
-    <div class="team-kpis">
-      <div class="card">
-        <span>{{ t('Open leads', 'العملاء المفتوحون') }}</span
-        ><strong>{{ p.summary.openLeads }}</strong>
+    <div class="kpis team-kpis">
+      <div class="kpi">
+        <span class="kpi__label">{{ t('Open leads', 'العملاء المفتوحون') }}</span
+        ><strong class="kpi__value mono">{{ p.summary.openLeads }}</strong>
       </div>
-      <div class="card">
-        <span>{{ t('Open tasks', 'المهام المفتوحة') }}</span
-        ><strong>{{ p.summary.openTasks }}</strong>
+      <div class="kpi">
+        <span class="kpi__label">{{ t('Open tasks', 'المهام المفتوحة') }}</span
+        ><strong class="kpi__value mono">{{ p.summary.openTasks }}</strong>
       </div>
-      <div class="card">
-        <span>{{ t('Overdue tasks', 'المهام المتأخرة') }}</span
-        ><strong>{{ p.summary.overdueTasks }}</strong>
+      <div class="kpi">
+        <span class="kpi__label">{{ t('Overdue tasks', 'المهام المتأخرة') }}</span
+        ><strong class="kpi__value mono">{{ p.summary.overdueTasks }}</strong>
       </div>
-      <div class="card">
-        <span>{{ t('Won sales value · period', 'قيمة المبيعات الناجحة · الفترة') }}</span
-        ><strong>{{ money(p.summary.wonSalesMinor) }}</strong>
+      <div class="kpi">
+        <span class="kpi__label">{{
+          t('Won sales value · period', 'قيمة المبيعات الناجحة · الفترة')
+        }}</span
+        ><strong class="kpi__value mono">{{ money(p.summary.wonSalesMinor) }}</strong>
       </div>
     </div>
     <div class="tools">
@@ -88,14 +90,14 @@
     </div>
     @if (tab() === 'performance') {
       <div class="tools">
-        <label
-          >{{ t('Performance period', 'فترة الأداء') }}
+        <label class="period-filter"
+          ><span>{{ t('Performance period', 'فترة الأداء') }}</span>
           <select [ngModel]="days()" (ngModelChange)="changeDays($event)" [disabled]="loading()">
             <option [value]="7">{{ t('Last 7 days', 'آخر ٧ أيام') }}</option>
             <option [value]="30">{{ t('Last 30 days', 'آخر ٣٠ يومًا') }}</option>
             <option [value]="90">{{ t('Last 90 days', 'آخر ٩٠ يومًا') }}</option>
           </select></label
-        ><span class="muted">{{ p.from }} — {{ p.to }} · {{ p.timeZone }}</span>
+        ><span class="muted mono" dir="ltr">{{ p.from }} — {{ p.to }} · {{ p.timeZone }}</span>
       </div>
       <section class="card">
         <div class="scroll">
@@ -225,7 +227,9 @@
                       }
                     </td>
                     <td>{{ l.owner.name }}</td>
-                    <td>{{ stage(l.stage) }}</td>
+                    <td>
+                      <span class="pill">{{ stage(l.stage) }}</span>
+                    </td>
                     <td class="end">
                       @if (p.canAssign && l.stage !== 'won' && l.stage !== 'lost') {
                         <button
@@ -274,7 +278,9 @@
                             : t('Low', 'منخفضة')
                       }}
                     </td>
-                    <td>{{ status(task.status) }}</td>
+                    <td>
+                      <span class="pill">{{ status(task.status) }}</span>
+                    </td>
                     <td class="end">
                       <div class="task-actions">
                         @if (p.canManageTasks) {

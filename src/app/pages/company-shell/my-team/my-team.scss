@@ -1,28 +1,35 @@
-.team-kpis {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin: 12px 0 20px;
-  .card {
-    padding: 16px;
+// Keep the role-specific workspace on the shared company/admin foundations.
+.team-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
   }
-  span {
-    display: block;
-    color: #6e6e73;
-    font-size: 12px;
-  }
-  strong {
-    display: block;
-    margin-top: 10px;
-    font-size: 23px;
+  p {
+    margin: 0;
   }
 }
-.tools {
-  margin: 14px 0;
+.team-kpis .kpi {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+}
+.team-kpis .kpi__value {
+  margin: 0;
+}
+.tools {
+  margin: 0;
+  display: flex;
+  gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+  .tabs {
+    flex: 1;
+    min-width: 0;
+  }
   input {
     flex: 1;
     min-width: 180px;
@@ -51,15 +58,7 @@
 .late {
   color: #a13b2d;
 }
-@media (max-width: 800px) {
-  .team-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
 @media (max-width: 480px) {
-  .team-kpis {
-    grid-template-columns: 1fr;
-  }
   .tools select {
     max-width: 100%;
   }
@@ -102,4 +101,34 @@
   .task-fields {
     grid-template-columns: 1fr;
   }
+}
+
+.period-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+  color: var(--ink-secondary);
+  font-size: 12.5px;
+  > span {
+    font-weight: 500;
+  }
+}
+@media (max-width: 480px) {
+  .tools > :is(input, select),
+  .period-filter {
+    width: 100%;
+    min-width: 0;
+  }
+  .task-actions {
+    justify-content: flex-start;
+  }
+}
+
+.card table a {
+  color: var(--ink-secondary);
+  text-underline-offset: 3px;
+}
+.card table a:hover {
+  color: var(--ink);
 }

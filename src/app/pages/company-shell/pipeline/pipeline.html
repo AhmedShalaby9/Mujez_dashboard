@@ -176,7 +176,7 @@
 
 @if (dialog()) {
   <div class="scrim scrim--top" (click)="!saving() && dialog.set(false)"></div>
-  <div class="dialog" role="dialog" aria-label="Pipeline deal">
+  <div class="dialog" role="dialog" aria-label="Pipeline deal" aria-modal="true">
     <div class="dialog__head">
       <span class="dialog__title">{{
         editing() ? t('Edit deal', 'تعديل الفرصة') : t('New deal', 'فرصة جديدة')
@@ -288,7 +288,7 @@
 
 @if (closing(); as c) {
   <div class="scrim scrim--top" (click)="!saving() && closing.set(null)"></div>
-  <div class="dialog" role="dialog" aria-label="Change pipeline stage">
+  <div class="dialog" role="dialog" aria-label="Change pipeline stage" aria-modal="true">
     <div class="dialog__head">
       <span class="dialog__title"
         >{{

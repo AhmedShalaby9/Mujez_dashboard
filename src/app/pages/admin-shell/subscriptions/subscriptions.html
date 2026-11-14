@@ -325,13 +325,21 @@
 
 @if (viewing(); as s) {
   <div class="scrim" (click)="closeView()"></div>
-  <aside class="drawer" (click)="$event.stopPropagation()">
+  <aside
+    class="drawer"
+    (click)="$event.stopPropagation()"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-subscriptions-1-title"
+  >
     <div class="drawer__head">
       <span class="logo logo--lg" [style.background]="logoBg(s)" [style.color]="logoFg(s)">{{
         logoInitials(s)
       }}</span>
       <div class="drawer__title">
-        <span class="drawer__name">{{ companyName(s) }}</span>
+        <span class="drawer__name" id="overlay-admin-shell-subscriptions-1-title">{{
+          companyName(s)
+        }}</span>
         <span class="mono muted" dir="ltr">{{ s.subId }} · {{ s.companyId }}</span>
         <div class="pills">
           <span
@@ -419,16 +427,17 @@
         </div>
       </div>
       <div class="sect">
-        <span class="sect__label"
-          >{{ lang() === 'ar' ? 'السجل' : 'HISTORY'
-          }}</span
-        >
+        <span class="sect__label">{{ lang() === 'ar' ? 'السجل' : 'HISTORY' }}</span>
         <div class="kv">
           <span>{{ lang() === 'ar' ? 'بداية الفترة الحالية' : 'Current period started' }}</span
           ><b>{{ date(s.periodStart) }}</b>
         </div>
-        @for(e of history();track e.id){<div class="kv"><span>{{e.action}} · {{e.actor || '—'}}</span><b>{{date(e.at)}}</b></div>}
-
+        @for (e of history(); track e.id) {
+          <div class="kv">
+            <span>{{ e.action }} · {{ e.actor || '—' }}</span
+            ><b>{{ date(e.at) }}</b>
+          </div>
+        }
       </div>
     </div>
     <div class="drawer__foot">
@@ -464,9 +473,17 @@
 
 @if (changingPlan(); as s) {
   <div class="scrim scrim--top" (click)="closeChangePlan()"></div>
-  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+  <div
+    class="dialog"
+    role="dialog"
+    (click)="$event.stopPropagation()"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-subscriptions-2-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{ L().changePlanTitle }} · {{ companyName(s) }}</span>
+      <span class="dialog__title" id="overlay-admin-shell-subscriptions-2-title"
+        >{{ L().changePlanTitle }} · {{ companyName(s) }}</span
+      >
       <span class="dialog__body">{{ L().changePlanSub(companyName(s)) }}</span>
     </div>
     <div class="dialog__main">
@@ -490,12 +507,21 @@
       <div class="field">
         <span>{{ lang() === 'ar' ? 'التطبيق' : 'Takes effect' }}</span>
         <div class="segs">
-          <button type="button" class="seg" [class.seg--on]="changeTiming()==='now'" (click)="changeTiming.set('now')">
+          <button
+            type="button"
+            class="seg"
+            [class.seg--on]="changeTiming() === 'now'"
+            (click)="changeTiming.set('now')"
+          >
             {{ lang() === 'ar' ? 'فورًا' : 'Immediately' }}
           </button>
-          <button type="button" class="seg" [class.seg--on]="changeTiming()==='renewal'" (click)="changeTiming.set('renewal')">
-            {{ lang() === 'ar' ? 'عند التجديد' : 'At renewal'
-            }}
+          <button
+            type="button"
+            class="seg"
+            [class.seg--on]="changeTiming() === 'renewal'"
+            (click)="changeTiming.set('renewal')"
+          >
+            {{ lang() === 'ar' ? 'عند التجديد' : 'At renewal' }}
           </button>
         </div>
       </div>
@@ -534,9 +560,15 @@
 
 @if (confirming(); as cf) {
   <div class="scrim scrim--top" (click)="cancelConfirm()"></div>
-  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+  <div
+    class="dialog"
+    role="dialog"
+    (click)="$event.stopPropagation()"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-subscriptions-3-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title"
+      <span class="dialog__title" id="overlay-admin-shell-subscriptions-3-title"
         >{{ cf.kind === 'cancel' ? L().cancelTitle : L().renewTitle }} ·
         {{ companyName(cf.sub) }}</span
       >
@@ -551,20 +583,26 @@
         <div class="field">
           <span>{{ lang() === 'ar' ? 'التوقيت' : 'When' }}</span>
           <div class="segs">
-            <button type="button" class="seg" [class.seg--on]="cancelTiming()==='renewal'" (click)="cancelTiming.set('renewal')">
+            <button
+              type="button"
+              class="seg"
+              [class.seg--on]="cancelTiming() === 'renewal'"
+              (click)="cancelTiming.set('renewal')"
+            >
               {{ lang() === 'ar' ? 'عند التجديد' : 'At renewal' }} · {{ date(cf.sub.renewsOn) }}
             </button>
-            <button type="button" class="seg" [class.seg--on]="cancelTiming()==='now'" (click)="cancelTiming.set('now')">
-              {{ lang() === 'ar' ? 'فورًا' : 'Immediately'
-              }}
+            <button
+              type="button"
+              class="seg"
+              [class.seg--on]="cancelTiming() === 'now'"
+              (click)="cancelTiming.set('now')"
+            >
+              {{ lang() === 'ar' ? 'فورًا' : 'Immediately' }}
             </button>
           </div>
         </div>
         <label class="field">
-          <span
-            >{{ lang() === 'ar' ? 'السبب' : 'Reason'
-            }}</span
-          >
+          <span>{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span>
           <select [value]="cancelReason()" (change)="cancelReason.set($any($event.target).value)">
             <option value="price">{{ lang() === 'ar' ? 'السعر' : 'Price' }}</option>
             <option value="features">
@@ -580,10 +618,7 @@
           </select>
         </label>
         <label class="field">
-          <span
-            >{{ lang() === 'ar' ? 'ملاحظة داخلية' : 'Internal note'
-            }}</span
-          >
+          <span>{{ lang() === 'ar' ? 'ملاحظة داخلية' : 'Internal note' }}</span>
           <textarea
             rows="2"
             [value]="cancelNote()"
@@ -633,9 +668,15 @@
 
 @if (staticForm(); as sf) {
   <div class="scrim scrim--top" (click)="staticForm.set(null)"></div>
-  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+  <div
+    class="dialog"
+    role="dialog"
+    (click)="$event.stopPropagation()"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-subscriptions-4-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">
+      <span class="dialog__title" id="overlay-admin-shell-subscriptions-4-title">
         {{
           sf.kind === 'cycle'
             ? lang() === 'ar'
@@ -669,10 +710,20 @@
           <div class="field">
             <span>{{ lang() === 'ar' ? 'الدورة الجديدة' : 'New cycle' }}</span>
             <div class="segs">
-              <button type="button" class="seg" [class.seg--on]="cycleDraft()==='monthly'" (click)="cycleDraft.set('monthly')">
+              <button
+                type="button"
+                class="seg"
+                [class.seg--on]="cycleDraft() === 'monthly'"
+                (click)="cycleDraft.set('monthly')"
+              >
                 {{ L().cycleLabel.monthly }}
               </button>
-              <button type="button" class="seg" [class.seg--on]="cycleDraft()==='annual'" (click)="cycleDraft.set('annual')">
+              <button
+                type="button"
+                class="seg"
+                [class.seg--on]="cycleDraft() === 'annual'"
+                (click)="cycleDraft.set('annual')"
+              >
                 {{ L().cycleLabel.annual }}
               </button>
             </div>
@@ -744,12 +795,26 @@
 
 @if (creating()) {
   <div class="scrim" (click)="creating.set(false)"></div>
-  <aside class="drawer">
+  <aside
+    class="drawer"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-subscriptions-5-title"
+  >
     <div class="drawer__head">
       <div class="drawer__title">
-        <span class="drawer__name">{{ lang() === 'ar' ? 'اشتراك جديد' : 'New subscription' }}</span>
+        <span class="drawer__name" id="overlay-admin-shell-subscriptions-5-title">{{
+          lang() === 'ar' ? 'اشتراك جديد' : 'New subscription'
+        }}</span>
       </div>
-      <button type="button" class="x" (click)="creating.set(false)">×</button>
+      <button
+        type="button"
+        class="x"
+        (click)="creating.set(false)"
+        [attr.aria-label]="lang() === 'ar' ? 'إغلاق' : 'Close'"
+      >
+        ×
+      </button>
     </div>
     <form class="drawer__body" (submit)="$event.preventDefault(); createSubscription()">
       <label class="field"

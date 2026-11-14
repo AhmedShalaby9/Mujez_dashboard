@@ -62,11 +62,20 @@
 
 @if (elevateOpen()) {
   <div class="scrim" (click)="closeElevate()"></div>
-  <div class="dialog" (click)="$event.stopPropagation()">
-    <div class="dialog__body dialog__body--pad">
-      <span class="dialog__title">{{
+  <div
+    class="dialog workspace-access-dialog"
+    [attr.dir]="dir()"
+    (click)="$event.stopPropagation()"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-pages-company-shell-1-title"
+  >
+    <div class="dialog__head">
+      <span class="dialog__title" id="overlay-pages-company-shell-1-title">{{
         lang() === 'ar' ? 'طلب صلاحية الإدارة' : 'Request management access'
       }}</span>
+    </div>
+    <div class="dialog__main">
       <label class="field">
         <span class="field__label">{{ lang() === 'ar' ? 'السبب' : 'Reason' }}</span>
         <textarea
@@ -82,8 +91,8 @@
           @for (d of wsDurations; track d) {
             <button
               type="button"
-              class="chip"
-              [class.chip--active]="elevateDuration() === d"
+              class="btn btn--sm"
+              [class.btn--dark]="elevateDuration() === d"
               (click)="elevateDuration.set(d)"
             >
               {{ d }}m
@@ -94,7 +103,6 @@
       <label class="field">
         <span class="field__label">{{ lang() === 'ar' ? 'كلمة المرور' : 'Your password' }}</span>
         <input
-          class="search"
           type="password"
           autocomplete="current-password"
           dir="ltr"
@@ -103,19 +111,14 @@
         />
       </label>
       @if (wsError()) {
-        <span class="field__error">{{ wsError() }}</span>
+        <span class="field__error" role="alert">{{ wsError() }}</span>
       }
     </div>
-    <div class="dialog__footer">
-      <button type="button" class="btn btn--ghost" (click)="closeElevate()">
+    <div class="dialog__foot">
+      <button type="button" class="btn" (click)="closeElevate()">
         {{ lang() === 'ar' ? 'إلغاء' : 'Cancel' }}
       </button>
-      <button
-        type="button"
-        class="btn btn--primary"
-        [disabled]="wsBusy()"
-        (click)="submitElevate()"
-      >
+      <button type="button" class="btn btn--dark" [disabled]="wsBusy()" (click)="submitElevate()">
         {{ lang() === 'ar' ? 'تأكيد' : 'Confirm' }}
       </button>
     </div>

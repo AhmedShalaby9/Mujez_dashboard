@@ -261,6 +261,7 @@ input,
 select,
 textarea {
   width: 100%;
+  min-width: 0;
   min-height: 38px;
   padding: 0 12px;
   border: 1px solid #e2e2dc;
@@ -306,6 +307,7 @@ textarea {
   inset-inline-end: 0;
   z-index: 71;
   width: min(480px, 100vw);
+  max-height: 100dvh;
   display: flex;
   flex-direction: column;
   background: #fff;
@@ -315,6 +317,8 @@ textarea {
   z-index: 81;
 }
 .drawer__head {
+  flex: none;
+  min-width: 0;
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -335,6 +339,8 @@ textarea {
 }
 .drawer__body {
   flex: 1;
+  min-height: 0;
+  min-width: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -342,6 +348,7 @@ textarea {
   padding: 18px 22px;
 }
 .drawer__foot {
+  flex: none;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -398,6 +405,7 @@ textarea {
   transform: translate(-50%, -50%);
   width: min(460px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -406,10 +414,15 @@ textarea {
   box-shadow: 0 24px 60px rgba(17, 17, 19, 0.3);
 }
 .dialog__head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-row);
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 20px 22px 4px;
+  padding: 20px 22px 16px;
 }
 .dialog__title {
   font-size: 16px;
@@ -420,16 +433,23 @@ textarea {
   text-wrap: pretty;
 }
 .dialog__main {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px 22px 4px;
+  padding: 18px 22px;
 }
 .dialog__foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-top: 1px solid var(--border-row);
+  flex-wrap: wrap;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 16px 22px 20px;
+  padding: 14px 22px;
 }
 .ack {
   display: flex;
@@ -562,5 +582,85 @@ textarea {
   span {
     font-size: 12px;
     color: #6e6e73;
+  }
+}
+
+// Forms and overlays share the same control states in every workspace.
+input:is([type='checkbox'], [type='radio']) {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  accent-color: var(--ink);
+}
+input[type='file'] {
+  height: auto;
+  padding: 8px;
+  line-height: 1.5;
+  &::file-selector-button {
+    margin-inline-end: 10px;
+    padding: 6px 10px;
+    border: 1px solid var(--border-card);
+    border-radius: 6px;
+    background: var(--surface-alt);
+    color: var(--ink);
+    font: inherit;
+    cursor: pointer;
+  }
+}
+:is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+:is(input, select, textarea):disabled {
+  color: var(--ink-muted);
+  background: var(--surface-alt-2);
+  cursor: not-allowed;
+}
+:is(input, select, textarea):is(.invalid, [aria-invalid='true']) {
+  border-color: var(--danger-solid);
+  &:focus {
+    box-shadow: 0 0 0 3px var(--danger-bg);
+  }
+}
+.dialog__title,
+.drawer__name {
+  overflow-wrap: anywhere;
+}
+.dialog__main > p {
+  margin: 0;
+  line-height: 1.6;
+}
+:is(.dialog, .drawer) :is(.field, .grid > *, .form > *) {
+  min-width: 0;
+}
+:is(.dialog, .drawer) pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+:is(.dialog__foot, .drawer__foot) .btn {
+  max-width: 100%;
+  min-height: 36px;
+  height: auto;
+  padding-block: 8px;
+  white-space: normal;
+}
+@media (max-width: 480px) {
+  .dialog__head,
+  .drawer__head {
+    padding: 16px;
+  }
+  .dialog__main,
+  .drawer__body {
+    padding: 16px;
+  }
+  .dialog__foot,
+  .drawer__foot {
+    padding: 12px 16px;
+  }
+  :is(.dialog, .drawer) .grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

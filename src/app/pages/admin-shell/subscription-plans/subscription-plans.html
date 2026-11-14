@@ -138,9 +138,15 @@
 @if (editing() || creating()) {
   @let p = editing();
   <div class="scrim scrim--top" (click)="closeEdit()"></div>
-  <div class="dialog dialog--wide" role="dialog" (click)="$event.stopPropagation()">
+  <div
+    class="dialog dialog--wide"
+    role="dialog"
+    (click)="$event.stopPropagation()"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-subscription-plans-1-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{
+      <span class="dialog__title" id="overlay-admin-shell-subscription-plans-1-title">{{
         creating()
           ? lang() === 'ar'
             ? 'باقة جديدة'
@@ -302,9 +308,15 @@
 
 @if (confirming(); as cf) {
   <div class="scrim scrim--top" (click)="cancelConfirm()"></div>
-  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+  <div
+    class="dialog"
+    role="dialog"
+    (click)="$event.stopPropagation()"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-subscription-plans-2-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title"
+      <span class="dialog__title" id="overlay-admin-shell-subscription-plans-2-title"
         >{{ cf.kind === 'archive' ? L().archiveTitle : L().restoreTitle }} ·
         {{ name(cf.plan) }}</span
       >

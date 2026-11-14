@@ -63,8 +63,20 @@
         }}</small>
       }
     </div>
-    <div class="stat"><span>{{lang()==='ar'?'المدة الوسيطة لأول صفقة':'Median time to first deal'}}</span><b>{{onboardingMetrics()?.medianDays===null || !onboardingMetrics()?'—':(onboardingMetrics().medianDays.toFixed(1)+' '+(lang()==='ar'?'يوم':'days'))}}</b><small>{{lang()==='ar'?'آخر ٩٠ يومًا':'Last 90 days'}}</small></div>
-    <div class="stat"><span>{{lang()==='ar'?'اكتمل أول تعامل':'First-deal completions'}}</span><b>{{onboardingMetrics()?.completed??'—'}}</b><small>{{lang()==='ar'?'لا توجد تجارب مجانية':'No free trials offered'}}</small></div>
+    <div class="stat">
+      <span>{{ lang() === 'ar' ? 'المدة الوسيطة لأول صفقة' : 'Median time to first deal' }}</span
+      ><b>{{
+        onboardingMetrics()?.medianDays === null || !onboardingMetrics()
+          ? '—'
+          : onboardingMetrics().medianDays.toFixed(1) + ' ' + (lang() === 'ar' ? 'يوم' : 'days')
+      }}</b
+      ><small>{{ lang() === 'ar' ? 'آخر ٩٠ يومًا' : 'Last 90 days' }}</small>
+    </div>
+    <div class="stat">
+      <span>{{ lang() === 'ar' ? 'اكتمل أول تعامل' : 'First-deal completions' }}</span
+      ><b>{{ onboardingMetrics()?.completed ?? '—' }}</b
+      ><small>{{ lang() === 'ar' ? 'لا توجد تجارب مجانية' : 'No free trials offered' }}</small>
+    </div>
   </div>
 
   <section class="card">
@@ -101,8 +113,7 @@
             <th>{{ lang() === 'ar' ? 'الحالة' : 'Status' }}</th>
             <th>{{ lang() === 'ar' ? 'نهاية التجربة' : 'Trial ends' }}</th>
             <th>
-              {{ lang() === 'ar' ? 'مدير النجاح' : 'Success manager'
-              }}
+              {{ lang() === 'ar' ? 'مدير النجاح' : 'Success manager' }}
             </th>
             <th></th>
           </tr>
@@ -149,7 +160,9 @@
                 }
               </td>
               <td [class.late]="(daysLeft(c) ?? 99) <= 4">{{ trialEndLabel(c) }}</td>
-              <td class="muted">{{c.successManager?.name || (lang() === 'ar' ? 'غير مُسند' : 'Unassigned')}}</td>
+              <td class="muted">
+                {{ c.successManager?.name || (lang() === 'ar' ? 'غير مُسند' : 'Unassigned') }}
+              </td>
               <td (click)="$event.stopPropagation()">
                 @if (c.status === 'pending') {
                   <button type="button" class="btn btn--sm" (click)="openInvite(c)">
@@ -157,8 +170,7 @@
                   </button>
                 } @else {
                   <button type="button" class="btn btn--sm" (click)="sendReminder(c)">
-                    {{ L().sendReminder
-                    }}
+                    {{ L().sendReminder }}
                   </button>
                 }
               </td>
@@ -178,13 +190,19 @@
 
 @if (viewing(); as c) {
   <div class="scrim" (click)="closeView()"></div>
-  <aside class="drawer" (click)="$event.stopPropagation()">
+  <aside
+    class="drawer"
+    (click)="$event.stopPropagation()"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-onboarding-1-title"
+  >
     <div class="drawer__head">
       <span class="logo logo--lg" [style.background]="logoBg(c)" [style.color]="logoFg(c)">{{
         logoInitials(c)
       }}</span>
       <div class="drawer__title">
-        <span class="drawer__name">{{ name(c) }}</span>
+        <span class="drawer__name" id="overlay-admin-shell-onboarding-1-title">{{ name(c) }}</span>
         <span class="mono muted" dir="ltr">{{ c.id }} · {{ c.slug }}</span>
         <div>
           <span

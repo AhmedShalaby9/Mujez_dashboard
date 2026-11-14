@@ -61,7 +61,13 @@
       ><b [class.bad]="stats().off > 0">{{ stats().off }}</b>
       <small>{{ lang() === 'ar' ? 'مفتاح الإيقاف' : 'kill switch' }}</small>
     </div>
-    <div class="kpi"><span>{{lang()==='ar'?'متوقفة':'Deprecated'}}</span><b>{{stats().deprecated}}</b><small>{{lang()==='ar'?'غير متاحة للباقات الجديدة':'Unavailable for new plans'}}</small></div>
+    <div class="kpi">
+      <span>{{ lang() === 'ar' ? 'متوقفة' : 'Deprecated' }}</span
+      ><b>{{ stats().deprecated }}</b
+      ><small>{{
+        lang() === 'ar' ? 'غير متاحة للباقات الجديدة' : 'Unavailable for new plans'
+      }}</small>
+    </div>
   </div>
 
   <section class="card">
@@ -252,9 +258,14 @@
 
 @if (planConfirm(); as t) {
   <div class="scrim scrim--top" (click)="cancelPlanConfirm()"></div>
-  <div class="dialog" role="dialog">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-feature-management-1-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{
+      <span class="dialog__title" id="overlay-admin-shell-feature-management-1-title">{{
         L().confirmPlanTitle(name(t.feature), planName(t.plan), t.next)
       }}</span>
       <span class="dialog__body">{{ L().confirmPlanBody(planCompanies(t.plan), t.next) }}</span>
@@ -275,9 +286,16 @@
 
 @if (flagConfirm(); as t) {
   <div class="scrim scrim--top" (click)="cancelFlagConfirm()"></div>
-  <div class="dialog" role="dialog">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-feature-management-2-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{ L().flagTitle(name(t.feature), t.next) }}</span>
+      <span class="dialog__title" id="overlay-admin-shell-feature-management-2-title">{{
+        L().flagTitle(name(t.feature), t.next)
+      }}</span>
       <span class="dialog__body">{{ L().flagBody(t.next) }}</span>
     </div>
     <div class="dialog__main">
@@ -314,9 +332,16 @@
 
 @if (rolloutEditing(); as f) {
   <div class="scrim scrim--top" (click)="closeRollout()"></div>
-  <div class="dialog" role="dialog">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-feature-management-3-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{ L().rolloutTitle(name(f)) }}</span>
+      <span class="dialog__title" id="overlay-admin-shell-feature-management-3-title">{{
+        L().rolloutTitle(name(f))
+      }}</span>
       <span class="dialog__body">{{
         lang() === 'ar'
           ? 'تُختار الشركات بشكل ثابت حسب معرّفها، فلا تتبدل بين الطلبات.'
@@ -338,16 +363,24 @@
         />
       </label>
       <div class="field">
-        <span
-          >{{
-            lang() === 'ar'
-              ? 'متوقفة (مخفية للباقات الجديدة)'
-              : 'Deprecated (hidden for new plans)'
-          }}</span
-        >
+        <span>{{
+          lang() === 'ar' ? 'متوقفة (مخفية للباقات الجديدة)' : 'Deprecated (hidden for new plans)'
+        }}</span>
         <div class="segs">
-          <button type="button" class="seg" [class.seg--on]="!deprecationDraft()" (click)="deprecationDraft.set(false)">{{ lang() === 'ar' ? 'لا' : 'No' }}</button>
-          <button type="button" class="seg" [class.seg--on]="deprecationDraft()" (click)="deprecationDraft.set(true)">
+          <button
+            type="button"
+            class="seg"
+            [class.seg--on]="!deprecationDraft()"
+            (click)="deprecationDraft.set(false)"
+          >
+            {{ lang() === 'ar' ? 'لا' : 'No' }}
+          </button>
+          <button
+            type="button"
+            class="seg"
+            [class.seg--on]="deprecationDraft()"
+            (click)="deprecationDraft.set(true)"
+          >
             {{ lang() === 'ar' ? 'نعم' : 'Yes' }}
           </button>
         </div>
@@ -364,9 +397,16 @@
 
 @if (removeConfirm(); as o) {
   <div class="scrim scrim--top" (click)="cancelRemove()"></div>
-  <div class="dialog" role="dialog">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-feature-management-4-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{ L().removeTitle(overrideCompany(o)) }}</span>
+      <span class="dialog__title" id="overlay-admin-shell-feature-management-4-title">{{
+        L().removeTitle(overrideCompany(o))
+      }}</span>
       <span class="dialog__body">{{ L().removeBody }}</span>
     </div>
     <div class="dialog__foot">
@@ -380,9 +420,14 @@
 
 @if (adding()) {
   <div class="scrim scrim--top" (click)="adding.set(false)"></div>
-  <div class="dialog" role="dialog">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-feature-management-5-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{
+      <span class="dialog__title" id="overlay-admin-shell-feature-management-5-title">{{
         lang() === 'ar' ? 'استثناء لشركة' : 'Company override'
       }}</span>
       <span class="dialog__body">{{
@@ -443,14 +488,24 @@
               {{ d }} {{ lang() === 'ar' ? 'يوم' : 'days' }}
             </button>
           }
-          <button type="button" class="seg" [class.seg--on]="duration()==='permanent'" (click)="setDuration('permanent')">
-            {{ lang() === 'ar' ? 'دائم' : 'Permanent'
-            }}
+          <button
+            type="button"
+            class="seg"
+            [class.seg--on]="duration() === 'permanent'"
+            (click)="setDuration('permanent')"
+          >
+            {{ lang() === 'ar' ? 'دائم' : 'Permanent' }}
           </button>
         </div>
         <span class="muted"
           >{{ lang() === 'ar' ? 'ينتهي في ' : 'Ends on '
-          }}{{ duration()==='permanent'?(lang()==='ar'?'دائم':'Permanent'):date(draft.expiresAt + 'T12:00:00Z') }}</span
+          }}{{
+            duration() === 'permanent'
+              ? lang() === 'ar'
+                ? 'دائم'
+                : 'Permanent'
+              : date(draft.expiresAt + 'T12:00:00Z')
+          }}</span
         >
       </div>
       <label class="field"

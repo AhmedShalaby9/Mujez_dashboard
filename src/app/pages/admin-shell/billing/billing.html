@@ -290,13 +290,21 @@
 
 @if (viewing(); as i) {
   <div class="scrim" (click)="closeView()"></div>
-  <aside class="drawer" (click)="$event.stopPropagation()">
+  <aside
+    class="drawer"
+    (click)="$event.stopPropagation()"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-billing-1-title"
+  >
     <div class="drawer__head">
       <span class="logo logo--lg" [style.background]="logoBg(i)" [style.color]="logoFg(i)">{{
         logoInitials(i)
       }}</span>
       <div class="drawer__title">
-        <span class="drawer__name mono">{{ i.number }}</span>
+        <span class="drawer__name mono" id="overlay-admin-shell-billing-1-title">{{
+          i.number
+        }}</span>
         <span class="muted"
           >{{ companyName(i) }} · <span class="mono">{{ i.companyId }}</span></span
         >
@@ -470,9 +478,17 @@
 
 @if (recording(); as i) {
   <div class="scrim scrim--top" (click)="closeRecord()"></div>
-  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+  <div
+    class="dialog"
+    role="dialog"
+    (click)="$event.stopPropagation()"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-billing-2-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{ L().recordTitle }}</span>
+      <span class="dialog__title" id="overlay-admin-shell-billing-2-title">{{
+        L().recordTitle
+      }}</span>
       <span class="dialog__body">{{ L().recordSub(i.number) }}</span>
     </div>
     <div class="dialog__main">
@@ -568,9 +584,17 @@
 
 @if (voiding(); as i) {
   <div class="scrim scrim--top" (click)="closeVoidDialog()"></div>
-  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+  <div
+    class="dialog"
+    role="dialog"
+    (click)="$event.stopPropagation()"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-billing-3-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{ L().voidTitle }} · {{ i.number }}</span>
+      <span class="dialog__title" id="overlay-admin-shell-billing-3-title"
+        >{{ L().voidTitle }} · {{ i.number }}</span
+      >
       <span class="dialog__body">{{ L().voidBody(i.number) }}</span>
     </div>
     <div class="dialog__main">
@@ -615,9 +639,17 @@
 
 @if (crediting(); as i) {
   <div class="scrim scrim--top" (click)="closeCredit()"></div>
-  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+  <div
+    class="dialog"
+    role="dialog"
+    (click)="$event.stopPropagation()"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-billing-4-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{ L().creditTitle }} · {{ i.number }}</span>
+      <span class="dialog__title" id="overlay-admin-shell-billing-4-title"
+        >{{ L().creditTitle }} · {{ i.number }}</span
+      >
       <span class="dialog__body">{{ L().creditSub(i.number) }}</span>
     </div>
     <div class="dialog__main">
@@ -669,14 +701,26 @@
 
 @if (creating()) {
   <div class="scrim" (click)="creating.set(false)"></div>
-  <aside class="drawer">
+  <aside
+    class="drawer"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-billing-5-title"
+  >
     <div class="drawer__head">
       <div class="drawer__title">
-        <span class="drawer__name">{{
+        <span class="drawer__name" id="overlay-admin-shell-billing-5-title">{{
           lang() === 'ar' ? 'فاتورة مسودة جديدة' : 'New draft invoice'
         }}</span>
       </div>
-      <button type="button" class="x" (click)="creating.set(false)">×</button>
+      <button
+        type="button"
+        class="x"
+        (click)="creating.set(false)"
+        [attr.aria-label]="lang() === 'ar' ? 'إغلاق' : 'Close'"
+      >
+        ×
+      </button>
     </div>
     <form class="drawer__body" (submit)="$event.preventDefault(); createInvoice()">
       <label class="field"

@@ -182,7 +182,11 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-company-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, RouteSkeleton],
   templateUrl: './company-shell.html',
-  styleUrls: ['../admin-shell/admin-sidebar.scss', './company-shell.scss'],
+  styleUrls: [
+    '../admin-shell/admin-sidebar.scss',
+    '../admin-shell/admin-ui.scss',
+    './company-shell.scss',
+  ],
 })
 export class CompanyShell {
   readonly collapsed = signal(false);

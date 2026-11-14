@@ -287,13 +287,21 @@
 
 @if (viewing(); as c) {
   <div class="scrim" (click)="closeView()"></div>
-  <aside class="drawer" (click)="$event.stopPropagation()">
+  <aside
+    class="drawer"
+    (click)="$event.stopPropagation()"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-companies-1-title"
+  >
     <div class="drawer__head">
       <span class="logo logo--lg" [style.background]="logoBg(c)" [style.color]="logoFg(c)">{{
         logoInitials(c)
       }}</span>
       <div class="drawer__title">
-        <span class="drawer__name">{{ companyName(c) }}</span>
+        <span class="drawer__name" id="overlay-admin-shell-companies-1-title">{{
+          companyName(c)
+        }}</span>
         <span class="mono drawer__id" dir="ltr">{{ c.id }} · {{ c.slug }}</span>
         <div class="drawer__pills">
           <span
@@ -316,8 +324,21 @@
     </div>
 
     <div class="drawer__body">
-      <div class="kv"><span>{{lang()==='ar'?'مدير النجاح':'Success manager'}}</span><b>{{c.successManager?.name || '—'}}</b>
-      @if(auth.user()?.permissions?.includes('co.create')){<select [value]="c.successManager?.id || ''" (change)="assignManager(c,$any($event.target).value)"><option value="">{{lang()==='ar'?'غير مُسند':'Unassigned'}}</option>@for(m of successManagers();track m.id){<option [value]="m.id">{{m.name}}</option>}</select>}</div>
+      <div class="kv">
+        <span>{{ lang() === 'ar' ? 'مدير النجاح' : 'Success manager' }}</span
+        ><b>{{ c.successManager?.name || '—' }}</b>
+        @if (auth.user()?.permissions?.includes('co.create')) {
+          <select
+            [value]="c.successManager?.id || ''"
+            (change)="assignManager(c, $any($event.target).value)"
+          >
+            <option value="">{{ lang() === 'ar' ? 'غير مُسند' : 'Unassigned' }}</option>
+            @for (m of successManagers(); track m.id) {
+              <option [value]="m.id">{{ m.name }}</option>
+            }
+          </select>
+        }
+      </div>
       @if (L().statusNote(c.status, c.statusReason ?? null); as note) {
         <p
           class="note"
@@ -580,9 +601,17 @@
 
 @if (wsCompany(); as c) {
   <div class="scrim scrim--top" (click)="closeWsDialog()"></div>
-  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+  <div
+    class="dialog"
+    role="dialog"
+    (click)="$event.stopPropagation()"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-companies-2-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{ L().wsTitle }}</span>
+      <span class="dialog__title" id="overlay-admin-shell-companies-2-title">{{
+        L().wsTitle
+      }}</span>
       <span class="dialog__body">{{ companyName(c) }} · {{ L().wsSub }}</span>
     </div>
     <div class="dialog__main">
@@ -673,7 +702,13 @@
 
 @if (confirming(); as cf) {
   <div class="scrim scrim--top" (click)="cancelConfirm()"></div>
-  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+  <div
+    class="dialog"
+    role="dialog"
+    (click)="$event.stopPropagation()"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-companies-3-title"
+  >
     <div class="dialog__head">
       <span class="warnIcon" [class.warnIcon--ok]="cf.kind === 'reactivate'">
         <svg
@@ -691,7 +726,7 @@
           />
         </svg>
       </span>
-      <span class="dialog__title">
+      <span class="dialog__title" id="overlay-admin-shell-companies-3-title">
         {{
           cf.kind === 'suspend'
             ? L().confirmSuspendTitle
@@ -788,14 +823,26 @@
 
 @if (formOpen()) {
   <div class="scrim" (click)="formOpen.set(false)"></div>
-  <aside class="drawer">
+  <aside
+    class="drawer"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-companies-4-title"
+  >
     <div class="drawer__head">
       <div class="drawer__title">
-        <span class="drawer__name">{{
+        <span class="drawer__name" id="overlay-admin-shell-companies-4-title">{{
           lang() === 'ar' ? 'بيانات الشركة' : 'Company details'
         }}</span>
       </div>
-      <button type="button" class="x" (click)="formOpen.set(false)">×</button>
+      <button
+        type="button"
+        class="x"
+        (click)="formOpen.set(false)"
+        [attr.aria-label]="lang() === 'ar' ? 'إغلاق' : 'Close'"
+      >
+        ×
+      </button>
     </div>
     <form class="drawer__body form" (submit)="$event.preventDefault(); saveCompany()">
       <label class="field"
@@ -887,7 +934,12 @@
 
 @if (ownerDialog(); as c) {
   <div class="scrim scrim--top" (click)="!ownerSaving() && closeOwner()"></div>
-  <aside class="drawer drawer--top" aria-label="Company owner invitation">
+  <aside
+    class="drawer drawer--top"
+    aria-label="Company owner invitation"
+    role="dialog"
+    aria-modal="true"
+  >
     <div class="drawer__head">
       <div class="drawer__title">
         <span class="drawer__name">{{
@@ -895,7 +947,15 @@
         }}</span>
         <span class="muted">{{ companyName(c) }}</span>
       </div>
-      <button type="button" class="x" [disabled]="ownerSaving()" (click)="closeOwner()">×</button>
+      <button
+        type="button"
+        class="x"
+        [disabled]="ownerSaving()"
+        (click)="closeOwner()"
+        [attr.aria-label]="lang() === 'ar' ? 'إغلاق' : 'Close'"
+      >
+        ×
+      </button>
     </div>
     <div class="drawer__body">
       <div class="kv">

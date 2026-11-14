@@ -242,9 +242,16 @@
 
 @if (inviting()) {
   <div class="scrim scrim--top" (click)="closeInvite()"></div>
-  <div class="dialog" role="dialog">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-platform-users-1-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{ L().inviteTitle }}</span>
+      <span class="dialog__title" id="overlay-admin-shell-platform-users-1-title">{{
+        L().inviteTitle
+      }}</span>
       <span class="dialog__body">{{
         lang() === 'ar'
           ? 'يُنشأ حساب مدعو ورابط تفعيل لمدة 24 ساعة. إرسال البريد غير مهيأ؛ انسخ الرابط وشاركه.'
@@ -314,9 +321,16 @@
 
 @if (roleChanging(); as u) {
   <div class="scrim scrim--top" (click)="cancelChangeRole()"></div>
-  <div class="dialog" role="dialog">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-platform-users-2-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{ L().changeRoleTitle(u.name) }}</span>
+      <span class="dialog__title" id="overlay-admin-shell-platform-users-2-title">{{
+        L().changeRoleTitle(u.name)
+      }}</span>
       <span class="dialog__body">{{
         lang() === 'ar'
           ? 'تغيير الدور ينهي كل جلسات هذا المستخدم.'
@@ -376,9 +390,14 @@
 
 @if (revoking(); as u) {
   <div class="scrim scrim--top" (click)="cancelRevoke()"></div>
-  <div class="dialog" role="dialog">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-platform-users-3-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{
+      <span class="dialog__title" id="overlay-admin-shell-platform-users-3-title">{{
         reissuing()
           ? (lang() === 'ar' ? 'إصدار رابط دعوة جديد · ' : 'Reissue invitation · ') + u.name
           : L().revokeTitle(u.name)
@@ -431,9 +450,14 @@
 
 @if (togglingStatus(); as u) {
   <div class="scrim scrim--top" (click)="cancelToggleStatus()"></div>
-  <div class="dialog" role="dialog">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-platform-users-4-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{
+      <span class="dialog__title" id="overlay-admin-shell-platform-users-4-title">{{
         u.status === 'disabled' ? L().enableTitle(u.name) : L().disableTitle(u.name)
       }}</span>
       <span class="dialog__body">{{

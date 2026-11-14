@@ -263,13 +263,21 @@
 
 @if (viewing(); as p) {
   <div class="scrim" (click)="closeView()"></div>
-  <aside class="drawer" (click)="$event.stopPropagation()">
+  <aside
+    class="drawer"
+    (click)="$event.stopPropagation()"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-payments-1-title"
+  >
     <div class="drawer__head">
       <span class="logo logo--lg" [style.background]="logoBg(p)" [style.color]="logoFg(p)">{{
         logoInitials(p)
       }}</span>
       <div class="drawer__title">
-        <span class="drawer__name mono">{{ p.txId }}</span>
+        <span class="drawer__name mono" id="overlay-admin-shell-payments-1-title">{{
+          p.txId
+        }}</span>
         <span class="muted"
           >{{ companyName(p) }} · <span class="mono">{{ p.invoiceNumber }}</span></span
         >
@@ -392,9 +400,17 @@
 
 @if (refunding(); as p) {
   <div class="scrim scrim--top" (click)="closeRefund()"></div>
-  <div class="dialog" role="dialog" (click)="$event.stopPropagation()">
+  <div
+    class="dialog"
+    role="dialog"
+    (click)="$event.stopPropagation()"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-payments-2-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{ L().refundTitle }} · {{ p.txId }}</span>
+      <span class="dialog__title" id="overlay-admin-shell-payments-2-title"
+        >{{ L().refundTitle }} · {{ p.txId }}</span
+      >
       <span class="dialog__body">{{ L().refundSub(p.txId) }}</span>
     </div>
     <div class="dialog__main">

@@ -147,9 +147,16 @@
 
 @if (grantConfirm(); as gc) {
   <div class="scrim scrim--top" (click)="cancelGrant()"></div>
-  <div class="dialog" role="dialog">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-roles-permissions-1-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{ L().grantTitle(permName(gc.perm), name(gc.role)) }}</span>
+      <span class="dialog__title" id="overlay-admin-shell-roles-permissions-1-title">{{
+        L().grantTitle(permName(gc.perm), name(gc.role))
+      }}</span>
       <span class="dialog__body">{{ L().grantBody(name(gc.role)) }}</span>
     </div>
     <div class="dialog__main">
@@ -206,9 +213,16 @@
 
 @if (deleteBlocked(); as db) {
   <div class="scrim scrim--top" (click)="closeDeleteBlocked()"></div>
-  <div class="dialog" role="dialog">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-roles-permissions-2-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{ L().deleteBlockedTitle(name(db)) }}</span>
+      <span class="dialog__title" id="overlay-admin-shell-roles-permissions-2-title">{{
+        L().deleteBlockedTitle(name(db))
+      }}</span>
       <span class="dialog__body">{{ L().deleteBlockedBody(name(db), db.members) }}</span>
     </div>
     <div class="dialog__foot">
@@ -221,9 +235,16 @@
 
 @if (deleteConfirm(); as dc) {
   <div class="scrim scrim--top" (click)="cancelDelete()"></div>
-  <div class="dialog" role="dialog">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-roles-permissions-3-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{ L().deleteTitle(name(dc)) }}</span>
+      <span class="dialog__title" id="overlay-admin-shell-roles-permissions-3-title">{{
+        L().deleteTitle(name(dc))
+      }}</span>
       <span class="dialog__body">{{ L().deleteBody }}</span>
     </div>
     <div class="dialog__main">
@@ -264,9 +285,16 @@
 
 @if (creatingRole()) {
   <div class="scrim scrim--top" (click)="closeCreateRole()"></div>
-  <div class="dialog" role="dialog">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-roles-permissions-4-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">{{ L().newRoleTitle }}</span>
+      <span class="dialog__title" id="overlay-admin-shell-roles-permissions-4-title">{{
+        L().newRoleTitle
+      }}</span>
       <span class="dialog__body">{{
         lang() === 'ar'
           ? 'يبدأ الدور الجديد بصلاحية عرض الشركات فقط، ثم فعّل ما تحتاجه من المصفوفة.'

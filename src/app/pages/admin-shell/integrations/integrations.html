@@ -194,11 +194,19 @@
 
 @if (viewing(); as i) {
   <div class="scrim" (click)="closeView()"></div>
-  <aside class="drawer" (click)="$event.stopPropagation()">
+  <aside
+    class="drawer"
+    (click)="$event.stopPropagation()"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-integrations-1-title"
+  >
     <div class="drawer__head">
       <span class="logo logo--lg">{{ name(i).slice(0, 2).toUpperCase() }}</span>
       <div class="drawer__title">
-        <span class="drawer__name">{{ name(i) }}</span>
+        <span class="drawer__name" id="overlay-admin-shell-integrations-1-title">{{
+          name(i)
+        }}</span>
         <span class="mono muted"
           >{{ lang() === 'ar' ? 'تكامل' : 'integration' }} · {{ i.key }}</span
         >
@@ -316,9 +324,14 @@
 
 @if (toggling(); as i) {
   <div class="scrim scrim--top" (click)="cancelToggle()"></div>
-  <div class="dialog" role="dialog">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-admin-shell-integrations-2-title"
+  >
     <div class="dialog__head">
-      <span class="dialog__title">
+      <span class="dialog__title" id="overlay-admin-shell-integrations-2-title">
         {{
           i.enabled
             ? lang() === 'ar'

@@ -31,6 +31,7 @@ jobs:
           API_URL: ${{ vars.API_URL || 'https://api-stg.mujez.net' }}
           DASHBOARD_URL: ${{ vars.DASHBOARD_URL || 'https://mujez-stg.mujez.net' }}
         run: node scripts/write-runtime-config.mjs
+      - run: npm run check:overlays
       - run: npm run build
       - name: Configure verified SSH access
         env:

@@ -191,4 +191,13 @@ describe('Shared inventory catalog', () => {
       undefined,
     );
   });
+  it('reuses the form command ID after a network failure to prevent duplicate records', async () => {
+    const { c, api } = await render('devs', [], true);
+    await c.openEditor();
+    c.draft.name = 'Retry record';
+    api.save.mockRejectedValueOnce(new Error('Connection interrupted'));
+    await c.save();
+    await c.save();
+    expect(api.save.mock.calls[0][1]['requestId']).toBe(api.save.mock.calls[1][1]['requestId']);
+  });
 });

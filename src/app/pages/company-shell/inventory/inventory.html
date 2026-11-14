@@ -306,7 +306,7 @@
             <button
               type="button"
               class="iv-btn sm"
-              [disabled]="busy()"
+              [disabled]="busy() || preferencesReadOnly()"
               [attr.aria-pressed]="i.preference.followed"
               (click)="preference(i, { followed: !i.preference.followed })"
             >
@@ -316,7 +316,7 @@
             ><button
               type="button"
               class="iv-btn sm"
-              [disabled]="busy()"
+              [disabled]="busy() || preferencesReadOnly()"
               [attr.aria-pressed]="i.preference.favorite"
               (click)="preference(i, { favorite: !i.preference.favorite })"
             >
@@ -383,14 +383,14 @@
         <button
           type="button"
           class="iv-btn"
-          [disabled]="busy()"
+          [disabled]="busy() || preferencesReadOnly()"
           (click)="preference(i, { followed: !i.preference.followed })"
         >
           {{ i.preference.followed ? X('Following', 'تتابعه') : X('+ Follow', '+ متابعة') }}</button
         ><button
           class="iv-btn"
           type="button"
-          [disabled]="busy()"
+          [disabled]="busy() || preferencesReadOnly()"
           (click)="preference(i, { favorite: !i.preference.favorite })"
         >
           {{ i.preference.favorite ? X('♥ Saved', '♥ محفوظ') : X('♡ Save', '♡ حفظ') }}</button
@@ -740,7 +740,7 @@
             ><input
               type="checkbox"
               [checked]="i.preference.muted"
-              [disabled]="busy()"
+              [disabled]="busy() || preferencesReadOnly()"
               (change)="preference(i, { muted: !i.preference.muted })"
             />{{ X('Mute updates', 'كتم التحديثات') }}</label
           >
@@ -749,7 +749,7 @@
               ><input
                 type="checkbox"
                 [checked]="i.preference.alerts[k]"
-                [disabled]="busy() || i.preference.muted"
+                [disabled]="busy() || preferencesReadOnly() || i.preference.muted"
                 (change)="toggleAlert(i, k)"
               />{{
                 k === 'units'
@@ -794,9 +794,19 @@
         }
       </div>
       <footer class="dialog__foot">
-        <button class="btn" type="button" [disabled]="busy()" (click)="archiveConfirm.set(false)">
+        <button
+          class="btn"
+          type="button"
+          [disabled]="busy() || preferencesReadOnly()"
+          (click)="archiveConfirm.set(false)"
+        >
           {{ X('Cancel', 'إلغاء') }}</button
-        ><button class="btn btn--dark" type="button" [disabled]="busy()" (click)="archive()">
+        ><button
+          class="btn btn--dark"
+          type="button"
+          [disabled]="busy() || preferencesReadOnly()"
+          (click)="archive()"
+        >
           {{ X('Archive', 'أرشفة') }}
         </button>
       </footer>
@@ -824,7 +834,7 @@
         <button
           class="x iv-close"
           type="button"
-          [disabled]="busy()"
+          [disabled]="busy() || preferencesReadOnly()"
           [attr.aria-label]="X('Close', 'إغلاق')"
           (click)="editor.set(false)"
         >
@@ -1028,9 +1038,19 @@
         </label>
       </form>
       <footer class="dialog__foot">
-        <button type="button" class="btn" [disabled]="busy()" (click)="editor.set(false)">
+        <button
+          type="button"
+          class="btn"
+          [disabled]="busy() || preferencesReadOnly()"
+          (click)="editor.set(false)"
+        >
           {{ X('Cancel', 'إلغاء') }}</button
-        ><button type="submit" form="catalog-form" class="btn btn--dark" [disabled]="busy()">
+        ><button
+          type="submit"
+          form="catalog-form"
+          class="btn btn--dark"
+          [disabled]="busy() || preferencesReadOnly()"
+        >
           {{ busy() ? X('Saving…', 'جارٍ الحفظ…') : X('Save', 'حفظ') }}
         </button>
       </footer>

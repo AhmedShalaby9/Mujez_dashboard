@@ -63,6 +63,8 @@ export class Inventory implements OnDestroy {
   private companyUi = inject(CompanyUiState);
   private adminUi = inject(AdminUiState);
   readonly admin = computed(() => this.auth.user()?.pool === 'platform');
+  readonly preferencesReadOnly = computed(() => this.auth.user()?.workspace?.mode === 'read');
+  private formRequestId = crypto.randomUUID();
   readonly canManage = computed(
     () => this.admin() && !!this.auth.user()?.permissions.includes('co.create'),
   );
@@ -357,6 +359,8 @@ export class Inventory implements OnDestroy {
     };
   }
   async openEditor(row: CatalogItem | null = null) {
+    this.formRequestId = crypto.randomUUID();
+    this.error.set('');
     this.editing.set(row);
     this.draft = this.blank();
     if (row) {
@@ -482,7 +486,7 @@ export class Inventory implements OnDestroy {
       const row = await this.api.save(
         this.kind,
         {
-          requestId: crypto.randomUUID(),
+          requestId: this.formRequestId,
           ...(this.editing() ? { version: this.editing()!.version } : {}),
           parentId: d.parentId || null,
           name: { en: d.name, ar: d.ar || d.name },

@@ -21,3 +21,5 @@ Admin overlays cover companies/owner invitations/workspace entry, onboarding, pl
 The audit uses an isolated staging company and QA owner, sales and lead accounts. Creation dialogs are opened and dismissed without creating accounts, sending invitations, charging payments, or submitting customer changes. Desktop and 390-pixel mobile checks verify controls remain within the overlay, action reachability and English/Arabic layouts. Conditional/destructive/financial states are reviewed through their shared templates and existing automated tests; they are not all executed against live records.
 
 The workspace-entry check exposed an existing API failure: workspace lifecycle events used the public company reference where the outbox requires a UUID. The backend fix preserves the public API response and covers enter, elevate, drop, expiry, exit and audit rollback with a PostgreSQL regression test.
+
+Workspace entry and exit also refresh the identity before route guards run; switching companies ends the previous workspace first. Three frontend regression tests cover those navigation transitions. Validation totals: 92 frontend tests and 237 backend tests pass.

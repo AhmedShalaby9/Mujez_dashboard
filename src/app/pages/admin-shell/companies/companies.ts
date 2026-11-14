@@ -1099,6 +1099,7 @@ export class Companies {
             }
           : { mode: 'read' },
       );
+      if (!(await this.auth.restore())) throw new Error('Unable to refresh workspace session.');
       this.closeWsDialog();
       await this.router.navigateByUrl('/company/dashboard');
     } catch (e) {

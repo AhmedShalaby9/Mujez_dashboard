@@ -407,12 +407,13 @@ export class CompanyShell {
     }
   }
 
-  async exitWorkspace(): Promise<void> {
+  async exitWorkspace(destination = '/admin/dashboard'): Promise<void> {
     if (this.wsBusy()) return;
     this.wsBusy.set(true);
     try {
       await this.auth.request('/api/v1/workspace-session/exit', {});
-      await this.router.navigateByUrl('/admin/dashboard');
+      if (!(await this.auth.restore())) throw new Error('Unable to refresh platform session.');
+      await this.router.navigateByUrl(destination);
     } catch (e) {
       this.error.set((e as Error).message);
     } finally {
@@ -421,7 +422,7 @@ export class CompanyShell {
   }
 
   switchWorkspace(): void {
-    void this.router.navigateByUrl('/admin/companies');
+    void this.exitWorkspace('/admin/companies');
   }
 
   private alertsSerial = 0;

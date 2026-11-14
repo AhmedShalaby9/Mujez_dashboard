@@ -295,3 +295,82 @@ describe('Admin company owner invitation', () => {
     expect(c.ownerLink()).toBe('');
   });
 });
+
+describe('Workspace navigation identity refresh', () => {
+  it('refreshes identity before the company route guard runs after entering a workspace', async () => {
+    const calls: string[] = [];
+    await TestBed.configureTestingModule({
+      imports: [Companies],
+      providers: [
+        provideRouter([]),
+        {
+          provide: AuthService,
+          useValue: {
+            user: signal({ pool: 'platform', permissions: ['co.view', 'ws.read'] }),
+            request: async (path: string) => {
+              if (path.endsWith('/workspace-session')) calls.push('enter');
+              return { items: [] };
+            },
+            restore: async () => {
+              calls.push('refresh');
+              return true;
+            },
+          },
+        },
+        { provide: CompaniesApi, useValue: { list: async () => [] } },
+      ],
+    }).compileComponents();
+    const router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigateByUrl').mockImplementation(async (url) => {
+      calls.push(String(url));
+      return true;
+    });
+    const f = TestBed.createComponent(Companies);
+    await f.whenStable();
+    f.componentInstance.openWsDialog({
+      id: 'MJ-QA',
+      nameEn: 'QA Company',
+      nameAr: 'اختبار',
+    } as any);
+    await f.componentInstance.submitWsDialog();
+    expect(calls).toEqual(['enter', 'refresh', '/company/dashboard']);
+  });
+  it.each([false, true])(
+    'ends the workspace and restores the platform identity before exit (switch=%s)',
+    async (switchCompany) => {
+      const calls: string[] = [];
+      await TestBed.configureTestingModule({
+        imports: [CompanyShell],
+        providers: [
+          provideRouter([]),
+          {
+            provide: AuthService,
+            useValue: {
+              user: signal(owner),
+              watched: signal(0),
+              request: async (path: string) => {
+                if (path.endsWith('/exit')) calls.push('exit');
+                return { items: [] };
+              },
+              restore: async () => {
+                calls.push('refresh');
+                return true;
+              },
+            },
+          },
+        ],
+      }).compileComponents();
+      vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockImplementation(async (url) => {
+        calls.push(String(url));
+        return true;
+      });
+      const f = TestBed.createComponent(CompanyShell);
+      await f.componentInstance.exitWorkspace(switchCompany ? '/admin/companies' : undefined);
+      expect(calls).toEqual([
+        'exit',
+        'refresh',
+        switchCompany ? '/admin/companies' : '/admin/dashboard',
+      ]);
+    },
+  );
+});

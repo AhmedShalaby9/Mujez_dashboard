@@ -95,10 +95,15 @@ tr.sel {
   border-radius: 12px;
   font-size: 11.5px;
   color: #8a8a90;
-  &.done {
-    border-color: #c8f169;
-    background: #eef6da;
-    color: #3f5a0e;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+  &:disabled {
+    cursor: default;
+  }
+  &:hover:not(:disabled):not(.cur) {
+    border-color: #111113;
+    color: #111113;
   }
   &.cur {
     border-color: #111113;

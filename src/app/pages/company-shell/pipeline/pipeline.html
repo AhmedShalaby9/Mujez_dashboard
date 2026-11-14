@@ -100,28 +100,6 @@
               @if (d.sample) {
                 <i class="soon">{{ t('Sample', 'تجريبي') }}</i>
               }
-              @if (canManage() && next(d.stage); as nextStage) {
-                <button
-                  type="button"
-                  class="fwd"
-                  [title]="t('Move to ', 'نقل إلى ') + stageNames()[nextStage]"
-                  [disabled]="saving() || loading()"
-                  (click)="move(d, nextStage)"
-                >
-                  <svg
-                    width="11"
-                    height="11"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.4"
-                    stroke-linecap="round"
-                    class="flip"
-                  >
-                    <path d="M9 6l6 6-6 6" />
-                  </svg>
-                </button>
-              }
             </div>
             <span class="sub"
               >{{ daysInStage(d) ?? '—' }} {{ t('days in stage', 'أيام في المرحلة') }} ·
@@ -146,24 +124,20 @@
                     pending(d) ? t('Add deal details', 'إضافة تفاصيل الفرصة') : t('Edit', 'تعديل')
                   }}
                 </button>
-                @if (d.stage !== 'won' && d.stage !== 'lost') {
-                  <button
-                    type="button"
-                    class="link bad"
+                @if (canManage()) {
+                  <select
+                    class="moveSel"
+                    [attr.aria-label]="t('Move to…', 'نقل إلى…')"
                     [disabled]="saving() || loading()"
-                    (click)="closeAction(d, 'lost')"
+                    (change)="move(d, $any($event.target).value); $any($event.target).value = ''"
                   >
-                    {{ t('Mark lost', 'تسجيل خسارة') }}
-                  </button>
-                } @else {
-                  <button
-                    type="button"
-                    class="link"
-                    [disabled]="saving() || loading()"
-                    (click)="closeAction(d, 'reopen')"
-                  >
-                    {{ t('Reopen', 'إعادة فتح') }}
-                  </button>
+                    <option value="">{{ t('Move to…', 'نقل إلى…') }}</option>
+                    @for (s of stages; track s) {
+                      @if (s !== d.stage) {
+                        <option [value]="s">{{ stageNames()[s] }}</option>
+                      }
+                    }
+                  </select>
                 }
               </div>
             }
@@ -299,44 +273,6 @@
         [disabled]="saving() || optionsLoading()"
       >
         {{ t('Save deal', 'حفظ الفرصة') }}
-      </button>
-    </div>
-  </div>
-}
-
-@if (closing(); as c) {
-  <div class="scrim scrim--top" (click)="!saving() && closing.set(null)"></div>
-  <div class="dialog" role="dialog" aria-label="Change pipeline stage" aria-modal="true">
-    <div class="dialog__head">
-      <span class="dialog__title"
-        >{{
-          c.stage === 'lost' ? t('Mark lost', 'تسجيل خسارة') : t('Reopen as new', 'إعادة فتح كجديد')
-        }}
-        · {{ c.deal.title?.[lang()] || c.deal.contact[lang()] }}</span
-      >
-    </div>
-    <div class="dialog__main">
-      @if (formError()) {
-        <p class="note note--bad" role="alert">{{ formError() }}</p>
-      }
-      <label class="field"
-        ><span>{{ t('Reason (10+ characters)', 'السبب (10 أحرف على الأقل)') }}</span
-        ><textarea rows="2" [(ngModel)]="reason" maxlength="500"></textarea>
-      </label>
-    </div>
-    <div class="dialog__foot">
-      <button type="button" class="btn" [disabled]="saving()" (click)="closing.set(null)">
-        {{ t('Cancel', 'إلغاء') }}
-      </button>
-      <button
-        type="button"
-        class="btn"
-        [class.btn--danger]="c.stage === 'lost'"
-        [class.btn--dark]="c.stage !== 'lost'"
-        [disabled]="saving() || reason().trim().length < 10"
-        (click)="confirmClose()"
-      >
-        {{ t('Confirm', 'تأكيد') }}
       </button>
     </div>
   </div>

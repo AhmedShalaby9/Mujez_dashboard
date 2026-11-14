@@ -266,71 +266,20 @@
         <div class="sect">
           <div class="sect__row">
             <span class="sect__label">{{ t('STAGE', 'المرحلة') }}</span>
-            @if (l.stage === 'lost') {
-              <span class="badTxt">{{ t('Lost', 'خسارة') }}</span>
-            }
           </div>
           <div class="steps">
             @for (s of stages; track s) {
-              @if (s !== 'lost') {
-                <span
-                  class="step"
-                  [class.done]="l.stage !== 'lost' && stageIndex(s) < stageIndex(l.stage)"
-                  [class.cur]="s === l.stage"
-                  >{{ stageNames()[s] }}</span
-                >
-              }
-            }
-          </div>
-          @if (canManage() && !l.archivedAt) {
-            <div class="stageAct">
-              <select [(ngModel)]="actionStage">
-                <option value="">{{ t('Change stage…', 'تغيير المرحلة…') }}</option>
-                @if (next(l.stage); as n) {
-                  <option [value]="n">{{ t('Move to ', 'نقل إلى ') }}{{ stageNames()[n] }}</option>
-                }
-                @if (l.stage !== 'won' && l.stage !== 'lost') {
-                  <option value="lost">{{ t('Mark lost', 'تسجيل خسارة') }}</option>
-                } @else {
-                  <option value="reopen">{{ t('Reopen as new', 'إعادة فتح كجديد') }}</option>
-                }
-              </select>
-              @if (actionStage() === 'lost' || actionStage() === 'reopen') {
-                @if (actKind() === 'call') {
-                  <select
-                    class="input"
-                    [value]="callOutcome()"
-                    (change)="callOutcome.set($any($event.target).value)"
-                  >
-                    <option value="">{{ t('Call outcome', 'نتيجة المكالمة') }}</option>
-                    <option value="interested">{{ t('Interested', 'مهتم') }}</option>
-                    <option value="call_back">{{ t('Call back', 'إعادة الاتصال') }}</option>
-                    <option value="no_answer">{{ t('No answer', 'لا إجابة') }}</option>
-                    <option value="not_interested">{{ t('Not interested', 'غير مهتم') }}</option>
-                  </select>
-                }
-
-                <textarea
-                  rows="2"
-                  [placeholder]="t('Reason (10+ characters)', 'السبب (10 أحرف على الأقل)')"
-                  [(ngModel)]="reason"
-                  maxlength="500"
-                ></textarea>
-              }
               <button
                 type="button"
-                class="btn btn--sm btn--dark"
-                [disabled]="
-                  saving() ||
-                  !actionStage() ||
-                  (['lost', 'reopen'].includes(actionStage()) && reason().trim().length < 10)
-                "
-                (click)="mutate('stage')"
+                class="step"
+                [class.cur]="s === l.stage"
+                [disabled]="!canManage() || !!l.archivedAt || saving()"
+                (click)="setStage(s)"
               >
-                {{ t('Apply', 'تطبيق') }}
+                {{ stageNames()[s] }}
               </button>
-            </div>
-          }
+            }
+          </div>
         </div>
 
         <div class="facts">
@@ -450,6 +399,23 @@
                 </button>
               }
             </div>
+            @if (actKind() === 'call') {
+              <select
+                class="input"
+                [value]="callOutcome()"
+                (change)="callOutcome.set($any($event.target).value)"
+              >
+                <option value="">{{ t('Call outcome', 'نتيجة المكالمة') }}</option>
+                <option value="answered">{{ t('Answered', 'تم الرد') }}</option>
+                <option value="no_answer">{{ t('No answer', 'لا إجابة') }}</option>
+                <option value="busy">{{ t('Busy', 'مشغول') }}</option>
+                <option value="switched_off">{{ t('Switched off', 'مغلق') }}</option>
+                <option value="wrong_number">{{ t('Wrong number', 'رقم خاطئ') }}</option>
+                <option value="call_back">{{ t('Call back requested', 'طلب إعادة اتصال') }}</option>
+                <option value="interested">{{ t('Interested', 'مهتم') }}</option>
+                <option value="not_interested">{{ t('Not interested', 'غير مهتم') }}</option>
+              </select>
+            }
             <div class="composer">
               <input
                 [placeholder]="t('What happened?', 'ماذا حدث؟')"

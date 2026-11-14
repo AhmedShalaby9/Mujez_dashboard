@@ -2,14 +2,22 @@ import { inject, Injectable } from '@angular/core';
 import { AuthService } from './auth.service';
 export const SALES_STAGES = [
   'new',
+  'attempting',
+  'contacted',
   'qualified',
+  'nurturing',
+  'unresponsive',
   'viewing',
   'offer',
   'contract',
   'won',
   'lost',
+  'unqualified',
 ] as const;
 export type SalesStage = (typeof SALES_STAGES)[number];
+/** Stages that take a lead out of the active pipeline. */
+export const CLOSED_STAGES: readonly SalesStage[] = ['won', 'lost', 'unqualified'];
+export const isClosedStage = (s: string) => (CLOSED_STAGES as readonly string[]).includes(s);
 export interface SalesLead {
   id: string;
   reference: string;
@@ -80,21 +88,31 @@ export interface SalesActivity {
 export const STAGE_NAMES = {
   en: {
     new: 'New',
+    attempting: 'Attempting Contact',
+    contacted: 'Contacted',
     qualified: 'Qualified',
-    viewing: 'Viewing',
-    offer: 'Offer',
+    nurturing: 'Nurturing',
+    unresponsive: 'Unresponsive',
+    viewing: 'Viewing Scheduled',
+    offer: 'Negotiation',
     contract: 'Contract',
     won: 'Won',
     lost: 'Lost',
+    unqualified: 'Unqualified',
   },
   ar: {
     new: 'جديد',
+    attempting: 'محاولة تواصل',
+    contacted: 'تم التواصل',
     qualified: 'مؤهّل',
-    viewing: 'معاينة',
-    offer: 'عرض',
+    nurturing: 'قيد المتابعة',
+    unresponsive: 'لا يرد',
+    viewing: 'معاينة مجدولة',
+    offer: 'تفاوض',
     contract: 'عقد',
     won: 'مغلق',
     lost: 'فاقد',
+    unqualified: 'غير مؤهّل',
   },
 };
 export const SOURCE_NAMES: Record<string, [string, string]> = {

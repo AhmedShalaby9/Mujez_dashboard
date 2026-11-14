@@ -7,7 +7,7 @@ import {
   type CompanyReport,
   type Overview,
 } from '../../../company-insights-api.service';
-import { SalesApi, SALES_STAGES, STAGE_NAMES, type SalesStage } from '../../../sales-api.service';
+import { SalesApi, SALES_STAGES, STAGE_NAMES, isClosedStage, type SalesStage } from '../../../sales-api.service';
 import type { CalendarEvent } from '../../../calendar-api.service';
 type Segment = 'all' | 'res' | 'com';
 const ALERTS: Record<string, [string, string]> = {
@@ -18,15 +18,20 @@ const ALERTS: Record<string, [string, string]> = {
   'first-contact': ['Leads overdue for first contact', 'عملاء تجاوزوا مهلة التواصل الأول'],
   'routing-worker': ['Routing worker needs attention', 'عامل التوزيع يحتاج مراجعة'],
 };
-const OPEN_STAGES: SalesStage[] = ['new', 'qualified', 'viewing', 'offer', 'contract'];
+const OPEN_STAGES: SalesStage[] = SALES_STAGES.filter((s) => !isClosedStage(s));
 const STAGE_COLOR: Record<string, string> = {
   new: '#C4C4BE',
+  attempting: '#E0A24B',
+  contacted: '#4FB0C6',
   qualified: '#5B78E5',
+  nurturing: '#9B7BD4',
+  unresponsive: '#9A9A94',
   viewing: '#D99A28',
   offer: '#8BB33A',
   contract: '#111113',
   won: '#2FA35F',
   lost: '#E2553B',
+  unqualified: '#B8564A',
 };
 const EVENT_COLOR: Record<string, string> = {
   viewing: '#D99A28',

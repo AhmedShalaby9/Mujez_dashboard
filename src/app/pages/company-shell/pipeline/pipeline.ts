@@ -5,6 +5,7 @@ import { AuthService } from '../../../auth.service';
 import {
   SalesApi,
   SALES_STAGES,
+  isClosedStage,
   STAGE_NAMES,
   salesMoney,
   minorAmount,
@@ -68,13 +69,11 @@ export class Pipeline {
   readonly optionPage = signal(1);
   readonly optionSearch = signal('');
   readonly optionsLoading = signal(false);
-  readonly closing = signal<{ deal: SalesDeal; stage: 'lost' | 'reopen' } | null>(null);
   readonly reason = signal('');
   draft = { leadId: '', title: '', titleAr: '', type: 'sale', value: '' };
   private serial = 0;
   private optionsSerial = 0;
   private formRequest = crypto.randomUUID();
-  private closeRequest = crypto.randomUUID();
   constructor() {
     void this.reload();
     this.destroy.onDestroy(() => {
@@ -117,12 +116,17 @@ export class Pipeline {
   }
   readonly stageColor: Record<string, string> = {
     new: '#C4C4BE',
+    attempting: '#E0A24B',
+    contacted: '#4FB0C6',
     qualified: '#5B78E5',
+    nurturing: '#9B7BD4',
+    unresponsive: '#9A9A94',
     viewing: '#D99A28',
     offer: '#8BB33A',
     contract: '#111113',
     won: '#2FA35F',
     lost: '#E2553B',
+    unqualified: '#B8564A',
   };
   readonly toast = signal('');
   private say(msg: string) {
@@ -131,13 +135,13 @@ export class Pipeline {
   }
   readonly openValue = computed(() =>
     this.stats()
-      .filter((x) => x.stage !== 'won' && x.stage !== 'lost')
+      .filter((x) => !isClosedStage(x.stage))
       .reduce((n, x) => n + BigInt(x.saleMinor), 0n)
       .toString(),
   );
   readonly openUnsetCount = computed(() =>
     this.stats()
-      .filter((x) => x.stage !== 'won' && x.stage !== 'lost')
+      .filter((x) => !isClosedStage(x.stage))
       .reduce((n, x) => n + (x.unsetCount ?? 0), 0),
   );
   notSet() {
@@ -151,7 +155,7 @@ export class Pipeline {
   }
   readonly openCount = computed(() =>
     this.stats()
-      .filter((x) => x.stage !== 'won' && x.stage !== 'lost')
+      .filter((x) => !isClosedStage(x.stage))
       .reduce((n, x) => n + x.count, 0),
   );
   initials(name: string | undefined) {
@@ -162,14 +166,11 @@ export class Pipeline {
       .map((w) => w[0].toUpperCase())
       .join('');
   }
-  // ---- drag & drop (only moves the API accepts: next stage, lost, reopen) ----
+  // ---- drag & drop (any stage to any other) ----
   readonly dragging = signal<SalesDeal | null>(null);
   readonly overStage = signal<string | null>(null);
   canDrop(d: SalesDeal | null, stage: SalesStage) {
-    if (!d || !this.canManage()) return false;
-    if (stage === 'lost') return d.stage !== 'won' && d.stage !== 'lost';
-    if (stage === 'new' && (d.stage === 'won' || d.stage === 'lost')) return true;
-    return this.next(d.stage) === stage;
+    return !!d && this.canManage() && d.stage !== stage;
   }
   dragStart(e: DragEvent, d: SalesDeal) {
     this.dragging.set(d);
@@ -190,27 +191,11 @@ export class Pipeline {
     const d = this.dragging();
     this.dragEnd();
     if (!d || d.stage === stage) return;
-    if (!this.canDrop(d, stage)) {
-      this.say(
-        this.t(
-          'Move one stage at a time, or mark the deal lost.',
-          'انقل مرحلة واحدة في كل مرة، أو سجل الخسارة.',
-        ),
-      );
-      return;
-    }
-    if (stage === 'lost') this.closeAction(d, 'lost');
-    else if (stage === 'new' && (d.stage === 'won' || d.stage === 'lost'))
-      this.closeAction(d, 'reopen');
-    else void this.move(d, stage);
+    void this.move(d, stage);
   }
 
-  next(stage: SalesStage) {
-    const i = this.stages.indexOf(stage);
-    return i < 5 ? this.stages[i + 1] : null;
-  }
-  async move(d: SalesDeal, stage: string, reason?: string, requestId = crypto.randomUUID()) {
-    if (this.saving()) return;
+  async move(d: SalesDeal, stage: string, requestId = crypto.randomUUID()) {
+    if (!stage || this.saving()) return;
     this.saving.set(true);
     this.error.set('');
     this.formError.set('');
@@ -219,9 +204,7 @@ export class Pipeline {
         requestId,
         version: d.leadVersion,
         stage,
-        ...(reason ? { reason } : {}),
       });
-      this.closing.set(null);
       await this.reload();
     } catch (e) {
       this.error.set((e as Error).message);
@@ -229,16 +212,6 @@ export class Pipeline {
     } finally {
       this.saving.set(false);
     }
-  }
-  closeAction(d: SalesDeal, stage: 'lost' | 'reopen') {
-    this.closing.set({ deal: d, stage });
-    this.closeRequest = crypto.randomUUID();
-    this.reason.set('');
-    this.formError.set('');
-  }
-  confirmClose() {
-    const c = this.closing();
-    if (c) void this.move(c.deal, c.stage, this.reason().trim(), this.closeRequest);
   }
   async openForm(d?: SalesDeal) {
     this.editing.set(d ?? null);

@@ -588,12 +588,17 @@ export class Leads {
   // ---- design helpers ----
   readonly stageColor: Record<string, string> = {
     new: '#C4C4BE',
+    attempting: '#E0A24B',
+    contacted: '#4FB0C6',
     qualified: '#5B78E5',
+    nurturing: '#9B7BD4',
+    unresponsive: '#9A9A94',
     viewing: '#D99A28',
     offer: '#8BB33A',
     contract: '#111113',
     won: '#2FA35F',
     lost: '#E2553B',
+    unqualified: '#B8564A',
   };
   initials(l: SalesLead) {
     return this.name(l)
@@ -662,8 +667,11 @@ export class Leads {
     setTimeout(() => this.toast.set(''), 3500);
   }
 
-  next(stage: SalesStage) {
-    const i = this.stages.indexOf(stage);
-    return i < 5 ? this.stages[i + 1] : null;
+  /** One click sets any status; no stepping or reason required. */
+  async setStage(s: SalesStage) {
+    const l = this.selected();
+    if (!l || this.saving() || l.stage === s) return;
+    this.actionStage.set(s);
+    await this.mutate('stage');
   }
 }

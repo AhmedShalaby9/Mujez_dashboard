@@ -125,7 +125,6 @@ export class Inventory implements OnDestroy {
       ? ['available', 'hold', 'reserved', 'under_contract', 'sold', 'soon']
       : ['launch', 'offer', 'selling', 'resale', 'sold', 'soon', 'not_set'],
   );
-  readonly alertKeys = ['units', 'price', 'launch', 'news'] as const;
   readonly types = [
     'apt',
     'villa',
@@ -318,9 +317,6 @@ export class Inventory implements OnDestroy {
     } finally {
       this.busy.set(false);
     }
-  }
-  toggleAlert(i: CatalogItem, k: 'units' | 'price' | 'launch' | 'news') {
-    void this.preference(i, { alerts: { ...i.preference.alerts, [k]: !i.preference.alerts[k] } });
   }
   async share() {
     try {

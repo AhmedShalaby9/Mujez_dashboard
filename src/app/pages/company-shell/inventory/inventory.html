@@ -736,45 +736,6 @@
             }
           </section>
         }
-        <section class="iv-card iv-sec">
-          <div class="iv-sech">
-            <h2>{{ X('Alert preferences', 'تفضيلات التنبيهات') }}</h2>
-          </div>
-          <p class="iv-meta">
-            {{
-              X(
-                'Save the updates you want to follow. External email alerts are not configured.',
-                'احفظ التحديثات التي ترغب بمتابعتها. التنبيهات الخارجية غير مفعلة.'
-              )
-            }}
-          </p>
-          <label class="iv-pref"
-            ><input
-              type="checkbox"
-              [checked]="i.preference.muted"
-              [disabled]="busy() || preferencesReadOnly()"
-              (change)="preference(i, { muted: !i.preference.muted })"
-            />{{ X('Mute updates', 'كتم التحديثات') }}</label
-          >
-          @for (k of alertKeys; track k) {
-            <label class="iv-pref"
-              ><input
-                type="checkbox"
-                [checked]="i.preference.alerts[k]"
-                [disabled]="busy() || preferencesReadOnly() || i.preference.muted"
-                (change)="toggleAlert(i, k)"
-              />{{
-                k === 'units'
-                  ? X('New units', 'وحدات جديدة')
-                  : k === 'price'
-                    ? X('Price changes', 'تغيّر الأسعار')
-                    : k === 'launch'
-                      ? X('Launches', 'الإطلاقات')
-                      : X('News', 'الأخبار')
-              }}</label
-            >
-          }
-        </section>
       </aside>
     </div>
   } @else if (!error()) {

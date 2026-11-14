@@ -400,7 +400,8 @@ input {
     transform: translateX(100%);
   }
 
-  .sidebar--open {
+  .sidebar.sidebar--open,
+  [dir='rtl'] .sidebar.sidebar--open {
     transform: translateX(0);
   }
 

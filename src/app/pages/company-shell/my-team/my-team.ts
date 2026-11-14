@@ -42,6 +42,26 @@ export class MyTeam {
   readonly targets = computed(() => this.performance()?.items.filter((m) => m.canAssign) ?? []);
   readonly selected = signal<TeamWorkLead | null>(null);
   readonly assigning = signal(false);
+  readonly taskSaving = signal(false);
+  readonly busy = computed(() => this.assigning() || this.taskSaving());
+  readonly taskMode = signal<'create' | 'assign' | 'status' | null>(null);
+  readonly taskRow = signal<TeamWorkTask | null>(null);
+  readonly taskError = signal('');
+  readonly taskLeadOptions = signal<TeamWorkLead[]>([]);
+  readonly taskLeadLoading = signal(false);
+  readonly taskLeadTotal = signal(0);
+  readonly chosenTaskLead = signal<TeamWorkLead | null>(null);
+  taskTitle = '';
+  taskDescription = '';
+  taskAssignee = '';
+  taskDue = '';
+  taskPriority = 'med';
+  taskReason = '';
+  taskLeadQuery = '';
+  taskAction: 'complete' | 'reopen' | 'cancel' = 'complete';
+  private taskRequestId = '';
+  private taskSignature = '';
+  private leadGeneration = 0;
   ownerId = '';
   private requestId = '';
   private generation = 0;
@@ -78,7 +98,7 @@ export class MyTeam {
     void this.reload();
   }
   async reload() {
-    if (this.assigning()) return;
+    if (this.busy()) return;
     this.loading.set(true);
     this.error.set('');
     try {
@@ -104,7 +124,7 @@ export class MyTeam {
     void this.reload();
   }
   changeTab(value: 'performance' | 'leads' | 'tasks') {
-    if (this.assigning()) return;
+    if (this.busy()) return;
     this.tab.set(value);
     this.state = '';
     this.page.set(1);
@@ -153,6 +173,7 @@ export class MyTeam {
     }
   }
   openAssign(lead: TeamWorkLead) {
+    if (this.busy()) return;
     this.selected.set(lead);
     this.ownerId = '';
     this.requestId = crypto.randomUUID();
@@ -165,7 +186,7 @@ export class MyTeam {
   }
   async assign() {
     const lead = this.selected();
-    if (!lead || !this.ownerId || this.assigning() || !this.performance()?.canAssign) return;
+    if (!lead || !this.ownerId || this.busy() || !this.performance()?.canAssign) return;
     this.assigning.set(true);
     this.error.set('');
     try {
@@ -190,8 +211,147 @@ export class MyTeam {
     }
   }
   async refreshAssignment() {
-    if (this.assigning()) return;
+    if (this.busy()) return;
     this.selected.set(null);
+    await this.reload();
+  }
+  openTask(
+    mode: 'create' | 'assign' | 'status',
+    task?: TeamWorkTask,
+    action: 'complete' | 'reopen' | 'cancel' = 'complete',
+  ) {
+    if (this.busy() || !this.performance()?.canManageTasks) return;
+    this.taskMode.set(mode);
+    this.taskRow.set(task ?? null);
+    this.taskError.set('');
+    this.toast.set('');
+    this.taskTitle = '';
+    this.taskDescription = '';
+    this.taskAssignee = '';
+    this.taskDue = this.performance()?.to ?? '';
+    this.taskPriority = 'med';
+    this.taskReason = '';
+    this.taskAction = action;
+    this.taskRequestId = crypto.randomUUID();
+    this.taskSignature = '';
+    this.taskLeadQuery = '';
+    this.chosenTaskLead.set(null);
+    this.taskLeadOptions.set([]);
+    this.taskLeadTotal.set(0);
+    if (mode === 'create') void this.searchTaskLeads();
+  }
+  closeTask() {
+    if (this.busy()) return;
+    this.taskMode.set(null);
+    this.leadGeneration++;
+    this.taskLeadLoading.set(false);
+  }
+  async searchTaskLeads() {
+    const n = ++this.leadGeneration;
+    this.taskLeadLoading.set(true);
+    try {
+      const q: Record<string, string> = { page: '1', limit: '25' };
+      if (this.taskLeadQuery.trim()) q['q'] = this.taskLeadQuery.trim();
+      const r = await this.api.workLeads(q);
+      if (n === this.leadGeneration) {
+        this.taskLeadOptions.set(r.items);
+        this.taskLeadTotal.set(r.total);
+      }
+    } catch (e) {
+      if (n === this.leadGeneration) this.taskError.set((e as Error).message);
+    } finally {
+      if (n === this.leadGeneration) this.taskLeadLoading.set(false);
+    }
+  }
+  chooseTaskLead(id: string) {
+    this.chosenTaskLead.set(this.taskLeadOptions().find((l) => l.id === id) ?? null);
+  }
+  taskActionName() {
+    return this.taskAction === 'complete'
+      ? this.t('Complete task', 'إكمال المهمة')
+      : this.taskAction === 'cancel'
+        ? this.t('Cancel task', 'إلغاء المهمة')
+        : this.t('Reopen task', 'إعادة فتح المهمة');
+  }
+  async saveTask() {
+    const mode = this.taskMode(),
+      row = this.taskRow();
+    if (!mode || this.busy() || !this.performance()?.canManageTasks) return;
+    const data: any =
+      mode === 'create'
+        ? {
+            title: this.taskTitle.trim(),
+            description: this.taskDescription.trim(),
+            assigneeId: this.taskAssignee,
+            dueDate: this.taskDue,
+            priority: this.taskPriority,
+            leadId: this.chosenTaskLead()?.id ?? null,
+          }
+        : mode === 'assign'
+          ? { version: row!.version, assigneeId: this.taskAssignee }
+          : {
+              version: row!.version,
+              action: this.taskAction,
+              ...(this.taskReason.trim() ? { reason: this.taskReason.trim() } : {}),
+            };
+    if (
+      (mode === 'create' && (data.title.length < 2 || !data.assigneeId || !data.dueDate)) ||
+      (mode === 'assign' && !data.assigneeId) ||
+      (mode === 'status' && this.taskAction === 'cancel' && this.taskReason.trim().length < 10)
+    ) {
+      this.taskError.set(
+        mode === 'status' && this.taskAction === 'cancel'
+          ? this.t(
+              'Cancellation needs a reason of at least 10 characters.',
+              'يتطلب الإلغاء سببًا من ١٠ أحرف على الأقل.',
+            )
+          : this.t('Complete the required task fields.', 'أكمل بيانات المهمة المطلوبة.'),
+      );
+      return;
+    }
+    const signature = JSON.stringify([mode, row?.id, data]);
+    if (signature !== this.taskSignature) {
+      this.taskSignature = signature;
+      this.taskRequestId = crypto.randomUUID();
+    }
+    const body = { ...data, requestId: this.taskRequestId };
+    this.taskSaving.set(true);
+    this.taskError.set('');
+    try {
+      const result =
+        mode === 'create'
+          ? await this.api.createTask(body)
+          : mode === 'assign'
+            ? await this.api.assignTask(row!.id, body)
+            : await this.api.taskStatus(row!.id, body);
+      this.taskMode.set(null);
+      this.taskSaving.set(false);
+      this.leadGeneration++;
+      if (mode === 'create') {
+        this.tab.set('tasks');
+        this.memberId = '';
+        this.state = '';
+        this.search = result.reference;
+        this.appliedSearch = result.reference;
+        this.page.set(1);
+      }
+      await this.reload();
+      this.toast.set(
+        mode === 'create'
+          ? this.t('Task created and assigned.', 'تم إنشاء المهمة وتعيينها.')
+          : mode === 'assign'
+            ? this.t('Task assigned.', 'تم تعيين المهمة.')
+            : this.t('Task status updated.', 'تم تحديث حالة المهمة.'),
+      );
+    } catch (e) {
+      this.taskError.set((e as Error).message);
+    } finally {
+      this.taskSaving.set(false);
+    }
+  }
+  async refreshTask() {
+    if (this.busy()) return;
+    this.closeTask();
     await this.reload();
   }
 }

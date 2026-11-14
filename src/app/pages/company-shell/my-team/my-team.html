@@ -5,7 +5,12 @@
       <h1>{{ t('My team', 'فريقي') }}</h1>
     </div>
     <div class="head__actions">
-      <button class="btn" [disabled]="loading() || assigning()" (click)="reload()">
+      @if (performance()?.canManageTasks) {
+        <button class="btn btn--dark" [disabled]="loading() || busy()" (click)="openTask('create')">
+          {{ t('+ New task', '+ مهمة جديدة') }}
+        </button>
+      }
+      <button class="btn" [disabled]="loading() || busy()" (click)="reload()">
         {{ t('Refresh', 'تحديث') }}
       </button>
     </div>
@@ -53,7 +58,7 @@
           role="tab"
           [class.on]="tab() === 'performance'"
           [attr.aria-selected]="tab() === 'performance'"
-          [disabled]="assigning() || loading()"
+          [disabled]="busy() || loading()"
           (click)="changeTab('performance')"
         >
           {{ t('Performance', 'الأداء') }}
@@ -62,7 +67,7 @@
           role="tab"
           [class.on]="tab() === 'leads'"
           [attr.aria-selected]="tab() === 'leads'"
-          [disabled]="assigning() || loading()"
+          [disabled]="busy() || loading()"
           (click)="changeTab('leads')"
         >
           {{ t('Leads', 'العملاء المحتملون') }}
@@ -71,7 +76,7 @@
           role="tab"
           [class.on]="tab() === 'tasks'"
           [attr.aria-selected]="tab() === 'tasks'"
-          [disabled]="assigning() || loading()"
+          [disabled]="busy() || loading()"
           (click)="changeTab('tasks')"
         >
           {{ t('Tasks', 'المهام') }}
@@ -143,7 +148,7 @@
           [attr.aria-label]="t('Team member', 'عضو الفريق')"
           name="member"
           [(ngModel)]="memberId"
-          [disabled]="listLoading() || assigning()"
+          [disabled]="listLoading() || busy()"
           (ngModelChange)="filter()"
         >
           <option value="">{{ t('All members', 'كل الأعضاء') }}</option>
@@ -155,7 +160,7 @@
           [attr.aria-label]="t('Status', 'الحالة')"
           name="state"
           [(ngModel)]="state"
-          [disabled]="listLoading() || assigning()"
+          [disabled]="listLoading() || busy()"
           (ngModelChange)="filter()"
         >
           <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
@@ -182,8 +187,8 @@
               ? t('Name, phone or reference…', 'الاسم أو الهاتف أو الرقم…')
               : t('Task title or reference…', 'عنوان المهمة أو رقمها…')
           "
-          [disabled]="assigning()"
-        /><button type="submit" class="btn" [disabled]="listLoading() || assigning()">
+          [disabled]="busy()"
+        /><button type="submit" class="btn" [disabled]="listLoading() || busy()">
           {{ t('Search', 'بحث') }}
         </button>
       </form>
@@ -222,7 +227,7 @@
                       @if (p.canAssign && l.stage !== 'won' && l.stage !== 'lost') {
                         <button
                           class="btn btn--sm"
-                          [disabled]="listLoading() || assigning()"
+                          [disabled]="listLoading() || busy()"
                           (click)="openAssign(l)"
                         >
                           {{ t('Assign', 'تعيين') }}
@@ -240,6 +245,7 @@
                   <th>{{ t('Due date', 'تاريخ الاستحقاق') }}</th>
                   <th>{{ t('Priority', 'الأولوية') }}</th>
                   <th>{{ t('Status', 'الحالة') }}</th>
+                  <th>{{ t('Actions', 'الإجراءات') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -266,6 +272,43 @@
                       }}
                     </td>
                     <td>{{ status(task.status) }}</td>
+                    <td class="end">
+                      <div class="task-actions">
+                        @if (p.canManageTasks) {
+                          @if (task.status === 'open') {
+                            <button
+                              class="btn btn--sm"
+                              [disabled]="loading() || listLoading() || busy()"
+                              (click)="openTask('assign', task)"
+                            >
+                              {{ t('Assign', 'تعيين') }}
+                            </button>
+                            <button
+                              class="btn btn--sm"
+                              [disabled]="loading() || listLoading() || busy()"
+                              (click)="openTask('status', task, 'complete')"
+                            >
+                              {{ t('Complete', 'إكمال') }}
+                            </button>
+                            <button
+                              class="btn btn--sm btn--badText"
+                              [disabled]="loading() || listLoading() || busy()"
+                              (click)="openTask('status', task, 'cancel')"
+                            >
+                              {{ t('Cancel', 'إلغاء') }}
+                            </button>
+                          } @else {
+                            <button
+                              class="btn btn--sm"
+                              [disabled]="loading() || listLoading() || busy()"
+                              (click)="openTask('status', task, 'reopen')"
+                            >
+                              {{ t('Reopen', 'إعادة فتح') }}
+                            </button>
+                          }
+                        }
+                      </div>
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -283,13 +326,13 @@
           <div>
             <button
               class="btn btn--sm"
-              [disabled]="listLoading() || assigning() || page() <= 1"
+              [disabled]="listLoading() || busy() || page() <= 1"
               (click)="paginate(-1)"
             >
               {{ t('Previous', 'السابق') }}</button
             ><button
               class="btn btn--sm"
-              [disabled]="listLoading() || assigning() || page() >= pages()"
+              [disabled]="listLoading() || busy() || page() >= pages()"
               (click)="paginate(1)"
             >
               {{ t('Next', 'التالي') }}
@@ -312,7 +355,7 @@
   }
 </div>
 @if (selected(); as lead) {
-  <div class="scrim scrim--top" (click)="!assigning() && selected.set(null)"></div>
+  <div class="scrim scrim--top" (click)="!busy() && selected.set(null)"></div>
   <section
     class="dialog"
     role="dialog"
@@ -337,7 +380,7 @@
             [ngModel]="ownerId"
             (ngModelChange)="targetChanged($event)"
             required
-            [disabled]="assigning()"
+            [disabled]="busy()"
           >
             <option value="">
               {{ t('Choose an active team member', 'اختر عضوًا نشطًا من الفريق') }}
@@ -359,16 +402,218 @@
         </p>
       </div>
       <div class="dialog__foot">
-        <button class="btn" type="button" [disabled]="assigning()" (click)="selected.set(null)">
+        <button class="btn" type="button" [disabled]="busy()" (click)="selected.set(null)">
           {{ t('Cancel', 'إلغاء') }}
         </button>
         @if (error()) {
-          <button class="btn" type="button" [disabled]="assigning()" (click)="refreshAssignment()">
+          <button class="btn" type="button" [disabled]="busy()" (click)="refreshAssignment()">
             {{ t('Refresh leads', 'تحديث العملاء') }}
           </button>
         }
-        <button class="btn btn--dark" type="submit" [disabled]="assigning() || !ownerId">
-          {{ assigning() ? t('Assigning…', 'جارٍ التعيين…') : t('Assign lead', 'تعيين العميل') }}
+        <button class="btn btn--dark" type="submit" [disabled]="busy() || !ownerId">
+          {{ busy() ? t('Assigning…', 'جارٍ التعيين…') : t('Assign lead', 'تعيين العميل') }}
+        </button>
+      </div>
+    </form>
+  </section>
+}
+
+@if (taskMode(); as mode) {
+  <div class="scrim scrim--top" (click)="closeTask()"></div>
+  <section
+    class="dialog team-task-dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.dir]="ar() ? 'rtl' : 'ltr'"
+    [attr.aria-label]="
+      mode === 'create'
+        ? t('New team task', 'مهمة جديدة للفريق')
+        : mode === 'assign'
+          ? t('Assign task', 'تعيين المهمة')
+          : taskActionName()
+    "
+  >
+    <form (ngSubmit)="saveTask()">
+      <div class="dialog__head">
+        <span class="dialog__title">{{
+          mode === 'create'
+            ? t('New team task', 'مهمة جديدة للفريق')
+            : mode === 'assign'
+              ? t('Assign task', 'تعيين المهمة')
+              : taskActionName()
+        }}</span>
+        @if (taskRow(); as row) {
+          <span class="dialog__body">{{ local(row.title) }} · {{ row.reference }}</span>
+        }
+      </div>
+      <div class="dialog__main">
+        @if (taskError()) {
+          <p class="note note--bad" role="alert">{{ taskError() }}</p>
+        }
+        @if (mode === 'create') {
+          <label class="field"
+            ><span>{{ t('Task title', 'عنوان المهمة') }}</span
+            ><input
+              name="taskTitle"
+              [(ngModel)]="taskTitle"
+              required
+              minlength="2"
+              maxlength="200"
+              [disabled]="busy()"
+          /></label>
+          <label class="field"
+            ><span>{{ t('Description', 'الوصف') }}</span
+            ><textarea
+              name="taskDescription"
+              [(ngModel)]="taskDescription"
+              maxlength="2000"
+              rows="2"
+              [disabled]="busy()"
+            ></textarea>
+          </label>
+          <div class="task-fields">
+            <label class="field"
+              ><span>{{ t('Due date · Cairo', 'تاريخ الاستحقاق · القاهرة') }}</span
+              ><input
+                type="date"
+                name="taskDue"
+                [(ngModel)]="taskDue"
+                required
+                [disabled]="busy()" /></label
+            ><label class="field"
+              ><span>{{ t('Priority', 'الأولوية') }}</span
+              ><select name="taskPriority" [(ngModel)]="taskPriority" [disabled]="busy()">
+                <option value="high">{{ t('High', 'عالية') }}</option>
+                <option value="med">{{ t('Medium', 'متوسطة') }}</option>
+                <option value="low">{{ t('Low', 'منخفضة') }}</option>
+              </select></label
+            >
+          </div>
+        }
+        @if (mode === 'create' || mode === 'assign') {
+          <label class="field"
+            ><span>{{ t('Assign to', 'تعيين إلى') }}</span
+            ><select name="taskAssignee" [(ngModel)]="taskAssignee" required [disabled]="busy()">
+              <option value="">
+                {{ t('Choose an active team member', 'اختر عضوًا نشطًا من الفريق') }}
+              </option>
+              @for (m of targets(); track m.id) {
+                @if (mode === 'create' || m.id !== taskRow()?.assignee?.id) {
+                  <option [value]="m.id">{{ m.name }}</option>
+                }
+              }
+            </select></label
+          >
+        }
+        @if (mode === 'create') {
+          <div class="field">
+            <span>{{
+              t('Link a lead from your team · optional', 'ربط عميل من الفريق · اختياري')
+            }}</span>
+            @if (chosenTaskLead(); as linked) {
+              <div class="task-linked">
+                <span>{{ local(linked.name) }} · {{ linked.reference }}</span
+                ><button
+                  class="btn btn--sm"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="chosenTaskLead.set(null)"
+                >
+                  {{ t('Remove link', 'إزالة الربط') }}
+                </button>
+              </div>
+            }
+            <div class="task-lead-search">
+              <input
+                name="taskLeadQuery"
+                [(ngModel)]="taskLeadQuery"
+                [attr.aria-label]="t('Search team leads', 'بحث عملاء الفريق')"
+                [placeholder]="t('Lead name, phone or reference', 'اسم العميل أو هاتفه أو رقمه')"
+                [disabled]="busy()"
+              /><button
+                class="btn btn--sm"
+                type="button"
+                [disabled]="busy() || taskLeadLoading()"
+                (click)="searchTaskLeads()"
+              >
+                {{ t('Search', 'بحث') }}
+              </button>
+            </div>
+            <select
+              [attr.aria-label]="t('Linked lead', 'العميل المرتبط')"
+              name="linkedLead"
+              [ngModel]="chosenTaskLead()?.id ?? ''"
+              (ngModelChange)="chooseTaskLead($event)"
+              [disabled]="busy() || taskLeadLoading()"
+            >
+              <option value="">{{ t('No linked lead', 'بدون عميل مرتبط') }}</option>
+              @if (chosenTaskLead(); as selectedLead) {
+                <option [value]="selectedLead.id">
+                  {{ local(selectedLead.name) }} · {{ selectedLead.reference }}
+                </option>
+              }
+              @for (l of taskLeadOptions(); track l.id) {
+                @if (l.id !== chosenTaskLead()?.id) {
+                  <option [value]="l.id">{{ local(l.name) }} · {{ l.reference }}</option>
+                }
+              }
+            </select>
+            <span class="sub">{{
+              taskLeadLoading()
+                ? t('Loading team leads…', 'جارٍ تحميل عملاء الفريق…')
+                : t(
+                    'Search by name or reference to find a lead. Up to 25 matches are shown.',
+                    'ابحث بالاسم أو الرقم للعثور على العميل. يُعرض حتى ٢٥ نتيجة.'
+                  )
+            }}</span>
+          </div>
+        }
+        @if (mode === 'status') {
+          <p>{{ t('Current status: ', 'الحالة الحالية: ') }}{{ status(taskRow()!.status) }}</p>
+          @if (taskAction === 'cancel') {
+            <label class="field"
+              ><span>{{ t('Cancellation reason', 'سبب الإلغاء') }}</span
+              ><textarea
+                name="taskReason"
+                [(ngModel)]="taskReason"
+                required
+                minlength="10"
+                maxlength="500"
+                rows="3"
+                [disabled]="busy()"
+              ></textarea>
+            </label>
+          }
+        }
+      </div>
+      <div class="dialog__foot">
+        <button class="btn" type="button" [disabled]="busy()" (click)="closeTask()">
+          {{ t('Close', 'إغلاق') }}
+        </button>
+        @if (taskError()) {
+          <button class="btn" type="button" [disabled]="busy()" (click)="refreshTask()">
+            {{ t('Refresh tasks', 'تحديث المهام') }}
+          </button>
+        }
+        <button
+          class="btn btn--dark"
+          type="submit"
+          [disabled]="
+            busy() ||
+            (mode === 'create' && (taskTitle.trim().length < 2 || !taskDue || !taskAssignee)) ||
+            (mode === 'assign' && !taskAssignee) ||
+            (mode === 'status' && taskAction === 'cancel' && taskReason.trim().length < 10)
+          "
+        >
+          {{
+            busy()
+              ? t('Saving…', 'جارٍ الحفظ…')
+              : mode === 'create'
+                ? t('Create task', 'إنشاء المهمة')
+                : mode === 'assign'
+                  ? t('Assign task', 'تعيين المهمة')
+                  : taskActionName()
+          }}
         </button>
       </div>
     </form>

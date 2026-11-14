@@ -40,6 +40,7 @@ export interface TeamWorkLead {
 }
 export interface TeamWorkTask {
   id: string;
+  version: number;
   reference: string;
   title: { en: string; ar: string };
   status: string;
@@ -76,12 +77,28 @@ export interface TeamPerformance {
   asOf: string;
   timeZone: string;
   canAssign: boolean;
+  canManageTasks: boolean;
 }
 export interface TeamWorkPage<T> {
   items: T[];
   total: number;
   page: number;
   limit: number;
+}
+export interface TeamTaskDraft {
+  requestId: string;
+  title: string;
+  description?: string;
+  assigneeId: string;
+  dueDate?: string;
+  priority: string;
+  leadId?: string | null;
+}
+export interface TeamTaskResult {
+  id: string;
+  reference: string;
+  version: number;
+  status: string;
 }
 @Injectable({ providedIn: 'root' })
 export class TeamApi {
@@ -115,6 +132,24 @@ export class TeamApi {
       '/api/v1/team/my-team/leads/' + encodeURIComponent(id) + '/assign',
       body,
     );
+  }
+  createTask(body: TeamTaskDraft) {
+    return this.auth.request('/api/v1/team/my-team/tasks', body) as Promise<TeamTaskResult>;
+  }
+  assignTask(id: string, body: { requestId: string; version: number; assigneeId: string }) {
+    return this.auth.request(
+      '/api/v1/team/my-team/tasks/' + encodeURIComponent(id) + '/assign',
+      body,
+    ) as Promise<TeamTaskResult>;
+  }
+  taskStatus(
+    id: string,
+    body: { requestId: string; version: number; action: string; reason?: string },
+  ) {
+    return this.auth.request(
+      '/api/v1/team/my-team/tasks/' + encodeURIComponent(id) + '/status',
+      body,
+    ) as Promise<TeamTaskResult>;
   }
   saveGroup(body: SalesTeamInput, id?: string) {
     return this.auth.request(

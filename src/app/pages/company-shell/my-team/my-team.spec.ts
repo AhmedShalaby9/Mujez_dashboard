@@ -52,6 +52,7 @@ async function setup(manage = true, assigned = true) {
       to: '2026-11-14',
       timeZone: 'Africa/Cairo',
       canAssign: manage,
+      canManageTasks: manage,
     })),
     workLeads: vi.fn(async (_q: Record<string, string>) => ({
       items: [lead],
@@ -63,6 +64,7 @@ async function setup(manage = true, assigned = true) {
       items: [
         {
           id: 'task-1',
+          version: 4,
           reference: 'TASK-REAL',
           title: { en: 'Call buyer', ar: 'اتصل بالعميل' },
           status: 'open',
@@ -77,6 +79,24 @@ async function setup(manage = true, assigned = true) {
       limit: 25,
     })),
     assignLead: vi.fn(async (_id: string, _body: any) => ({ status: 'assigned' })),
+    createTask: vi.fn(async (_body: any) => ({
+      id: 'new-task',
+      reference: 'TASK-NEW',
+      version: 0,
+      status: 'open',
+    })),
+    assignTask: vi.fn(async (_id: string, _body: any) => ({
+      id: 'task-1',
+      reference: 'TASK-REAL',
+      version: 5,
+      status: 'open',
+    })),
+    taskStatus: vi.fn(async (_id: string, _body: any) => ({
+      id: 'task-1',
+      reference: 'TASK-REAL',
+      version: 5,
+      status: 'done',
+    })),
   };
   await TestBed.configureTestingModule({
     imports: [MyTeam],
@@ -192,5 +212,106 @@ describe('My team work and performance', () => {
     expect(c.performance()).toBeNull();
     expect(c.teams()).toEqual([]);
     expect(c.error()).toContain('Access unavailable');
+  });
+  it('creates an assigned task with a team lead link and shows the saved task using its reference', async () => {
+    const { f, c, api } = await setup();
+    c.openTask('create');
+    await f.whenStable();
+    c.taskTitle = '  Call saved buyer  ';
+    c.taskDescription = 'Discuss the viewing';
+    c.taskAssignee = 'member';
+    c.taskPriority = 'high';
+    c.chooseTaskLead('lead-1');
+    await c.saveTask();
+    expect(api.createTask).toHaveBeenCalledWith({
+      requestId: expect.any(String),
+      title: 'Call saved buyer',
+      description: 'Discuss the viewing',
+      assigneeId: 'member',
+      priority: 'high',
+      dueDate: '2026-11-14',
+      leadId: 'lead-1',
+    });
+    expect(c.taskMode()).toBeNull();
+    expect(c.toast()).toContain('Task created');
+    expect(api.workTasks.mock.calls.at(-1)?.[0]['q']).toBe('TASK-NEW');
+    expect(api.performance).toHaveBeenCalledTimes(2);
+  });
+  it('reassigns a task using its current version and reloads the confirmed workload', async () => {
+    const { c, api } = await setup();
+    const row = (await api.workTasks({})).items[0];
+    c.openTask('assign', row);
+    c.taskAssignee = 'leader';
+    await c.saveTask();
+    expect(api.assignTask).toHaveBeenCalledWith('task-1', {
+      requestId: expect.any(String),
+      version: 4,
+      assigneeId: 'leader',
+    });
+    expect(c.taskMode()).toBeNull();
+    expect(c.toast()).toContain('Task assigned');
+  });
+  it('completes team tasks and requires a meaningful cancellation reason', async () => {
+    const { c, api } = await setup();
+    const row = (await api.workTasks({})).items[0];
+    c.openTask('status', row, 'complete');
+    await c.saveTask();
+    expect(api.taskStatus).toHaveBeenCalledWith('task-1', {
+      requestId: expect.any(String),
+      version: 4,
+      action: 'complete',
+    });
+    c.openTask('status', row, 'cancel');
+    c.taskReason = 'short';
+    await c.saveTask();
+    expect(api.taskStatus).toHaveBeenCalledTimes(1);
+    expect(c.taskError()).toContain('10');
+    c.taskReason = 'Buyer requested a later appointment';
+    await c.saveTask();
+    expect(api.taskStatus.mock.calls.at(-1)?.[1].reason).toBe(
+      'Buyer requested a later appointment',
+    );
+  });
+  it('preserves a rejected task draft and keeps its request ID on an unchanged retry', async () => {
+    const { c, api } = await setup();
+    c.openTask('create');
+    c.taskTitle = 'Keep this task draft';
+    c.taskAssignee = 'member';
+    api.createTask.mockRejectedValueOnce(Error('Connection interrupted'));
+    await c.saveTask();
+    expect(c.taskMode()).toBe('create');
+    expect(c.taskTitle).toBe('Keep this task draft');
+    expect(c.taskError()).toContain('Connection');
+    await c.saveTask();
+    expect(api.createTask.mock.calls[0][0].requestId).toBe(
+      api.createTask.mock.calls[1][0].requestId,
+    );
+  });
+  it('keeps stale status changes visible for refresh without inventing a completed state', async () => {
+    const { c, api } = await setup();
+    const row = (await api.workTasks({})).items[0];
+    c.openTask('status', row, 'complete');
+    api.taskStatus.mockRejectedValueOnce(Error('Task changed. Refresh before trying again.'));
+    await c.saveTask();
+    expect(c.taskRow()?.version).toBe(4);
+    expect(c.taskMode()).toBe('status');
+    expect(c.taskError()).toContain('Refresh');
+    expect(c.toast()).toBe('');
+    await c.refreshTask();
+    expect(c.taskMode()).toBeNull();
+    expect(api.performance).toHaveBeenCalledTimes(2);
+  });
+  it('hides task mutation controls and blocks create calls for read-only team leads', async () => {
+    const { f, c, api } = await setup(false);
+    c.changeTab('tasks');
+    await f.whenStable();
+    f.detectChanges();
+    expect(f.nativeElement.textContent).not.toContain('+ New task');
+    expect(f.nativeElement.querySelector('.task-actions button')).toBeNull();
+    c.openTask('create');
+    c.taskTitle = 'Forbidden';
+    c.taskAssignee = 'member';
+    await c.saveTask();
+    expect(api.createTask).not.toHaveBeenCalled();
   });
 });

@@ -67,3 +67,39 @@
     flex-wrap: wrap;
   }
 }
+
+.task-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.task-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.task-lead-search,
+.task-linked {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+.task-linked {
+  padding: 8px 0;
+  justify-content: space-between;
+  font-size: 12px;
+}
+.team-task-dialog {
+  max-height: 90vh;
+  overflow: auto;
+}
+@media (max-width: 480px) {
+  .task-fields {
+    grid-template-columns: 1fr;
+  }
+}

@@ -129,7 +129,7 @@ tr.sel {
     overflow-wrap: anywhere;
   }
 }
-.box {
+.content-panel {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -138,10 +138,10 @@ tr.sel {
   background: #f6f6f3;
   font-size: 12.5px;
 }
-.box--note {
+.content-panel--note {
   background: #fffbf2;
 }
-.box--warn {
+.content-panel--warn {
   background: #fcf2de;
   gap: 6px;
 }

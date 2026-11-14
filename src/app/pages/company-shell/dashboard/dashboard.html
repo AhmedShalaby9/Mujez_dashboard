@@ -41,7 +41,7 @@
 
       <div class="row">
         @if (stages() || d.keyDates !== null) {
-          <section class="card box box--wide">
+          <section class="card content-panel content-panel--wide">
             <div class="c-head">
               <h2>{{ text('Pipeline', 'خط الصفقات') }}</h2>
               @if (stages(); as s) {
@@ -115,7 +115,7 @@
         }
 
         @if (events() !== null || d.todayTasks !== null) {
-          <section class="card box">
+          <section class="card content-panel">
             <div class="c-head">
               <h2>{{ text('Today', 'اليوم') }}</h2>
               @if (events(); as ev) {
@@ -178,7 +178,7 @@
 
       <div class="row">
         @if (d.scoredLeads !== null) {
-          <section class="card box box--wide">
+          <section class="card content-panel content-panel--wide">
             <div class="c-head">
               <h2>{{ text('Top leads', 'أهم العملاء') }}</h2>
               <span class="muted small">{{ text('sorted by score', 'مرتبة حسب التقييم') }}</span>
@@ -223,7 +223,7 @@
           </section>
         }
 
-        <div class="box stack">
+        <div class="content-panel stack">
           @if (team().length) {
             <section class="card">
               <div class="c-head">
@@ -276,7 +276,7 @@
       </div>
 
       <div class="row">
-        <section class="card box">
+        <section class="card content-panel">
           <div class="c-head">
             <h2>{{ text('Needs attention', 'تحتاج إلى متابعة') }}</h2>
             @if (d.alerts.length) {
@@ -312,7 +312,7 @@
         </section>
 
         @if (d.inventory; as inventory) {
-          <section class="card box">
+          <section class="card content-panel">
             <div class="c-head">
               <h2>{{ text('Inventory', 'المخزون') }}</h2>
               <span class="muted small">{{ text('all segments', 'كل القطاعات') }}</span>

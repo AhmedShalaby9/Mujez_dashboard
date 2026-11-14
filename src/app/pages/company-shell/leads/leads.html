@@ -355,7 +355,7 @@
         </div>
 
         @if (canReadTasks()) {
-          <div class="box">
+          <div class="content-panel">
             <span class="sect__label">{{ t('NEXT STEP', 'الخطوة التالية') }}</span>
             @if (nextTask(); as nt) {
               <span
@@ -380,7 +380,7 @@
           </div>
         }
         @if (latestNote(); as n) {
-          <div class="box box--note">
+          <div class="content-panel content-panel--note">
             <span class="sect__label">{{ t('LATEST NOTE', 'آخر ملاحظة') }}</span>
             <span>{{ n.text }}</span>
             <span class="sub">{{ n.by || t('System', 'النظام') }} · {{ date(n.at) }}</span>
@@ -388,7 +388,7 @@
         }
 
         @if (!l.firstContactAt && canManage() && !l.archivedAt) {
-          <div class="box box--warn">
+          <div class="content-panel content-panel--warn">
             <span class="sect__label">{{ t('FIRST CONTACT', 'أول تواصل') }}</span>
             <span>
               {{ t('No first-contact record.', 'لا يوجد سجل لأول تواصل.') }}

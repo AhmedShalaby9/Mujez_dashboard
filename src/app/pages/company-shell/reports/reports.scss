@@ -56,16 +56,16 @@
   gap: 14px;
   align-items: flex-start;
 }
-.box {
+.content-panel {
   display: flex;
   flex-direction: column;
   flex: 1 1 300px;
   min-width: 0;
 }
-.box--wide {
+.content-panel--wide {
   flex: 2 1 560px;
 }
-.box--wide2 {
+.content-panel--wide2 {
   flex: 1.4 1 480px;
 }
 .c-head {

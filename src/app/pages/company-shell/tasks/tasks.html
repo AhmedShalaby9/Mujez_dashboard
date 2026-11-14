@@ -293,7 +293,7 @@
         }
       </section>
       <div class="side">
-        <section class="card box">
+        <section class="card content-panel">
           <h2>{{ t('Overview', 'نظرة عامة') }}</h2>
           @for (g of groups; track g) {
             <button type="button" class="stat" (click)="groupFilter.set(g); reload()">
@@ -304,7 +304,7 @@
           }
         </section>
         @if (byAssignee().length > 1) {
-          <section class="card box">
+          <section class="card content-panel">
             <h2>{{ t('By assignee', 'حسب المسؤول') }}</h2>
             @for (a of byAssignee(); track a.name) {
               <div class="agent">

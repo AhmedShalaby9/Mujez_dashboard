@@ -283,6 +283,16 @@
               </div>
               <div class="iv-cb">
                 <div class="iv-cn">{{ label(i.name) }}</div>
+                @if (kind === 'units' && i.data.listing) {
+                  <div>
+                    <span class="iv-badge plain">{{ statusLabel(i.data.listing) }}</span>
+                    @if (i.data.reference?.aiCover) {
+                      <span class="iv-badge plain">{{
+                        X('AI image', 'صورة بالذكاء الاصطناعي')
+                      }}</span>
+                    }
+                  </div>
+                }
                 <div class="iv-devrow">{{ label(i.data.location) }}</div>
                 <div class="iv-pricerow">
                   <b>{{ money(kind === 'units' ? i.priceMinor : i.fromPriceMinor) }}</b>
@@ -443,7 +453,7 @@
           ><b>{{ i.available }}</b>
         </div>
         <div class="iv-kpi wide">
-          <span>{{ X('Starting price', 'يبدأ السعر من') }}</span
+          <span>{{ X('Sale prices from', 'تبدأ أسعار البيع من') }}</span
           ><b>{{ money(i.fromPriceMinor) }}</b>
         </div>
       } @else {
@@ -630,7 +640,7 @@
                 {{
                   kind === 'developers'
                     ? X('Compounds by this developer', 'كمباوندات هذا المطوّر')
-                    : X('Units for sale', 'الوحدات المعروضة')
+                    : X('Unit listings', 'الوحدات المعروضة')
                 }}
               </h2>
               <a

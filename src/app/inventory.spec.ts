@@ -3,7 +3,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { describe, expect, it } from 'vitest';
 import { Inventory } from './pages/company-shell/inventory/inventory';
 import { CompanyUiState } from './pages/company-shell/company-ui-state';
-import { COS, DEVS } from './pages/company-shell/inventory/inventory-data';
+import { COS, DEVS, UNITS } from './pages/company-shell/inventory/inventory-data';
 
 async function render(view: string, id?: string, lang: 'en' | 'ar' = 'en') {
   await TestBed.configureTestingModule({
@@ -29,6 +29,34 @@ async function render(view: string, id?: string, lang: 'en' | 'ar' = 'en') {
   f.detectChanges();
   return f;
 }
+
+describe('Inventory units (static design)', () => {
+  it('lists every unit and filters by bedrooms', async () => {
+    const f = await render('units');
+    expect(f.nativeElement.querySelectorAll('.iv-ccard').length).toBe(UNITS.length);
+    f.componentInstance.ub.set('1');
+    f.detectChanges();
+    expect(f.nativeElement.querySelectorAll('.iv-ccard').length).toBe(
+      UNITS.filter((u) => u.beds === 1).length,
+    );
+  });
+  it('renders every unit profile in both languages', async () => {
+    for (let i = 0; i < UNITS.length; i++) {
+      for (const lang of ['en', 'ar'] as const) {
+        TestBed.resetTestingModule();
+        const f = await render('unit', String(i), lang);
+        expect(f.nativeElement.querySelector('.iv-h1.big')?.textContent).toBeTruthy();
+        expect(f.nativeElement.querySelectorAll('.iv-prow').length).toBeGreaterThan(0);
+      }
+    }
+  });
+  it('shows the units for sale on a compound profile', async () => {
+    const f = await render('co', '0');
+    expect(f.nativeElement.querySelectorAll('.iv-sec2 .iv-ccard').length).toBe(
+      UNITS.filter((u) => u.c === 0).slice(0, 4).length,
+    );
+  });
+});
 
 describe('Inventory (static design)', () => {
   it('lists every developer', async () => {

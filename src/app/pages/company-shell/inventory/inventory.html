@@ -1,6 +1,32 @@
 <div class="iv-root" [attr.dir]="dir()" (click)="alOpen.set(false)">
   @let l = this.l();
 
+  <ng-template #unitCard let-u>
+    <div class="iv-card iv-ccard" (click)="openUnit(u.i)" [style.opacity]="u.op">
+      <div class="iv-img">
+        <app-inv-scene [sc]="u.sc" />
+        <div class="iv-ubadges top">
+          <span class="iv-st inl" [style.background]="u.listBg" [style.color]="u.listFg">{{ u.list }}</span>
+          @for (b of u.badges; track b.t) { <span class="iv-st inl" [style.background]="b.bg" [style.color]="b.fg">{{ b.t }}</span> }
+        </div>
+        <button type="button" class="iv-heart" (click)="toggleFav(u.i, $event)" [style.background]="u.hBg" [style.color]="u.hFg"><span style="font-size:14px">{{ u.heart }}</span></button>
+        <span class="iv-refb mono">{{ u.ref }}</span>
+      </div>
+      <div class="iv-cb">
+        <div class="iv-pricerow"><b>{{ u.price }}</b>@if (u.hasWas) { <s>{{ u.was }}</s> }</div>
+        <div class="iv-ppm">{{ u.ppm }}</div>
+        <div class="iv-cn sm">{{ u.title }}</div>
+        <div class="iv-devrow"><span class="iv-logo xs" [style.background]="u.devC">{{ u.devInit }}</span>{{ u.co }} · {{ u.area }}</div>
+        <div class="iv-uspecs">
+          @if (u.hasBeds) { <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4M2 17h20"/></svg>{{ u.beds }}</span> }
+          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16a1 1 0 0 1 1 1v2a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5v-2a1 1 0 0 1 1-1zM6 12V5a2 2 0 0 1 2-2h1"/></svg>{{ u.baths }}</span>
+          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3zM3 9h18M9 21V9"/></svg>{{ u.size }}</span>
+        </div>
+        <div class="iv-cfoot"><span [style.color]="u.delC">{{ u.del }}</span><span class="iv-pay">{{ u.pay }}</span></div>
+      </div>
+    </div>
+  </ng-template>
+
   @if (crumbs().length) {
     <div class="iv-crumbs">
       @for (cr of crumbs(); track $index; let last = $last) {
@@ -87,6 +113,7 @@
       <div class="iv-kpi wide"><span>{{ l.delivered }}</span><b>{{ dv.delBig }}</b><em>{{ dv.delSub }}</em></div>
       <div class="iv-kpi"><span>{{ l.founded }}</span><b>{{ dv.yr }}</b></div>
       <div class="iv-kpi"><span>{{ l.followers }}</span><b>{{ dv.folN }}</b></div>
+      <div class="iv-kpi"><span>{{ dv.unitsL }}</span><b>{{ dv.unitsN }}</b></div>
     </div>
 
     <div class="iv-cols">
@@ -322,6 +349,13 @@
             }
           </div>
         </section>
+
+        @if (co.coUnits.length) {
+          <section class="iv-sec2">
+            <div class="iv-sech"><h2>{{ co.coUnitsT }}</h2><button type="button" class="iv-link" (click)="viewAllUnits(idx())">{{ X('View all units', 'عرض كل الوحدات') }} →</button></div>
+            <div class="iv-grid co">@for (u of co.coUnits; track u.i) { <ng-container [ngTemplateOutlet]="unitCard" [ngTemplateOutletContext]="{ $implicit: u }" /> }</div>
+          </section>
+        }
       </div>
 
       <aside class="iv-side">
@@ -366,6 +400,135 @@
             <div class="iv-news"><span class="mono">{{ news.date }}</span><b>{{ news.t }}</b><p>{{ news.b }}</p></div>
           </section>
         }
+      </aside>
+    </div>
+  }
+  <!-- ===================== UNITS LIST ===================== -->
+  @if (view === 'units') {
+    <div class="iv-head">
+      <div><h1 class="iv-h1">{{ l.unitsT }}</h1><div class="iv-meta">{{ uMeta() }}</div></div>
+      <button type="button" class="iv-btn dark" (click)="addUnit()">{{ l.unitsT }} +</button>
+    </div>
+    <div class="iv-tools">
+      <label class="iv-search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></svg><input [value]="q()" (input)="onInput($event)" [placeholder]="l.search" /></label>
+      <select class="iv-select" (change)="setSel($event, 'uc')">@for (o of uCoOpts(); track o.v) { <option [value]="o.v" [selected]="o.v === uc()">{{ o.l }}</option> }</select>
+      <select class="iv-select" (change)="setSel($event, 'ut')">@for (o of uTypeOpts(); track o.v) { <option [value]="o.v" [selected]="o.v === ut()">{{ o.l }}</option> }</select>
+      <select class="iv-select" (change)="setSel($event, 'us')">@for (o of uSorts(); track o.v) { <option [value]="o.v" [selected]="o.v === us()">{{ o.l }}</option> }</select>
+    </div>
+    <div class="iv-ufil">
+      <div class="iv-chips">@for (ch of uListChips(); track ch.k) { <button type="button" class="iv-chip" (click)="ch.go()" [style.background]="ch.bg" [style.color]="ch.fg" [style.border-color]="ch.bd">{{ ch.label }}</button> }</div>
+      <div class="iv-chips"><span class="iv-segl">{{ X('Bedrooms', 'غرف النوم') }}</span>@for (ch of uBedChips(); track ch.k) { <button type="button" class="iv-chip sq" (click)="ch.go()" [style.background]="ch.bg" [style.color]="ch.fg" [style.border-color]="ch.bd">{{ ch.label }}</button> }</div>
+    </div>
+    <div class="iv-rescount"><b>{{ uCount() }}</b>@if (hasUFilter()) { <button type="button" class="iv-link" (click)="clearU()">{{ X('Clear filters', 'مسح الفلاتر') }}</button> }</div>
+    <div class="iv-grid co">
+      @for (u of unitList(); track u.i) { <ng-container [ngTemplateOutlet]="unitCard" [ngTemplateOutletContext]="{ $implicit: u }" /> }
+      @empty { <div class="iv-empty">—</div> }
+    </div>
+  }
+
+  <!-- ===================== UNIT DETAIL ===================== -->
+  @if (view === 'unit' && un(); as un) {
+    @if (un.hasOffer) { <div class="iv-uoffer"><span class="iv-pkind">%</span><div><b>{{ un.offerT }}</b><span>{{ un.offerS }}</span></div></div> }
+    @if (un.isLaunch) { <div class="iv-uoffer lime"><span class="iv-pkind">★</span><div><b>{{ un.launchT }}</b></div></div> }
+    <div class="iv-ugal">
+      <div class="iv-umain">
+        @if (un.mPhotos) { <app-inv-scene [sc]="un.mainSc" /><span class="iv-gn mono">{{ un.galN }}</span> }
+        @if (un.mPlan) {
+          <div class="iv-fplan">
+            <div class="iv-fpgrid">@for (rm of un.rooms; track $index) { <div class="iv-room" [style.background]="rm.bg">{{ rm.n }}</div> }</div>
+            <div class="iv-fpmeta"><span class="mono">{{ un.planSize }}</span><span class="iv-north">{{ un.uL.north }} ↑</span></div>
+          </div>
+        }
+        @if (un.mVideo) {
+          <app-inv-scene [sc]="un.coSc" /><div class="iv-vshade"></div>
+          <span class="iv-play big"><svg width="22" height="22" viewBox="0 0 24 24" fill="#111113"><path d="M8 5v14l11-7z"/></svg></span><span class="iv-glbl">{{ un.uL.vid }}</span>
+        }
+        <div class="iv-mtabs">@for (m of un.media; track m.k) { <button type="button" (click)="mt.set(m.k); gal.set(0)" [style.background]="m.bg" [style.color]="m.fg">{{ m.l }}</button> }</div>
+        <div class="iv-ubadges">
+          <span class="iv-st inl" [style.background]="un.listBg" [style.color]="un.listFg">{{ un.list }}</span>
+          @for (b of un.badges; track b.t) { <span class="iv-st inl" [style.background]="b.bg" [style.color]="b.fg">{{ b.t }}</span> }
+        </div>
+      </div>
+      <div class="iv-uthumbs">@for (g of un.thumbs; track g.k) { <button type="button" class="iv-gth" (click)="setGal(g.k)" [style.outline-color]="g.bd"><app-inv-scene [sc]="g.sc" /></button> }</div>
+    </div>
+
+    <div class="iv-cols">
+      <div class="iv-main">
+        <div class="iv-uhead">
+          <div class="iv-coinfo">
+            <span class="iv-ref mono">{{ un.ref }}</span>
+            <h1 class="iv-h1 big">{{ un.title }}</h1>
+            <div class="iv-dn2 lg">{{ un.title2 }}</div>
+            <div class="iv-uspecs big">
+              @if (un.hasBeds) { <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4M2 17h20"/></svg>{{ un.beds }}</span> }
+              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16a1 1 0 0 1 1 1v2a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5v-2a1 1 0 0 1 1-1zM6 12V5a2 2 0 0 1 2-2h1"/></svg>{{ un.baths }}</span>
+              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3zM3 9h18M9 21V9"/></svg>{{ un.size }}</span>
+              <span [style.color]="un.delC"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7a2 2 0 0 1 2 2M21 9a6 6 0 0 1-7.7 5.7L11 17H9v2H7v2H3v-3.6l6.3-6.3A6 6 0 1 1 21 9z"/></svg>{{ un.del }}</span>
+            </div>
+            <div class="iv-meta">{{ un.listed }}</div>
+          </div>
+        </div>
+
+        <section class="iv-card iv-sec">
+          <div class="iv-sech"><h2>{{ un.uL.calc }}</h2></div>
+          <div class="iv-chips">@for (pt of un.planTabs; track pt.k) { <button type="button" class="iv-chip" (click)="pl.set(pt.k)" [style.background]="pt.bg" [style.color]="pt.fg" [style.border-color]="pt.bd">{{ pt.l }}</button> }</div>
+          <div class="iv-payrows">@for (r of un.payRows; track $index) { <div class="iv-prow"><span>{{ r.k }}</span><div><b>{{ r.v }}</b>@if (r.s) { <em>{{ r.s }}</em> }</div></div> }</div>
+          <div class="iv-maint">{{ un.maintRow }}</div>
+        </section>
+
+        <section class="iv-card iv-sec">
+          <div class="iv-sech"><h2>{{ un.uL.specs }}</h2></div>
+          <div class="iv-spec">@for (s of un.spec; track $index) { <div><span>{{ s.k }}</span><b>{{ s.v }}</b></div> }</div>
+        </section>
+
+        <section class="iv-card iv-sec">
+          <div class="iv-sech"><h2>{{ un.uL.desc }}</h2>
+            <div class="iv-seg"><span class="iv-segl">{{ l.contentL }}</span>
+              @for (sg of clSeg(); track sg.k) { <button type="button" (click)="cl.set(sg.k)" [style.background]="sg.bg" [style.color]="sg.fg" [style.font-weight]="sg.fw">{{ sg.label }}</button> }
+            </div>
+          </div>
+          <p class="iv-p" [attr.dir]="un.descDir">{{ un.desc }}</p>
+        </section>
+
+        @if (un.similar.length) {
+          <section class="iv-sec2">
+            <div class="iv-sech"><h2>{{ un.uL.similar }}</h2></div>
+            <div class="iv-grid co">@for (u of un.similar; track u.i) { <ng-container [ngTemplateOutlet]="unitCard" [ngTemplateOutletContext]="{ $implicit: u }" /> }</div>
+          </section>
+        }
+      </div>
+
+      <aside class="iv-side">
+        <section class="iv-card iv-sec iv-pricebox">
+          <span class="iv-segl0">{{ un.uL.price }}</span>
+          <div class="iv-bigp">{{ un.price }}</div>
+          @if (un.hasWas) { <s class="iv-was">{{ un.was }}</s> }
+          <div class="iv-meta">{{ un.ppmBig }} · {{ un.pay }}</div>
+          <button type="button" class="iv-btn dark full" (click)="reserve()">{{ un.reserveL }}</button>
+          <div class="iv-row2">
+            <button type="button" class="iv-btn ghost" (click)="stackSoon()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l10 5-10 5L2 7zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>{{ un.uL.stack }}</button>
+            <button type="button" class="iv-btn ghost" (click)="toggleFav(un.i)"><span style="font-size:16px">{{ un.heart }}</span></button>
+            <button type="button" class="iv-btn ghost" (click)="info('Unit link copied', 'تم نسخ رابط الوحدة')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
+          </div>
+        </section>
+
+        <section class="iv-card iv-sec">
+          <h2 class="iv-h2s">{{ un.uL.seller }}</h2>
+          <div class="iv-agent"><span class="iv-av">{{ un.ag.init }}</span><div><b>{{ un.ag.n }}</b><span>{{ un.ag.role }}</span><em><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>{{ un.sellerV }}</em></div></div>
+          <div class="iv-row2 two">
+            <button type="button" class="iv-btn ghost" (click)="info('Calling the seller…', 'جارٍ الاتصال بالمعلن…')">{{ un.uL.call }}</button>
+            <button type="button" class="iv-btn wa" (click)="info('Unit details sent on WhatsApp', 'تم إرسال تفاصيل الوحدة على واتساب')">{{ un.uL.wa }}</button>
+          </div>
+        </section>
+
+        <section class="iv-card iv-sec">
+          <h2 class="iv-h2s">{{ un.uL.compound }}</h2>
+          <button type="button" class="iv-cobox" (click)="openCo(un.coIdx)">
+            <div class="iv-img sm"><app-inv-scene [sc]="un.coSc" /><span class="iv-st" [style.background]="un.coStBg" [style.color]="un.coStFg">{{ un.coSt }}</span></div>
+            <div class="iv-mb"><div class="iv-cn">{{ un.co }}</div><div class="iv-area">{{ un.area }}</div><div class="iv-mrow"><b>{{ un.coFrom }}</b><span>{{ un.coUnits }}</span></div></div>
+          </button>
+          <button type="button" class="iv-devlink wide" (click)="openDev(un.devIdx)"><span class="iv-logo sm" [style.background]="un.devC">{{ un.devInit }}</span><span><b>{{ un.dev }}</b>@if (un.devVer) { <span class="iv-vdot"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> }<em>{{ un.devUnits }}</em></span></button>
+        </section>
       </aside>
     </div>
   }

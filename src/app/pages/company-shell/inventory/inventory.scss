@@ -162,3 +162,51 @@
 .iv-root .fillsvg{width:100%;height:100%;display:block}
 .iv-gth{position:relative}
 .iv-pmedia app-inv-scene,.iv-gmain app-inv-scene{display:contents}
+
+/* units */
+.iv-ufil{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.iv-ufil .iv-chips{align-items:center}.iv-chip.sq{min-width:38px;justify-content:center;padding:0 10px}
+.iv-rescount{display:flex;align-items:center;gap:12px;margin-bottom:12px;font-size:13px;color:#3B3B40}
+.iv-ubadges{position:absolute;top:10px;inset-inline-start:10px;display:flex;gap:5px;flex-wrap:wrap;max-width:75%}
+.iv-umain .iv-ubadges{top:auto;bottom:14px;inset-inline-start:14px}
+.iv-refb{position:absolute;bottom:8px;inset-inline-end:8px;font-size:10.5px;padding:2px 6px;border-radius:5px;background:rgba(255,255,255,.88)}
+.iv-pricerow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.iv-pricerow b{font-size:18px;font-weight:600;letter-spacing:-0.01em}.iv-pricerow s{font-size:12.5px;color:#8A8A90}
+.iv-ppm{font-size:12px;color:#8A8A90;margin-top:-4px}
+.iv-cn.sm{font-size:14px;font-weight:500;color:#2A2A2E}
+.iv-uspecs{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:#3B3B40}.iv-uspecs span{display:inline-flex;align-items:center;gap:5px}
+.iv-uspecs.big{font-size:14.5px;gap:18px;margin:6px 0 2px}
+.iv-pay{color:#5B7F12!important}
+.iv-uoffer{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:14px;background:#111113;color:#fff;margin-bottom:14px}
+.iv-uoffer div{display:flex;flex-direction:column;gap:2px}.iv-uoffer b{font-size:15px}.iv-uoffer span:not(.iv-pkind){font-size:12.5px;color:#B5B5BA}
+.iv-uoffer .iv-pkind{background:#F2B84B;font-size:14px;align-self:center}.iv-uoffer.lime .iv-pkind{background:#C8F169}
+.iv-ugal{display:grid;grid-template-columns:minmax(0,1fr) 140px;gap:10px;margin-bottom:18px}
+@media (max-width:760px){.iv-ugal{grid-template-columns:1fr}.iv-uthumbs{flex-direction:row!important}}
+.iv-umain{position:relative;aspect-ratio:16/8;border-radius:18px;overflow:hidden;background:#EEF0E8}
+.iv-uthumbs{display:flex;flex-direction:column;gap:8px}
+.iv-mtabs{position:absolute;top:14px;inset-inline-start:14px;display:flex;gap:4px;padding:4px;border-radius:11px;background:rgba(17,17,19,.25);backdrop-filter:blur(6px)}
+.iv-mtabs button{border:0;height:30px;padding:0 12px;border-radius:8px;font-size:12.5px;font-weight:600}
+.iv-vshade{position:absolute;inset:0;background:rgba(17,17,19,.35)}.iv-play.big{width:64px;height:64px}
+.iv-fplan{position:absolute;inset:0;display:flex;flex-direction:column;padding:58px 28px 20px;background:#FBFBF8;background-image:linear-gradient(#EFEFEA 1px,transparent 1px),linear-gradient(90deg,#EFEFEA 1px,transparent 1px);background-size:20px 20px}
+.iv-fpgrid{flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:0;border:4px solid #2A2A2E;max-width:640px;width:100%;margin:0 auto}
+.iv-room{display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:500;color:#45454A;border:2px solid #2A2A2E;margin:-1px}
+.iv-room:first-child{grid-column:span 2;grid-row:span 2}
+.iv-fpmeta{display:flex;justify-content:space-between;max-width:640px;width:100%;margin:10px auto 0;font-size:12.5px;color:#6E6E73}.iv-north{font-weight:700;color:#111113}
+.iv-uhead{padding:2px 0 4px}
+.iv-ref{align-self:flex-start;font-size:12px;color:#6E6E73;background:#fff;border:1px solid #E7E7E2;padding:3px 8px;border-radius:7px}
+.iv-payrows{display:flex;flex-direction:column;margin-top:14px;border:1px solid #EFEFEA;border-radius:12px;overflow:hidden}
+.iv-prow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #EFEFEA;font-size:13.5px}
+.iv-prow:first-child{border-top:0}.iv-prow:last-child{background:#F7F9F0}
+.iv-prow span{color:#6E6E73}.iv-prow div{display:flex;flex-direction:column;align-items:flex-end;text-align:end}.iv-prow b{font-size:15px}.iv-prow em{font-style:normal;font-size:11.5px;color:#8A8A90}
+.iv-maint{margin-top:10px;font-size:12.5px;color:#8A5A14;background:#FDF3DC;padding:9px 12px;border-radius:10px}
+.iv-spec{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0 18px}
+.iv-spec div{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #F1F1ED;font-size:13.5px}.iv-spec span{color:#8A8A90}.iv-spec b{font-weight:600;text-align:end}
+.iv-pricebox{display:flex;flex-direction:column;gap:8px}
+.iv-segl0{font-size:12px;color:#8A8A90}.iv-bigp{font-size:28px;font-weight:600;letter-spacing:-0.02em;line-height:1.1}.iv-was{font-size:13px;color:#8A8A90}
+.iv-row2{display:flex;gap:8px}.iv-row2 .iv-btn{flex:1}.iv-row2.two{margin-top:12px}
+.iv-btn.wa{background:#25D366;border-color:#25D366;color:#fff}
+.iv-agent{display:flex;gap:12px;align-items:center}.iv-agent div{display:flex;flex-direction:column;gap:2px}.iv-agent b{font-size:14px}.iv-agent span{font-size:12.5px;color:#6E6E73}
+.iv-agent em{font-style:normal;font-size:11.5px;font-weight:600;color:#2F4A0A;display:inline-flex;align-items:center;gap:4px}
+.iv-av{width:44px;height:44px;border-radius:50%;background:#111113;color:#C8F169;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:none}
+.iv-cobox{display:block;width:100%;padding:0;border:1px solid #E7E7E2;border-radius:14px;background:#fff;text-align:start;overflow:hidden}
+.iv-cobox .iv-img{border-radius:0}
+.iv-devlink.wide{width:100%;margin-top:10px}

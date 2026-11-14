@@ -1,31 +1,36 @@
 import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CompanyUiState } from '../company-ui-state';
 import { InvScene, type Scene } from './inv-scene';
 import { InventoryState, type AlertPrefs } from './inventory-state';
 import {
+  AGENTS,
   COS,
   DEVS,
   FIN,
   IC,
   PAL,
   STATUS,
+  UNITS,
+  UTYPES,
+  type Unit,
   type Compound,
   type CoKind,
   type CoStatus,
 } from './inventory-data';
 
-type View = 'devs' | 'dev' | 'cos' | 'co';
+type View = 'devs' | 'dev' | 'cos' | 'co' | 'units' | 'unit';
 type DevFilter = 'all' | 'top' | 'ver';
 
 /**
- * Inventory section: Developers and Compounds (list + detail). Everything here is
+ * Inventory section: Developers, Compounds and Units (list + detail). Everything here is
  * static demo data from inventory-data.ts — there are no API calls.
  */
 @Component({
   selector: 'app-inventory',
-  imports: [InvScene],
+  imports: [InvScene, NgTemplateOutlet],
   templateUrl: './inventory.html',
   styleUrl: './inventory.scss',
 })
@@ -50,7 +55,13 @@ export class Inventory implements OnDestroy {
     return Number.isInteger(n) && n >= 0 ? n : -1;
   });
   readonly notFound = computed(() =>
-    this.view === 'dev' ? !DEVS[this.idx()] : this.view === 'co' ? !COS[this.idx()] : false,
+    this.view === 'dev'
+      ? !DEVS[this.idx()]
+      : this.view === 'co'
+        ? !COS[this.idx()]
+        : this.view === 'unit'
+          ? !UNITS[this.idx()]
+          : false,
   );
 
   readonly ar = computed(() => this.ui.lang() === 'ar');
@@ -64,6 +75,15 @@ export class Inventory implements OnDestroy {
   readonly sort = signal<'fol' | 'cos' | 'az'>('fol');
   readonly stF = signal<'all' | CoStatus>('all');
   readonly devSel = signal('all');
+  // units list filters (the compound page links here with ?co=<index>)
+  readonly uc = signal(this.route.snapshot.queryParamMap?.get('co') ?? 'all');
+  readonly ut = signal('all');
+  readonly ul = signal<'all' | 'primary' | 'resale' | 'ready' | 'offer' | 'launch'>('all');
+  readonly ub = signal('any');
+  readonly us = signal<'new' | 'plo' | 'phi' | 'ppm' | 'size'>('new');
+  // unit detail
+  readonly pl = signal(0);
+  readonly mt = signal<'photos' | 'plan' | 'video'>('photos');
   // detail state
   readonly cl = signal<'en' | 'ar' | null>(null);
   readonly gal = signal(0);
@@ -153,16 +173,30 @@ export class Inventory implements OnDestroy {
   openCo(i: number) {
     this.go('compounds', i);
   }
+  openUnit(i: number) {
+    this.go('units', i);
+  }
+  viewAllUnits(ci: number) {
+    void this.router.navigate(['/company/units'], { queryParams: { co: ci } });
+  }
 
   readonly crumbs = computed(() => {
     const L = this.L();
     const root =
       this.view === 'dev' || this.view === 'devs'
         ? { label: this.X('Developers', 'المطوّرون'), go: () => this.go('developers') }
-        : { label: this.X('Compounds', 'الكمباوندات'), go: () => this.go('compounds') };
-    if (this.view === 'devs' || this.view === 'cos' || this.notFound()) return [];
+        : this.view === 'unit' || this.view === 'units'
+          ? { label: this.X('Units', 'الوحدات'), go: () => this.go('units') }
+          : { label: this.X('Compounds', 'الكمباوندات'), go: () => this.go('compounds') };
+    if (this.view === 'devs' || this.view === 'cos' || this.view === 'units' || this.notFound())
+      return [];
     const i = this.idx();
-    const name = this.view === 'dev' ? DEVS[i].n[L] : COS[i].n[L];
+    const name =
+      this.view === 'dev'
+        ? DEVS[i].n[L]
+        : this.view === 'unit'
+          ? UTYPES[UNITS[i].t][L] + ' · ' + UNITS[i].size + this.X(' m²', ' م²')
+          : COS[i].n[L];
     return [root, { label: name, go: () => undefined }];
   });
 
@@ -236,6 +270,7 @@ export class Inventory implements OnDestroy {
       ends: X('Ends', 'ينتهي'),
       sold: X('Sold', 'مباع'),
       next: X('Next phase', 'المرحلة القادمة'),
+      unitsT: X('Units', 'الوحدات'),
     };
   });
 
@@ -348,6 +383,8 @@ export class Inventory implements OnDestroy {
         )[k],
       })),
       cos: String(this.coCount(i)),
+      unitsN: this.num(UNITS.filter((u) => COS[u.c].d === i).length),
+      unitsL: this.X('Units listed', 'وحدات معروضة'),
       devCos: COS.map((c, ci) => ({ c, ci }))
         .filter((x) => x.c.d === i)
         .map(({ c, ci }) => this.coCard(c, ci, 2, 'dm')),
@@ -854,6 +891,14 @@ export class Inventory implements OnDestroy {
       gal,
       hasPromo: !!promo,
       promo,
+      coUnits: UNITS.map((u, k) => ({ u, k }))
+        .filter((x) => x.u.c === i)
+        .slice(0, 4)
+        .map(({ u, k }) => this.unitCard(u, k, 'cu')),
+      coUnitsT: X(
+        `Units for sale · ${UNITS.filter((u) => u.c === i).length}`,
+        `وحدات للبيع · ${UNITS.filter((u) => u.c === i).length}`,
+      ),
       stats: (
         [
           [this.l().totalU, num(c.tot), '', '#111113'],
@@ -922,6 +967,515 @@ export class Inventory implements OnDestroy {
         : X('Follow to start getting alerts', 'تابع لتصلك التنبيهات'),
     };
   });
+
+  // ---------------------------------------------------------------- units
+  egp(n: number) {
+    return this.ar() ? `${this.num(Math.round(n))} ج.م` : `EGP ${this.num(Math.round(n))}`;
+  }
+  uRef(u: Unit) {
+    return (
+      COS[u.c].n[0].replace(/^The /, '').slice(0, 3).toUpperCase() +
+      '-' +
+      String(u.id).padStart(5, '0')
+    );
+  }
+  uTitle(u: Unit, l: number) {
+    const c = COS[u.c],
+      tp = UTYPES[u.t][l];
+    if (!u.beds)
+      return l ? `${tp} في ${c.n[1]} – ${u.size} م²` : `${tp} in ${c.n[0]} – ${u.size} m²`;
+    return l
+      ? `${tp} في ${c.n[1]} – ${u.beds === 1 ? 'غرفة نوم' : u.beds + ' غرف نوم'}`
+      : `${tp} in ${c.n[0]} – ${u.beds} bedroom${u.beds > 1 ? 's' : ''}`;
+  }
+  uPrice(u: Unit) {
+    return u.offer ? Math.round((u.price * (1 - u.offer / 100)) / 100) * 100 : u.price;
+  }
+  uPlans(u: Unit) {
+    const c = COS[u.c],
+      P = this.uPrice(u),
+      maint = Math.round((u.price * 0.08) / 100) * 100;
+    const base: [number, number][] =
+      u.list === 'resale' && u.ready
+        ? [[3, 30]]
+        : u.list === 'resale'
+          ? [[Math.max(3, c.yr - 3), Math.max(20, c.dn + 15)]]
+          : [
+              [c.yr, c.dn],
+              [Math.max(3, c.yr - 2), c.dn + 10],
+              [Math.max(3, c.yr - 4), c.dn + 20],
+            ];
+    const seen = new Set<string>();
+    const plans = base
+      .filter(([y, d]) => !seen.has(y + '-' + d) && !!seen.add(y + '-' + d))
+      .map(([years, dpPct]) => {
+        const dp = Math.round((P * dpPct) / 100);
+        const bulk =
+          years >= 8
+            ? (
+                [
+                  [0.05, 8],
+                  [0.05, 12],
+                ] as [number, number][]
+              )
+                .slice(0, years >= 10 ? 2 : 1)
+                .map(([f, at]) => ({ v: Math.round(P * f), at }))
+            : [];
+        const count = years * 4;
+        const inst = Math.round((P - dp - bulk.reduce((a, b) => a + b.v, 0)) / count);
+        return { cash: false, years, dpPct, dp, bulk, count, inst, maint, total: P, disc: 0 };
+      });
+    const disc = u.list === 'primary' ? 15 : 0;
+    plans.push({
+      cash: true,
+      years: 0,
+      dpPct: 100,
+      dp: Math.round(P * (1 - disc / 100)),
+      bulk: [],
+      count: 0,
+      inst: 0,
+      maint,
+      total: Math.round(P * (1 - disc / 100)),
+      disc,
+    });
+    return plans;
+  }
+  payLine(u: Unit) {
+    const p = this.uPlans(u)[0];
+    return p.cash
+      ? this.X('Cash · resale', 'كاش · إعادة بيع')
+      : this.X(`${p.dpPct}% down · ${p.years} yrs`, `مقدم ${p.dpPct}% · ${p.years} سنوات`);
+  }
+  uBadges(u: Unit) {
+    const X = (e: string, a: string) => this.X(e, a);
+    return (
+      [
+        u.sold ? [X('Sold', 'مباعة'), '#E4E4DF', '#6E6E73'] : null,
+        u.launch ? [X('New Launch', 'إطلاق جديد'), '#C8F169', '#111113'] : null,
+        u.offer ? [X(`Offer −${u.offer}%`, `عرض −${u.offer}%`), '#F2B84B', '#111113'] : null,
+        u.featured ? [X('Featured', 'مميزة'), '#111113', '#fff'] : null,
+      ].filter(Boolean) as string[][]
+    ).map(([t, bg, fg]) => ({ t, bg, fg }));
+  }
+  unitCard(u: Unit, i: number, idp = 'u') {
+    const L = this.L(),
+      c = COS[u.c],
+      dv = DEVS[c.d],
+      faved = this.isFol('u' + i);
+    const ppm = this.num(Math.round(this.uPrice(u) / u.size));
+    return {
+      i,
+      title: this.uTitle(u, L),
+      ref: this.uRef(u),
+      sc: this.scene(u.p, u.v + 1, c.k, idp + u.id),
+      badges: this.uBadges(u),
+      list: u.list === 'primary' ? this.X('Primary', 'من المطوّر') : this.X('Resale', 'إعادة بيع'),
+      listBg: u.list === 'primary' ? '#EEF6DA' : '#E3ECF8',
+      listFg: u.list === 'primary' ? '#2F4A0A' : '#1F4E8C',
+      price: this.egp(this.uPrice(u)),
+      was: u.offer ? this.egp(u.price) : '',
+      hasWas: !!u.offer,
+      ppm: this.X(`${ppm} EGP/m²`, `${ppm} ج.م/م²`),
+      co: c.n[L],
+      dev: dv.n[L],
+      devInit: this.inits(dv.n[0]),
+      devC: dv.c,
+      area: c.a[L],
+      beds: String(u.beds),
+      hasBeds: u.beds > 0,
+      baths: String(u.baths),
+      size: `${u.size} ${this.X('m²', 'م²')}`,
+      del: u.ready
+        ? this.X('Ready to move', 'جاهز للسكن')
+        : this.X('Delivery ', 'الاستلام ') + (c.dl as Bi2)[L],
+      delC: u.ready ? '#2F4A0A' : '#3B3B40',
+      pay: this.payLine(u),
+      faved,
+      hBg: faved ? '#C8F169' : 'rgba(17,17,19,0.62)',
+      hFg: faved ? '#111113' : '#fff',
+      heart: faved ? '♥' : '♡',
+      op: u.sold ? 0.6 : 1,
+    };
+  }
+  toggleFav(i: number, ev?: Event) {
+    ev?.stopPropagation();
+    const on = this.state.toggleFollow('u' + i);
+    this.toast(
+      on
+        ? this.X('Saved to favorites', 'تمت الإضافة للمفضلة')
+        : this.X('Removed from favorites', 'تمت الإزالة من المفضلة'),
+    );
+  }
+  private chip<T extends string>(cur: T, set: (v: T) => void) {
+    return ([k, l, n]: [T, string, number?]) => ({
+      k,
+      label: n === undefined ? l : l + ' · ' + n,
+      go: () => set(k),
+      bg: cur === k ? '#111113' : '#fff',
+      fg: cur === k ? '#fff' : '#111113',
+      bd: cur === k ? '#111113' : '#E2E2DC',
+    });
+  }
+  readonly uMeta = computed(() =>
+    this.X(
+      `${UNITS.length} units · ${UNITS.filter((u) => !u.sold).length} for sale · ${COS.length} compounds`,
+      `${UNITS.length} وحدة · ${UNITS.filter((u) => !u.sold).length} للبيع · ${COS.length} كمباوند`,
+    ),
+  );
+  readonly uListChips = computed(() =>
+    (
+      [
+        ['all', this.X('All', 'الكل'), UNITS.length],
+        [
+          'primary',
+          this.X('Primary', 'من المطوّر'),
+          UNITS.filter((u) => u.list === 'primary').length,
+        ],
+        ['resale', this.X('Resale', 'إعادة بيع'), UNITS.filter((u) => u.list === 'resale').length],
+        ['ready', this.X('Ready to move', 'جاهز للسكن'), UNITS.filter((u) => u.ready).length],
+        ['offer', this.X('Offers', 'عروض'), UNITS.filter((u) => u.offer).length],
+        ['launch', this.X('Launches', 'إطلاقات'), UNITS.filter((u) => u.launch).length],
+      ] as ['all' | 'primary' | 'resale' | 'ready' | 'offer' | 'launch', string, number][]
+    ).map(this.chip(this.ul(), (v) => this.ul.set(v))),
+  );
+  readonly uBedChips = computed(() =>
+    (
+      [
+        ['any', this.X('Any', 'الكل')],
+        ['1', '1'],
+        ['2', '2'],
+        ['3', '3'],
+        ['4', '4+'],
+      ] as [string, string][]
+    ).map(this.chip(this.ub(), (v) => this.ub.set(v))),
+  );
+  readonly uTypeOpts = computed(() => [
+    { v: 'all', l: this.X('All property types', 'كل أنواع الوحدات') },
+    ...Object.keys(UTYPES).map((k) => ({
+      v: k,
+      l: UTYPES[k][this.L()] + ' · ' + UNITS.filter((u) => u.t === k).length,
+    })),
+  ]);
+  readonly uCoOpts = computed(() => [
+    { v: 'all', l: this.X('All compounds', 'كل الكمباوندات') },
+    ...COS.map((c, i) => ({ v: String(i), l: c.n[this.L()] })),
+  ]);
+  readonly uSorts = computed(() => [
+    { v: 'new', l: this.X('Newest', 'الأحدث') },
+    { v: 'plo', l: this.X('Price: low to high', 'السعر: من الأقل') },
+    { v: 'phi', l: this.X('Price: high to low', 'السعر: من الأعلى') },
+    { v: 'ppm', l: this.X('Price per m²', 'سعر المتر') },
+    { v: 'size', l: this.X('Largest', 'الأكبر مساحة') },
+  ]);
+  readonly hasUFilter = computed(
+    () =>
+      this.uc() !== 'all' ||
+      this.ut() !== 'all' ||
+      this.ul() !== 'all' ||
+      this.ub() !== 'any' ||
+      !!this.q(),
+  );
+  clearU() {
+    this.uc.set('all');
+    this.ut.set('all');
+    this.ul.set('all');
+    this.ub.set('any');
+    this.q.set('');
+  }
+  readonly unitList = computed(() => {
+    this.state.followed();
+    const ql = this.q().trim().toLowerCase(),
+      uc = this.uc(),
+      ut = this.ut(),
+      ul = this.ul(),
+      ub = this.ub(),
+      us = this.us();
+    const list = UNITS.map((u, i) => ({ u, i })).filter(({ u }) => {
+      const c = COS[u.c];
+      if (uc !== 'all' && String(u.c) !== uc) return false;
+      if (ut !== 'all' && u.t !== ut) return false;
+      if (ul === 'primary' && u.list !== 'primary') return false;
+      if (ul === 'resale' && u.list !== 'resale') return false;
+      if (ul === 'offer' && !u.offer) return false;
+      if (ul === 'launch' && !u.launch) return false;
+      if (ul === 'ready' && !u.ready) return false;
+      if (ub !== 'any' && (ub === '4' ? u.beds < 4 : u.beds !== +ub)) return false;
+      return (
+        !ql ||
+        (
+          this.uTitle(u, 0) +
+          ' ' +
+          this.uTitle(u, 1) +
+          ' ' +
+          this.uRef(u) +
+          ' ' +
+          c.a[0] +
+          ' ' +
+          c.a[1]
+        )
+          .toLowerCase()
+          .includes(ql)
+      );
+    });
+    list.sort(
+      (a, b) =>
+        Number(a.u.sold) - Number(b.u.sold) ||
+        (us === 'plo'
+          ? this.uPrice(a.u) - this.uPrice(b.u)
+          : us === 'phi'
+            ? this.uPrice(b.u) - this.uPrice(a.u)
+            : us === 'size'
+              ? b.u.size - a.u.size
+              : us === 'ppm'
+                ? this.uPrice(a.u) / a.u.size - this.uPrice(b.u) / b.u.size
+                : a.u.days - b.u.days),
+    );
+    return list.map(({ u, i }) => this.unitCard(u, i));
+  });
+  readonly uCount = computed(() =>
+    this.X(`${this.unitList().length} results`, `${this.unitList().length} نتيجة`),
+  );
+
+  readonly un = computed(() => {
+    if (this.view !== 'unit' || this.notFound()) return null;
+    this.state.followed();
+    const X = (e: string, a: string) => this.X(e, a);
+    const L = this.L(),
+      CL = this.CL,
+      i = this.idx(),
+      u = UNITS[i],
+      c = COS[u.c],
+      dv = DEVS[c.d];
+    const card = this.unitCard(u, i),
+      plans = this.uPlans(u),
+      pi = Math.min(this.pl(), plans.length - 1),
+      p = plans[pi],
+      ag = AGENTS[u.ag];
+    const dl = (c.dl as Bi2 | undefined) ?? ['', ''];
+    const media: [string, string][] = [
+      ['photos', X('Photos', 'الصور') + ' · 5'],
+      ['plan', X('Floor plan', 'المسقط')],
+      ...(u.video ? ([['video', X('Video', 'فيديو')]] as [string, string][]) : []),
+    ];
+    const mt = media.some((m) => m[0] === this.mt()) ? this.mt() : 'photos';
+    const rooms: [string, string][] = u.beds
+      ? [
+          [X('Living', 'المعيشة'), '#F7F9F0'],
+          ...Array.from(
+            { length: Math.min(u.beds, 3) },
+            (_, k) => [X('Bedroom ' + (k + 1), 'نوم ' + (k + 1)), '#fff'] as [string, string],
+          ),
+          [X('Kitchen', 'المطبخ'), '#FDF6E6'],
+          [X('Bath', 'حمام'), '#EEF4FA'],
+        ]
+      : [
+          [X('Open space', 'مساحة مفتوحة'), '#F7F9F0'],
+          [X('Pantry', 'بوفيه'), '#FDF6E6'],
+          [X('WC', 'دورة مياه'), '#EEF4FA'],
+        ];
+    const m2 = X('m²', 'م²');
+    const spec = (
+      [
+        [X('Property type', 'نوع الوحدة'), UTYPES[u.t][L]],
+        [X('Size', 'المساحة'), `${u.size} ${m2}`],
+        u.beds ? [X('Bedrooms', 'غرف النوم'), String(u.beds)] : null,
+        [X('Bathrooms', 'الحمامات'), String(u.baths)],
+        u.level ? [X('Level', 'الدور'), u.level[L]] : null,
+        u.garden ? [X('Garden', 'الحديقة'), `${u.garden} ${m2}`] : null,
+        u.land ? [X('Land', 'الأرض'), `${u.land} ${m2}`] : null,
+        u.outdoor ? [X('Roof terrace', 'تراس الروف'), `${u.outdoor} ${m2}`] : null,
+        [X('Finishing', 'التشطيب'), FIN[c.fin][L]],
+        [X('Delivery', 'الاستلام'), u.ready ? X('Ready to move', 'جاهز للسكن') : dl[L]],
+        [
+          X('Listing', 'نوع العرض'),
+          u.list === 'primary'
+            ? X('Primary · from developer', 'من المطوّر مباشرة')
+            : X('Resale · from owner', 'إعادة بيع · من المالك'),
+        ],
+        [
+          X('Payment', 'الدفع'),
+          plans.length > 1 ? X('Installments or cash', 'تقسيط أو كاش') : X('Cash', 'كاش'),
+        ],
+        [X('Maintenance', 'الصيانة'), this.egp(p.maint)],
+        [X('Reference', 'الكود'), this.uRef(u)],
+      ].filter(Boolean) as string[][]
+    ).map(([k, v]) => ({ k, v }));
+    const tp = UTYPES[u.t];
+    const descEn = u.beds
+      ? `${tp[0]} in ${c.n[0]} by ${dv.n[0]}, ${u.size} m², ${u.beds} bedroom${u.beds > 1 ? 's' : ''}, ${u.baths} bathroom${u.baths > 1 ? 's' : ''}. ${FIN[c.fin][0]}. ${u.ready ? 'Ready to move.' : 'Delivery ' + dl[0] + '.'}${u.garden ? ` Private garden of ${u.garden} m².` : ''}${u.outdoor ? ` Roof terrace of ${u.outdoor} m².` : ''}`
+      : `${tp[0]} in ${c.n[0]} by ${dv.n[0]}, ${u.size} m² on ${u.level ? u.level[0].toLowerCase() : 'the ground floor'}. ${FIN[c.fin][0]}. ${u.ready ? 'Ready to operate.' : 'Delivery ' + dl[0] + '.'}`;
+    const descAr = u.beds
+      ? `${tp[1]} في ${c.n[1]} من ${dv.n[1]}، مساحتها ${u.size} م² و${u.beds === 1 ? 'غرفة نوم' : u.beds + ' غرف نوم'} و${u.baths === 1 ? 'حمام' : u.baths === 2 ? 'حمامان' : u.baths + ' حمامات'}. ${FIN[c.fin][1]}. ${u.ready ? 'جاهزة للسكن.' : 'التسليم ' + dl[1] + '.'}${u.garden ? ` حديقة خاصة ${u.garden} م².` : ''}${u.outdoor ? ` تراس روف ${u.outdoor} م².` : ''}`
+      : `${tp[1]} في ${c.n[1]} من ${dv.n[1]}، مساحته ${u.size} م²${u.level ? ' في ' + u.level[1] : ''}. ${FIN[c.fin][1]}. ${u.ready ? 'جاهز للتشغيل.' : 'التسليم ' + dl[1] + '.'}`;
+    const payRows: [string, string, string][] = p.cash
+      ? [
+          [
+            X('Cash price', 'السعر كاش'),
+            this.egp(p.total),
+            p.disc
+              ? X(`${p.disc}% cash discount`, `خصم كاش ${p.disc}%`)
+              : X('Paid on contract', 'يُدفع عند التعاقد'),
+          ],
+        ]
+      : [
+          [
+            X('Down payment', 'المقدم'),
+            p.dp ? this.egp(p.dp) : X('No down payment', 'بدون مقدم'),
+            `${p.dpPct}%`,
+          ],
+          [
+            X('Quarterly installment', 'القسط ربع السنوي'),
+            this.egp(p.inst),
+            X(
+              `${p.count} installments over ${p.years} years`,
+              `${p.count} قسط على ${p.years} سنوات`,
+            ),
+          ],
+          ...p.bulk.map(
+            (b) =>
+              [
+                X('Bulk payment', 'دفعة إضافية'),
+                this.egp(b.v),
+                X(`with installment ${b.at}`, `مع القسط ${b.at}`),
+              ] as [string, string, string],
+          ),
+          [
+            X('Total price', 'إجمالي السعر'),
+            this.egp(p.total),
+            u.offer ? X(`after ${u.offer}% offer`, `بعد خصم ${u.offer}%`) : '',
+          ],
+        ];
+    const cnt = UNITS.filter((x) => x.c === u.c).length,
+      devCos = COS.filter((x) => x.d === c.d).length,
+      devUnits = UNITS.filter((x) => COS[x.c].d === c.d).length;
+    const st = this.stLbl(c.st),
+      gal = this.gal();
+    const ppm = this.num(Math.round(this.uPrice(u) / u.size));
+    return {
+      ...card,
+      title2: this.uTitle(u, 1 - L),
+      desc: CL ? descAr : descEn,
+      descDir: CL ? 'rtl' : 'ltr',
+      listed: X(
+        `Listed ${u.days} day${u.days > 1 ? 's' : ''} ago · ${u.views} views`,
+        `أُضيفت منذ ${u.days} يوم · ${u.views} مشاهدة`,
+      ),
+      ppmBig: X(`${ppm} EGP per m²`, `${ppm} ج.م للمتر`),
+      mainSc: this.scene((u.p + gal) % 6, u.v + gal, c.k, 'um' + u.id),
+      galN: gal + 1 + ' / 5',
+      coIdx: u.c,
+      devIdx: c.d,
+      coSc: this.scene(c.p, 0, c.k, 'uc' + u.id),
+      coSt: st.t,
+      coStBg: st.bg,
+      coStFg: st.fg,
+      coFrom: X('From ', 'يبدأ من ') + this.egpM(c.from),
+      coUnits: X(`${cnt} units listed`, `${cnt} وحدة معروضة`),
+      devUnits: X(
+        `${devCos} compounds · ${devUnits} units`,
+        `${devCos} كمباوند · ${devUnits} وحدة`,
+      ),
+      devVer: !!dv.ver,
+      media: media.map(([k, l]) => ({
+        k: k as 'photos' | 'plan' | 'video',
+        l,
+        bg: mt === k ? '#111113' : 'rgba(255,255,255,0.92)',
+        fg: mt === k ? '#fff' : '#111113',
+      })),
+      mPhotos: mt === 'photos',
+      mPlan: mt === 'plan',
+      mVideo: mt === 'video',
+      thumbs: [0, 1, 2, 3, 4].map((k) => ({
+        k,
+        sc: this.scene((u.p + k) % 6, u.v + k, c.k, 'ut' + u.id + '-' + k),
+        bd: gal === k ? '#111113' : 'transparent',
+      })),
+      rooms: rooms.map(([n, bg]) => ({ n, bg })),
+      planSize: `${u.size} ${m2}`,
+      hasOffer: !!u.offer,
+      offerT: X(
+        `${u.offer}% off this unit until Nov 30, 2026`,
+        `خصم ${u.offer}% على هذه الوحدة حتى 30 نوفمبر 2026`,
+      ),
+      offerS: X(
+        `Was ${this.egp(u.price)} · you save ${this.egp(u.price - this.uPrice(u))}`,
+        `كان ${this.egp(u.price)} · توفير ${this.egp(u.price - this.uPrice(u))}`,
+      ),
+      isLaunch: u.launch,
+      launchT: X(
+        'Launch price · priority booking for followers',
+        'سعر الإطلاق · أولوية الحجز للمتابعين',
+      ),
+      spec,
+      planTabs: plans.map((q, k) => ({
+        k,
+        l: q.cash
+          ? X('Cash', 'كاش')
+          : X(`${q.years} yrs · ${q.dpPct}%`, `${q.years} سنوات · ${q.dpPct}%`),
+        bg: pi === k ? '#111113' : '#fff',
+        fg: pi === k ? '#fff' : '#111113',
+        bd: pi === k ? '#111113' : '#E2E2DC',
+      })),
+      payRows: payRows.map(([k, v, s]) => ({ k, v, s })),
+      maintRow: X(
+        `Maintenance deposit ${this.egp(p.maint)} · one-time, not included in the price`,
+        `وديعة صيانة ${this.egp(p.maint)} · مرة واحدة ولا تدخل في السعر`,
+      ),
+      ag: {
+        n: ag[L],
+        init: ag[0]
+          .split(' ')
+          .map((w) => w[0])
+          .join(''),
+        role: X('Sales agent · Nile Realty', 'وكيل مبيعات · النيل العقارية'),
+      },
+      sellerV: X('Verified seller', 'بائع موثّق'),
+      reserveL: u.sold ? X('Sold', 'مباعة') : X('Reserve · hold 48h', 'حجز · 48 ساعة'),
+      similar: UNITS.map((x, k) => ({ x, k }))
+        .filter(({ x, k }) => x.c === u.c && k !== i)
+        .slice(0, 3)
+        .map(({ x, k }) => this.unitCard(x, k, 'us')),
+      uL: {
+        price: X('Price', 'السعر'),
+        specs: X('Unit details', 'تفاصيل الوحدة'),
+        calc: X('Payment plans', 'خطط السداد'),
+        desc: X('Description', 'الوصف'),
+        compound: X('Compound', 'الكمباوند'),
+        seller: X('Listed by', 'المعلن'),
+        similar: X('More units in this compound', 'وحدات أخرى في هذا الكمباوند'),
+        call: X('Call', 'اتصال'),
+        wa: X('WhatsApp', 'واتساب'),
+        stack: X('Stacking plan', 'خريطة الوحدات'),
+        vid: X('Walkthrough video · 1:12', 'فيديو جولة · 1:12'),
+        north: X('N', 'ش'),
+      },
+    };
+  });
+  reserve() {
+    const u = UNITS[this.idx()];
+    this.toast(
+      u.sold
+        ? this.X('This unit is sold', 'هذه الوحدة مباعة')
+        : this.X(
+            'Unit held for 48 hours · record the deposit before it expires',
+            'تم حجز الوحدة 48 ساعة · سجّل العربون قبل انتهاء المدة',
+          ),
+    );
+  }
+  addUnit() {
+    this.toast(
+      this.X(
+        'Units come from developer feeds, Excel import or + Add unit',
+        'تأتي الوحدات من بيانات المطوّرين أو استيراد Excel أو إضافة وحدة',
+      ),
+    );
+  }
+  setSel(ev: Event, s: 'uc' | 'ut' | 'us') {
+    const v = (ev.target as HTMLSelectElement).value;
+    if (s === 'uc') this.uc.set(v);
+    else if (s === 'ut') this.ut.set(v);
+    else this.us.set(v as 'new' | 'plo' | 'phi' | 'ppm' | 'size');
+  }
 
   toggleFaq(k: number) {
     this.faq.set(this.faq() === k ? -1 : k);

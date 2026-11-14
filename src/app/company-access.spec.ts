@@ -126,6 +126,7 @@ describe('Company navigation redesign', () => {
       const permissions = [
         'workspace.view',
         'projects.read',
+        'units.read',
         ...pages.map((page) => page + '.read'),
         ...(role === 'team_lead' ? ['team.self.read'] : []),
       ];
@@ -154,6 +155,7 @@ describe('Company navigation redesign', () => {
           ...pages,
           'developers',
           'compounds',
+          'units',
           ...(role === 'team_lead' ? ['my-team'] : []),
         ]
           .map((p) => '/company/' + p)

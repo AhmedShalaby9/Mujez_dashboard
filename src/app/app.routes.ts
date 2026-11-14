@@ -209,9 +209,20 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
       },
-      // Legacy inventory URLs (API-backed pages were replaced by the static Developers / Compounds tabs)
+      {
+        path: 'units',
+        data: { permission: 'units.read', view: 'units' },
+        loadComponent: () =>
+          import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
+      },
+      {
+        path: 'units/:id',
+        data: { permission: 'units.read', view: 'unit' },
+        loadComponent: () =>
+          import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
+      },
+      // Legacy inventory URL (the API-backed Projects page was replaced by the static Compounds tab)
       { path: 'projects', redirectTo: 'compounds', pathMatch: 'full' },
-      { path: 'units', redirectTo: 'compounds', pathMatch: 'full' },
       {
         path: 'reservations',
         data: { permission: 'reservations.read' },

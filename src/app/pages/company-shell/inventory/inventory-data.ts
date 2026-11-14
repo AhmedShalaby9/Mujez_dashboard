@@ -544,3 +544,165 @@ export const PAL: string[][] = [
   ['#8EC5D6', '#EAF3E6', '#FFE08A', '#A6BBA8', '#F3F1E8', '#7FA65C', '#C8F169'],
   ['#C7B7E8', '#F6E4E8', '#FFD9A8', '#B3A6C9', '#F2ECF0', '#8BA86A', '#C8F169'],
 ];
+
+export interface Unit {
+  id: number;
+  c: number;
+  t: string;
+  size: number;
+  price: number;
+  beds: number;
+  baths: number;
+  lvl: number | null;
+  level: Bi | null;
+  garden: number | null;
+  land: number | null;
+  outdoor: number | null;
+  list: 'primary' | 'resale';
+  sold: boolean;
+  ready: boolean;
+  featured: boolean;
+  launch: boolean;
+  offer: number | null;
+  views: number;
+  days: number;
+  ag: number;
+  video: boolean;
+  p: number;
+  v: number;
+}
+
+// units: generated deterministically (seeded) from the compounds above
+export const UTYPES: Record<string, Bi> = {
+  apartment: ['Apartment', 'شقة'],
+  duplex: ['Duplex', 'دوبلكس'],
+  penthouse: ['Penthouse', 'بنتهاوس'],
+  townhouse: ['Townhouse', 'تاون هاوس'],
+  twinhouse: ['Twin house', 'توين هاوس'],
+  villa: ['Villa', 'فيلا'],
+  chalet: ['Chalet', 'شاليه'],
+  office: ['Office', 'مكتب'],
+  retail: ['Retail', 'محل تجاري'],
+  clinic: ['Clinic', 'عيادة'],
+};
+export const KTYPES: Record<CoKind, [string, number, number][]> = {
+  res: [
+    ['apartment', 76, 150],
+    ['apartment', 130, 210],
+    ['duplex', 220, 310],
+    ['townhouse', 240, 300],
+    ['villa', 320, 480],
+    ['penthouse', 180, 260],
+  ],
+  coast: [
+    ['chalet', 90, 125],
+    ['chalet', 110, 150],
+    ['twinhouse', 210, 260],
+    ['villa', 280, 420],
+  ],
+  com: [
+    ['office', 60, 140],
+    ['retail', 40, 120],
+    ['clinic', 45, 90],
+    ['office', 120, 240],
+  ],
+};
+export const AGENTS: Bi[] = [
+  ['Omar Khaled', 'عمر خالد'],
+  ['Nour Adel', 'نور عادل'],
+  ['Youssef Samir', 'يوسف سمير'],
+  ['Mariam Fathy', 'مريم فتحي'],
+];
+const LEVELS: Bi[] = [
+  ['Ground floor', 'الدور الأرضي'],
+  ['1st floor', 'الدور الأول'],
+  ['2nd floor', 'الدور الثاني'],
+  ['3rd floor', 'الدور الثالث'],
+  ['4th floor', 'الدور الرابع'],
+];
+export const UNITS: Unit[] = (() => {
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const out: Unit[] = [];
+  let id = 6601;
+  COS.forEach((c, ci) => {
+    const T = KTYPES[c.k],
+      n = c.st === 'sold' ? 3 : 4,
+      ppm = (c.from * 1e6) / T[0][1],
+      delivered = !!c.since;
+    for (let j = 0; j < n; j++) {
+      const [t, s1, s2] = T[(j + ci) % T.length];
+      const size = Math.round(s1 + rnd() * (s2 - s1));
+      const prem =
+        (
+          { villa: 1.12, penthouse: 1.15, twinhouse: 1.05, retail: 1.4, clinic: 1.2 } as Record<
+            string,
+            number
+          >
+        )[t] || 1;
+      const price = Math.round((size * ppm * prem * (0.95 + rnd() * 0.2)) / 100) * 100;
+      const com = c.k === 'com';
+      const beds = com
+        ? 0
+        : t === 'apartment'
+          ? size < 100
+            ? 1
+            : size < 150
+              ? 2
+              : 3
+          : t === 'chalet'
+            ? size < 115
+              ? 1
+              : 2
+            : t === 'villa'
+              ? size > 380
+                ? 5
+                : 4
+              : 3 + (t === 'duplex' && size > 260 ? 1 : 0);
+      const baths = com ? 1 : Math.min(5, beds === 1 ? 2 : beds);
+      const lvl =
+        t === 'apartment' || t === 'chalet' ? Math.floor(rnd() * (t === 'chalet' ? 2 : 5)) : null;
+      const resale =
+        c.st === 'resale' ||
+        c.st === 'sold' ||
+        (c.st !== 'soon' && c.st !== 'launch' && rnd() < 0.2);
+      const ground = lvl === 0 || ['villa', 'townhouse', 'twinhouse'].includes(t);
+      out.push({
+        id: id++,
+        c: ci,
+        t,
+        size,
+        price,
+        beds,
+        baths,
+        lvl,
+        level:
+          t === 'duplex'
+            ? ['Ground + 1st', 'أرضي + أول']
+            : t === 'penthouse'
+              ? ['Roof', 'الروف']
+              : com
+                ? [`Floor ${1 + (j % 6)}`, `الدور ${1 + (j % 6)}`]
+                : lvl === null
+                  ? null
+                  : LEVELS[lvl],
+        garden: ground && !com ? Math.round(size * (t === 'villa' ? 1.4 : 0.5)) : null,
+        land: ['villa', 'townhouse', 'twinhouse'].includes(t) ? Math.round(size * 1.7) : null,
+        outdoor: t === 'penthouse' ? Math.round(size * 0.45) : null,
+        list: resale ? 'resale' : 'primary',
+        sold: c.st === 'sold',
+        ready: delivered,
+        featured: rnd() < 0.18,
+        launch: c.st === 'launch' && !resale,
+        offer: c.st === 'offer' && !resale ? 10 : null,
+        views: Math.round(rnd() * 380),
+        days: 1 + Math.floor(rnd() * 40),
+        ag: Math.floor(rnd() * AGENTS.length),
+        video: j === 0 && c.st === 'launch',
+        p: (c.p + j) % 6,
+        v: j,
+      });
+    }
+  });
+  return out;
+})();

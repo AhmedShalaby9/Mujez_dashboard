@@ -12,7 +12,7 @@ import { majorAmount, minorAmount } from './sales-api.service';
       class="dialog dialog--wide"
       role="dialog"
       aria-modal="true"
-      [attr.aria-label]="t('Inventory form', 'نموذج المخزون')"
+      [attr.aria-label]="title()"
     >
       <form (ngSubmit)="save()">
         <div class="dialog__head">

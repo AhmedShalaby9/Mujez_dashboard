@@ -48,6 +48,32 @@ import { AuthService } from './auth.service';
         min-height: 100vh;
         background: var(--bg, #f4f4f1);
       }
+      :host {
+        display: block;
+        font-family: var(--font-ui);
+        font-size: 13px;
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      :is(button, input):focus-visible {
+        outline: 2px solid var(--ink);
+        outline-offset: 3px;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      @media (max-width: 480px) {
+        :host main {
+          padding: 16px;
+        }
+        :host section {
+          padding: 24px;
+        }
+      }
       main {
         max-width: 480px;
         margin: 0 auto;
@@ -56,7 +82,7 @@ import { AuthService } from './auth.service';
         color: var(--ink, #111113);
         background: var(--surface, #fff);
         border: 1px solid var(--border-card, #e2e2dc);
-        border-radius: var(--r-card, 12px);
+        border-radius: var(--r-modal, 16px);
         position: relative;
         top: 10vh;
       }

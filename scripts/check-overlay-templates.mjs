@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseTemplate } from '@angular/compiler';
+import ts from 'typescript';
 
 function files(path) {
   return readdirSync(path, { withFileTypes: true }).flatMap((entry) =>
@@ -27,8 +28,31 @@ function hasName(node, name) {
 }
 let overlays = 0;
 let closeButtons = 0;
-for (const file of files('src/app/pages').filter((path) => path.endsWith('.html'))) {
-  const template = parseTemplate(readFileSync(file, 'utf8'), file);
+const templates = [];
+for (const file of files('src/app')) {
+  if (file.endsWith('.html')) templates.push([file, readFileSync(file, 'utf8')]);
+  else if (file.endsWith('.ts') && !file.endsWith('.spec.ts')) {
+    const source = ts.createSourceFile(
+      file,
+      readFileSync(file, 'utf8'),
+      ts.ScriptTarget.Latest,
+      true,
+    );
+    function collect(node) {
+      if (
+        ts.isPropertyAssignment(node) &&
+        node.name.getText(source) === 'template' &&
+        (ts.isNoSubstitutionTemplateLiteral(node.initializer) ||
+          ts.isStringLiteral(node.initializer))
+      )
+        templates.push([file, node.initializer.text]);
+      ts.forEachChild(node, collect);
+    }
+    collect(source);
+  }
+}
+for (const [file, text] of templates) {
+  const template = parseTemplate(text, file);
   assert.equal(template.errors, null, file + ': template must parse');
   function visit(node) {
     const classes = attribute(node, 'class') ?? '';

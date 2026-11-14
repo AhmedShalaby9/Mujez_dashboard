@@ -163,4 +163,32 @@ describe('Shared inventory catalog', () => {
     await c.load();
     expect(c.error()).toBe('');
   });
+  it('preserves zero values and treats cleared numeric inputs as unknown', async () => {
+    const { c, api } = await render('units', [], true);
+    await c.openEditor();
+    Object.assign(c.draft, {
+      name: 'Zero down studio',
+      parentId: id,
+      price: '0',
+      bedrooms: null,
+      area: null,
+      bathrooms: 0,
+      down: 0,
+      years: 8,
+    });
+    await c.save();
+    expect(api.save).toHaveBeenCalledWith(
+      'units',
+      expect.objectContaining({
+        area: null,
+        bedrooms: null,
+        priceMinor: '0',
+        data: expect.objectContaining({
+          bathrooms: 0,
+          paymentPlans: [expect.objectContaining({ downPercent: 0, years: 8 })],
+        }),
+      }),
+      undefined,
+    );
+  });
 });

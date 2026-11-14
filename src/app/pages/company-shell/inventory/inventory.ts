@@ -412,6 +412,9 @@ export class Inventory implements OnDestroy {
       this.error.set((e as Error).message);
     }
   }
+  hasValue(v: unknown) {
+    return v !== null && v !== undefined && v !== '';
+  }
   async save() {
     if (this.busy()) return;
     this.busy.set(true);
@@ -451,17 +454,17 @@ export class Inventory implements OnDestroy {
         data.top = d.top;
         data.verified = d.verified;
         for (const key of ['founded', 'delivered'] as const) {
-          if (d[key]) data[key] = Number(d[key]);
+          if (this.hasValue(d[key])) data[key] = Number(d[key]);
           else delete data[key];
         }
       } else {
         for (const key of ['deliveryYear', 'bathrooms'] as const) {
-          if (d[key]) data[key] = Number(d[key]);
+          if (this.hasValue(d[key])) data[key] = Number(d[key]);
           else delete data[key];
         }
         if (d.finishing) data.finishing = { en: d.finishing, ar: d.finishing };
         else delete data.finishing;
-        if (d.down !== '' && d.years !== '')
+        if (this.hasValue(d.down) && this.hasValue(d.years))
           data.paymentPlans = [
             {
               name: { en: 'Payment plan', ar: 'خطة السداد' },
@@ -485,8 +488,8 @@ export class Inventory implements OnDestroy {
           name: { en: d.name, ar: d.ar || d.name },
           status: d.status,
           priceMinor,
-          area: d.area ? Number(d.area) : null,
-          bedrooms: d.bedrooms !== '' ? Number(d.bedrooms) : null,
+          area: this.hasValue(d.area) ? Number(d.area) : null,
+          bedrooms: this.hasValue(d.bedrooms) ? Number(d.bedrooms) : null,
           data,
         },
         this.editing()?.id,

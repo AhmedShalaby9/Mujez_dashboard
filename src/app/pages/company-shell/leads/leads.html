@@ -24,22 +24,13 @@
     </div>
   </div>
 
-  <select
-    class="input"
-    [value]="ownerFilter()"
-    (change)="ownerFilter.set($any($event.target).value); reload()"
-  >
-    <option value="">{{ t('All owners', 'كل المسؤولين') }}</option>
-    @for (o of owners(); track o.id) {
-      <option [value]="o.id">{{ o.name }}</option>
-    }
-  </select>
-  <div class="filters">
+  <div class="saved-view-tools">
     <input
       class="input"
       [value]="savedName()"
       (input)="savedName.set($any($event.target).value)"
       [placeholder]="t('Saved view name', 'اسم طريقة العرض')"
+      [attr.aria-label]="t('Saved view name', 'اسم طريقة العرض')"
     /><button
       type="button"
       class="btn"
@@ -89,7 +80,18 @@
         (input)="searchChanged($any($event.target).value)"
       />
     </div>
-    <div class="chips">
+    <select
+      class="sel"
+      [attr.aria-label]="t('Filter by owner', 'التصفية حسب المسؤول')"
+      [value]="ownerFilter()"
+      (change)="ownerFilter.set($any($event.target).value); reload()"
+    >
+      <option value="">{{ t('All owners', 'كل المسؤولين') }}</option>
+      @for (o of owners(); track o.id) {
+        <option [value]="o.id">{{ o.name }}</option>
+      }
+    </select>
+    <div class="chips status-tabs">
       <button
         type="button"
         class="chip"

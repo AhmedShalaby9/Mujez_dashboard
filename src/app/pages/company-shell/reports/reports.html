@@ -25,7 +25,7 @@
   </div>
 
   <div class="tools">
-    <div class="chips">
+    <div class="chips status-tabs">
       @for (p of periods; track p) {
         <button type="button" class="chip" [class.on]="period() === p" (click)="load(p)">
           {{ L().periodNames[p] }}

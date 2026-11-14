@@ -20,19 +20,21 @@
   </div>
 
   <div class="tools">
-    <div class="toggle" role="tablist" [attr.aria-label]="t('Team views', 'عرض الفريق')">
+    <div class="tabs" role="tablist" [attr.aria-label]="t('Team views', 'عرض الفريق')">
       <button
+        class="tab"
         role="tab"
         [attr.aria-selected]="tab() === 'members'"
-        [class.on]="tab() === 'members'"
+        [class.tab--on]="tab() === 'members'"
         (click)="tab.set('members')"
       >
         {{ t('Employees', 'الموظفون') }}
       </button>
       <button
+        class="tab"
         role="tab"
         [attr.aria-selected]="tab() === 'teams'"
-        [class.on]="tab() === 'teams'"
+        [class.tab--on]="tab() === 'teams'"
         (click)="tab.set('teams')"
       >
         {{ t('Teams', 'الفرق') }} · {{ groups().length }}
@@ -44,7 +46,7 @@
   </div>
   @if (tab() === 'members') {
     <div class="tools">
-      <div class="chips">
+      <div class="chips status-tabs">
         <button
           type="button"
           class="chip"

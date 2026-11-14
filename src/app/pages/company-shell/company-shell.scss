@@ -1,6 +1,6 @@
 :host {
   display: block;
-  font-family: 'Geist', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  font-family: var(--font-ui);
   font-size: 13px;
   line-height: 1.45;
   color: #111113;
@@ -18,169 +18,32 @@ input {
 
 .shell {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-columns: 252px minmax(0, 1fr);
   min-height: 100vh;
 }
 
-// ---- sidebar ----
-
-.sidebar {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  width: 232px;
-  overflow-y: auto;
-  scrollbar-width: none;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding: 16px 12px;
-  background: #111113;
-  color: #e8e8ea;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
+.shell--collapsed {
+  grid-template-columns: 68px minmax(0, 1fr);
 }
-
-.sidebar__brand {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 4px 8px;
-}
-
-.sidebar__logo {
-  flex: none;
-  display: block;
-}
-
-.sidebar__brandName {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: #fff;
-}
-
-.sidebar__company {
-  margin-inline-start: auto;
-  min-width: 0;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 10px;
-  color: #8a8a90;
-  border: 1px solid #2c2d31;
-  border-radius: 4px;
-  padding: 1px 5px;
-}
-
-.sidebar__nav {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.sidebar__groupLabel {
-  padding: 12px 8px 4px;
-  font-size: 10px;
-  font-weight: 600;
-  color: #5d5d63;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.sidebar__item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 9px;
-  background: transparent;
-  color: #a1a1a6;
-  font-size: 13px;
-  font-weight: 400;
-  text-align: start;
-  text-decoration: none;
-  cursor: pointer;
-
-  &:hover {
-    background: #1d1e21;
-  }
-}
-
-.sidebar__item--active {
-  background: #1f2023;
-  color: #fff;
-  font-weight: 500;
-  box-shadow: inset 3px 0 0 #c8f169;
-}
-
-[dir='rtl'] .sidebar__item--active {
-  box-shadow: inset -3px 0 0 #c8f169;
-}
-
-.sidebar__itemLabel {
-  flex: 1 1 auto;
-  min-width: 0;
-  white-space: nowrap;
+.sidebar__brandTag {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-.sidebar__itemCount {
-  flex: none;
-  margin-inline-start: auto;
-  font:
-    400 11px 'Geist Mono',
-    'IBM Plex Sans Arabic',
-    monospace;
-  color: #5d5d63;
-}
-
-.sidebar__me {
-  margin-top: auto;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 8px;
-  border-top: 1px solid #222327;
-}
-
 .sidebar__avatar {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #ecece7;
-  color: #111113;
   display: grid;
   place-items: center;
-  font-size: 11px;
-  font-weight: 600;
 }
-
-.sidebar__meText {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+.sidebar__search:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
-
-.sidebar__meName {
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.sidebar__meRole {
-  font-size: 11px;
-  color: #8a8a90;
-}
-
-.sidebar__scrim {
+.sidebar__collapseBtn {
   display: none;
+}
+@media (min-width: 901px) {
+  .sidebar__collapseBtn {
+    display: grid;
+  }
 }
 
 // ---- main / topbar ----
@@ -199,11 +62,10 @@ input {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 60px;
-  padding: 0 clamp(12px, 2.5vw, 24px);
+  height: 52px;
+  padding: 0 clamp(12px, 2.5vw, 20px);
   border-bottom: 1px solid #e7e7e2;
-  background: rgba(244, 244, 241, 0.88);
-  backdrop-filter: blur(10px);
+  background: var(--surface);
 }
 
 .topbar__menuBtn,
@@ -230,10 +92,6 @@ input {
   font-size: 15px;
 }
 
-
-
-
-
 .topbar__search {
   position: relative;
   flex: 1 1 auto;
@@ -244,7 +102,7 @@ input {
 .topbar__search {
   display: flex;
   align-items: center;
-  max-width: 380px;
+  max-width: 420px;
 }
 .topbar__kbd {
   position: absolute;
@@ -323,7 +181,7 @@ input {
 .topbar__searchInput {
   width: 100%;
   height: 30px;
-  padding: 0;
+  padding: 0 10px;
   padding-inline: 10px 52px;
   border: 1px solid #e2e2dc;
   border-radius: 9px;
@@ -343,7 +201,6 @@ input {
   align-items: center;
   gap: 8px;
 }
-
 
 .topbar__menuWrap {
   position: relative;
@@ -524,7 +381,8 @@ input {
 // ---- responsive ----
 
 @media (max-width: 900px) {
-  .shell {
+  .shell,
+  .shell.shell--collapsed {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -533,7 +391,7 @@ input {
     inset-inline-start: 0;
     top: 0;
     z-index: 50;
-    width: 232px;
+    width: 252px;
     transform: translateX(-100%);
     transition: transform 0.2s ease;
   }
@@ -558,7 +416,6 @@ input {
     display: grid;
     place-items: center;
   }
-
 }
 
 // ---- workspace banner ----
@@ -834,4 +691,13 @@ input {
 }
 .route-host--hidden {
   display: none;
+}
+
+.sidebar__scrim {
+  display: none;
+}
+@media (max-width: 900px) {
+  .sidebar__scrim {
+    display: block;
+  }
 }

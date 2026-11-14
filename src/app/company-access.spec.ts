@@ -108,6 +108,65 @@ describe('Company owner workspace identity', () => {
     expect(navigate).toHaveBeenCalledWith('/');
   });
 });
+describe('Company navigation redesign', () => {
+  it('preserves permission filtering when groups collapse and the sidebar switches to icons', async () => {
+    const user = signal({ ...owner, permissions: ['workspace.view', 'leads.read', 'tasks.read'] });
+    await TestBed.configureTestingModule({
+      imports: [CompanyShell],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: { user, logout: vi.fn(), watched: signal(0) } },
+      ],
+    }).compileComponents();
+    const f = TestBed.createComponent(CompanyShell);
+    f.detectChanges();
+    const paths = () =>
+      [...f.nativeElement.querySelectorAll('.sidebar__item')].map((a: any) =>
+        a.getAttribute('href'),
+      );
+    expect(paths()).toEqual(['/company/dashboard', '/company/leads', '/company/tasks']);
+    f.nativeElement.querySelector('.sidebar__groupLabel').click();
+    f.detectChanges();
+    expect(paths()).toEqual([]);
+    f.componentInstance.collapsed.set(true);
+    f.detectChanges();
+    expect(paths()).toEqual(['/company/dashboard', '/company/leads', '/company/tasks']);
+    expect(f.nativeElement.querySelector('.sidebar__item').getAttribute('aria-label')).toBe(
+      'Dashboard',
+    );
+    expect(f.nativeElement.querySelector('.sidebar__itemLabel')).toBeNull();
+    user.set({ ...owner, permissions: ['workspace.view'] });
+    f.detectChanges();
+    expect(paths()).toEqual(['/company/dashboard']);
+  });
+  it('uses expanded navigation on mobile even after collapsing it on desktop', async () => {
+    await TestBed.configureTestingModule({
+      imports: [CompanyShell],
+      providers: [
+        provideRouter([]),
+        {
+          provide: AuthService,
+          useValue: { user: signal(owner), logout: vi.fn(), watched: signal(0) },
+        },
+      ],
+    }).compileComponents();
+    const f = TestBed.createComponent(CompanyShell);
+    f.componentInstance.collapsed.set(true);
+    expect(f.componentInstance.isCollapsed()).toBe(true);
+    const previousWidth = window.innerWidth;
+    try {
+      Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
+      window.dispatchEvent(new Event('resize'));
+      f.detectChanges();
+      expect(f.componentInstance.isCollapsed()).toBe(false);
+      expect(f.nativeElement.querySelector('.sidebar__itemLabel').textContent.trim()).toBe(
+        'Dashboard',
+      );
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { value: previousWidth, configurable: true });
+    }
+  });
+});
 describe('Admin company owner invitation', () => {
   it('queues the automatic welcome on creation and preserves explicit legacy invitations', async () => {
     const company: any = {

@@ -122,10 +122,20 @@
   </div>
 }
 
-<div class="shell" [attr.dir]="dir()" [class.shell--ws]="!!workspace()" (click)="closeMenus()">
-  <aside class="sidebar" [class.sidebar--open]="mobileNavOpen()">
+<div
+  class="shell"
+  [attr.dir]="dir()"
+  [class.shell--ws]="!!workspace()"
+  [class.shell--collapsed]="isCollapsed()"
+  (click)="closeMenus()"
+>
+  <aside
+    class="sidebar"
+    [class.sidebar--open]="mobileNavOpen()"
+    [class.sidebar--collapsed]="isCollapsed()"
+  >
     <div class="sidebar__brand">
-      <svg width="26" height="26" viewBox="0 0 64 64" class="sidebar__logo" aria-hidden="true">
+      <svg width="30" height="30" viewBox="0 0 64 64" class="sidebar__logo" aria-hidden="true">
         <rect width="64" height="64" rx="16" fill="#C8F169" />
         <path
           d="M14 46V27L23.5 18.5L32 26L40.5 18.5L50 27V46"
@@ -137,38 +147,161 @@
         />
         <rect x="28.5" y="35" width="7" height="11" rx="1.5" fill="#111113" />
       </svg>
-      <span class="sidebar__brandName">{{ L().brand }}</span>
-      @if (companyName()) {
-        <span class="sidebar__company" [title]="companyName()">{{ companyName() }}</span>
+      @if (!isCollapsed()) {
+        <div class="sidebar__brandText">
+          <span class="sidebar__brandName">{{ L().brand }}</span
+          ><span class="sidebar__brandTag" [title]="companyName()">{{
+            companyName() || L().platformTag
+          }}</span>
+        </div>
       }
     </div>
-
-    <nav class="sidebar__nav">
-      @for (entry of visibleNav(); track $index) {
-        @if (entry.kind === 'head') {
-          <div class="sidebar__groupLabel">{{ entry.label }}</div>
-        } @else {
-          <a
-            class="sidebar__item"
-            [routerLink]="['/company', entry.path]"
-            routerLinkActive="sidebar__item--active"
-            (click)="closeMobileNav()"
-          >
-            <span class="sidebar__itemLabel">{{ entry.label }}</span>
-            @if (entry.count) {
-              <span class="sidebar__itemCount">{{ entry.count }}</span>
-            }
-          </a>
+    <div class="sidebar__searchWrap">
+      <button
+        type="button"
+        class="sidebar__search"
+        [attr.aria-label]="lang() === 'ar' ? 'بحث في مساحة الشركة' : 'Search company workspace'"
+        [disabled]="!canSearchLeads()"
+        (click)="$event.stopPropagation(); focusSearch()"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          aria-hidden="true"
+        >
+          <circle cx="10.5" cy="10.5" r="6.5" />
+          <path d="m16 16 4 4" />
+        </svg>
+        @if (!isCollapsed()) {
+          <span>{{ lang() === 'ar' ? 'بحث' : 'Search' }}</span
+          ><kbd class="sidebar__kbd">⌘K</kbd>
         }
+      </button>
+    </div>
+    <nav
+      class="sidebar__nav"
+      [attr.aria-label]="lang() === 'ar' ? 'تنقل الشركة' : 'Company navigation'"
+    >
+      @for (group of visibleGroups(); track group.key) {
+        <div class="sidebar__group">
+          @if (!isCollapsed()) {
+            <button
+              type="button"
+              class="sidebar__groupLabel"
+              [attr.aria-expanded]="!closedGroups()[group.key]"
+              (click)="$event.stopPropagation(); toggleGroup(group.key)"
+            >
+              <span>{{ group.label }}</span
+              ><svg
+                class="sidebar__groupCaret"
+                [class.sidebar__groupCaret--closed]="closedGroups()[group.key]"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+          } @else {
+            <div class="sidebar__groupDivider"></div>
+          }
+          @if (isCollapsed() || !closedGroups()[group.key]) {
+            @for (entry of group.items; track entry.path) {
+              <a
+                class="sidebar__item"
+                [routerLink]="['/company', entry.path]"
+                routerLinkActive="sidebar__item--active"
+                [routerLinkActiveOptions]="{ exact: true }"
+                ariaCurrentWhenActive="page"
+                [attr.aria-label]="entry.label"
+                [title]="isCollapsed() ? entry.label : ''"
+                (click)="closeMobileNav()"
+              >
+                <span class="sidebar__itemBar"></span
+                ><svg
+                  class="sidebar__itemIcon"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path [attr.d]="icon(entry.path)" />
+                </svg>
+                @if (!isCollapsed()) {
+                  <span class="sidebar__itemLabel">{{ entry.label }}</span>
+                  @if (entry.count) {
+                    <span class="sidebar__itemCount">{{ entry.count }}</span>
+                  }
+                }
+              </a>
+            }
+          }
+        </div>
       }
     </nav>
-
-    <div class="sidebar__me">
-      <span class="sidebar__avatar">{{ me.initials }}</span>
-      <div class="sidebar__meText">
-        <span class="sidebar__meName">{{ me.name }}</span>
-        <span class="sidebar__meRole">{{ me.role }}</span>
+    <div class="sidebar__foot">
+      <div class="sidebar__me">
+        <span class="sidebar__avatar" [title]="me.name">{{ me.initials }}</span>
+        @if (!isCollapsed()) {
+          <div class="sidebar__meText">
+            <span class="sidebar__meName">{{ me.name }}</span
+            ><span class="sidebar__meRole">{{ me.role }}</span>
+          </div>
+          <button
+            type="button"
+            class="sidebar__collapseBtn"
+            [attr.aria-label]="lang() === 'ar' ? 'طي القائمة الجانبية' : 'Collapse sidebar'"
+            (click)="$event.stopPropagation(); collapsed.set(true)"
+          >
+            <svg
+              class="sidebar__flip"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              aria-hidden="true"
+            >
+              <path d="m14 7-5 5 5 5" />
+            </svg>
+          </button>
+        }
       </div>
+      @if (isCollapsed()) {
+        <button
+          type="button"
+          class="sidebar__collapseBtn sidebar__collapseBtn--solo"
+          [attr.aria-label]="lang() === 'ar' ? 'توسيع القائمة الجانبية' : 'Expand sidebar'"
+          (click)="$event.stopPropagation(); collapsed.set(false)"
+        >
+          <svg
+            class="sidebar__flip sidebar__flip--expand"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            aria-hidden="true"
+          >
+            <path d="m14 7-5 5 5 5" />
+          </svg>
+        </button>
+      }
     </div>
   </aside>
 
@@ -194,6 +327,7 @@
       >
         <input
           #q
+          #companySearch
           id="company-search"
           type="search"
           class="topbar__searchInput"

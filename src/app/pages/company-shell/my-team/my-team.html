@@ -53,10 +53,11 @@
       </div>
     </div>
     <div class="tools">
-      <div class="toggle" role="tablist" [attr.aria-label]="t('Team work', 'عمل الفريق')">
+      <div class="tabs" role="tablist" [attr.aria-label]="t('Team work', 'عمل الفريق')">
         <button
+          class="tab"
           role="tab"
-          [class.on]="tab() === 'performance'"
+          [class.tab--on]="tab() === 'performance'"
           [attr.aria-selected]="tab() === 'performance'"
           [disabled]="busy() || loading()"
           (click)="changeTab('performance')"
@@ -64,8 +65,9 @@
           {{ t('Performance', 'الأداء') }}
         </button>
         <button
+          class="tab"
           role="tab"
-          [class.on]="tab() === 'leads'"
+          [class.tab--on]="tab() === 'leads'"
           [attr.aria-selected]="tab() === 'leads'"
           [disabled]="busy() || loading()"
           (click)="changeTab('leads')"
@@ -73,8 +75,9 @@
           {{ t('Leads', 'العملاء المحتملون') }}
         </button>
         <button
+          class="tab"
           role="tab"
-          [class.on]="tab() === 'tasks'"
+          [class.tab--on]="tab() === 'tasks'"
           [attr.aria-selected]="tab() === 'tasks'"
           [disabled]="busy() || loading()"
           (click)="changeTab('tasks')"

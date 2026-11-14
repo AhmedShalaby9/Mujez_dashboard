@@ -2,7 +2,15 @@ import { NavigationState, RouteSkeleton } from '../../route-skeleton';
 import { NotificationsApi } from '../../notifications-api.service';
 import { AuthService } from '../../auth.service';
 import { Router } from '@angular/router';
-import { Component, DestroyRef, HostListener, computed, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  HostListener,
+  computed,
+  signal,
+  ElementRef,
+  viewChild,
+} from '@angular/core';
 import { NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { CompanyInsightsApi, type Overview } from '../../company-insights-api.service';
@@ -32,6 +40,27 @@ const NAV_PERMISSION: Record<string, string> = {
   'my-team': 'team.self.read',
 };
 
+const COMPANY_ICONS: Record<string, string> = {
+  dashboard: 'M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z',
+  pipeline: 'M4 4h4v16H4zM10 4h4v11h-4zM16 4h4v7h-4z',
+  leads: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 7h5M19.5 4.5v5',
+  contacts: 'M5 3h14v18H5zM3 7h4M3 12h4M3 17h4M10 8h5M10 12h5M10 16h3',
+  calendar: 'M4 5h16v16H4zM8 3v4M16 3v4M4 10h16M8 14h2M14 14h2',
+  tasks: 'M4 5h3v3H4zM11 6h9M4 12h3v3H4zM11 13h9M4 19h3M11 20h9',
+  'my-team':
+    'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 0 0 0-6M22 21a6 6 0 0 0-4-5.6',
+  projects: 'M3 21h18M5 21V5l7-2v18M12 9h7v12M8 8h1M8 12h1M8 16h1M15 13h1M15 17h1',
+  units: 'M3 10l9-7 9 7M5 9v12h14V9M9 21v-7h6v7',
+  reservations: 'M5 3h14v18l-7-4-7 4zM9 8h6M9 12h6',
+  contracts: 'M5 3h10l4 4v14H5zM9 8h3M9 12h6M9 16h6',
+  commissions: 'M12 3v18M17 7c-1-2-9-2-9 2s8 2 8 6-8 4-10 1',
+  documents: 'M5 3h9l5 5v13H5zM14 3v6h5M9 13h6M9 17h6',
+  marketing: 'M4 10v4h3l7 4V6l-7 4zM18 9a4 4 0 0 1 0 6',
+  reports: 'M5 20V11M12 20V5M19 20v-6',
+  'lead-routing': 'M4 4h5v5H4zM15 15h5v5h-5zM15 4h5v5h-5zM9 6.5h6M6.5 9v8.5H15',
+  'audit-log': 'M5 3h10l4 4v14H5zM9 12h6M9 16h6M9 8h3',
+  team: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 0 0 0-6M22 21a6 6 0 0 0-4-5.6',
+};
 interface NavHead {
   kind: 'head';
   label: string;
@@ -153,9 +182,37 @@ const COPY: Record<Lang, Copy> = {
   selector: 'app-company-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, RouteSkeleton],
   templateUrl: './company-shell.html',
-  styleUrl: './company-shell.scss',
+  styleUrls: ['../admin-shell/admin-sidebar.scss', './company-shell.scss'],
 })
 export class CompanyShell {
+  readonly collapsed = signal(false);
+  private readonly desktop = signal(typeof window === 'undefined' || window.innerWidth > 900);
+  readonly isCollapsed = computed(() => this.collapsed() && this.desktop());
+  readonly closedGroups = signal<Record<string, boolean>>({});
+  readonly companySearch = viewChild<ElementRef<HTMLInputElement>>('companySearch');
+  icon(path: string) {
+    return COMPANY_ICONS[path] ?? COMPANY_ICONS['dashboard'];
+  }
+  focusSearch() {
+    this.companySearch()?.nativeElement.focus();
+  }
+  toggleGroup(key: string) {
+    this.closedGroups.update((v) => ({ ...v, [key]: !v[key] }));
+  }
+  @HostListener('window:resize') updateNavigationViewport() {
+    this.desktop.set(window.innerWidth > 900);
+  }
+  readonly visibleGroups = computed(() => {
+    const groups: { key: string; label: string; items: NavItem[] }[] = [];
+    for (const entry of this.visibleNav()) {
+      if (entry.kind === 'head') groups.push({ key: '', label: entry.label, items: [] });
+      else {
+        if (!groups.length) groups.push({ key: '', label: '', items: [] });
+        groups[groups.length - 1].items.push(entry);
+      }
+    }
+    return groups.filter((g) => g.items.length).map((g) => ({ ...g, key: g.items[0].path }));
+  });
   readonly nav = inject(NavigationState);
   readonly announcements = signal<
     Array<{ id: string; title: string; body: string; type: string; priority: string }>

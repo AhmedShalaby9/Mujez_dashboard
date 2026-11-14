@@ -309,6 +309,10 @@
           }
         </div>
 
+        @if (auth.user()?.permissions?.includes('units.read') && !l.archivedAt) {
+          <app-lead-unit-recommendations [lead]="l" />
+        }
+
         @if (canReadTasks()) {
           <div class="content-panel">
             <span class="sect__label">{{ t('NEXT STEP', 'الخطوة التالية') }}</span>

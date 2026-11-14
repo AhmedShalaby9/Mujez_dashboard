@@ -1,0 +1,227 @@
+<section class="ai-units" aria-labelledby="ai-units-title">
+  <header>
+    <div>
+      <span class="ai-tag">AI</span>
+      <h3 id="ai-units-title">{{ t('Recommended units', 'الوحدات المقترحة') }}</h3>
+    </div>
+    <p>
+      {{
+        t(
+          'Find catalog matches for this lead’s property needs.',
+          'ابحث عن وحدات تناسب متطلبات هذا العميل.'
+        )
+      }}
+    </p>
+  </header>
+  <p class="policy">
+    {{
+      t(
+        'Uses the saved lead budget, with up to 10% above budget clearly marked.',
+        'تعتمد على ميزانية العميل المحفوظة، مع توضيح الخيارات الأعلى حتى ١٠٪.'
+      )
+    }}
+  </p>
+  <div class="ai-budget">
+    <span>{{ t('Saved budget', 'الميزانية المحفوظة') }}</span
+    ><b>{{ money(lead().budgetMinor) }}</b>
+  </div>
+  @if (auth.user()?.workspace) {
+    <p class="ai-note">
+      {{
+        t(
+          'Sign in with a company account to generate recommendations.',
+          'سجّل الدخول بحساب شركة لتوليد الاقتراحات.'
+        )
+      }}
+    </p>
+  }
+  <form (ngSubmit)="generate()" class="ai-form">
+    <label
+      >{{ t('Preferred area or compound', 'المنطقة أو الكمباوند')
+      }}<input
+        name="ai-location"
+        [attr.list]="'ai-locations-' + lead().id"
+        [(ngModel)]="preferences.location"
+        [disabled]="busy() || readOnly()"
+        [placeholder]="t('Auto from lead needs', 'من متطلبات العميل')"
+        maxlength="120"
+    /></label>
+    <datalist [id]="'ai-locations-' + lead().id">
+      @for (l of locations(); track l.en) {
+        <option [value]="label(l)"></option>
+      }
+    </datalist>
+    <label
+      >{{ t('Unit type', 'نوع الوحدة')
+      }}<select name="ai-type" [(ngModel)]="preferences.type" [disabled]="busy() || readOnly()">
+        <option value="">{{ t('Auto from lead needs', 'من متطلبات العميل') }}</option>
+        @for (type of types(); track type) {
+          <option [value]="type">{{ typeLabel(type) }}</option>
+        }
+      </select></label
+    >
+    <div class="ai-fields">
+      <label
+        >{{ t('Minimum bedrooms', 'أقل عدد غرف')
+        }}<input
+          name="ai-bedrooms"
+          type="number"
+          min="0"
+          max="100"
+          [(ngModel)]="preferences.minBedrooms"
+          [disabled]="busy() || readOnly()" /></label
+      ><label
+        >{{ t('Deliver by year', 'التسليم حتى سنة')
+        }}<input
+          name="ai-delivery"
+          type="number"
+          min="2000"
+          max="2200"
+          [(ngModel)]="preferences.maxDeliveryYear"
+          [disabled]="busy() || readOnly()" /></label
+      ><label
+        >{{ t('Min. area (m²)', 'أقل مساحة (م²)')
+        }}<input
+          name="ai-min-area"
+          type="number"
+          min="0.01"
+          step="0.01"
+          [(ngModel)]="preferences.minArea"
+          [disabled]="busy() || readOnly()" /></label
+      ><label
+        >{{ t('Max. area (m²)', 'أكبر مساحة (م²)')
+        }}<input
+          name="ai-max-area"
+          type="number"
+          min="0.01"
+          step="0.01"
+          [(ngModel)]="preferences.maxArea"
+          [disabled]="busy() || readOnly()"
+      /></label>
+    </div>
+    <button type="submit" class="ai-generate" [disabled]="busy() || !canGenerate()">
+      {{
+        busy()
+          ? t('Finding suitable units…', 'جارٍ البحث عن وحدات مناسبة…')
+          : t('Recommend units', 'اقتراح وحدات')
+      }}
+    </button>
+  </form>
+  @if (error()) {
+    <p class="ai-error" role="alert">{{ error() }}</p>
+  }
+  @if (run(); as r) {
+    @if (r.status === 'processing') {
+      <p class="ai-note" role="status">
+        {{
+          t(
+            'Analyzing the lead’s needs and ranking available matches. You can return to this lead later.',
+            'جارٍ تحليل المتطلبات وترتيب الوحدات المناسبة. يمكنك العودة إلى العميل لاحقًا.'
+          )
+        }}
+      </p>
+      <button class="ai-link" type="button" (click)="refresh()">
+        {{ t('Check progress', 'تحديث الحالة') }}
+      </button>
+    }
+    @if (r.status === 'failed' || r.status === 'stale') {
+      <p class="ai-error" role="alert">
+        {{
+          r.status === 'stale'
+            ? t(
+                'Lead needs or catalog data changed. Generate fresh recommendations.',
+                'تغيّرت متطلبات العميل أو بيانات الوحدات. اطلب اقتراحات جديدة.'
+              )
+            : t(
+                r.error?.message || 'Recommendations could not be generated.',
+                'تعذّر توليد الاقتراحات. يمكنك المحاولة مجددًا.'
+              )
+        }}
+      </p>
+    }
+    @if (r.result; as result) {
+      <div class="ai-understood">
+        <span>{{ t('Matched needs', 'المتطلبات المستخدمة') }}</span>
+        <p>
+          {{ needsSummary() || t('Based on the saved budget.', 'بناءً على الميزانية المحفوظة.') }}
+        </p>
+      </div>
+      @if (result.needsMoreInfo) {
+        <p class="ai-note">
+          {{
+            t(
+              'Add an area, unit type or lead budget to get useful recommendations.',
+              'أضف منطقة أو نوع وحدة أو ميزانية للعميل للحصول على اقتراحات مفيدة.'
+            )
+          }}
+        </p>
+      } @else if (!result.items.length) {
+        <p class="ai-note">
+          {{
+            result.eligibleCount === 0
+              ? t(
+                  'No available primary units match these needs within the 10% budget allowance. Try refining the requirements.',
+                  'لا توجد وحدات من المطوّرين تطابق المتطلبات ضمن سماح الميزانية ١٠٪. جرّب تعديل المتطلبات.'
+                )
+              : t(
+                  'No strong match was selected. Try refining the property needs.',
+                  'لم يتم اختيار تطابق مناسب. جرّب تحديد المتطلبات أكثر.'
+                )
+          }}
+        </p>
+      } @else {
+        <p class="ai-meta">
+          {{ result.shortlistedCount }} {{ t('shortlisted from', 'وحدة مختارة من') }}
+          {{ result.eligibleCount }} {{ t('matching units', 'وحدة مطابقة') }}
+        </p>
+        <ol class="ai-results">
+          @for (match of result.items; track match.unit.id; let rank = $index) {
+            <li class="ai-match">
+              @if (match.unit.cover) {
+                <img [src]="match.unit.cover" [alt]="label(match.unit.name)" loading="lazy" />
+              }
+              <div class="ai-match-body">
+                <span class="ai-rank">{{ t('Match', 'اقتراح') }} {{ rank + 1 }}</span>
+                <h4>{{ label(match.unit.name) }}</h4>
+                <p class="ai-meta">
+                  {{ label(match.unit.compound.name) }} · {{ label(match.unit.location) }}
+                </p>
+                <b class="ai-price">{{ money(match.unit.priceMinor) }}</b>
+                <p class="ai-specs">
+                  {{ typeLabel(match.unit.type) }} ·
+                  {{ match.unit.area || t('Not set', 'غير محدد') }} m² ·
+                  {{ match.unit.bedrooms ?? t('Not set', 'غير محدد') }}
+                  {{ t('bedrooms', 'غرف نوم') }}
+                </p>
+                @if (match.unit.reference.aiCover) {
+                  <span class="ai-meta">{{
+                    t('AI-generated cover image', 'صورة غلاف بالذكاء الاصطناعي')
+                  }}</span>
+                }
+                @for (w of match.warnings; track $index) {
+                  <p class="ai-warning">{{ label(w) }}</p>
+                }
+                <ul class="ai-reasons">
+                  @for (reason of match.reasons; track $index) {
+                    <li>{{ label(reason) }}</li>
+                  }
+                </ul>
+                <a class="ai-view" [routerLink]="['/company/units', match.unit.id]"
+                  >{{ t('View unit details', 'عرض تفاصيل الوحدة') }} →</a
+                >
+              </div>
+            </li>
+          }
+        </ol>
+        <p class="ai-meta">
+          {{
+            t(
+              'Catalog prices and availability are source snapshots. Confirm current terms with the seller.',
+              'الأسعار والتوفر لقطة من بيانات المصدر. تُراجع الشروط الحالية مع البائع.'
+            )
+          }}
+        </p>
+      }
+    }
+  }
+</section>

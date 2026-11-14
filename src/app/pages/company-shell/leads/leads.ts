@@ -1,3 +1,4 @@
+import { LeadUnitRecommendations } from './lead-unit-recommendations';
 import { Router, ActivatedRoute } from '@angular/router';
 import type { CompanyTask } from '../../../tasks-api.service';
 import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
@@ -18,7 +19,7 @@ import {
 } from '../../../sales-api.service';
 @Component({
   selector: 'app-leads',
-  imports: [FormsModule],
+  imports: [FormsModule, LeadUnitRecommendations],
   templateUrl: './leads.html',
   styleUrls: [
     '../../admin-shell/admin-ui.scss',

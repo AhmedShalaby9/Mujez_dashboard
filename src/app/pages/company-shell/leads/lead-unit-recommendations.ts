@@ -174,11 +174,12 @@ export class LeadUnitRecommendations {
       maxDeliveryYear: '',
     };
     try {
-      const [run, options] = await Promise.all([
+      const [latest, options] = await Promise.all([
         this.api.get(`leads/${id}/unit-recommendations`),
         this.api.get(`leads/${id}/unit-recommendations/options`),
       ]);
       if (serial !== this.serial) return;
+      const run = latest.run;
       this.locations.set(options.locations);
       if (run?.preferences) Object.assign(this.preferences, run.preferences);
       this.setRun(run, serial);

@@ -78,7 +78,9 @@ async function render(options: { readOnly?: boolean; latest?: any } = {}) {
       .mockImplementation(async (path: string) =>
         path.endsWith('/options')
           ? { locations: [{ en: 'New Cairo', ar: 'القاهرة الجديدة' }] }
-          : current,
+          : path.endsWith('/unit-recommendations')
+            ? { run: current }
+            : current,
       ),
     write: vi.fn().mockImplementation(async () => ({
       id: 'run-1',

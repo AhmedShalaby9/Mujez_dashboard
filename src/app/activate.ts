@@ -6,120 +6,44 @@ import { AuthService } from './auth.service';
   selector: 'app-activate',
   imports: [FormsModule, RouterLink],
   template: `<main>
-    <h1>
-      Activate your {{ team ? 'team' : company ? 'company owner' : 'Mujez administrator' }}
-      account
-    </h1>
-    <p>
-      Set a password of at least 12 characters. This link expires after 24 hours and works once.
-    </p>
-    @if (error()) {
-      <p role="alert">{{ error() }}</p>
-    }
-    @if (done()) {
-      <p role="status">Account activated.</p>
-      <a routerLink="/">Sign in</a>
-    } @else {
-      <form (ngSubmit)="activate()">
-        <label
-          >New password<input
-            type="password"
-            autocomplete="new-password"
-            name="password"
-            [(ngModel)]="password"
-            minlength="12"
-            maxlength="256"
-            required /></label
-        ><label
-          >Confirm password<input
-            type="password"
-            autocomplete="new-password"
-            name="confirm"
-            [(ngModel)]="confirm"
-            required /></label
-        ><button [disabled]="saving() || !token">Activate account</button>
-      </form>
-    }
+    <section>
+      <h1>
+        Activate your {{ team ? 'team' : company ? 'company owner' : 'Mujez administrator' }}
+        account
+      </h1>
+      <p>
+        Set a password of at least 12 characters. This link expires after 24 hours and works once.
+      </p>
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
+      @if (done()) {
+        <p role="status">Account activated.</p>
+        <a routerLink="/">Sign in</a>
+      } @else {
+        <form (ngSubmit)="activate()">
+          <label
+            >New password<input
+              type="password"
+              autocomplete="new-password"
+              name="password"
+              [(ngModel)]="password"
+              minlength="12"
+              maxlength="256"
+              required /></label
+          ><label
+            >Confirm password<input
+              type="password"
+              autocomplete="new-password"
+              name="confirm"
+              [(ngModel)]="confirm"
+              required /></label
+          ><button [disabled]="saving() || !token">Activate account</button>
+        </form>
+      }
+    </section>
   </main>`,
-  styles: [
-    `
-      :host {
-        display: block;
-        min-height: 100vh;
-        background: var(--bg, #f4f4f1);
-      }
-      :host {
-        display: block;
-        font-family: var(--font-ui);
-        font-size: 13px;
-      }
-      *,
-      *::before,
-      *::after {
-        box-sizing: border-box;
-      }
-      :is(button, input):focus-visible {
-        outline: 2px solid var(--ink);
-        outline-offset: 3px;
-      }
-      button:disabled {
-        opacity: 0.45;
-        cursor: default;
-      }
-      @media (max-width: 480px) {
-        :host main {
-          padding: 16px;
-        }
-        :host section {
-          padding: 24px;
-        }
-      }
-      main {
-        max-width: 480px;
-        margin: 0 auto;
-        padding: 28px;
-        font: 16px var(--font-ui, 'Geist', system-ui, sans-serif);
-        color: var(--ink, #111113);
-        background: var(--surface, #fff);
-        border: 1px solid var(--border-card, #e2e2dc);
-        border-radius: var(--r-modal, 16px);
-        position: relative;
-        top: 10vh;
-      }
-      label {
-        display: block;
-        margin: 16px 0;
-      }
-      input {
-        display: block;
-        width: 100%;
-        box-sizing: border-box;
-        padding: 12px;
-        margin-top: 6px;
-        border: 1px solid var(--border-input, #c4c4be);
-        border-radius: var(--r-control, 9px);
-        font: inherit;
-      }
-      button {
-        padding: 12px;
-        background: var(--primary, #111113);
-        color: white;
-        border: 0;
-        border-radius: var(--r-control, 9px);
-        cursor: pointer;
-      }
-      button:hover:not(:disabled) {
-        background: var(--primary-hover, #2a2b30);
-      }
-      button:disabled {
-        opacity: 0.6;
-        cursor: default;
-      }
-      p[role='alert'] {
-        color: var(--danger-text, #a23624);
-      }
-    `,
-  ],
+  styleUrls: ['./auth-form.scss'],
 })
 export class Activate {
   private readonly api = inject(AuthService);

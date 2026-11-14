@@ -59,6 +59,8 @@ export class Tasks {
   readonly dialog = signal(false);
   readonly editing = signal<CompanyTask | null>(null);
   readonly assignees = signal<Array<{ id: string; name: string }>>([]);
+  /** Sales (own-scope) users can only keep tasks on themselves. */
+  readonly canAssign = signal(true);
   readonly leadOptions = signal<
     Array<{ id: string; name: { en: string; ar: string }; reference: string }>
   >([]);
@@ -170,6 +172,7 @@ export class Tasks {
     try {
       const r = await this.api.sales.get('tasks/options');
       this.assignees.set(r.assignees);
+      this.canAssign.set(r.canAssign !== false);
     } catch (e) {
       this.error.set((e as Error).message);
     }

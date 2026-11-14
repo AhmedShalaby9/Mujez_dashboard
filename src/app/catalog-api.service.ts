@@ -6,7 +6,6 @@ export interface Bi {
   ar: string;
 }
 export interface CatalogPreference {
-  followed: boolean;
   favorite: boolean;
   muted: boolean;
   alerts: { units: boolean; price: boolean; launch: boolean; news: boolean };
@@ -75,7 +74,6 @@ export interface CatalogItem {
   bedrooms: number | null;
   data: CatalogData;
   version: number;
-  followers: number;
   children: number;
   available: number;
   fromPriceMinor: string | null;

@@ -88,7 +88,7 @@
           (ngModelChange)="search($event)"
       /></label>
       <div class="iv-chips">
-        @for (f of ['all', 'following', 'favorites']; track f) {
+        @for (f of ['all', 'favorites']; track f) {
           <button
             type="button"
             class="iv-chip"
@@ -99,9 +99,7 @@
             {{
               f === 'all'
                 ? X('All', 'الكل')
-                : f === 'following'
-                  ? X('Following', 'المتابَعون')
-                  : X('Favorites', 'المفضلة')
+                : X('Favorites', 'المفضلة')
             }}
           </button>
         }
@@ -126,7 +124,6 @@
       >
         <option value="new">{{ X('Newest first', 'الأحدث أولًا') }}</option>
         <option value="name">{{ X('Name A–Z', 'الاسم') }}</option>
-        <option value="followers">{{ X('Most followed', 'الأكثر متابعة') }}</option>
         @if (kind === 'units') {
           <option value="price_asc">{{ X('Lowest price', 'أقل سعر') }}</option>
           <option value="price_desc">{{ X('Highest price', 'أعلى سعر') }}</option>
@@ -263,10 +260,6 @@
                 ><span>{{ X('Compounds', 'كمباوندات') }}</span>
               </div>
               <div>
-                <b>{{ i.followers }}</b
-                ><span>{{ X('Followers', 'متابعون') }}</span>
-              </div>
-              <div>
                 <b>{{ num(i.data.delivered) }}</b
                 ><span>{{ X('Units delivered', 'وحدات مسلّمة') }}</span>
               </div>
@@ -314,16 +307,6 @@
           }
           <div class="iv-card-actions">
             <button
-              type="button"
-              class="iv-btn sm"
-              [disabled]="busy() || preferencesReadOnly()"
-              [attr.aria-pressed]="i.preference.followed"
-              (click)="preference(i, { followed: !i.preference.followed })"
-            >
-              {{
-                i.preference.followed ? X('Following', 'تتابعه') : X('+ Follow', '+ متابعة')
-              }}</button
-            ><button
               type="button"
               class="iv-btn sm"
               [disabled]="busy() || preferencesReadOnly()"
@@ -391,13 +374,6 @@
       </div>
       <div class="iv-pact">
         <button
-          type="button"
-          class="iv-btn"
-          [disabled]="busy() || preferencesReadOnly()"
-          (click)="preference(i, { followed: !i.preference.followed })"
-        >
-          {{ i.preference.followed ? X('Following', 'تتابعه') : X('+ Follow', '+ متابعة') }}</button
-        ><button
           class="iv-btn"
           type="button"
           [disabled]="busy() || preferencesReadOnly()"
@@ -426,10 +402,6 @@
       </p>
     }
     <div class="iv-kpis">
-      <div class="iv-kpi">
-        <span>{{ X('Followers', 'المتابعون') }}</span
-        ><b>{{ i.followers }}</b>
-      </div>
       @if (kind === 'developers') {
         <div class="iv-kpi">
           <span>{{ X('Compounds', 'الكمباوندات') }}</span

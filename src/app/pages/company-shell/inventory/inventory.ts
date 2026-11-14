@@ -307,7 +307,6 @@ export class Inventory implements OnDestroy {
           ? {
               ...x,
               preference: pref,
-              followers: x.followers + (Number(pref.followed) - Number(x.preference.followed)),
             }
           : x;
       this.items.update((a) => a.map(update));

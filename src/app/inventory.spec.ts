@@ -21,12 +21,10 @@ const row = (more: Partial<CatalogItem> = {}): CatalogItem => ({
   bedrooms: null,
   data: {},
   version: 0,
-  followers: 0,
   children: 0,
   available: 0,
   fromPriceMinor: null,
   preference: {
-    followed: false,
     favorite: false,
     muted: false,
     alerts: { units: true, price: true, launch: true, news: false },

@@ -2,12 +2,20 @@
   <header class="ai-head">
     <div>
       <span class="ai-tag">AI</span>
-      <h2>{{ t('Team analytics', 'تحليلات الفريق') }}</h2>
+      @if (company()) {
+        <h1>{{ t('Company AI analytics', 'تحليلات الشركة بالذكاء الاصطناعي') }}</h1>
+      } @else {
+        <h2>{{ t('Team analytics', 'تحليلات الفريق') }}</h2>
+      }
       <p>
         {{
           t(
-            'Understand your team’s recorded work and choose what to focus on next.',
-            'افهم عمل فريقك المسجّل وحدّد أولويات المتابعة.'
+            company()
+              ? 'Compare company performance, teams and salespeople using recorded evidence.'
+              : 'Understand your team’s recorded work and choose what to focus on next.',
+            company()
+              ? 'قارن أداء الشركة والفرق ومندوبي المبيعات من البيانات المسجّلة.'
+              : 'افهم عمل فريقك المسجّل وحدّد أولويات المتابعة.'
           )
         }}
       </p>
@@ -27,7 +35,13 @@
       ><button class="refresh" (click)="load()" [disabled]="busy()">
         {{ t('Refresh metrics', 'تحديث المؤشرات') }}</button
       ><button class="generate" (click)="generate()" [disabled]="busy() || !snapshot()?.hasData">
-        {{ busy() ? t('Analyzing…', 'جارٍ التحليل…') : t('Analyze my team', 'حلّل فريقي') }}
+        {{
+          busy()
+            ? t('Analyzing…', 'جارٍ التحليل…')
+            : company()
+              ? t('Analyze my company', 'حلّل شركتي')
+              : t('Analyze my team', 'حلّل فريقي')
+        }}
       </button>
     </div>
   </header>
@@ -42,7 +56,7 @@
   @if (data(); as s) {
     <p class="meta" dir="ltr">{{ s.from }} — {{ s.to }} · {{ s.timeZone }}</p>
     <div class="metric-grid">
-      @for (id of cards; track id) {
+      @for (id of cards(); track id) {
         @if (metric(id); as m) {
           <article class="metric">
             <span>{{ label(m) }}</span
@@ -55,14 +69,22 @@
       <p class="notice">
         {{
           t(
-            'No recorded team work to analyze yet. Your metrics will appear as leads and tasks are added.',
+            company()
+              ? 'No recorded company work to analyze yet. Add leads, tasks or signed sales to build a useful comparison.'
+              : 'No recorded team work to analyze yet. Your metrics will appear as leads and tasks are added.',
             'لا يوجد عمل مسجّل لتحليله بعد. ستظهر المؤشرات عند إضافة العملاء والمهام.'
           )
         }}
       </p>
     }
     <section class="report" aria-live="polite">
-      <h3>{{ t('AI team brief', 'ملخص الفريق بالذكاء الاصطناعي') }}</h3>
+      <h3>
+        {{
+          company()
+            ? t('AI company brief', 'ملخص الشركة بالذكاء الاصطناعي')
+            : t('AI team brief', 'ملخص الفريق بالذكاء الاصطناعي')
+        }}
+      </h3>
       @if (run(); as r) {
         @if (r.status === 'processing') {
           <p class="notice" role="status">
@@ -82,8 +104,12 @@
             {{
               r.status === 'stale'
                 ? t(
-                    'Team data changed. Refresh the metrics and generate a fresh analysis.',
-                    'تغيّرت بيانات الفريق. حدّث المؤشرات واطلب تحليلًا جديدًا.'
+                    company()
+                      ? 'Company data changed. Refresh the metrics and generate a fresh analysis.'
+                      : 'Team data changed. Refresh the metrics and generate a fresh analysis.',
+                    company()
+                      ? 'تغيّرت بيانات الشركة. حدّث المؤشرات واطلب تحليلًا جديدًا.'
+                      : 'تغيّرت بيانات الفريق. حدّث المؤشرات واطلب تحليلًا جديدًا.'
                   )
                 : t(
                     r.error?.message || 'Analysis could not be generated.',
@@ -101,6 +127,9 @@
                 <span class="pill">{{ category(i.category) }}</span>
                 <h4>{{ i.title }}</h4>
                 <p>{{ i.explanation }}</p>
+                @for (key of i.teamKeys ?? []; track key) {
+                  <b class="member">{{ teamName(key) }}</b>
+                }
                 @for (key of i.memberKeys; track key) {
                   <b class="member">{{ member(key) }}</b>
                 }
@@ -126,6 +155,9 @@
                   }}</span>
                   <h4>{{ a.title }}</h4>
                   <p>{{ a.explanation }}</p>
+                  @for (key of a.teamKeys ?? []; track key) {
+                    <b class="member">{{ teamName(key) }}</b>
+                  }
                   @for (key of a.memberKeys; track key) {
                     <b class="member">{{ member(key) }}</b>
                   }
@@ -154,13 +186,107 @@
         <p class="notice">
           {{
             t(
-              'Select Analyze my team to get a summary, risks and suggested next steps based on these metrics.',
-              'اضغط حلّل فريقي للحصول على ملخص ومخاطر وخطوات مقترحة من هذه المؤشرات.'
+              company()
+                ? 'Select Analyze my company for comparisons, risks and suggested priorities.'
+                : 'Select Analyze my team to get a summary, risks and suggested next steps based on these metrics.',
+              company()
+                ? 'اضغط حلّل شركتي للحصول على المقارنات والمخاطر والأولويات المقترحة.'
+                : 'اضغط حلّل فريقي للحصول على ملخص ومخاطر وخطوات مقترحة من هذه المؤشرات.'
             )
           }}
         </p>
       }
     </section>
+    @if (company()) {
+      <section class="panel">
+        <h3>{{ t('Compare teams and salespeople', 'مقارنة الفرق ومندوبي المبيعات') }}</h3>
+        <label
+          >{{ t('Sort comparisons by', 'ترتيب المقارنات حسب')
+          }}<select [ngModel]="comparisonSort()" (ngModelChange)="comparisonSort.set($event)">
+            @for (k of sortOptions; track k) {
+              <option [value]="k">{{ metricField(k) }}</option>
+            }
+          </select></label
+        >
+        <h4>{{ t('Teams', 'الفرق') }}</h4>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('Team', 'الفريق') }}</th>
+                <th>{{ t('Members', 'الأعضاء') }}</th>
+                <th>{{ t('New leads', 'عملاء جدد') }}</th>
+                <th>{{ t('Won / lost', 'ناجحة / خاسرة') }}</th>
+                <th>{{ t('Win share', 'نسبة النجاح') }}</th>
+                <th>{{ t('Open pipeline', 'المسار المفتوح') }}</th>
+                <th>{{ t('Won lead value', 'قيمة صفقات ناجحة') }}</th>
+                <th>{{ t('Signed sales', 'مبيعات موقّعة') }}</th>
+                <th>{{ t('Overdue tasks', 'مهام متأخرة') }}</th>
+                <th>{{ t('Tasks done', 'مهام مكتملة') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of companyTeams(); track row.key) {
+                <tr>
+                  <td>{{ teamName(row.key) }}</td>
+                  <td>{{ number(row.memberCount) }}</td>
+                  <td>{{ number(row.newLeads ?? 0) }}</td>
+                  <td>{{ number(row.won) }} / {{ number(row.lost) }}</td>
+                  <td>{{ row.winRate }}%</td>
+                  <td dir="ltr">{{ money(row.openSaleMinor ?? null) }}</td>
+                  <td dir="ltr">{{ money(row.wonSalesMinor) }}</td>
+                  <td dir="ltr">{{ money(row.signedSalesMinor ?? null) }}</td>
+                  <td>{{ number(row.overdueTasks) }}</td>
+                  <td>{{ number(row.completedTasks) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <h4>{{ t('Salespeople and team leads', 'مندوبو المبيعات وقادة الفرق') }}</h4>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('Salesperson', 'مندوب المبيعات') }}</th>
+                <th>{{ t('Team', 'الفريق') }}</th>
+                <th>{{ t('Status', 'الحالة') }}</th>
+                <th>{{ t('New leads', 'عملاء جدد') }}</th>
+                <th>{{ t('Won / lost', 'ناجحة / خاسرة') }}</th>
+                <th>{{ t('Win share', 'نسبة النجاح') }}</th>
+                <th>{{ t('Open pipeline', 'المسار المفتوح') }}</th>
+                <th>{{ t('Won lead value', 'قيمة صفقات ناجحة') }}</th>
+                <th>{{ t('Signed sales', 'مبيعات موقّعة') }}</th>
+                <th>{{ t('Overdue tasks', 'مهام متأخرة') }}</th>
+                <th>{{ t('Tasks done', 'مهام مكتملة') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (m of salespeople(); track m.id) {
+                <tr>
+                  <td>{{ m.name }}</td>
+                  <td>{{ teamName(memberTeam(m)) }}</td>
+                  <td>{{ statusLabel(m.status) }}</td>
+                  <td>{{ number(m.newLeads ?? 0) }}</td>
+                  <td>{{ number(m.won) }} / {{ number(m.lost) }}</td>
+                  <td>{{ m.winRate }}%</td>
+                  <td dir="ltr">{{ money(m.openSaleMinor ?? null) }}</td>
+                  <td dir="ltr">{{ money(m.wonSalesMinor) }}</td>
+                  <td dir="ltr">{{ money(m.signedSalesMinor ?? null) }}</td>
+                  <td>{{ number(m.overdueTasks) }}</td>
+                  <td>{{ number(m.completedTasks) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="meta">
+          {{ t('Unassigned open work', 'العمل المفتوح غير المسند') }}:
+          {{ value(metric('company.unassigned_leads')) }} {{ t('leads', 'عميل') }} ·
+          {{ value(metric('company.unassigned_tasks')) }} {{ t('tasks', 'مهمة') }}
+        </p>
+      </section>
+    }
     <div class="detail-grid">
       <section class="panel">
         <h3>{{ t('Pipeline by stage', 'المسار حسب المرحلة') }}</h3>
@@ -206,7 +332,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (c of comparisons; track c.now) {
+            @for (c of comparisons(); track c.now) {
               <tr>
                 <td>{{ metric(c.now) ? label(metric(c.now)!) : c.now }}</td>
                 <td dir="ltr">{{ value(metric(c.now)) }}</td>
@@ -223,7 +349,7 @@
         <table>
           <tbody>
             @for (m of s.metrics; track m.id) {
-              @if (!m.memberKey) {
+              @if (!m.memberKey && !m.teamKey) {
                 <tr>
                   <td>{{ label(m) }}</td>
                   <td dir="ltr">{{ value(m) }}</td>
@@ -290,23 +416,46 @@
         </table>
       </div>
     </details>
-    <p class="meta">
-      {{
-        t(
-          'Team totals include all current members. AI member focus covers',
-          'تشمل إجماليات الفريق كل الأعضاء الحاليين. يركّز تحليل الأعضاء على'
-        )
-      }}
-      {{ s.focusMembers.length }} {{ t('of', 'من') }} {{ s.members.length }}
-      {{ t('members, prioritized by open work.', 'أعضاء حسب العمل المفتوح.') }}
-    </p>
-    <p class="meta">
-      {{
-        t(
-          'Figures follow current membership and ownership. Won/lost counts reflect current stages changed during the period; sale values are recorded deals, not cash collected. Lease and unknown deal values are excluded. Suggested actions require your review.',
-          'تعتمد الأرقام على العضوية والمسؤولية الحالية. تعكس أرقام النجاح والخسارة المراحل الحالية التي تغيّرت خلال الفترة؛ وقيم البيع صفقات مسجّلة وليست تحصيلات نقدية. تُستبعد قيم الإيجار والقيم المجهولة. راجع الإجراءات المقترحة قبل تنفيذها.'
-        )
-      }}
-    </p>
+    @if (!company()) {
+      <p class="meta">
+        {{
+          t(
+            'Team totals include all current members. AI member focus covers',
+            'تشمل إجماليات الفريق كل الأعضاء الحاليين. يركّز تحليل الأعضاء على'
+          )
+        }}
+        {{ s.focusMembers.length }} {{ t('of', 'من') }} {{ s.members.length }}
+        {{ t('members, prioritized by open work.', 'أعضاء حسب العمل المفتوح.') }}
+      </p>
+      <p class="meta">
+        {{
+          t(
+            'Figures follow current membership and ownership. Won/lost counts reflect current stages changed during the period; sale values are recorded deals, not cash collected. Lease and unknown deal values are excluded. Suggested actions require your review.',
+            'تعتمد الأرقام على العضوية والمسؤولية الحالية. تعكس أرقام النجاح والخسارة المراحل الحالية التي تغيّرت خلال الفترة؛ وقيم البيع صفقات مسجّلة وليست تحصيلات نقدية. تُستبعد قيم الإيجار والقيم المجهولة. راجع الإجراءات المقترحة قبل تنفيذها.'
+          )
+        }}
+      </p>
+    } @else {
+      <p class="meta">
+        {{
+          t(
+            'Company totals include all owners, inactive accounts and unassigned work. Lead metrics exclude archived leads; signed sales include currently signed contracts, including archived-linked leads. Teams use current membership, leads their current owner, tasks their assignee and signed sales their contract owner. These are recorded values, not cash collections.',
+            'تشمل الإجماليات المالك والحسابات غير النشطة والعمل غير المسند. تُستبعد العملاء المؤرشفة من مؤشرات العملاء، وتُدرج عقود البيع الموقعة حاليًا بما فيها المرتبطة بعملاء مؤرشفة. تعتمد الفرق على العضوية الحالية والعملاء على مالكهم والمهام على مسؤولها والعقود على مالك العقد. القيم مسجّلة وليست تحصيلات نقدية.'
+          )
+        }}
+      </p>
+      <p class="meta">
+        {{ t('AI comparison coverage', 'تغطية مقارنة الذكاء الاصطناعي') }}:
+        {{ s.focusTeams?.length }} / {{ s.teams?.length }}
+        {{ t('team buckets', 'مجموعات الفرق') }} · {{ s.focusMembers.length }} /
+        {{ salespeople().length }}
+        {{
+          t(
+            'salespeople. Full comparison tables include everyone.',
+            'مندوب مبيعات. تشمل جداول المقارنة الجميع.'
+          )
+        }}
+      </p>
+    }
   }
 </section>

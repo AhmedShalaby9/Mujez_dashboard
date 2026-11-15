@@ -136,6 +136,8 @@ export const companyGuard: CanActivateFn = async (route) => {
     u?.permissions.includes('workspace.view');
   const isWorkspace = u?.pool === 'company_admin' && !!u?.workspace;
   const isEmployee = u?.pool === 'company_user';
+  if (route.data['ownerOnly'] && (!isOwner || isWorkspace))
+    return router.createUrlTree(['/company/dashboard']);
   return isOwner || isWorkspace || isEmployee
     ? !route.data['permission'] || u?.permissions.includes(route.data['permission'])
       ? true

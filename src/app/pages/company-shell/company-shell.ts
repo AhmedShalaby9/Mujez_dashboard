@@ -35,6 +35,7 @@ const NAV_PERMISSION: Record<string, string> = {
   documents: 'documents.read',
   marketing: 'marketing.read',
   reports: 'reports.read',
+  'ai-analytics': 'reports.read',
   'lead-routing': 'routing.read',
   'audit-log': 'audit.read',
   team: 'team.read',
@@ -59,6 +60,7 @@ const COMPANY_ICONS: Record<string, string> = {
   documents: 'M5 3h9l5 5v13H5zM14 3v6h5M9 13h6M9 17h6',
   marketing: 'M4 10v4h3l7 4V6l-7 4zM18 9a4 4 0 0 1 0 6',
   reports: 'M5 20V11M12 20V5M19 20v-6',
+  'ai-analytics': 'M5 20V11M12 20V5M19 20v-6M3 3l2 2M18 3l2 2',
   'lead-routing': 'M4 4h5v5H4zM15 15h5v5h-5zM15 4h5v5h-5zM9 6.5h6M6.5 9v8.5H15',
   'audit-log': 'M5 3h10l4 4v14H5zM9 12h6M9 16h6M9 8h3',
   team: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 0 0 0-6M22 21a6 6 0 0 0-4-5.6',
@@ -126,6 +128,7 @@ const EN_NAV: NavEntry[] = [
   { kind: 'head', label: 'Growth' },
   { kind: 'item', label: 'Marketing', path: 'marketing' },
   { kind: 'item', label: 'Reports', path: 'reports' },
+  { kind: 'item', label: 'AI analytics', path: 'ai-analytics' },
   { kind: 'head', label: 'Administration' },
   { kind: 'item', label: 'Lead Routing', path: 'lead-routing' },
   { kind: 'item', label: 'Audit Log', path: 'audit-log' },
@@ -153,6 +156,7 @@ const AR_NAV: NavEntry[] = [
   { kind: 'head', label: 'النمو' },
   { kind: 'item', label: 'التسويق', path: 'marketing' },
   { kind: 'item', label: 'التقارير', path: 'reports' },
+  { kind: 'item', label: 'تحليلات الذكاء الاصطناعي', path: 'ai-analytics' },
   { kind: 'head', label: 'الإدارة' },
   { kind: 'item', label: 'توزيع العملاء', path: 'lead-routing' },
   { kind: 'item', label: 'سجل التدقيق', path: 'audit-log' },
@@ -271,6 +275,7 @@ export class CompanyShell {
     for (let i = 0; i < all.length; i++) {
       const entry = all[i];
       if (entry.kind === 'item') {
+        if(entry.path==='ai-analytics' && (this.auth.user()?.pool!=='company_admin' || this.auth.user()?.role!=='company_owner' || this.auth.user()?.workspace)) continue;
         const permission = NAV_PERMISSION[entry.path];
         if (permission && !perms.includes(permission)) continue;
         const n = this.counts()[entry.path];

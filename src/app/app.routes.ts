@@ -291,6 +291,14 @@ export const routes: Routes = [
           import('./pages/company-shell/marketing/marketing').then((m) => m.Marketing),
       },
       {
+        path: 'ai-analytics',
+        data: { permission: 'reports.read', ownerOnly: true },
+        loadComponent: () =>
+          import('./pages/company-shell/company-ai-analytics/company-ai-analytics').then(
+            (m) => m.CompanyAiAnalytics,
+          ),
+      },
+      {
         path: 'reports',
         data: { permission: 'reports.read' },
         loadComponent: () => import('./pages/company-shell/reports/reports').then((m) => m.Reports),

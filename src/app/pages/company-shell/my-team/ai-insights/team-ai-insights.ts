@@ -18,6 +18,7 @@ interface Metric {
   value: string;
   unit: 'count' | 'money' | 'percent' | 'days';
   memberKey?: string;
+  teamKey?: string;
 }
 interface Member {
   key: string;
@@ -32,9 +33,17 @@ interface Member {
   won: number;
   lost: number;
   wonSalesMinor: string;
+  newLeads?: number;
+  openSaleMinor?: string;
+  signedSalesMinor?: string;
+  signedContracts?: number;
+  winRate?: string;
+  teamId?: string | null;
 }
 interface Snapshot {
-  team: { id: string; name: string };
+  team?: { id: string; name: string };
+  teams?: Array<Member & { memberCount: number }>;
+  focusTeams?: string[];
   days: number;
   from: string;
   to: string;
@@ -58,6 +67,7 @@ interface Insight {
   explanation: string;
   metricIds: string[];
   memberKeys: string[];
+  teamKeys?: string[];
 }
 interface Run {
   id: string;
@@ -77,6 +87,11 @@ interface Run {
   styleUrl: './team-ai-insights.scss',
 })
 export class TeamAiInsights {
+  readonly scope = input<'team' | 'company'>('team');
+  readonly company = computed(() => this.scope() === 'company');
+  readonly base = computed(() =>
+    this.company() ? 'company-ai-insights' : 'team/my-team/ai-insights',
+  );
   readonly days = input(30);
   readonly daysChange = output<string>();
   private readonly api = inject(SalesApi);
@@ -94,21 +109,64 @@ export class TeamAiInsights {
   readonly data = computed(() => this.run()?.result?.snapshot ?? this.snapshot());
   readonly money = salesMoney;
   readonly number = compactNumber;
-  readonly cards = [
-    'team.open_leads',
+  readonly cards = computed(() => [
+    this.company() ? 'company.open_leads' : 'team.open_leads',
     'pipeline.sale_value',
-    'team.overdue_tasks',
+    this.company() ? 'company.overdue_tasks' : 'team.overdue_tasks',
     'period.win_rate',
     'period.newLeads',
-    'period.activities',
-  ];
-  readonly comparisons = [
+    this.company() ? 'period.signed_sales' : 'period.activities',
+  ]);
+  readonly comparisons = computed(() => [
     { now: 'period.newLeads', before: 'previous.newLeads' },
     { now: 'period.won', before: 'previous.won' },
     { now: 'period.lost', before: 'previous.lost' },
     { now: 'period.completedTasks', before: 'previous.completedTasks' },
     { now: 'period.won_sales', before: 'previous.won_sales' },
+    ...(this.company() ? [{ now: 'period.signed_sales', before: 'previous.signed_sales' }] : []),
+  ]);
+  readonly comparisonSort = signal('wonSalesMinor');
+  readonly sortOptions = [
+    'wonSalesMinor',
+    'signedSalesMinor',
+    'openSaleMinor',
+    'openLeads',
+    'overdueTasks',
+    'completedTasks',
   ];
+  readonly salespeople = computed(() =>
+    this.sorted(
+      (this.data()?.members ?? []).filter((m) => ['agent', 'team_lead'].includes(m.role)),
+    ),
+  );
+  readonly companyTeams = computed(() => this.sorted(this.data()?.teams ?? []));
+  private sorted<T>(rows: T[]) {
+    const key = this.comparisonSort();
+    return [...rows].sort((a: any, b: any) => {
+      const x = BigInt(a[key] ?? 0),
+        y = BigInt(b[key] ?? 0);
+      return x > y ? -1 : x < y ? 1 : a.key.localeCompare(b.key);
+    });
+  }
+  memberTeam(m: Member) {
+    return this.data()?.teams?.find((t) => t.id === m.teamId)?.key ?? 'T00';
+  }
+  teamName(key: string) {
+    const t = this.data()?.teams?.find((t) => t.key === key);
+    return t?.id === null
+      ? this.t('No team / unassigned', 'دون فريق / دون مسؤول')
+      : (t?.name ?? key);
+  }
+  statusLabel(s: string) {
+    const labels: Record<string, [string, string]> = {
+      active: ['Active', 'نشط'],
+      invited: ['Invited', 'مدعو'],
+      disabled: ['Disabled', 'معطّل'],
+      locked: ['Locked', 'مقفل'],
+      deleted: ['Deleted', 'محذوف'],
+    };
+    return labels[s] ? this.t(...labels[s]) : s;
+  }
   private serial = 0;
   private timer?: ReturnType<typeof setTimeout>;
   private requestId = '';
@@ -126,7 +184,7 @@ export class TeamAiInsights {
     return this.ar() ? ar : en;
   }
   label(m: Metric) {
-    return m.memberKey
+    return m.memberKey || m.teamKey
       ? this.metricField(m.id.split('.').at(-1)!)
       : m.id.startsWith('stage.')
         ? this.stage(m.id.slice(6))
@@ -138,6 +196,11 @@ export class TeamAiInsights {
   }
   metricField(s: string) {
     const labels: Record<string, [string, string]> = {
+      memberCount: ['Team members', 'أعضاء الفريق'],
+      signedSalesMinor: ['Signed sale value', 'قيمة البيع الموقّع'],
+      signedContracts: ['Signed sale contracts', 'عقود البيع الموقعة'],
+      openSaleMinor: ['Open sale pipeline', 'قيمة البيع المفتوحة'],
+      winRate: ['Won share of won/lost', 'نسبة النجاح من الناجحين والخاسرين'],
       openLeads: ['Open leads', 'عملاء مفتوحون'],
       newLeads: ['New leads', 'عملاء جدد'],
       won: ['Won leads', 'عملاء ناجحون'],
@@ -172,6 +235,8 @@ export class TeamAiInsights {
   }
   category(s: string | undefined) {
     const n: Record<string, [string, string]> = {
+      teams: ['Teams', 'الفرق'],
+      sales: ['Salespeople', 'مندوبو المبيعات'],
       pipeline: ['Pipeline', 'مسار المبيعات'],
       tasks: ['Tasks', 'المهام'],
       conversion: ['Conversion', 'التحويل'],
@@ -203,8 +268,8 @@ export class TeamAiInsights {
     this.signature = '';
     try {
       const [s, r] = await Promise.all([
-        this.api.get('team/my-team/ai-insights/snapshot', { days: String(days) }),
-        this.api.get('team/my-team/ai-insights', { days: String(days), language }),
+        this.api.get(this.base() + '/snapshot', { days: String(days) }),
+        this.api.get(this.base(), { days: String(days), language }),
       ]);
       if (n !== this.serial) return;
       this.snapshot.set(s);
@@ -220,7 +285,7 @@ export class TeamAiInsights {
       r = this.run();
     if (!r) return;
     try {
-      this.setRun(await this.api.get('team/my-team/ai-insights/' + r.id), n);
+      this.setRun(await this.api.get(this.base() + '/' + r.id), n);
       if (n === this.serial) this.error.set('');
     } catch (e) {
       if (n === this.serial) this.error.set((e as Error).message);
@@ -232,7 +297,7 @@ export class TeamAiInsights {
     this.starting.set(true);
     this.error.set('');
     const b = { days: this.days(), language: this.ar() ? 'ar' : 'en' };
-    const signature = JSON.stringify(b);
+    const signature = JSON.stringify({ base: this.base(), ...b });
     if (
       !this.requestId ||
       this.signature !== signature ||
@@ -243,10 +308,7 @@ export class TeamAiInsights {
     }
     this.run.set(null);
     try {
-      this.setRun(
-        await this.api.write('team/my-team/ai-insights', { ...b, requestId: this.requestId }),
-        n,
-      );
+      this.setRun(await this.api.write(this.base(), { ...b, requestId: this.requestId }), n);
     } catch (e) {
       if (n === this.serial) this.error.set((e as Error).message);
     } finally {

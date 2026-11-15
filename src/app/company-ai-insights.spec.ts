@@ -256,6 +256,8 @@ describe('Company owner AI analytics', () => {
     expect(f.nativeElement.querySelector('.insight').textContent).toContain('Eastern team');
     expect(f.nativeElement.querySelector('.insight').textContent).toContain('Actual team member');
     expect(f.nativeElement.querySelector('.evidence').textContent).toContain('3');
+    expect(f.nativeElement.querySelector('.evidence').textContent).toContain('Eastern team');
+    expect(f.nativeElement.querySelector('.evidence').textContent).toContain('Actual team member');
   });
   it('sorts comparison rows by the selected work metric without generating or changing records', async () => {
     const { c, api } = await render();

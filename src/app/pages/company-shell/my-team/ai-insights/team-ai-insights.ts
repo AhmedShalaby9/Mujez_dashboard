@@ -184,6 +184,10 @@ export class TeamAiInsights {
     return this.ar() ? ar : en;
   }
   label(m: Metric) {
+    if (this.company() && m.teamKey)
+      return this.teamName(m.teamKey) + ' · ' + this.metricField(m.id.split('.').at(-1)!);
+    if (this.company() && m.memberKey)
+      return this.member(m.memberKey) + ' · ' + this.metricField(m.id.split('.').at(-1)!);
     return m.memberKey || m.teamKey
       ? this.metricField(m.id.split('.').at(-1)!)
       : m.id.startsWith('stage.')

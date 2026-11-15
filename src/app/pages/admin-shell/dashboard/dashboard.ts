@@ -1,3 +1,5 @@
+import { compactNumber } from '../../../compact-numbers';
+import { compactMinor } from '../../../compact-numbers';
 import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -183,39 +185,39 @@ export class Dashboard {
         ? [
             {
               label: ar ? 'إجمالي الشركات' : 'Total companies',
-              value: String(c.total),
+              value: compactNumber(c.total),
               sub: ar ? 'يشمل المؤرشفة' : 'Includes archived',
             },
             {
               label: ar ? 'قيد الإعداد' : 'Pending onboarding',
-              value: String(c.pending),
+              value: compactNumber(c.pending),
               sub: ar ? 'الحالة الحالية' : 'Current company status',
             },
             {
               label: ar ? 'نشطة' : 'Active',
-              value: String(c.active),
+              value: compactNumber(c.active),
               sub: ar ? 'الحالة الحالية' : 'Current company status',
             },
             {
               label: ar ? 'تجريبية' : 'Trial',
-              value: String(c.trial),
+              value: compactNumber(c.trial),
               sub: ar ? 'الحالة الحالية' : 'Current company status',
             },
             {
               label: ar ? 'معلقة' : 'Suspended',
-              value: String(c.suspended),
+              value: compactNumber(c.suspended),
               sub: ar ? 'الحالة الحالية' : 'Current company status',
             },
             {
               label: ar ? 'حسابات CRM' : 'CRM accounts',
-              value: c.crmUsers,
+              value: c.crmUsers === null ? null : compactNumber(c.crmUsers),
               sub: ar
                 ? 'دون المحذوفة والمعطلة والشركات المؤرشفة'
                 : 'Excludes deleted/disabled and archived companies',
             },
             {
               label: ar ? 'شركات جديدة' : 'New companies',
-              value: String(c.added),
+              value: compactNumber(c.added),
               sub: ar ? 'خلال الفترة المحددة' : 'Selected date range',
             },
           ]
@@ -322,15 +324,7 @@ export class Dashboard {
     return this.money(String(BigInt(d.finance.mrrMinor) / BigInt(d.companies.active)));
   });
   compact(minor: string) {
-    const v = Number(BigInt(minor)) / 100,
-      a = Math.abs(v);
-    const s =
-      a >= 1e6
-        ? (a / 1e6).toFixed(2) + 'M'
-        : a >= 1e4
-          ? (a / 1e3).toFixed(1) + 'K'
-          : a.toLocaleString('en-GB', { maximumFractionDigits: 0 });
-    return (v < 0 ? '−' : '') + s;
+    return compactMinor(minor);
   }
   alertIcon(a: OverviewAlert) {
     return ALERT_ICONS[a.kind] ?? ALERT_ICONS['company_created'];

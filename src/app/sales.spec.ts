@@ -44,10 +44,10 @@ const user = () =>
   });
 describe('Company sales screens', () => {
   it('formats money exactly and rejects imprecise or invalid inputs', () => {
-    expect(salesMoney('900719925474099399')).toBe('EGP 9,007,199,254,740,993.99');
+    expect(salesMoney('900719925474099399')).toBe('EGP 9007199.25474099399b');
     expect(minorAmount('001.05')).toBe('105');
     expect(minorAmount('', true)).toBeNull();
-    expect(majorAmount('125050')).toBe('1250.50');
+    expect(majorAmount('125050')).toBe('1.2505k');
     expect(() => minorAmount('1.001')).toThrow();
     expect(() => minorAmount('EGP 10M')).toThrow();
   });
@@ -93,7 +93,7 @@ describe('Company sales screens', () => {
     const c = f.componentInstance;
     expect(f.nativeElement.textContent).toContain('Actual Buyer');
     expect(f.nativeElement.textContent).not.toContain('Ahmed Samir');
-    expect(f.nativeElement.textContent).toContain('EGP 1,250.50');
+    expect(f.nativeElement.textContent).toContain('EGP 1.2505k');
     c.stageFilter.set('qualified');
     await c.reload();
     expect(calls.filter((x) => x.path === 'leads').at(-1).q.stage).toBe('qualified');
@@ -105,9 +105,15 @@ describe('Company sales screens', () => {
     expect(calls.find((x) => x.body?.note === 'Actual note').body.version).toBe(1);
     c.openNew(row);
     c.draft.want = 'Office';
+    c.draft.budget = '10m';
     await c.submit();
     expect(
-      calls.some((x) => x.path === 'leads/' + lead.id + '/update' && x.body.want === 'Office'),
+      calls.some(
+        (x) =>
+          x.path === 'leads/' + lead.id + '/update' &&
+          x.body.want === 'Office' &&
+          x.body.budgetMinor === '1000000000',
+      ),
     ).toBe(true);
   });
   it('uses backend duplicate candidates and persists an explicit linked override, preserving its request ID on retry', async () => {
@@ -299,7 +305,7 @@ describe('Assigned leads in the pipeline', () => {
     expect(f.nativeElement.textContent).toContain('Assigned Buyer');
     expect(f.nativeElement.textContent).toContain('Not set');
     expect(f.nativeElement.textContent).toContain('Add deal details');
-    expect(f.nativeElement.querySelector('.cardx').textContent).not.toContain('EGP 0.00');
+    expect(f.nativeElement.querySelector('.cardx').textContent).not.toContain('EGP 0');
     const c = f.componentInstance;
     await c.openForm(c.deals()[0]);
     expect(c.draft.value).toBe('');
@@ -321,7 +327,7 @@ describe('Assigned leads in the pipeline', () => {
     );
     expect(c.deals()).toHaveLength(1);
     expect(c.deals()[0].opportunityId).toBe('deal-created');
-    expect(f.nativeElement.querySelector('.cardx').textContent).toContain('EGP 1,234.56');
+    expect(f.nativeElement.querySelector('.cardx').textContent).toContain('EGP 1.23456k');
     TestBed.inject(
       (await import('./pages/company-shell/company-ui-state')).CompanyUiState,
     ).lang.set('ar');

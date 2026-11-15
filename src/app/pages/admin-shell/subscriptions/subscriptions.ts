@@ -1,3 +1,4 @@
+import { compactMoney, compactMajor } from '../../../compact-numbers';
 import { FormsModule } from '@angular/forms';
 import { SubscriptionsApi } from '../../../subscriptions-api.service';
 import { CompaniesApi } from '../../../companies-api.service';
@@ -485,10 +486,7 @@ export class Subscriptions {
   }
 
   formatMrr(v: number): string {
-    if (v === 0) return '—';
-    return this.lang() === 'ar'
-      ? `${v.toLocaleString('en-US')} ج.م`
-      : `EGP ${v.toLocaleString('en-US')}`;
+    return v === 0 ? '—' : this.lang() === 'ar' ? compactMajor(v) + ' ج.م' : 'EGP ' + compactMajor(v);
   }
 
   private logo(s: Subscription): [string, string] {
@@ -598,7 +596,7 @@ export class Subscriptions {
     return this.ended(s);
   }
   amount(s: Subscription) {
-    return 'EGP ' + Math.round(Number(s.amountMinor) / 100).toLocaleString('en-US');
+    return compactMoney(s.amountMinor);
   }
   date(iso?: string) {
     if (!iso) return '—';
@@ -619,7 +617,7 @@ export class Subscriptions {
     return d <= 7 ? (ar ? `خلال ${d} أيام` : `in ${d} days`) : '';
   }
   money(v: number) {
-    return 'EGP ' + (v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : Math.round(v).toLocaleString('en-US'));
+    return 'EGP ' + compactMajor(v);
   }
   /** Plan rank from the catalog order, for upgrade/downgrade shortcuts. */
   private rank(key: Plan) {
@@ -637,7 +635,7 @@ export class Subscriptions {
   planPrice(key: Plan, cycle: 'monthly' | 'annual') {
     const p = this.availablePlans().find((x) => x.key === key) as any;
     const v = p?.[cycle === 'annual' ? 'annualMinor' : 'monthlyMinor'];
-    return typeof v === 'number' ? 'EGP ' + Math.round(v / 100).toLocaleString('en-US') : '—';
+    return typeof v === 'number' ? compactMoney(String(v)) : '—';
   }
 
   // ---- static (design-only) forms; see BACKEND_MISSING.md ----

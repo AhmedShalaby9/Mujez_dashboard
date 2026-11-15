@@ -1,3 +1,5 @@
+import { CompactAmountDirective } from '../../../compact-amount.directive';
+import { compactMoney, compactAmountInput, parseCompactAmount } from '../../../compact-numbers';
 import { Component, computed, inject, signal, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -48,7 +50,7 @@ interface Draft {
 }
 @Component({
   selector: 'app-inventory',
-  imports: [FormsModule, RouterLink],
+  imports: [CompactAmountDirective, FormsModule, RouterLink],
   templateUrl: './inventory.html',
   styleUrls: ['./inventory.scss', '../../admin-shell/admin-ui.scss'],
 })
@@ -204,15 +206,7 @@ export class Inventory implements OnDestroy {
     return names[s] ? this.X(...names[s]) : s;
   }
   money(v: string | null | undefined, currency = 'EGP') {
-    if (v == null) return this.X('Not set', 'غير محدد');
-    const n = BigInt(v);
-    return (
-      currency +
-      ' ' +
-      (n / 100n).toLocaleString(this.ar() ? 'ar-EG' : 'en-US') +
-      '.' +
-      String(n % 100n).padStart(2, '0')
-    );
+    return v == null ? this.X('Not set', 'غير محدد') : compactMoney(v, currency);
   }
   image(i: CatalogItem) {
     return i.data.cover ?? i.data.photos?.[0] ?? null;
@@ -399,10 +393,7 @@ export class Inventory implements OnDestroy {
         ar: row.name.ar,
         parentId: row.parentId ?? '',
         status: row.status,
-        price:
-          row.priceMinor === null
-            ? ''
-            : `${BigInt(row.priceMinor) / 100n}.${String(BigInt(row.priceMinor) % 100n).padStart(2, '0')}`,
+        price: row.priceMinor === null ? '' : compactAmountInput(row.priceMinor),
         area: row.area ?? '',
         bedrooms: row.bedrooms === null ? '' : String(row.bedrooms),
         description: d.description?.en ?? '',
@@ -455,14 +446,7 @@ export class Inventory implements OnDestroy {
     try {
       const d = this.draft;
       let priceMinor: string | null = null;
-      if (d.price) {
-        if (!/^\d+(?:\.\d{1,2})?$/.test(d.price))
-          throw new Error(
-            this.X('Enter a valid price with up to two decimals.', 'أدخل سعرًا صحيحًا.'),
-          );
-        const [whole, fraction = ''] = d.price.split('.');
-        priceMinor = (BigInt(whole) * 100n + BigInt(fraction.padEnd(2, '0'))).toString();
-      }
+      if (d.price) priceMinor = parseCompactAmount(d.price);
       const data: CatalogData = { ...this.editing()?.data };
       for (const key of [
         'phone',

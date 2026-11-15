@@ -384,6 +384,14 @@ export class Commissions implements OnDestroy {
     this.busy.set(true);
     this.error.set('');
     try {
+      if (
+        ![this.rate, ...this.splits.map((s) => s.pct)].every((v) =>
+          /^\d+(?:\.\d{1,2})?$/.test(v.trim()),
+        )
+      )
+        throw Error(
+          this.t('Enter a percentage with up to two decimal places.', 'أدخل نسبة مئوية صحيحة.'),
+        );
       const old = this.editing(),
         b: Record<string, unknown> = {
           requestId: this.requestId,

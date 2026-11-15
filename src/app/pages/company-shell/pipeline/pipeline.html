@@ -258,7 +258,14 @@
         </div>
         <label class="field"
           ><span>{{ t('Value (EGP)', 'القيمة بالجنيه') }}</span
-          ><input class="mono" name="value" [(ngModel)]="draft.value" inputmode="decimal" required
+          ><input
+            placeholder="e.g. 10m or 250k"
+            compactAmount
+            class="mono"
+            name="value"
+            [(ngModel)]="draft.value"
+            inputmode="text"
+            required
         /></label>
       </div>
     </form>

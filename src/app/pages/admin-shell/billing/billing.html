@@ -191,13 +191,11 @@
                 {{ date(i.dueDate) }}
               </td>
               <td class="end">
-                <span class="mono">{{
-                  total(i).toLocaleString('en-US', { minimumFractionDigits: 2 })
-                }}</span>
+                <span class="mono">{{ compactAmount(total(i)) }}</span>
                 <span class="sub">
                   @if (i.status === 'partial') {
                     {{ lang() === 'ar' ? 'المتبقي ' : 'balance '
-                    }}{{ minor(i.balanceMinor).toLocaleString('en-US') }}
+                    }}{{ compactAmount(minor(i.balanceMinor)) }}
                   } @else if (i.taxBps) {
                     {{ lang() === 'ar' ? 'شامل الضريبة ' : 'incl. tax ' }}{{ i.taxBps / 100 }}%
                   } @else {
@@ -351,7 +349,7 @@
       <div class="lines">
         <div>
           <span>{{ i.description }}</span
-          ><b>{{ minor(i.subtotalMinor).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</b>
+          ><b>{{ compactAmount(minor(i.subtotalMinor)) }}</b>
         </div>
         <div class="soft">
           <span>{{
@@ -359,33 +357,25 @@
               ? (lang() === 'ar' ? 'الضريبة ' : 'Tax ') + i.taxBps / 100 + '%'
               : L().drawerFields.reverseCharge
           }}</span
-          ><b>{{ tax(i).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</b>
+          ><b>{{ compactAmount(tax(i)) }}</b>
         </div>
         <div class="hl">
           <span>{{ L().drawerFields.total }} ({{ $any(i).currency || 'EGP' }})</span
-          ><b>{{ total(i).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</b>
+          ><b>{{ compactAmount(total(i)) }}</b>
         </div>
         <div class="soft">
           <span>{{ lang() === 'ar' ? 'المدفوع' : 'Paid' }}</span
-          ><b class="ok"
-            >−{{ minor(i.paidMinor).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</b
-          >
+          ><b class="ok">−{{ compactAmount(minor(i.paidMinor)) }}</b>
         </div>
         @if (i.creditedMinor !== '0') {
           <div class="soft">
             <span>{{ lang() === 'ar' ? 'إشعارات دائنة' : 'Credited' }}</span
-            ><b class="ok"
-              >−{{
-                minor(i.creditedMinor).toLocaleString('en-US', { minimumFractionDigits: 2 })
-              }}</b
-            >
+            ><b class="ok">−{{ compactAmount(minor(i.creditedMinor)) }}</b>
           </div>
         }
         <div class="hl">
           <span>{{ lang() === 'ar' ? 'الرصيد المستحق' : 'Balance due' }}</span
-          ><b [class.bad]="i.balanceMinor !== '0'">{{
-            minor(i.balanceMinor).toLocaleString('en-US', { minimumFractionDigits: 2 })
-          }}</b>
+          ><b [class.bad]="i.balanceMinor !== '0'">{{ compactAmount(minor(i.balanceMinor)) }}</b>
         </div>
       </div>
       <div class="sect">
@@ -440,9 +430,7 @@
             <div class="kv">
               <span
                 ><span class="mono">{{ c.number }}</span> · {{ c.reason }}</span
-              ><b class="mono">{{
-                minor(c.amountMinor).toLocaleString('en-US', { minimumFractionDigits: 2 })
-              }}</b>
+              ><b class="mono">{{ compactAmount(minor(c.amountMinor)) }}</b>
             </div>
           }
         </div>
@@ -538,8 +526,10 @@
           </button>
         </div>
         <input
+          placeholder="e.g. 10m or 250k"
+          compactAmount
           class="mono"
-          inputmode="decimal"
+          inputmode="text"
           [disabled]="recordMode() === 'full'"
           [value]="recordAmount()"
           (input)="recordAmount.set($any($event.target).value)"
@@ -656,8 +646,10 @@
       <label class="field"
         ><span>{{ L().creditAmount }}</span
         ><input
+          placeholder="e.g. 10m or 250k"
+          compactAmount
           class="mono"
-          inputmode="decimal"
+          inputmode="text"
           [value]="creditAmount()"
           (input)="creditAmount.set($any($event.target).value)"
       /></label>
@@ -758,8 +750,10 @@
         <label class="field"
           ><span>{{ lang() === 'ar' ? 'المجموع الفرعي (ج.م)' : 'Subtotal (EGP)' }}</span
           ><input
+            placeholder="e.g. 10m or 250k"
+            compactAmount
             class="mono"
-            inputmode="decimal"
+            inputmode="text"
             name="subtotal"
             [(ngModel)]="draft.subtotal"
             required

@@ -96,11 +96,7 @@
             [style.color]="filter() === f ? '#fff' : '#111113'"
             (click)="setFilter(f)"
           >
-            {{
-              f === 'all'
-                ? X('All', 'الكل')
-                : X('Favorites', 'المفضلة')
-            }}
+            {{ f === 'all' ? X('All', 'الكل') : X('Favorites', 'المفضلة') }}
           </button>
         }
         @if (kind === 'developers') {
@@ -921,7 +917,12 @@
             <div class="grid">
               <label class="field"
                 >{{ X('Price (EGP), optional', 'السعر بالجنيه، اختياري')
-                }}<input name="price" inputmode="decimal" [(ngModel)]="draft.price" /></label
+                }}<input
+                  placeholder="e.g. 10m or 250k"
+                  compactAmount
+                  name="price"
+                  inputmode="text"
+                  [(ngModel)]="draft.price" /></label
               ><label class="field"
                 >{{ X('Area (m²), optional', 'المساحة، اختياري')
                 }}<input

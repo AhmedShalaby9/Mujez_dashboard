@@ -562,7 +562,13 @@
         /></label>
         <label class="field"
           ><span>{{ t('Budget (EGP, optional)', 'الميزانية بالجنيه (اختياري)') }}</span
-          ><input class="mono" [(ngModel)]="draft.budget" name="budget" inputmode="decimal"
+          ><input
+            placeholder="e.g. 10m or 250k"
+            compactAmount
+            class="mono"
+            [(ngModel)]="draft.budget"
+            name="budget"
+            inputmode="text"
         /></label>
         <label class="field"
           ><span>{{ t('Source', 'المصدر') }}</span

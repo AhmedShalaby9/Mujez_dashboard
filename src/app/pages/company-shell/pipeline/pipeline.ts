@@ -1,3 +1,4 @@
+import { CompactAmountDirective } from '../../../compact-amount.directive';
 import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CompanyUiState } from '../company-ui-state';
@@ -15,7 +16,7 @@ import {
 } from '../../../sales-api.service';
 @Component({
   selector: 'app-pipeline',
-  imports: [FormsModule],
+  imports: [CompactAmountDirective, FormsModule],
   templateUrl: './pipeline.html',
   styleUrls: [
     '../../admin-shell/admin-ui.scss',

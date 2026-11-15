@@ -1,3 +1,5 @@
+import { CompactAmountDirective } from '../../../compact-amount.directive';
+import { compactMoney, compactMajor, compactNumber, compactAmountInput, parseCompactAmount } from '../../../compact-numbers';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../auth.service';
 import { SubscriptionsApi } from '../../../subscriptions-api.service';
@@ -139,7 +141,7 @@ const COPY: Record<Lang, Copy> = {
 
 @Component({
   selector: 'app-subscription-plans',
-  imports: [FormsModule],
+  imports: [CompactAmountDirective, FormsModule],
   templateUrl: './subscription-plans.html',
   styleUrls: ['../admin-ui.scss', './subscription-plans.scss'],
 })
@@ -172,8 +174,8 @@ export class SubscriptionPlans {
     nameAr: '',
     descEn: '',
     descAr: '',
-    monthlyPrice: 0,
-    annualPrice: 0,
+    monthlyPrice: '',
+    annualPrice: '',
     users: null as number | null,
     listings: null as number | null,
     projects: null as number | null,
@@ -195,8 +197,8 @@ export class SubscriptionPlans {
       this.records.set(
         data.map((v: any) => ({
           ...v,
-          priceEn: 'EGP ' + (v.monthlyMinor / 100).toLocaleString('en-US'),
-          priceAr: (v.monthlyMinor / 100).toLocaleString('en-US') + ' ج.م',
+          priceEn: 'EGP ' + compactMajor(v.monthlyMinor / 100),
+          priceAr: compactMajor(v.monthlyMinor / 100) + ' ج.م',
           perEn: 'per month',
           perAr: 'شهريًا',
           color: (
@@ -248,8 +250,8 @@ export class SubscriptionPlans {
       nameAr: '',
       descEn: '',
       descAr: '',
-      monthlyPrice: 0,
-      annualPrice: 0,
+      monthlyPrice: '',
+      annualPrice: '',
       users: null,
       listings: null,
       projects: null,
@@ -317,8 +319,8 @@ export class SubscriptionPlans {
       nameAr: p.nameAr,
       descEn: p.descEn,
       descAr: p.descAr,
-      monthlyPrice: p.monthlyMinor / 100,
-      annualPrice: p.annualMinor / 100,
+      monthlyPrice: compactAmountInput(String(p.monthlyMinor)),
+      annualPrice: compactAmountInput(String(p.annualMinor)),
       users: p.users,
       listings: p.listings,
       projects: p.projects,
@@ -346,8 +348,8 @@ export class SubscriptionPlans {
       const { key, monthlyPrice, annualPrice, ...rest } = this.draft;
       const terms = {
         ...rest,
-        monthlyMinor: Math.round(Number(monthlyPrice) * 100),
-        annualMinor: Math.round(Number(annualPrice) * 100),
+        monthlyMinor: Number(parseCompactAmount(String(monthlyPrice), 1000000000000n)),
+        annualMinor: Number(parseCompactAmount(String(annualPrice), 1000000000000n)),
       };
       const current = this.editing();
       await this.api.savePlan(
@@ -383,7 +385,7 @@ export class SubscriptionPlans {
     return live.length ? live.reduce((a, b) => (b.companies > a.companies ? b : a)).key : null;
   });
   money(minor: number) {
-    return Math.round(minor / 100).toLocaleString('en-US');
+    return compactMajor(minor / 100);
   }
   priceNow(p: PlanDef) {
     return this.money(this.cycle() === 'a' ? p.annualMinor : p.monthlyMinor);
@@ -400,27 +402,21 @@ export class SubscriptionPlans {
   }
   /** Sum of current subscription MRR on this plan (needs `sub.manage`). */
   planMrr(p: PlanDef): string {
-    if (p.mrrMinor !== undefined)
-      return (
-        'EGP ' + (Number(p.mrrMinor) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })
-      );
+    if (p.mrrMinor !== undefined) return compactMoney(p.mrrMinor);
     if (!this.canSubs()) return '—';
-    const v = this.subscribers()
-      .filter((s) => s.plan === p.key)
-      .reduce((n, s) => n + (Number(s.mrr) || 0), 0);
     return (
       'EGP ' +
-      (v >= 1e6
-        ? (v / 1e6).toFixed(2) + 'M'
-        : v >= 1e4
-          ? Math.round(v / 1000) + 'K'
-          : Math.round(v).toLocaleString('en-US'))
+      compactMajor(
+        this.subscribers()
+          .filter((s) => s.plan === p.key)
+          .reduce((n, s) => n + (Number(s.mrr) || 0), 0),
+      )
     );
   }
   limitRows(p: PlanDef) {
     const ar = this.lang() === 'ar';
     const lv = (v: number | null, u = '') =>
-      v === null ? (ar ? 'غير محدود' : 'Unlimited') : v.toLocaleString('en-US') + u;
+      v === null ? (ar ? 'غير محدود' : 'Unlimited') : compactNumber(v) + u;
     return [
       { k: ar ? 'المستخدمون' : 'Users', v: lv(p.users) },
       { k: ar ? 'الوحدات' : 'Listings', v: lv(p.listings) },

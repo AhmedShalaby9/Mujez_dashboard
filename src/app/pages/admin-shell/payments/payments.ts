@@ -1,3 +1,5 @@
+import { CompactAmountDirective } from '../../../compact-amount.directive';
+import { compactMajor, compactAmountInput } from '../../../compact-numbers';
 import { BillingApi, toMinor } from '../../../billing-api.service';
 import { Router } from '@angular/router';
 import { Component, computed, inject, signal } from '@angular/core';
@@ -242,6 +244,8 @@ const PAGE_SIZE = 10;
   styleUrls: ['../admin-ui.scss', '../admin-table.scss', './payments.scss'],
 })
 export class Payments {
+  readonly compactAmount = compactMajor;
+
   readonly NumberValue = Number;
   private readonly api = inject(BillingApi);
   private readonly router = inject(Router);
@@ -425,9 +429,7 @@ export class Payments {
   }
 
   formatMoney(v: number): string {
-    return this.lang() === 'ar'
-      ? `${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`
-      : `EGP ${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return this.lang() === 'ar' ? compactMajor(v) + ' ج.م' : 'EGP ' + compactMajor(v);
   }
 
   canRefund(p: Payment): boolean {
@@ -488,7 +490,7 @@ export class Payments {
     };
   });
   short(v: number) {
-    return 'EGP ' + (v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : Math.round(v).toLocaleString('en-US'));
+    return 'EGP ' + compactMajor(v);
   }
   minor(v: string) {
     return Number(v) / 100;
@@ -587,7 +589,9 @@ export class Payments {
     this.requestId = crypto.randomUUID();
     this.refunding.set(p);
     this.refundMode.set('full');
-    this.refundAmount.set(String((Number(p.amountMinor) - Number(p.refundedMinor)) / 100));
+    this.refundAmount.set(
+      compactAmountInput((BigInt(p.amountMinor) - BigInt(p.refundedMinor)).toString()),
+    );
     this.refundReason.set('');
     this.refundTotp.set('');
     this.refundError.set('');
@@ -604,7 +608,9 @@ export class Payments {
     const p = this.refunding();
     if (!p) return;
     if (mode === 'full')
-      this.refundAmount.set(String((Number(p.amountMinor) - Number(p.refundedMinor)) / 100));
+      this.refundAmount.set(
+        compactAmountInput((BigInt(p.amountMinor) - BigInt(p.refundedMinor)).toString()),
+      );
   }
 
   async submitRefund() {

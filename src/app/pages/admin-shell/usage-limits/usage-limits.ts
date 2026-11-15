@@ -1,3 +1,4 @@
+import { compactNumber } from '../../../compact-numbers';
 import { FeaturesApi } from '../../../features-api.service';
 import { Router } from '@angular/router';
 import { Component, computed, inject, signal } from '@angular/core';
@@ -141,6 +142,8 @@ const COPY: Record<Lang, Copy> = {
   styleUrls: ['../admin-ui.scss', '../admin-table.scss', './usage-limits.scss'],
 })
 export class UsageLimits {
+  readonly compactNumber = compactNumber;
+
   private readonly api = inject(FeaturesApi);
   private readonly router = inject(Router);
   readonly kebabFor = signal<string | null>(null);
@@ -232,7 +235,7 @@ export class UsageLimits {
   }
   format(n: number | null): string {
     if (n === null) return this.lang() === 'ar' ? 'غير مقاس' : 'Not measured';
-    return n % 1 === 0 ? n.toLocaleString('en-US') : n.toFixed(1);
+    return n % 1 === 0 ? compactNumber(n) : n.toFixed(1);
   }
 
   readonly kpis = computed(() => {

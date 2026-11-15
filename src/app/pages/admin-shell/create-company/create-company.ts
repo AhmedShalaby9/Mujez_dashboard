@@ -1,3 +1,4 @@
+import { compactMoney, compactNumber } from '../../../compact-numbers';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { CompaniesApi } from '../../../companies-api.service';
@@ -341,7 +342,7 @@ export class CreateCompany {
     return this.ar() ? p.nameAr : p.nameEn;
   }
   money(minor: number | null) {
-    return minor === null ? '—' : 'EGP ' + Math.round(minor / 100).toLocaleString('en-US');
+    return minor === null ? '—' : compactMoney(String(minor));
   }
   planDesc(p: PlanInfo) {
     const u =
@@ -351,7 +352,7 @@ export class CreateCompany {
     const l =
       p.listings === null
         ? this.t('unlimited listings', 'وحدات بلا حد')
-        : p.listings.toLocaleString('en-US') + ' ' + this.t('listings', 'وحدة');
+        : compactNumber(p.listings) + ' ' + this.t('listings', 'وحدة');
     return u + ' · ' + l;
   }
   readonly summary=computed(()=>{const q=this.quote();return q?{base:Number(q.baseMinor),disc:Number(q.discountMinor),vat:Number(q.taxMinor),taxRate:q.taxBps/100,total:Number(q.totalMinor)}:null;});
@@ -377,7 +378,7 @@ export class CreateCompany {
           this.t('Plan default: ', 'افتراضي الباقة: ') +
           (def === null
             ? this.t('Unlimited', 'بلا حد')
-            : def.toLocaleString('en-US') + (unit ? ' ' + unit : '')),
+            : compactNumber(def) + (unit ? ' ' + unit : '')),
         over: v !== def,
       };
     });

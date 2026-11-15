@@ -199,7 +199,9 @@
           <span>{{ L().simBudget }}</span>
           <input
             class="mono"
-            inputmode="decimal"
+            compactAmount
+            inputmode="text"
+            placeholder="e.g. 10m or 250k"
             [ngModel]="simBudget()"
             (ngModelChange)="simBudget.set($event)"
           />
@@ -350,8 +352,10 @@
           <label class="field">
             <span>{{ t('Min. budget (EGP)', 'أدنى ميزانية (جنيه)') }}</span>
             <input
+              placeholder="e.g. 10m or 250k"
+              compactAmount
               class="mono"
-              inputmode="decimal"
+              inputmode="text"
               [(ngModel)]="form.minBudget"
               name="budget"
               (ngModelChange)="changed()"

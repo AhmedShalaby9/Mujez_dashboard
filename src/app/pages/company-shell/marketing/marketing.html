@@ -278,8 +278,10 @@
           <label class="field full">
             <span>{{ t('Recorded lifetime spend (EGP)', 'الإنفاق الإجمالي المسجل (جنيه)') }}</span>
             <input
+              placeholder="e.g. 10m or 250k"
+              compactAmount
               class="mono"
-              inputmode="decimal"
+              inputmode="text"
               [(ngModel)]="form.spend"
               name="spend"
               required

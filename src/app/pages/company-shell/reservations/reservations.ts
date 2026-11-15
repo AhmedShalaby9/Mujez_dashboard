@@ -1,3 +1,4 @@
+import { CompactAmountDirective } from '../../../compact-amount.directive';
 import { Component, computed, inject, signal, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -107,7 +108,7 @@ const COPY: Record<Lang, Copy> = {
 
 @Component({
   selector: 'app-reservations',
-  imports: [FormsModule, RouterLink],
+  imports: [CompactAmountDirective, FormsModule, RouterLink],
   templateUrl: './reservations.html',
   styleUrls: [
     '../../admin-shell/admin-ui.scss',

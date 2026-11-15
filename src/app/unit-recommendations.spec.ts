@@ -123,7 +123,7 @@ describe('Lead unit recommendations', () => {
     const { f, api } = await render();
     expect(api.write).not.toHaveBeenCalled();
     expect(f.nativeElement.textContent).toContain('10%');
-    expect(f.nativeElement.textContent).toContain('EGP 10,000,000.00');
+    expect(f.nativeElement.textContent).toContain('EGP 10m');
   });
   it('starts a job with only explicit preferences, then displays actual unit links and over-budget warnings', async () => {
     const { f, c, api, setCurrent } = await render();
@@ -145,7 +145,7 @@ describe('Lead unit recommendations', () => {
     await c.refresh();
     f.detectChanges();
     expect(f.nativeElement.textContent).toContain('Real apartment');
-    expect(f.nativeElement.textContent).toContain('Above budget by EGP 500,000.00');
+    expect(f.nativeElement.textContent).toContain('Above budget by EGP 500k');
     expect(f.nativeElement.querySelector('a.ai-view').getAttribute('href')).toContain(item.unit.id);
   });
   it('shows provider failure and stale states without fake matches', async () => {

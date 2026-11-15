@@ -42,9 +42,9 @@
   <div class="kpis kpis--4">
     <div class="kpi">
       <span>{{ lang() === 'ar' ? 'المستخدمون' : 'Users' }}</span>
-      <b>{{ totals().users.toLocaleString('en-US') }}</b>
+      <b>{{ compactNumber(totals().users) }}</b>
       <small
-        >{{ lang() === 'ar' ? 'من ' : 'of ' }}{{ totals().seats.toLocaleString('en-US')
+        >{{ lang() === 'ar' ? 'من ' : 'of ' }}{{ compactNumber(totals().seats)
         }}{{ totals().unlimitedSeats ? '+' : '' }} {{ lang() === 'ar' ? 'مقعدًا' : 'seats' }}</small
       >
     </div>
@@ -60,7 +60,7 @@
     </div>
     <div class="kpi">
       <span>{{ lang() === 'ar' ? 'الوحدات' : 'Listings' }}</span>
-      <b>{{ totals().listings === null ? '—' : totals().listings!.toLocaleString('en-US') }}</b>
+      <b>{{ totals().listings === null ? '—' : compactNumber(totals().listings!) }}</b>
       <small>{{
         totals().listings === null
           ? lang() === 'ar'

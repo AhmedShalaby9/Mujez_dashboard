@@ -1,14 +1,11 @@
+import { parseCompactAmount } from './compact-numbers';
 import { inject, Injectable, signal } from '@angular/core';
 import { RUNTIME_CONFIG } from './runtime-config';
 import { AuthService } from './auth.service';
 export function toMinor(value: string): string {
-  if (!/^\d+(\.\d{1,2})?$/.test(value.trim()))
-    throw new Error('Enter a positive amount with at most two decimal places');
-  const [whole, fraction = ''] = value.trim().split('.');
-  const result = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, '0'));
-  if (result <= 0n || result > 1000000000000n)
-    throw new Error('Amount is outside the allowed range');
-  return String(result);
+  const result = parseCompactAmount(value, 1000000000000n);
+  if (result === '0') throw Error('Enter a positive amount');
+  return result;
 }
 @Injectable({ providedIn: 'root' })
 export class BillingApi {

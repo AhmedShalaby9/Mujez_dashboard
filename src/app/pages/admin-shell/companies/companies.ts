@@ -1,3 +1,4 @@
+import { compactMajor, compactNumber } from '../../../compact-numbers';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CompaniesApi } from '../../../companies-api.service';
@@ -881,10 +882,7 @@ export class Companies {
   }
 
   formatMrr(v: number): string {
-    if (v === 0) return '—';
-    return this.lang() === 'ar'
-      ? `${v.toLocaleString('en-US')} ج.م`
-      : `EGP ${v.toLocaleString('en-US')}`;
+    return v === 0 ? '—' : this.lang() === 'ar' ? compactMajor(v) + ' ج.م' : 'EGP ' + compactMajor(v);
   }
 
   setSearch(v: string): void {
@@ -976,10 +974,10 @@ export class Companies {
       return {
         label,
         value: measured
-          ? r.used!.toLocaleString('en-US') +
+          ? compactNumber(r.used!) +
             unit +
             ' / ' +
-            (r.limit === null ? '∞' : r.limit.toLocaleString('en-US') + unit)
+            (r.limit === null ? '∞' : compactNumber(r.limit) + unit)
           : ar
             ? 'غير مقاس'
             : 'Not measured',

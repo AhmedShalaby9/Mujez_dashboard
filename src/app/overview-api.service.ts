@@ -1,3 +1,4 @@
+import { compactMoney } from './compact-numbers';
 import { Injectable, inject, signal } from '@angular/core';
 import { AuthService } from './auth.service';
 export interface OverviewAlert {
@@ -38,15 +39,7 @@ export interface OverviewData {
   capabilities: { companies: boolean; finance: boolean; historicalMrr: boolean; churn: boolean };
 }
 export function overviewMoney(value: string, lang = 'en') {
-  const n = BigInt(value),
-    a = n < 0n ? -n : n;
-  return (
-    (n < 0n ? '-' : '') +
-    'EGP ' +
-    (a / 100n).toLocaleString(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB') +
-    '.' +
-    String(a % 100n).padStart(2, '0')
-  );
+  return compactMoney(value);
 }
 export function overviewAlertText(a: OverviewAlert, lang = 'en') {
   const name = lang === 'ar' ? a.nameAr : a.nameEn;

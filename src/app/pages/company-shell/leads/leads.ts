@@ -1,3 +1,4 @@
+import { CompactAmountDirective } from '../../../compact-amount.directive';
 import { LeadUnitRecommendations } from './lead-unit-recommendations';
 import { Router, ActivatedRoute } from '@angular/router';
 import type { CompanyTask } from '../../../tasks-api.service';
@@ -19,7 +20,7 @@ import {
 } from '../../../sales-api.service';
 @Component({
   selector: 'app-leads',
-  imports: [FormsModule, LeadUnitRecommendations],
+  imports: [CompactAmountDirective, FormsModule, LeadUnitRecommendations],
   templateUrl: './leads.html',
   styleUrls: [
     '../../admin-shell/admin-ui.scss',

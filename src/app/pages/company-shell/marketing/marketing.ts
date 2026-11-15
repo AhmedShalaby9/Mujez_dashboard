@@ -1,3 +1,5 @@
+import { compactNumber } from '../../../compact-numbers';
+import { CompactAmountDirective } from '../../../compact-amount.directive';
 import { Component, computed, inject, signal, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -66,7 +68,7 @@ const COPY: Record<Lang, Copy> = {
 
 @Component({
   selector: 'app-marketing',
-  imports: [FormsModule, RouterLink],
+  imports: [CompactAmountDirective, FormsModule, RouterLink],
   templateUrl: './marketing.html',
   styleUrls: [
     '../../admin-shell/admin-ui.scss',
@@ -159,7 +161,7 @@ export class Marketing implements OnDestroy {
       },
       {
         label: this.t('Attributed leads', 'العملاء المنسوبون'),
-        value: Number(k.leads).toLocaleString('en-US'),
+        value: compactNumber(Number(k.leads)),
         sub: this.t('CPL ', 'تكلفة العميل ') + this.money(k.cplMinor),
       },
       {

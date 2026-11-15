@@ -490,10 +490,12 @@
           <label class="field">
             <span>{{ t('Agreed value (EGP)', 'القيمة المتفق عليها (جنيه)') }}</span>
             <input
+              placeholder="e.g. 10m or 250k"
+              compactAmount
               [(ngModel)]="form.value"
               name="value"
               required
-              inputmode="decimal"
+              inputmode="text"
               class="mono"
               (ngModelChange)="changed()"
             />

@@ -111,7 +111,7 @@ describe('My team work and performance', () => {
   it('renders real per-member results and requests the selected performance period', async () => {
     const { f, c, api } = await setup();
     expect(f.nativeElement.textContent).toContain('Actual member');
-    expect(f.nativeElement.textContent).toContain('EGP 1,234.56');
+    expect(f.nativeElement.textContent).toContain('EGP 1.23456k');
     c.changeDays('90');
     await f.whenStable();
     expect(api.performance).toHaveBeenLastCalledWith(90);

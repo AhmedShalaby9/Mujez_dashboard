@@ -1,3 +1,4 @@
+import { CompactAmountDirective } from '../../../compact-amount.directive';
 import { Component, computed, inject, signal, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CompanyUiState, type Lang } from '../company-ui-state';
@@ -82,7 +83,7 @@ const COPY: Record<Lang, Copy> = {
 
 @Component({
   selector: 'app-lead-routing',
-  imports: [FormsModule],
+  imports: [CompactAmountDirective, FormsModule],
   templateUrl: './lead-routing.html',
   styleUrls: [
     '../../admin-shell/admin-ui.scss',

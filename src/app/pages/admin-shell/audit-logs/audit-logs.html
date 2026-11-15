@@ -39,17 +39,17 @@
   <div class="kpis kpis--4">
     <button type="button" class="kpi" (click)="setFilter('all')">
       <span>{{ L().kpis.total }}</span
-      ><b>{{ kpis().total.toLocaleString('en-US') }}</b>
+      ><b>{{ compactNumber(kpis().total) }}</b>
       <small>{{ lang() === 'ar' ? 'مطابقة للفلاتر' : 'matching the filters' }}</small>
     </button>
     <button type="button" class="kpi" (click)="setFilter('high')">
       <span>{{ L().kpis.high }}</span
-      ><b class="bad">{{ kpis().high.toLocaleString('en-US') }}</b>
+      ><b class="bad">{{ compactNumber(kpis().high) }}</b>
       <small>{{ lang() === 'ar' ? 'أمان وإعدادات وأدوار' : 'security, settings, roles' }}</small>
     </button>
     <button type="button" class="kpi" (click)="setFilter('ws')">
       <span>{{ L().kpis.workspace }}</span
-      ><b>{{ kpis().workspace.toLocaleString('en-US') }}</b>
+      ><b>{{ compactNumber(kpis().workspace) }}</b>
       <small
         >{{ deniedLoaded() }}
         {{ lang() === 'ar' ? 'مرفوضة في النتائج المحملة' : 'denied in loaded results' }}</small
@@ -181,7 +181,7 @@
       </div>
     }
     <div class="pager">
-      <span>{{ filtered().length }} / {{ kpis().total.toLocaleString('en-US') }}</span>
+      <span>{{ filtered().length }} / {{ compactNumber(kpis().total) }}</span>
       @if (nextCursor()) {
         <button type="button" class="btn btn--sm" [disabled]="loading()" (click)="load(true)">
           {{ lang() === 'ar' ? 'تحميل المزيد' : 'Load more' }}

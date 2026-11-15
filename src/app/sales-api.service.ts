@@ -1,3 +1,4 @@
+import { compactMoney, compactAmountInput, parseCompactAmount } from './compact-numbers';
 import { inject, Injectable } from '@angular/core';
 import { AuthService } from './auth.service';
 export const SALES_STAGES = [
@@ -124,22 +125,14 @@ export const SOURCE_NAMES: Record<string, [string, string]> = {
   other: ['Other', 'أخرى'],
 };
 export function salesMoney(value: string | null) {
-  if (value === null) return '—';
-  const n = BigInt(value);
-  return 'EGP ' + (n / 100n).toLocaleString('en-GB') + '.' + String(n % 100n).padStart(2, '0');
+  return compactMoney(value);
 }
 export function majorAmount(value: string | null) {
-  if (value === null) return '';
-  const n = BigInt(value);
-  return String(n / 100n) + '.' + String(n % 100n).padStart(2, '0');
+  return value === null ? '' : compactAmountInput(value);
 }
 export function minorAmount(value: string, optional = false) {
-  const s = value.trim();
-  if (!s && optional) return null;
-  if (!/^\d{1,16}(\.\d{1,2})?$/.test(s))
-    throw Error('Enter an EGP amount with up to two decimal places');
-  const [a, b = ''] = s.split('.');
-  return (BigInt(a) * 100n + BigInt(b.padEnd(2, '0'))).toString();
+  if (!value.trim() && optional) return null;
+  return parseCompactAmount(value);
 }
 @Injectable({ providedIn: 'root' })
 export class SalesApi {

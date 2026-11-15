@@ -1,3 +1,4 @@
+import { compactNumber } from '../../../compact-numbers';
 import { Component, computed, inject, signal } from '@angular/core';
 import { AuthService } from '../../../auth.service';
 import { FormsModule } from '@angular/forms';
@@ -121,6 +122,8 @@ const COPY: Record<Lang, Copy> = {
   styleUrls: ['../admin-ui.scss', '../admin-table.scss', './audit-logs.scss'],
 })
 export class AuditLogs {
+  readonly compactNumber = compactNumber;
+
   private readonly ui = inject(AdminUiState);
 
   readonly lang = computed<Lang>(() => this.ui.lang());

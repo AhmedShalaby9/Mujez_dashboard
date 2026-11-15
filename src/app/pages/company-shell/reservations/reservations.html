@@ -226,7 +226,9 @@
       <label class="field">
         <span>{{ L().depositLabel }}</span>
         <input
-          inputmode="decimal"
+          placeholder="e.g. 10m or 250k"
+          compactAmount
+          inputmode="text"
           [value]="depositInput()"
           (input)="depositInput.set($any($event.target).value); changed()"
         />

@@ -1,3 +1,5 @@
+import { CompactAmountDirective } from '../../../compact-amount.directive';
+import { compactMajor, compactAmountInput } from '../../../compact-numbers';
 import { AuthService } from '../../../auth.service';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -289,11 +291,13 @@ const PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-billing',
-  imports: [FormsModule],
+  imports: [CompactAmountDirective, FormsModule],
   templateUrl: './billing.html',
   styleUrls: ['../admin-ui.scss', '../admin-table.scss', './billing.scss'],
 })
 export class Billing {
+  readonly compactAmount = compactMajor;
+
   private readonly auth = inject(AuthService);
   readonly NumberValue = Number;
   private readonly api = inject(BillingApi);
@@ -557,9 +561,7 @@ export class Billing {
   }
 
   formatMoney(v: number): string {
-    return this.lang() === 'ar'
-      ? `${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`
-      : `EGP ${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return this.lang() === 'ar' ? compactMajor(v) + ' ج.م' : 'EGP ' + compactMajor(v);
   }
 
   logoBg(i: Invoice): string {
@@ -647,7 +649,7 @@ export class Billing {
       new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
     );
     this.recordMode.set('full');
-    this.recordAmount.set(String(Number(i.balanceMinor) / 100));
+    this.recordAmount.set(compactAmountInput(i.balanceMinor));
     this.recordBankRef.set('');
     this.kebabFor.set(null);
   }
@@ -660,7 +662,7 @@ export class Billing {
     this.recordMode.set(mode);
     const i = this.recording();
     if (!i) return;
-    if (mode === 'full') this.recordAmount.set(String(Number(i.balanceMinor) / 100));
+    if (mode === 'full') this.recordAmount.set(compactAmountInput(i.balanceMinor));
   }
 
   async submitRecord() {
@@ -729,7 +731,7 @@ export class Billing {
     this.requestId = crypto.randomUUID();
     this.password.set('');
     this.crediting.set(i);
-    this.creditAmount.set(String(Number(i.balanceMinor) / 100));
+    this.creditAmount.set(compactAmountInput(i.balanceMinor));
     this.creditReason.set('');
     this.creditError.set('');
     this.kebabFor.set(null);
@@ -823,7 +825,7 @@ export class Billing {
     };
   });
   short(v: number) {
-    return 'EGP ' + (v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : Math.round(v).toLocaleString('en-US'));
+    return 'EGP ' + compactMajor(v);
   }
   date(iso: string) {
     const d = new Date(iso.length === 10 ? iso + 'T12:00:00Z' : iso);

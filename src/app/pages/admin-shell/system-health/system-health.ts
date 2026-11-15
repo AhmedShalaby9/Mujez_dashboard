@@ -1,3 +1,4 @@
+import { compactNumber } from '../../../compact-numbers';
 import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
@@ -198,7 +199,7 @@ export class SystemHealth {
     const bars = ((this.data()?.metrics.bars ?? []) as any[]).filter((b) => b.observed);
     if (!bars.length) return '—';
     const avg = bars.reduce((n, b) => n + b.requests, 0) / bars.length;
-    return (avg >= 1000 ? (avg / 1000).toFixed(1) + 'K' : Math.round(avg)) + '/h';
+    return compactNumber(Math.round(avg)) + '/h';
   });
   hourLabel(iso: string) {
     return new Date(iso).toISOString().slice(11, 16) + ' UTC';

@@ -1,3 +1,4 @@
+import { compactNumber } from '../../../compact-numbers';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CompanyUiState } from '../company-ui-state';
@@ -219,7 +220,7 @@ export class Dashboard {
     if (m.newLeads7d !== undefined)
       out.push({
         label: this.text('New leads · 7 days', 'عملاء جدد · 7 أيام'),
-        value: String(m.newLeads7d),
+        value: compactNumber(m.newLeads7d),
         sub: this.segmentName(this.segment()),
         route: '/company/leads',
         bar: null,
@@ -227,7 +228,7 @@ export class Dashboard {
     if (m.todayTasks !== undefined)
       out.push({
         label: this.text('Tasks due today', 'مهام اليوم'),
-        value: String(m.todayTasks),
+        value: compactNumber(m.todayTasks),
         sub: this.text('open', 'مفتوحة'),
         route: '/company/tasks',
         bar: null,
@@ -245,7 +246,7 @@ export class Dashboard {
       const total = Object.values(inv).reduce((a, n) => a + n, 0);
       out.push({
         label: this.text('Units available', 'وحدات متاحة'),
-        value: String(inv['available'] ?? 0),
+        value: compactNumber(inv['available'] ?? 0),
         sub: this.text('of ' + total + ' units', 'من ' + total + ' وحدة'),
         route: '/company/units',
         bar: total ? ((inv['available'] ?? 0) / total) * 100 : 0,
@@ -253,7 +254,7 @@ export class Dashboard {
     } else if (m.projects !== undefined)
       out.push({
         label: this.text('Active projects', 'المشروعات النشطة'),
-        value: String(m.projects),
+        value: compactNumber(m.projects),
         sub: this.text('not archived', 'غير مؤرشفة'),
         route: '/company/projects',
         bar: null,

@@ -191,11 +191,25 @@
         /></label>
         <label class="field"
           ><span>{{ lang() === 'ar' ? 'السعر الشهري (ج.م)' : 'Monthly price (EGP)' }}</span
-          ><input type="number" min="0" step="0.01" class="mono" [(ngModel)]="draft.monthlyPrice"
+          ><input
+            placeholder="e.g. 10m or 250k"
+            compactAmount
+            type="text"
+            min="0"
+            step="0.01"
+            class="mono"
+            [(ngModel)]="draft.monthlyPrice"
         /></label>
         <label class="field"
           ><span>{{ lang() === 'ar' ? 'السعر السنوي (ج.م)' : 'Annual price (EGP)' }}</span
-          ><input type="number" min="0" step="0.01" class="mono" [(ngModel)]="draft.annualPrice"
+          ><input
+            placeholder="e.g. 10m or 250k"
+            compactAmount
+            type="text"
+            min="0"
+            step="0.01"
+            class="mono"
+            [(ngModel)]="draft.annualPrice"
         /></label>
         <label class="field"
           ><span>{{

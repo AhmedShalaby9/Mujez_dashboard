@@ -1,3 +1,4 @@
+import { compactMoney } from './compact-numbers';
 import { Injectable, inject } from '@angular/core';
 import { SalesApi } from './sales-api.service';
 export interface LocalName {
@@ -82,10 +83,6 @@ export class InventoryApi {
     return this.api.write(path, body) as Promise<T>;
   }
   money(v: string | null) {
-    if (v === null) return '—';
-    const n = BigInt(v);
-    return (
-      'EGP ' + (n / 100n).toLocaleString('en-US') + '.' + (n % 100n).toString().padStart(2, '0')
-    );
+    return compactMoney(v);
   }
 }

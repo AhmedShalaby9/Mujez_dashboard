@@ -162,13 +162,11 @@
               <td class="mono soft">{{ p.invoiceNumber }}</td>
               <td class="soft">{{ methodLabel(p.method) }}</td>
               <td class="end">
-                <span class="mono">{{
-                  minor(p.amountMinor).toLocaleString('en-US', { minimumFractionDigits: 2 })
-                }}</span>
+                <span class="mono">{{ compactAmount(minor(p.amountMinor)) }}</span>
                 @if (p.refundedMinor !== '0') {
                   <span class="sub warn"
                     >{{ lang() === 'ar' ? 'مسترد ' : 'refunded '
-                    }}{{ minor(p.refundedMinor).toLocaleString('en-US') }}</span
+                    }}{{ compactAmount(minor(p.refundedMinor)) }}</span
                   >
                 } @else {
                   <span class="sub">{{ $any(p).currency || 'EGP' }}</span>
@@ -435,8 +433,10 @@
           </button>
         </div>
         <input
+          placeholder="e.g. 10m or 250k"
+          compactAmount
           class="mono"
-          inputmode="decimal"
+          inputmode="text"
           [disabled]="refundMode() === 'full'"
           [value]="refundAmount()"
           (input)="refundAmount.set($any($event.target).value)"

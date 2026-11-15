@@ -79,7 +79,7 @@ describe('Live overview', () => {
     f.detectChanges();
     const c = f.componentInstance;
     expect(f.nativeElement.textContent).toContain('Real company');
-    expect(f.nativeElement.textContent).toContain('EGP 100.00');
+    expect(f.nativeElement.textContent).toContain('EGP 100');
     expect(c.donut()[0].pct).toBe(67);
     c.setRange('30d');
     await f.whenStable();
@@ -119,7 +119,7 @@ describe('Live overview', () => {
     expect(f.nativeElement.querySelector('[role="alert"]').textContent).toContain('stale');
   });
   it('formats large money values exactly and supports negative recorded net', () => {
-    expect(overviewMoney('900719925474099399')).toBe('EGP 9,007,199,254,740,993.99');
-    expect(overviewMoney('-10001')).toBe('-EGP 100.01');
+    expect(overviewMoney('900719925474099399')).toBe('EGP 9007199.25474099399b');
+    expect(overviewMoney('-10001')).toBe('EGP -100.01');
   });
 });

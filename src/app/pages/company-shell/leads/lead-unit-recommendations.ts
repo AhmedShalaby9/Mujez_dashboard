@@ -1,3 +1,4 @@
+import { compactMoneyText } from '../../../compact-numbers';
 import { Component, input, signal, computed, effect, inject, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -127,7 +128,9 @@ export class LeadUnitRecommendations {
     return this.ar() ? ar : en;
   }
   label(v: Bi | null) {
-    return v ? (this.ar() ? v.ar || v.en : v.en) : this.t('Not set', 'غير محدد');
+    return v
+      ? compactMoneyText(this.ar() ? v.ar || v.en : v.en || v.ar)
+      : this.t('Not set', 'غير محدد');
   }
   typeLabel(s: string) {
     const n: Record<string, [string, string]> = {

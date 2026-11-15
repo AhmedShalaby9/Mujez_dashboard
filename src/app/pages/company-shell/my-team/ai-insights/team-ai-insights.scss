@@ -1,0 +1,265 @@
+:host {
+  display: block;
+}
+.team-ai {
+  color: #111113;
+}
+.ai-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: start;
+  flex-wrap: wrap;
+  margin: 16px 0 24px;
+}
+.ai-head h2 {
+  display: inline;
+  margin-inline-start: 10px;
+  font-size: 24px;
+}
+.ai-head p,
+.meta {
+  color: #727478;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.ai-tag {
+  display: inline-flex;
+  background: #c8f269;
+  color: #111;
+  padding: 6px 9px;
+  border-radius: 8px;
+  font-weight: 750;
+}
+.ai-controls {
+  display: flex;
+  gap: 10px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #727478;
+}
+button,
+select {
+  border: 1px solid #dedfd9;
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #111;
+  font: inherit;
+  font-size: 13px;
+}
+button {
+  cursor: pointer;
+}
+.generate {
+  background: #111113;
+  color: #fff;
+  font-weight: 650;
+  border-color: #111113;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.metric,
+.panel,
+.report {
+  background: #fff;
+  border: 1px solid #dedfd9;
+  border-radius: 14px;
+  padding: 20px;
+}
+.metric span {
+  font-size: 12px;
+  color: #727478;
+}
+.metric strong {
+  display: block;
+  font-size: 25px;
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+}
+.report,
+.panel {
+  margin-top: 18px;
+}
+.report h3,
+.panel h3 {
+  margin: 0 0 16px;
+  font-size: 16px;
+}
+.summary {
+  font-size: 16px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+.insight-grid,
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.insight {
+  border: 1px solid #dedfd9;
+  padding: 18px;
+  border-radius: 12px;
+}
+.attention {
+  border-inline-start: 3px solid #d99c1c;
+}
+.pill {
+  display: inline-block;
+  font-size: 11px;
+  background: #f0f3e8;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.high {
+  background: #fbe7e3;
+  color: #a23624;
+}
+h4 {
+  font-size: 14px;
+  margin: 12px 0 8px;
+}
+article p,
+.actions p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #55575c;
+  white-space: pre-wrap;
+}
+.member {
+  display: block;
+  font-size: 12px;
+  margin: 10px 0;
+}
+.evidence {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.evidence span {
+  background: #f5f5f2;
+  font-size: 11px;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+.evidence b {
+  margin-inline-start: 6px;
+}
+.actions {
+  padding-inline-start: 22px;
+}
+.actions li {
+  padding: 15px 8px;
+  border-bottom: 1px solid #eee;
+}
+.notice {
+  border-radius: 10px;
+  background: #f4f5f0;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.error {
+  background: #fbe7e3;
+  color: #a23624;
+}
+.limitations {
+  font-size: 12px;
+  color: #727478;
+  line-height: 1.8;
+}
+.breakdown {
+  margin-top: 14px;
+}
+.breakdown > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+.track {
+  height: 6px;
+  background: #f1f1ed;
+  margin-top: 6px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.track span {
+  display: block;
+  height: 100%;
+  background: #a8ce54;
+  border-radius: 10px;
+}
+.scroll {
+  overflow: auto;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+th,
+td {
+  text-align: start;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  white-space: nowrap;
+}
+th {
+  color: #727478;
+  font-weight: 500;
+}
+summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 650;
+}
+.trend {
+  max-height: 360px;
+}
+button:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #7da637;
+  outline-offset: 3px;
+}
+@media (max-width: 800px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .insight-grid,
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .ai-controls {
+    width: 100%;
+  }
+}
+@media (max-width: 480px) {
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+  .ai-controls button {
+    flex: 1;
+  }
+  .metric,
+  .report,
+  .panel {
+    padding: 16px;
+  }
+}

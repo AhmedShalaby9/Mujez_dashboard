@@ -86,8 +86,21 @@
         >
           {{ t('Tasks', 'المهام') }}
         </button>
+        <button
+          class="tab"
+          role="tab"
+          [class.tab--on]="tab() === 'ai'"
+          [attr.aria-selected]="tab() === 'ai'"
+          [disabled]="busy() || loading()"
+          (click)="changeTab('ai')"
+        >
+          {{ t('AI analytics', 'تحليلات الذكاء الاصطناعي') }}
+        </button>
       </div>
     </div>
+    @if (tab() === 'ai') {
+      <app-team-ai-insights [days]="days()" (daysChange)="changeDays($event)" />
+    }
     @if (tab() === 'performance') {
       <div class="tools">
         <label class="period-filter"
@@ -147,7 +160,7 @@
           )
         }}
       </p>
-    } @else {
+    } @else if (tab() === 'leads' || tab() === 'tasks') {
       <form class="tools" (ngSubmit)="filter()">
         <select
           [attr.aria-label]="t('Team member', 'عضو الفريق')"

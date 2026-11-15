@@ -1,3 +1,4 @@
+import { TeamAiInsights } from './ai-insights/team-ai-insights';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
@@ -11,7 +12,7 @@ import { salesMoney, STAGE_NAMES } from '../../../sales-api.service';
 import { CompanyUiState } from '../company-ui-state';
 @Component({
   selector: 'app-my-team',
-  imports: [FormsModule],
+  imports: [FormsModule, TeamAiInsights],
   templateUrl: './my-team.html',
   styleUrls: [
     '../../admin-shell/admin-ui.scss',
@@ -31,7 +32,7 @@ export class MyTeam {
   readonly listLoading = signal(false);
   readonly error = signal('');
   readonly toast = signal('');
-  readonly tab = signal<'performance' | 'leads' | 'tasks'>('performance');
+  readonly tab = signal<'performance' | 'leads' | 'tasks' | 'ai'>('performance');
   readonly days = signal(30);
   readonly leads = signal<TeamWorkLead[]>([]);
   readonly tasks = signal<TeamWorkTask[]>([]);
@@ -106,7 +107,8 @@ export class MyTeam {
       this.performance.set(this.teams().length ? await this.api.performance(this.days()) : null);
       if (this.memberId && !this.performance()?.items.some((m) => m.id === this.memberId))
         this.memberId = '';
-      if (this.tab() !== 'performance' && this.teams().length) await this.loadList();
+      if ((this.tab() === 'leads' || this.tab() === 'tasks') && this.teams().length)
+        await this.loadList();
     } catch (e) {
       if ([401, 403, 404].includes((e as { status?: number }).status ?? 0)) {
         this.teams.set([]);
@@ -123,7 +125,7 @@ export class MyTeam {
     this.days.set(Number(value));
     void this.reload();
   }
-  changeTab(value: 'performance' | 'leads' | 'tasks') {
+  changeTab(value: 'performance' | 'leads' | 'tasks' | 'ai') {
     if (this.busy()) return;
     this.tab.set(value);
     this.state = '';
@@ -131,7 +133,7 @@ export class MyTeam {
     this.error.set('');
     this.toast.set('');
     this.generation++;
-    if (value !== 'performance') void this.loadList();
+    if (value === 'leads' || value === 'tasks') void this.loadList();
   }
   filter() {
     this.appliedSearch = this.search.trim();
@@ -146,7 +148,7 @@ export class MyTeam {
   }
   async loadList() {
     const tab = this.tab();
-    if (tab === 'performance') return;
+    if (tab !== 'leads' && tab !== 'tasks') return;
     const n = ++this.generation;
     this.listLoading.set(true);
     this.error.set('');

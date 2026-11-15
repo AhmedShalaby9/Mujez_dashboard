@@ -1,0 +1,312 @@
+<section class="team-ai" [attr.dir]="ar() ? 'rtl' : 'ltr'">
+  <header class="ai-head">
+    <div>
+      <span class="ai-tag">AI</span>
+      <h2>{{ t('Team analytics', 'تحليلات الفريق') }}</h2>
+      <p>
+        {{
+          t(
+            'Understand your team’s recorded work and choose what to focus on next.',
+            'افهم عمل فريقك المسجّل وحدّد أولويات المتابعة.'
+          )
+        }}
+      </p>
+    </div>
+    <div class="ai-controls">
+      <label
+        >{{ t('Analysis period', 'فترة التحليل')
+        }}<select
+          [ngModel]="days()"
+          (ngModelChange)="daysChange.emit($event)"
+          [disabled]="loading() || starting()"
+        >
+          <option value="7">{{ t('Last 7 days', 'آخر ٧ أيام') }}</option>
+          <option value="30">{{ t('Last 30 days', 'آخر ٣٠ يومًا') }}</option>
+          <option value="90">{{ t('Last 90 days', 'آخر ٩٠ يومًا') }}</option>
+        </select></label
+      ><button class="refresh" (click)="load()" [disabled]="busy()">
+        {{ t('Refresh metrics', 'تحديث المؤشرات') }}</button
+      ><button class="generate" (click)="generate()" [disabled]="busy() || !snapshot()?.hasData">
+        {{ busy() ? t('Analyzing…', 'جارٍ التحليل…') : t('Analyze my team', 'حلّل فريقي') }}
+      </button>
+    </div>
+  </header>
+  @if (error()) {
+    <p class="notice error" role="alert">{{ error() }}</p>
+  }
+  @if (loading()) {
+    <p class="notice" role="status">
+      {{ t('Loading team analytics…', 'جارٍ تحميل تحليلات الفريق…') }}
+    </p>
+  }
+  @if (data(); as s) {
+    <p class="meta" dir="ltr">{{ s.from }} — {{ s.to }} · {{ s.timeZone }}</p>
+    <div class="metric-grid">
+      @for (id of cards; track id) {
+        @if (metric(id); as m) {
+          <article class="metric">
+            <span>{{ label(m) }}</span
+            ><strong dir="ltr">{{ value(m) }}</strong>
+          </article>
+        }
+      }
+    </div>
+    @if (!s.hasData) {
+      <p class="notice">
+        {{
+          t(
+            'No recorded team work to analyze yet. Your metrics will appear as leads and tasks are added.',
+            'لا يوجد عمل مسجّل لتحليله بعد. ستظهر المؤشرات عند إضافة العملاء والمهام.'
+          )
+        }}
+      </p>
+    }
+    <section class="report" aria-live="polite">
+      <h3>{{ t('AI team brief', 'ملخص الفريق بالذكاء الاصطناعي') }}</h3>
+      @if (run(); as r) {
+        @if (r.status === 'processing') {
+          <p class="notice" role="status">
+            {{
+              t(
+                'Kimi is reviewing the recorded metrics with thinking enabled. You can leave this tab and return later.',
+                'يراجع كيمي المؤشرات مع تفعيل التفكير. يمكنك مغادرة التبويب والعودة لاحقًا.'
+              )
+            }}
+          </p>
+          <button class="refresh" (click)="refresh()">
+            {{ t('Check progress', 'تحديث الحالة') }}
+          </button>
+        }
+        @if (r.status === 'failed' || r.status === 'stale') {
+          <p class="notice error" role="alert">
+            {{
+              r.status === 'stale'
+                ? t(
+                    'Team data changed. Refresh the metrics and generate a fresh analysis.',
+                    'تغيّرت بيانات الفريق. حدّث المؤشرات واطلب تحليلًا جديدًا.'
+                  )
+                : t(
+                    r.error?.message || 'Analysis could not be generated.',
+                    'تعذّر توليد التحليل. يمكنك المحاولة مجددًا.'
+                  )
+            }}
+          </p>
+        }
+        @if (r.result; as result) {
+          <p class="summary">{{ result.report.summary }}</p>
+          <p class="meta">{{ t('Generated', 'تم التوليد') }} · {{ result.generatedAt }}</p>
+          <div class="insight-grid">
+            @for (i of result.report.insights; track $index) {
+              <article class="insight" [class.attention]="i.tone === 'attention'">
+                <span class="pill">{{ category(i.category) }}</span>
+                <h4>{{ i.title }}</h4>
+                <p>{{ i.explanation }}</p>
+                @for (key of i.memberKeys; track key) {
+                  <b class="member">{{ member(key) }}</b>
+                }
+                <div class="evidence">
+                  @for (id of i.metricIds; track id) {
+                    @if (metric(id); as m) {
+                      <span
+                        >{{ label(m) }} <b dir="ltr">{{ value(m) }}</b></span
+                      >
+                    }
+                  }
+                </div>
+              </article>
+            }
+          </div>
+          @if (result.report.actions.length) {
+            <h3>{{ t('Suggested priorities', 'الأولويات المقترحة') }}</h3>
+            <ol class="actions">
+              @for (a of result.report.actions; track $index) {
+                <li>
+                  <span class="pill" [class.high]="a.priority === 'high'">{{
+                    category(a.priority)
+                  }}</span>
+                  <h4>{{ a.title }}</h4>
+                  <p>{{ a.explanation }}</p>
+                  @for (key of a.memberKeys; track key) {
+                    <b class="member">{{ member(key) }}</b>
+                  }
+                  <div class="evidence">
+                    @for (id of a.metricIds; track id) {
+                      @if (metric(id); as m) {
+                        <span
+                          >{{ label(m) }} <b dir="ltr">{{ value(m) }}</b></span
+                        >
+                      }
+                    }
+                  </div>
+                </li>
+              }
+            </ol>
+          }
+          @if (result.report.limitations.length) {
+            <ul class="limitations">
+              @for (l of result.report.limitations; track $index) {
+                <li>{{ l }}</li>
+              }
+            </ul>
+          }
+        }
+      } @else {
+        <p class="notice">
+          {{
+            t(
+              'Select Analyze my team to get a summary, risks and suggested next steps based on these metrics.',
+              'اضغط حلّل فريقي للحصول على ملخص ومخاطر وخطوات مقترحة من هذه المؤشرات.'
+            )
+          }}
+        </p>
+      }
+    </section>
+    <div class="detail-grid">
+      <section class="panel">
+        <h3>{{ t('Pipeline by stage', 'المسار حسب المرحلة') }}</h3>
+        @for (row of s.stages; track row.stage) {
+          <div class="breakdown">
+            <div>
+              <span>{{ stage(row.stage) }}</span
+              ><b>{{ number(row.count) }}</b>
+            </div>
+            <div class="track"><span [style.width]="bar(row.count, s.stages)"></span></div>
+          </div>
+        } @empty {
+          <p class="meta">{{ t('No leads recorded.', 'لا يوجد عملاء مسجّلون.') }}</p>
+        }
+      </section>
+      <section class="panel">
+        <h3>{{ t('New leads by source', 'العملاء الجدد حسب المصدر') }}</h3>
+        @for (row of s.sources; track row.source) {
+          <div class="breakdown">
+            <div>
+              <span>{{ source(row.source) }}</span
+              ><b>{{ number(row.count) }}</b>
+            </div>
+            <div class="track"><span [style.width]="bar(row.count, s.sources)"></span></div>
+          </div>
+        } @empty {
+          <p class="meta">
+            {{ t('No new leads in this period.', 'لا يوجد عملاء جدد خلال الفترة.') }}
+          </p>
+        }
+      </section>
+    </div>
+    <section class="panel">
+      <h3>{{ t('Compared with the previous period', 'مقارنة بالفترة السابقة') }}</h3>
+      <p class="meta" dir="ltr">{{ s.previousFrom }} — {{ s.previousTo }}</p>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('Metric', 'المؤشر') }}</th>
+              <th>{{ t('Selected period', 'الفترة المحددة') }}</th>
+              <th>{{ t('Previous period', 'الفترة السابقة') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of comparisons; track c.now) {
+              <tr>
+                <td>{{ metric(c.now) ? label(metric(c.now)!) : c.now }}</td>
+                <td dir="ltr">{{ value(metric(c.now)) }}</td>
+                <td dir="ltr">{{ value(metric(c.before)) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <details class="panel">
+      <summary>{{ t('All recorded metrics', 'كل المؤشرات المسجّلة') }}</summary>
+      <div class="scroll">
+        <table>
+          <tbody>
+            @for (m of s.metrics; track m.id) {
+              @if (!m.memberKey) {
+                <tr>
+                  <td>{{ label(m) }}</td>
+                  <td dir="ltr">{{ value(m) }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </details>
+    <details class="panel">
+      <summary>{{ t('Daily trends', 'الاتجاهات اليومية') }}</summary>
+      <div class="scroll trend">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('Date', 'التاريخ') }}</th>
+              <th>{{ t('New leads', 'عملاء جدد') }}</th>
+              <th>{{ t('Won', 'ناجحة') }}</th>
+              <th>{{ t('Lost', 'خاسرة') }}</th>
+              <th>{{ t('Tasks done', 'مهام مكتملة') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of s.series; track d.date) {
+              <tr>
+                <td dir="ltr">{{ d.date }}</td>
+                <td>{{ number(d.newLeads) }}</td>
+                <td>{{ number(d.won) }}</td>
+                <td>{{ number(d.lost) }}</td>
+                <td>{{ number(d.completedTasks) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </details>
+    <details class="panel">
+      <summary>{{ t('Member workload and results', 'توزيع العمل ونتائج الأعضاء') }}</summary>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('Member', 'العضو') }}</th>
+              <th>{{ t('Open leads', 'عملاء مفتوحون') }}</th>
+              <th>{{ t('Open tasks', 'مهام مفتوحة') }}</th>
+              <th>{{ t('Overdue', 'متأخرة') }}</th>
+              <th>{{ t('Tasks done', 'مهام مكتملة') }}</th>
+              <th>{{ t('Won sales', 'مبيعات ناجحة') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of s.members; track m.id) {
+              <tr>
+                <td>{{ m.name }}</td>
+                <td>{{ number(m.openLeads) }}</td>
+                <td>{{ number(m.openTasks) }}</td>
+                <td>{{ number(m.overdueTasks) }}</td>
+                <td>{{ number(m.completedTasks) }}</td>
+                <td dir="ltr">{{ money(m.wonSalesMinor) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </details>
+    <p class="meta">
+      {{
+        t(
+          'Team totals include all current members. AI member focus covers',
+          'تشمل إجماليات الفريق كل الأعضاء الحاليين. يركّز تحليل الأعضاء على'
+        )
+      }}
+      {{ s.focusMembers.length }} {{ t('of', 'من') }} {{ s.members.length }}
+      {{ t('members, prioritized by open work.', 'أعضاء حسب العمل المفتوح.') }}
+    </p>
+    <p class="meta">
+      {{
+        t(
+          'Figures follow current membership and ownership. Won/lost counts reflect current stages changed during the period; sale values are recorded deals, not cash collected. Lease and unknown deal values are excluded. Suggested actions require your review.',
+          'تعتمد الأرقام على العضوية والمسؤولية الحالية. تعكس أرقام النجاح والخسارة المراحل الحالية التي تغيّرت خلال الفترة؛ وقيم البيع صفقات مسجّلة وليست تحصيلات نقدية. تُستبعد قيم الإيجار والقيم المجهولة. راجع الإجراءات المقترحة قبل تنفيذها.'
+        )
+      }}
+    </p>
+  }
+</section>

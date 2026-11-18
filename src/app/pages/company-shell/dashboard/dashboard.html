@@ -3,18 +3,49 @@
     <div class="head">
       <div class="head__text">
         <span>{{ text('Company workspace', 'مساحة الشركة') }}</span>
-        <h1>{{ text('Welcome to your employee account', 'مرحبًا بك في حساب الموظف') }}</h1>
+        <h1>
+          {{
+            hrAccess()
+              ? text('Welcome to your HR workspace', 'مرحبًا بك في مساحة الموارد البشرية')
+              : payrollOnly()
+                ? text('Welcome to your payroll account', 'مرحبًا بك في حساب الرواتب')
+                : text('Welcome to your employee account', 'مرحبًا بك في حساب الموظف')
+          }}
+        </h1>
       </div>
     </div>
     <section class="card pad">
-      <p>
-        {{
-          text(
-            'Your Employee role is active. Employee self-service pages will be available in a future release.',
-            'دور الموظف مفعّل. ستتوفر صفحات الخدمة الذاتية في إصدار لاحق.'
-          )
-        }}
-      </p>
+      @if (hrAccess()) {
+        <p>
+          {{
+            text(
+              'Manage your company’s employees, departments, private documents and onboarding.',
+              'إدارة موظفي الشركة وأقسامها ومستنداتها الخاصة وتهيئة الموظفين.'
+            )
+          }}
+        </p>
+        <a class="btn btn--dark" routerLink="/company/hr/employees">{{
+          text('Open HR workspace', 'فتح الموارد البشرية')
+        }}</a>
+      } @else if (payrollOnly()) {
+        <p>
+          {{
+            text(
+              'Your Payroll Officer role is assigned. Payroll features will be available when the payroll module is introduced.',
+              'تم إسناد دور مسؤول الرواتب. ستتوفر وظائف الرواتب عند إضافة الوحدة.'
+            )
+          }}
+        </p>
+      } @else {
+        <p>
+          {{
+            text(
+              'Your Employee role is active. Employee self-service pages will be available in a future release.',
+              'دور الموظف مفعّل. ستتوفر صفحات الخدمة الذاتية في إصدار لاحق.'
+            )
+          }}
+        </p>
+      }
       <p class="muted">
         {{
           text(

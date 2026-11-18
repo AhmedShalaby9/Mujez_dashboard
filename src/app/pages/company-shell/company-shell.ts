@@ -1,6 +1,6 @@
 import { NavigationState, RouteSkeleton } from '../../route-skeleton';
 import { NotificationsApi } from '../../notifications-api.service';
-import { AuthService } from '../../auth.service';
+import { AuthService, hasHrAccess } from '../../auth.service';
 import { Router } from '@angular/router';
 import {
   Component,
@@ -21,10 +21,10 @@ import { CompanyUiState, type Lang } from './company-ui-state';
 /** Nav item -> permission required to see it. Items without an entry here
  * (e.g. the dashboard) are always shown to any signed-in tenant principal. */
 const NAV_PERMISSION: Record<string, string> = {
-  'hr/employees': 'workspace.view',
-  'hr/departments': 'workspace.view',
-  'hr/documents': 'workspace.view',
-  'hr/onboarding': 'workspace.view',
+  'hr/employees': 'hr.read',
+  'hr/departments': 'hr.read',
+  'hr/documents': 'hr.read',
+  'hr/onboarding': 'hr.read',
   pipeline: 'pipeline.read',
   leads: 'leads.read',
   contacts: 'contacts.read',
@@ -290,29 +290,28 @@ export class CompanyShell {
     const perms = this.auth.user()?.permissions ?? [];
     const all = this.L().nav;
     const kept: NavEntry[] = [];
+    const canSee = (item: NavItem) => {
+      const u = this.auth.user();
+      if (
+        item.path === 'ai-analytics' &&
+        (u?.pool !== 'company_admin' || u?.role !== 'company_owner' || u?.workspace)
+      )
+        return false;
+      if (item.path.startsWith('hr/')) return hasHrAccess(u);
+      const permission = NAV_PERMISSION[item.path];
+      return !permission || perms.includes(permission);
+    };
     for (let i = 0; i < all.length; i++) {
       const entry = all[i];
       if (entry.kind === 'item') {
-        if (
-          (entry.path === 'ai-analytics' || entry.path.startsWith('hr/')) &&
-          (this.auth.user()?.pool !== 'company_admin' ||
-            this.auth.user()?.role !== 'company_owner' ||
-            this.auth.user()?.workspace)
-        )
-          continue;
-        const permission = NAV_PERMISSION[entry.path];
-        if (permission && !perms.includes(permission)) continue;
+        if (!canSee(entry)) continue;
         const n = this.counts()[entry.path];
         kept.push(n ? { ...entry, count: String(n) } : entry);
       } else {
         // Drop a head if nothing in its group survived filtering.
         const next = all.slice(i + 1).findIndex((e) => e.kind === 'head');
         const group = all.slice(i + 1, next === -1 ? undefined : i + 1 + next);
-        const hasVisible = group.some(
-          (e) =>
-            e.kind === 'item' &&
-            (!NAV_PERMISSION[e.path] || perms.includes(NAV_PERMISSION[e.path])),
-        );
+        const hasVisible = group.some((e) => e.kind === 'item' && canSee(e));
         if (hasVisible) kept.push(entry);
       }
     }
@@ -334,6 +333,9 @@ export class CompanyShell {
       team_lead: { en: 'Team Lead', ar: 'قائد الفريق' },
       agent: { en: 'Sales Agent', ar: 'وكيل المبيعات' },
       employee: { en: 'Employee', ar: 'موظف' },
+      hr_officer: { en: 'HR Officer', ar: 'مسؤول الموارد البشرية' },
+      hr_manager: { en: 'HR Manager', ar: 'مدير الموارد البشرية' },
+      payroll_officer: { en: 'Payroll Officer', ar: 'مسؤول الرواتب' },
     };
     const role = ws
       ? (ws.platformRoleName?.[this.ui.lang()] ??

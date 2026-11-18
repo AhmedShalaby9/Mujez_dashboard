@@ -32,6 +32,17 @@ export interface User {
     };
   };
 }
+/** HR company access is an explicit module grant; CRM scope stays personal. */
+export function hasHrAccess(u: User | null | undefined) {
+  if (!u || u.workspace) return false;
+  if (u.pool === 'company_admin' && u.role === 'company_owner')
+    return u.permissions.includes('workspace.view');
+  return (
+    u.pool === 'company_user' &&
+    u.permissions.includes('hr.read') &&
+    (u.roles ?? [u.role]).some((r) => r === 'hr_manager' || r === 'hr_officer')
+  );
+}
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -106,7 +117,11 @@ export class AuthService {
       ? '/change-password'
       : this.user()?.pool === 'platform'
         ? '/admin/dashboard'
-        : '/company/dashboard';
+        : this.user()?.pool === 'company_user' &&
+            hasHrAccess(this.user()) &&
+            !this.user()?.permissions.includes('leads.read')
+          ? '/company/hr/employees'
+          : '/company/dashboard';
   }
   async logout() {
     await this.request('/api/v1/auth/logout', {});
@@ -138,6 +153,8 @@ export const companyGuard: CanActivateFn = async (route) => {
     u?.permissions.includes('workspace.view');
   const isWorkspace = u?.pool === 'company_admin' && !!u?.workspace;
   const isEmployee = u?.pool === 'company_user';
+  if (route.data['hrAccess'] && !hasHrAccess(u))
+    return router.createUrlTree(['/company/dashboard']);
   if (route.data['ownerOnly'] && (!isOwner || isWorkspace))
     return router.createUrlTree(['/company/dashboard']);
   return isOwner || isWorkspace || isEmployee

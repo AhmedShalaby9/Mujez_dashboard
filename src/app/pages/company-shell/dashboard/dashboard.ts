@@ -2,7 +2,7 @@ import { compactNumber } from '../../../compact-numbers';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CompanyUiState } from '../company-ui-state';
-import { AuthService } from '../../../auth.service';
+import { AuthService, hasHrAccess } from '../../../auth.service';
 import {
   CompanyInsightsApi,
   type CompanyReport,
@@ -63,6 +63,10 @@ export class Dashboard {
   readonly api = inject(CompanyInsightsApi);
   private readonly sales = inject(SalesApi);
   private readonly auth = inject(AuthService);
+  readonly hrAccess = computed(() => hasHrAccess(this.auth.user()));
+  readonly payrollOnly = computed(
+    () => this.auth.user()?.role === 'payroll_officer' && !this.hrAccess(),
+  );
   readonly employeeOnly = computed(
     () =>
       this.auth.user()?.pool === 'company_user' &&

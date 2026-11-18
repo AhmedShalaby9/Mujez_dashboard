@@ -80,7 +80,7 @@ describe('Multiple company roles', () => {
     const checks = Array.from(
       f.nativeElement.querySelectorAll('.role-options input'),
     ) as HTMLInputElement[];
-    expect(checks.map((x) => x.checked)).toEqual([true, false, true]);
+    expect(checks.map((x) => x.checked)).toEqual([true, false, true, false, false, false]);
     checks[1].click();
     f.detectChanges();
     await c.saveRoles();

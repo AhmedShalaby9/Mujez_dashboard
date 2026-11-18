@@ -1,6 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { AuthService } from './auth.service';
-export const TEAM_ROLES = ['agent', 'team_lead', 'employee'] as const;
+export const TEAM_ROLES = [
+  'agent',
+  'team_lead',
+  'employee',
+  'hr_officer',
+  'hr_manager',
+  'payroll_officer',
+] as const;
 export type TeamRole = (typeof TEAM_ROLES)[number];
 export interface TeamMember {
   id: string;

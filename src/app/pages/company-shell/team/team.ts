@@ -35,6 +35,9 @@ export class Team {
   readonly roleNames: Record<TeamRole, { en: string; ar: string }> = {
     agent: { en: 'Sales Agent', ar: 'وكيل المبيعات' },
     employee: { en: 'Employee', ar: 'موظف' },
+    hr_officer: { en: 'HR Officer', ar: 'مسؤول الموارد البشرية' },
+    hr_manager: { en: 'HR Manager', ar: 'مدير الموارد البشرية' },
+    payroll_officer: { en: 'Payroll Officer', ar: 'مسؤول الرواتب' },
     team_lead: { en: 'Team Lead', ar: 'قائد الفريق' },
   };
   readonly statusNames: Record<TeamMember['status'], { en: string; ar: string }> = {

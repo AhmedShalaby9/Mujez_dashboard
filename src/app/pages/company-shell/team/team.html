@@ -12,6 +12,8 @@
         <button type="button" class="btn" (click)="openTeam()">
           {{ t('+ Create team', '+ إنشاء فريق') }}
         </button>
+      }
+      @if (canAssignRoles()) {
         <button type="button" class="btn btn--dark" (click)="openInvite()">
           {{ t('+ Invite member', '+ دعوة عضو') }}
         </button>
@@ -111,7 +113,7 @@
                       <span class="role-badge">{{ roleNames[r][lang()] }}</span>
                     }
                   </span>
-                  @if (canManage()) {
+                  @if (canAssignRoles()) {
                     <button
                       type="button"
                       class="btn btn--sm"

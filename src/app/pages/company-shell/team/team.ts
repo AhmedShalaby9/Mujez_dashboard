@@ -49,6 +49,13 @@ export class Team {
       (this.auth.user()?.permissions ?? []).includes('team.manage') &&
       this.auth.user()?.workspace?.mode !== 'read',
   );
+  readonly canAssignRoles = computed(
+    () =>
+      this.canManage() &&
+      this.auth.user()?.pool === 'company_admin' &&
+      this.auth.user()?.role === 'company_owner' &&
+      !this.auth.user()?.workspace,
+  );
   readonly tab = signal<'members' | 'teams'>('members');
   readonly groups = signal<SalesTeam[]>([]);
   readonly editing = signal<SalesTeam | null>(null);
@@ -142,7 +149,7 @@ export class Team {
   }
   async saveRoles() {
     const m = this.roleMember();
-    if (!m || this.busy() || !this.canManage() || !this.selectedRoles().length) return;
+    if (!m || this.busy() || !this.canAssignRoles() || !this.selectedRoles().length) return;
     this.busy.set(m.id);
     this.rolesError.set('');
     try {
@@ -240,7 +247,7 @@ export class Team {
   }
 
   async submitInvite() {
-    if (this.inviting() || !this.inviteRoles().length) return;
+    if (this.inviting() || !this.canAssignRoles() || !this.inviteRoles().length) return;
     this.inviting.set(true);
     this.inviteError.set('');
     try {

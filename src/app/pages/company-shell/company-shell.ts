@@ -21,6 +21,10 @@ import { CompanyUiState, type Lang } from './company-ui-state';
 /** Nav item -> permission required to see it. Items without an entry here
  * (e.g. the dashboard) are always shown to any signed-in tenant principal. */
 const NAV_PERMISSION: Record<string, string> = {
+  'hr/employees': 'workspace.view',
+  'hr/departments': 'workspace.view',
+  'hr/documents': 'workspace.view',
+  'hr/onboarding': 'workspace.view',
   pipeline: 'pipeline.read',
   leads: 'leads.read',
   contacts: 'contacts.read',
@@ -43,6 +47,10 @@ const NAV_PERMISSION: Record<string, string> = {
 };
 
 const COMPANY_ICONS: Record<string, string> = {
+  'hr/employees': 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0',
+  'hr/departments': 'M3 21h18M5 21V5h14v16M9 9h6M9 13h6',
+  'hr/documents': 'M5 3h10l4 4v14H5zM9 12h6M9 16h6',
+  'hr/onboarding': 'M4 5h3v3H4zM11 6h9M4 12h3v3H4zM11 13h9',
   dashboard: 'M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z',
   pipeline: 'M4 4h4v16H4zM10 4h4v11h-4zM16 4h4v7h-4z',
   leads: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 7h5M19.5 4.5v5',
@@ -129,6 +137,11 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Marketing', path: 'marketing' },
   { kind: 'item', label: 'Reports', path: 'reports' },
   { kind: 'item', label: 'AI analytics', path: 'ai-analytics' },
+  { kind: 'head', label: 'People' },
+  { kind: 'item', label: 'Employees', path: 'hr/employees' },
+  { kind: 'item', label: 'Departments', path: 'hr/departments' },
+  { kind: 'item', label: 'Employee documents', path: 'hr/documents' },
+  { kind: 'item', label: 'Employee onboarding', path: 'hr/onboarding' },
   { kind: 'head', label: 'Administration' },
   { kind: 'item', label: 'Lead Routing', path: 'lead-routing' },
   { kind: 'item', label: 'Audit Log', path: 'audit-log' },
@@ -157,6 +170,11 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'التسويق', path: 'marketing' },
   { kind: 'item', label: 'التقارير', path: 'reports' },
   { kind: 'item', label: 'تحليلات الذكاء الاصطناعي', path: 'ai-analytics' },
+  { kind: 'head', label: 'الموارد البشرية' },
+  { kind: 'item', label: 'الموظفون', path: 'hr/employees' },
+  { kind: 'item', label: 'الأقسام', path: 'hr/departments' },
+  { kind: 'item', label: 'مستندات الموظفين', path: 'hr/documents' },
+  { kind: 'item', label: 'تهيئة الموظفين', path: 'hr/onboarding' },
   { kind: 'head', label: 'الإدارة' },
   { kind: 'item', label: 'توزيع العملاء', path: 'lead-routing' },
   { kind: 'item', label: 'سجل التدقيق', path: 'audit-log' },
@@ -275,7 +293,13 @@ export class CompanyShell {
     for (let i = 0; i < all.length; i++) {
       const entry = all[i];
       if (entry.kind === 'item') {
-        if(entry.path==='ai-analytics' && (this.auth.user()?.pool!=='company_admin' || this.auth.user()?.role!=='company_owner' || this.auth.user()?.workspace)) continue;
+        if (
+          (entry.path === 'ai-analytics' || entry.path.startsWith('hr/')) &&
+          (this.auth.user()?.pool !== 'company_admin' ||
+            this.auth.user()?.role !== 'company_owner' ||
+            this.auth.user()?.workspace)
+        )
+          continue;
         const permission = NAV_PERMISSION[entry.path];
         if (permission && !perms.includes(permission)) continue;
         const n = this.counts()[entry.path];

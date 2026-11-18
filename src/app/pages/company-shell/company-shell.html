@@ -220,7 +220,7 @@
             @for (entry of group.items; track entry.path) {
               <a
                 class="sidebar__item"
-                [routerLink]="['/company', entry.path]"
+                [routerLink]="'/company/' + entry.path"
                 routerLinkActive="sidebar__item--active"
                 [routerLinkActiveOptions]="{ exact: true }"
                 ariaCurrentWhenActive="page"

@@ -190,6 +190,26 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
+        path: 'hr/employees',
+        data: { permission: 'workspace.view', ownerOnly: true, hrView: 'employees' },
+        loadComponent: () => import('./pages/company-shell/hr/hr').then((m) => m.Hr),
+      },
+      {
+        path: 'hr/departments',
+        data: { permission: 'workspace.view', ownerOnly: true, hrView: 'departments' },
+        loadComponent: () => import('./pages/company-shell/hr/hr').then((m) => m.Hr),
+      },
+      {
+        path: 'hr/documents',
+        data: { permission: 'workspace.view', ownerOnly: true, hrView: 'documents' },
+        loadComponent: () => import('./pages/company-shell/hr/hr').then((m) => m.Hr),
+      },
+      {
+        path: 'hr/onboarding',
+        data: { permission: 'workspace.view', ownerOnly: true, hrView: 'onboarding' },
+        loadComponent: () => import('./pages/company-shell/hr/hr').then((m) => m.Hr),
+      },
+      {
         path: 'dashboard',
         loadComponent: () =>
           import('./pages/company-shell/dashboard/dashboard').then((m) => m.Dashboard),

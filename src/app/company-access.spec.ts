@@ -186,24 +186,30 @@ describe('Company navigation redesign', () => {
     }).compileComponents();
     const f = TestBed.createComponent(CompanyShell);
     f.detectChanges();
+    const hrPaths = [
+      '/company/hr/employees',
+      '/company/hr/departments',
+      '/company/hr/documents',
+      '/company/hr/onboarding',
+    ];
     const paths = () =>
       [...f.nativeElement.querySelectorAll('.sidebar__item')].map((a: any) =>
         a.getAttribute('href'),
       );
-    expect(paths()).toEqual(['/company/dashboard', '/company/leads', '/company/tasks']);
+    expect(paths()).toEqual(['/company/dashboard', '/company/leads', '/company/tasks', ...hrPaths]);
     f.nativeElement.querySelector('.sidebar__groupLabel').click();
     f.detectChanges();
-    expect(paths()).toEqual([]);
+    expect(paths()).toEqual(hrPaths);
     f.componentInstance.collapsed.set(true);
     f.detectChanges();
-    expect(paths()).toEqual(['/company/dashboard', '/company/leads', '/company/tasks']);
+    expect(paths()).toEqual(['/company/dashboard', '/company/leads', '/company/tasks', ...hrPaths]);
     expect(f.nativeElement.querySelector('.sidebar__item').getAttribute('aria-label')).toBe(
       'Dashboard',
     );
     expect(f.nativeElement.querySelector('.sidebar__itemLabel')).toBeNull();
     user.set({ ...owner, permissions: ['workspace.view'] });
     f.detectChanges();
-    expect(paths()).toEqual(['/company/dashboard']);
+    expect(paths()).toEqual(['/company/dashboard', ...hrPaths]);
   });
   it('uses expanded navigation on mobile even after collapsing it on desktop', async () => {
     await TestBed.configureTestingModule({

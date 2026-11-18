@@ -1,0 +1,517 @@
+<div class="pg" [attr.dir]="ar() ? 'rtl' : 'ltr'">
+  <div class="head">
+    <div class="head__text">
+      <span>{{ t('People · Human resources', 'الأفراد · الموارد البشرية') }}</span>
+      <h1>{{ title() }}</h1>
+    </div>
+    <div class="head__actions">
+      <button class="btn" [disabled]="loading()" (click)="reload()">
+        {{ t('Refresh', 'تحديث') }}</button
+      ><button class="btn btn--dark" (click)="show()">
+        {{
+          view === 'documents'
+            ? t('+ Upload document', '+ رفع مستند')
+            : view === 'onboarding'
+              ? t('+ Add checklist task', '+ إضافة مهمة')
+              : view === 'departments'
+                ? t('+ Add department', '+ إضافة قسم')
+                : t('+ Add employee', '+ إضافة موظف')
+        }}
+      </button>
+    </div>
+  </div>
+  <p class="muted">
+    {{
+      t(
+        'Manage every employee, including staff without CRM access. HR records are private to the company owner.',
+        'إدارة جميع الموظفين، بما فيهم من لا يستخدمون النظام. سجلات الموارد البشرية خاصة بمالك الشركة.'
+      )
+    }}
+  </p>
+  <div class="kpis">
+    <div class="kpi">
+      <span>{{ t('All employees', 'جميع الموظفين') }}</span
+      ><strong class="kpi__value">{{ summary().employees ?? 0 }}</strong>
+    </div>
+    <div class="kpi">
+      <span>{{ t('Active employees', 'الموظفون النشطون') }}</span
+      ><strong class="kpi__value">{{ summary().active ?? 0 }}</strong>
+    </div>
+    <div class="kpi">
+      <span>{{ t('Onboarding', 'قيد التهيئة') }}</span
+      ><strong class="kpi__value">{{ summary().onboarding ?? 0 }}</strong>
+    </div>
+    <div class="kpi">
+      <span>{{ t('Overdue onboarding tasks', 'مهام تهيئة متأخرة') }}</span
+      ><strong class="kpi__value">{{ summary().overdue ?? 0 }}</strong>
+    </div>
+  </div>
+  <nav class="tabs" [attr.aria-label]="t('HR pages', 'صفحات الموارد البشرية')">
+    @for (v of ['employees', 'departments', 'documents', 'onboarding']; track v) {
+      <a class="tab" [class.tab--on]="view === v" [routerLink]="'/company/hr/' + v">{{
+        t(titles[$any(v)][0], titles[$any(v)][1])
+      }}</a>
+    }
+  </nav>
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="note" role="status">{{ notice() }}</p>
+  }
+  <form class="tools" (ngSubmit)="reload(true)">
+    <label class="sr-only" for="hr-search">{{ t('Search HR records', 'بحث في السجلات') }}</label
+    ><input
+      id="hr-search"
+      class="search"
+      name="q"
+      [(ngModel)]="q"
+      [placeholder]="t('Search records…', 'ابحث في السجلات…')"
+      maxlength="160"
+    />
+    @if (view === 'employees') {
+      <select
+        class="sel"
+        name="department"
+        [(ngModel)]="departmentId"
+        [attr.aria-label]="t('Filter department', 'تصفية القسم')"
+      >
+        <option value="">{{ t('All departments', 'كل الأقسام') }}</option>
+        @for (d of options().departments; track d.id) {
+          <option [value]="d.id">{{ d.name }}</option>
+        }
+      </select>
+    }
+    @if (view === 'employees' || view === 'onboarding') {
+      <select
+        class="sel"
+        name="status"
+        [(ngModel)]="status"
+        [attr.aria-label]="t('Filter status', 'تصفية الحالة')"
+      >
+        <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
+        @for (s of view === 'employees' ? employeeStatuses : taskStatuses; track s) {
+          <option [value]="s">{{ label(s) }}</option>
+        }
+      </select>
+    }
+    @if (view === 'onboarding' || view === 'documents') {
+      <select
+        class="sel"
+        name="employee"
+        [(ngModel)]="employeeId"
+        [attr.aria-label]="t('Filter employee', 'تصفية الموظف')"
+      >
+        <option value="">{{ t('All employees', 'كل الموظفين') }}</option>
+        @for (e of options().employees; track e.id) {
+          <option [value]="e.id">{{ e.name }}</option>
+        }
+      </select>
+    }
+    @if (view === 'documents' || view === 'departments') {
+      <label class="archive"
+        ><input type="checkbox" name="archived" [(ngModel)]="archived" />{{
+          t('Include archived', 'إظهار المؤرشف')
+        }}</label
+      >
+    }
+    <button class="btn" [disabled]="loading()">{{ t('Apply filters', 'تطبيق') }}</button>
+  </form>
+  <section class="table-card" [attr.aria-busy]="loading()">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            @if (view === 'employees') {
+              <th>{{ t('Employee', 'الموظف') }}</th>
+              <th>{{ t('Department / manager', 'القسم / المدير') }}</th>
+              <th>{{ t('Employment', 'التوظيف') }}</th>
+              <th>{{ t('CRM access', 'حساب النظام') }}</th>
+              <th>{{ t('Onboarding', 'التهيئة') }}</th>
+            }
+            @if (view === 'departments') {
+              <th>{{ t('Department', 'القسم') }}</th>
+              <th>{{ t('Description', 'الوصف') }}</th>
+              <th>{{ t('Employees', 'الموظفون') }}</th>
+              <th>{{ t('Status', 'الحالة') }}</th>
+            }
+            @if (view === 'documents') {
+              <th>{{ t('Document', 'المستند') }}</th>
+              <th>{{ t('Employee', 'الموظف') }}</th>
+              <th>{{ t('Kind', 'النوع') }}</th>
+              <th>{{ t('Expiry', 'الصلاحية') }}</th>
+            }
+            @if (view === 'onboarding') {
+              <th>{{ t('Checklist task', 'مهمة التهيئة') }}</th>
+              <th>{{ t('Employee', 'الموظف') }}</th>
+              <th>{{ t('Responsible employee', 'المسؤول') }}</th>
+              <th>{{ t('Due date', 'تاريخ الاستحقاق') }}</th>
+              <th>{{ t('Status', 'الحالة') }}</th>
+            }
+            <th>{{ t('Actions', 'الإجراءات') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of items(); track row.id) {
+            <tr>
+              @if (view === 'employees') {
+                <td>
+                  <strong>{{ row.name }}</strong
+                  ><small
+                    >{{ row.employeeCode }} ·
+                    {{ row.jobTitle || t('No job title', 'بدون مسمى') }}</small
+                  ><small>{{ row.email || row.phone }}</small>
+                </td>
+                <td>
+                  {{ row.department || t('Not set', 'غير محدد')
+                  }}<small>{{ row.manager || t('No manager', 'بدون مدير') }}</small>
+                </td>
+                <td>
+                  <span class="badge">{{ label(row.status) }}</span
+                  ><small
+                    >{{ label(row.employmentType) }} ·
+                    {{ row.joiningDate || t('No joining date', 'بدون تاريخ بدء') }}</small
+                  >
+                </td>
+                <td>
+                  {{ row.crmName || t('No CRM account', 'بدون حساب للنظام') }}
+                  @if (row.crmStatus) {
+                    <small>{{ label(row.crmStatus) }}</small>
+                  }
+                </td>
+                <td>
+                  <a [routerLink]="'/company/hr/onboarding'" [queryParams]="{ employeeId: row.id }"
+                    >{{ row.openTasks }} {{ t('open tasks', 'مهام مفتوحة') }}</a
+                  >
+                </td>
+              }
+              @if (view === 'departments') {
+                <td>
+                  <strong>{{ row.name }}</strong>
+                </td>
+                <td>{{ row.description || '—' }}</td>
+                <td>{{ row.employeeCount }}</td>
+                <td>
+                  <span class="badge">{{
+                    row.archived ? t('Archived', 'مؤرشف') : t('Active', 'نشط')
+                  }}</span>
+                </td>
+              }
+              @if (view === 'documents') {
+                <td>
+                  <strong>{{ row.title }}</strong
+                  ><small>{{ row.fileName }} · {{ (row.sizeBytes / 1024).toFixed(1) }} KB</small>
+                  @if (row.archived) {
+                    <span class="badge">{{ t('Archived', 'مؤرشف') }}</span>
+                  }
+                </td>
+                <td>{{ row.employee }}</td>
+                <td>{{ label(row.kind) }}</td>
+                <td>
+                  {{ row.expiresDate || t('No expiry', 'بدون انتهاء') }}
+                  @if (row.expired || row.expiringSoon) {
+                    <small class="warning">{{
+                      row.expired
+                        ? t('Expired', 'منتهي')
+                        : t('Expires within 30 days', 'ينتهي خلال ٣٠ يومًا')
+                    }}</small>
+                  }
+                </td>
+              }
+              @if (view === 'onboarding') {
+                <td>
+                  <strong>{{ row.title }}</strong>
+                </td>
+                <td>{{ row.employee }}</td>
+                <td>{{ row.assignee || t('Not assigned', 'غير مسند') }}</td>
+                <td [class.warning]="row.overdue">
+                  {{ row.dueDate || t('Not set', 'غير محدد') }}
+                  @if (row.overdue) {
+                    <small>{{ t('Overdue', 'متأخر') }}</small>
+                  }
+                </td>
+                <td>
+                  <span class="badge">{{ label(row.status) }}</span>
+                </td>
+              }
+              <td>
+                <div class="row-actions">
+                  @if (view === 'documents') {
+                    <button class="btn" (click)="download(row)">{{ t('Download', 'تنزيل') }}</button
+                    ><button class="btn" [disabled]="saving()" (click)="archive(row)">
+                      {{ row.archived ? t('Restore', 'استعادة') : t('Archive', 'أرشفة') }}
+                    </button>
+                  } @else {
+                    <button class="btn" (click)="show(row)">{{ t('Edit', 'تعديل') }}</button>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="empty">
+                {{
+                  loading()
+                    ? t('Loading…', 'جارٍ التحميل…')
+                    : t(
+                        'No records found. Add your first record or change the filters.',
+                        'لا توجد سجلات. أضف سجلًا أو غيّر التصفية.'
+                      )
+                }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <footer class="pager">
+      <span>{{ total() }} {{ t('records', 'سجل') }} · {{ t('Page', 'صفحة') }} {{ page() }}</span>
+      <div>
+        <button class="btn" [disabled]="loading() || page() === 1" (click)="paginate(-1)">
+          {{ t('Previous', 'السابق') }}</button
+        ><button class="btn" [disabled]="loading() || page() * 25 >= total()" (click)="paginate(1)">
+          {{ t('Next', 'التالي') }}
+        </button>
+      </div>
+    </footer>
+  </section>
+  <p class="muted">
+    {{
+      t(
+        'Job titles and HR employment statuses do not change CRM roles or login access. Manage CRM invitations and access in Team.',
+        'المسمى الوظيفي وحالة التوظيف لا يغيّران صلاحيات النظام أو تسجيل الدخول. تُدار الحسابات والدعوات من صفحة الفريق.'
+      )
+    }}
+  </p>
+</div>
+@if (open()) {
+  <div class="scrim scrim--top" (click)="close()"></div>
+  <section
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="hr-dialog-title"
+    [attr.dir]="ar() ? 'rtl' : 'ltr'"
+  >
+    <form (ngSubmit)="save()">
+      <header class="dialog__head">
+        <h2 id="hr-dialog-title">
+          {{ editing() ? t('Edit record', 'تعديل السجل') : t('Add record', 'إضافة سجل') }} ·
+          {{ title() }}
+        </h2>
+        <button
+          class="x"
+          type="button"
+          [disabled]="saving()"
+          [attr.aria-label]="t('Close dialog', 'إغلاق النافذة')"
+          (click)="close()"
+        >
+          ×
+        </button>
+      </header>
+      <div class="dialog__body">
+        @if (formError()) {
+          <p class="note note--bad" role="alert">{{ formError() }}</p>
+        }
+        <fieldset [disabled]="saving()" class="form-grid">
+          @if (view === 'employees') {
+            <label class="field"
+              ><span>{{ t('Employee code', 'رقم الموظف') }} *</span
+              ><input
+                name="employeeCode"
+                [(ngModel)]="form.employeeCode"
+                type="text"
+                required
+                maxlength="40" /></label
+            ><label class="field"
+              ><span>{{ t('Full name', 'الاسم الكامل') }} *</span
+              ><input
+                name="name"
+                [(ngModel)]="form.name"
+                type="text"
+                required
+                maxlength="160" /></label
+            ><label class="field"
+              ><span>{{ t('Email', 'البريد الإلكتروني') }}</span
+              ><input name="email" [(ngModel)]="form.email" type="email" maxlength="254" /></label
+            ><label class="field"
+              ><span>{{ t('Phone', 'الهاتف') }}</span
+              ><input name="phone" [(ngModel)]="form.phone" type="text" maxlength="50" /></label
+            ><label class="field"
+              ><span>{{ t('Job title', 'المسمى الوظيفي') }}</span
+              ><input
+                name="jobTitle"
+                [(ngModel)]="form.jobTitle"
+                type="text"
+                maxlength="120" /></label
+            ><label class="field"
+              ><span>{{ t('Work location', 'موقع العمل') }}</span
+              ><input
+                name="workLocation"
+                [(ngModel)]="form.workLocation"
+                type="text"
+                maxlength="160" /></label
+            ><label class="field"
+              ><span>{{ t('Department', 'القسم') }}</span
+              ><select name="departmentId" [(ngModel)]="form.departmentId">
+                <option value="">{{ t('Not set', 'غير محدد') }}</option>
+                @for (d of options().departments; track d.id) {
+                  @if (!d.archived) {
+                    <option [value]="d.id">{{ d.name }}</option>
+                  }
+                }
+              </select></label
+            ><label class="field"
+              ><span>{{ t('Reports to', 'المدير المباشر') }}</span
+              ><select name="managerId" [(ngModel)]="form.managerId">
+                <option value="">{{ t('Not set', 'غير محدد') }}</option>
+                @for (e of options().employees; track e.id) {
+                  @if (e.status !== 'offboarded' && e.id !== editing()?.id) {
+                    <option [value]="e.id">{{ e.name }}</option>
+                  }
+                }
+              </select></label
+            ><label class="field"
+              ><span>{{ t('Employment status', 'حالة التوظيف') }}</span
+              ><select name="status" [(ngModel)]="form.status">
+                @for (s of employeeStatuses; track s) {
+                  <option [value]="s">{{ label(s) }}</option>
+                }
+              </select></label
+            ><label class="field"
+              ><span>{{ t('Employment type', 'نوع التوظيف') }}</span
+              ><select name="employmentType" [(ngModel)]="form.employmentType">
+                @for (s of types; track s) {
+                  <option [value]="s">{{ label(s) }}</option>
+                }
+              </select></label
+            ><label class="field"
+              ><span>{{ t('Joining date', 'تاريخ الانضمام') }}</span
+              ><input name="joiningDate" [(ngModel)]="form.joiningDate" type="date" /></label
+            ><label class="field"
+              ><span>{{ t('End date', 'تاريخ انتهاء الخدمة') }}</span
+              ><input name="endDate" [(ngModel)]="form.endDate" type="date" /></label
+            ><label class="field"
+              ><span>{{
+                t('Link existing CRM account (optional)', 'ربط حساب نظام موجود (اختياري)')
+              }}</span
+              ><select name="userId" [(ngModel)]="form.userId">
+                <option value="">{{ t('Not set', 'غير محدد') }}</option>
+                @for (u of options().users; track u.id) {
+                  <option [value]="u.id">{{ u.name }} · {{ u.email }}</option>
+                }
+              </select></label
+            ><label class="field wide"
+              ><span>{{ t('HR notes', 'ملاحظات الموارد البشرية') }}</span
+              ><textarea name="notes" [(ngModel)]="form.notes" maxlength="4000" rows="3"></textarea>
+            </label>
+            <p class="muted wide">
+              {{
+                t(
+                  'Adding an employee does not create a login or send an invitation. A new employee receives an editable onboarding checklist.',
+                  'إضافة موظف لا تنشئ حساب دخول ولا ترسل دعوة. تُنشأ قائمة تهيئة قابلة للتعديل للموظف الجديد.'
+                )
+              }}
+            </p>
+          }
+          @if (view === 'departments') {
+            <label class="field"
+              ><span>{{ t('Department name', 'اسم القسم') }} *</span
+              ><input
+                name="name"
+                [(ngModel)]="form.name"
+                type="text"
+                required
+                maxlength="120" /></label
+            ><label class="field wide"
+              ><span>{{ t('Description', 'الوصف') }}</span
+              ><textarea
+                name="description"
+                [(ngModel)]="form.description"
+                maxlength="1000"
+                rows="3"
+              ></textarea></label
+            ><label class="archive wide"
+              ><input name="archived" type="checkbox" [(ngModel)]="form.archived" />{{
+                t(
+                  'Archive department (move current employees first)',
+                  'أرشفة القسم (انقل الموظفين الحاليين أولًا)'
+                )
+              }}</label
+            >
+          }
+          @if (view === 'documents' || view === 'onboarding') {
+            <label class="field"
+              ><span>{{ t('Employee', 'الموظف') }}</span
+              ><select name="employeeId" [(ngModel)]="form.employeeId" required>
+                <option value="">{{ t('Not set', 'غير محدد') }}</option>
+                @for (e of options().employees; track e.id) {
+                  <option [value]="e.id">{{ e.name }}</option>
+                }
+              </select></label
+            ><label class="field"
+              ><span>{{ t('Title', 'العنوان') }} *</span
+              ><input name="title" [(ngModel)]="form.title" type="text" required maxlength="200"
+            /></label>
+          }
+          @if (view === 'documents') {
+            <label class="field"
+              ><span>{{ t('Document type', 'نوع المستند') }}</span
+              ><select name="kind" [(ngModel)]="form.kind">
+                @for (k of kinds; track k) {
+                  <option [value]="k">{{ label(k) }}</option>
+                }
+              </select></label
+            ><label class="field"
+              ><span>{{ t('Expiry date', 'تاريخ الانتهاء') }}</span
+              ><input name="expiresDate" [(ngModel)]="form.expiresDate" type="date" /></label
+            ><label class="field wide"
+              ><span>{{
+                t(
+                  'File · PDF, PNG, JPEG or text · up to 5 MB',
+                  'ملف PDF أو PNG أو JPEG أو نص · حتى ٥ ميجابايت'
+                )
+              }}</span
+              ><input
+                type="file"
+                name="file"
+                accept=".pdf,.png,.jpg,.jpeg,.txt"
+                required
+                (change)="selectFile($event)"
+            /></label>
+          }
+          @if (view === 'onboarding') {
+            <label class="field"
+              ><span>{{ t('Responsible employee', 'الموظف المسؤول') }}</span
+              ><select name="assigneeId" [(ngModel)]="form.assigneeId">
+                <option value="">{{ t('Not set', 'غير محدد') }}</option>
+                @for (e of options().employees; track e.id) {
+                  @if (e.status !== 'offboarded') {
+                    <option [value]="e.id">{{ e.name }}</option>
+                  }
+                }
+              </select></label
+            ><label class="field"
+              ><span>{{ t('Due date', 'تاريخ الاستحقاق') }}</span
+              ><input name="dueDate" [(ngModel)]="form.dueDate" type="date" /></label
+            ><label class="field"
+              ><span>{{ t('Task status', 'حالة المهمة') }}</span
+              ><select name="status" [(ngModel)]="form.status">
+                @for (s of taskStatuses; track s) {
+                  <option [value]="s">{{ label(s) }}</option>
+                }
+              </select></label
+            >
+          }
+        </fieldset>
+      </div>
+      <footer class="dialog__foot">
+        <button type="button" class="btn" [disabled]="saving()" (click)="close()">
+          {{ t('Cancel', 'إلغاء') }}</button
+        ><button type="submit" class="btn btn--dark" [disabled]="saving()">
+          {{ saving() ? t('Saving…', 'جارٍ الحفظ…') : t('Save', 'حفظ') }}
+        </button>
+      </footer>
+    </form>
+  </section>
+}

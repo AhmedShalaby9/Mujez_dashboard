@@ -333,13 +333,16 @@ export class CompanyShell {
       company_owner: { en: 'Company Owner', ar: 'مالك الشركة' },
       team_lead: { en: 'Team Lead', ar: 'قائد الفريق' },
       agent: { en: 'Sales Agent', ar: 'وكيل المبيعات' },
+      employee: { en: 'Employee', ar: 'موظف' },
     };
     const role = ws
       ? (ws.platformRoleName?.[this.ui.lang()] ??
         (this.ui.lang() === 'ar' ? 'مدير منصة' : 'Platform Admin'))
-      : (u?.roleName?.[this.ui.lang()] ??
-        roleLabels[u?.role ?? '']?.[this.ui.lang()] ??
-        (this.ui.lang() === 'ar' ? 'مستخدم الشركة' : 'Company User'));
+      : u?.roles?.length && u.pool === 'company_user'
+        ? u.roles.map((r) => roleLabels[r]?.[this.ui.lang()] ?? r).join(' · ')
+        : (u?.roleName?.[this.ui.lang()] ??
+          roleLabels[u?.role ?? '']?.[this.ui.lang()] ??
+          (this.ui.lang() === 'ar' ? 'مستخدم الشركة' : 'Company User'));
     return {
       name,
       role,
@@ -460,6 +463,11 @@ export class CompanyShell {
 
   private alertsSerial = 0;
   async loadAlerts() {
+    if (
+      this.auth.user()?.pool === 'company_user' &&
+      !this.auth.user()?.permissions.includes('leads.read')
+    )
+      return;
     const n = ++this.alertsSerial;
     try {
       const d = await this.insights.get<Overview>('/company-overview');
@@ -504,6 +512,11 @@ export class CompanyShell {
     Array<{ id: string; name: string; filters: Record<string, string>; version: number }>
   >([]);
   async loadTools() {
+    if (
+      this.auth.user()?.pool === 'company_user' &&
+      !this.auth.user()?.permissions.includes('leads.read')
+    )
+      return;
     try {
       const [counts, views] = await Promise.all([
         this.auth.request('/api/v1/navigation-counts'),

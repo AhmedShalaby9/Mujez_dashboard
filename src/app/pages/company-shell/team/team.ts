@@ -34,6 +34,7 @@ export class Team {
   readonly roles = TEAM_ROLES;
   readonly roleNames: Record<TeamRole, { en: string; ar: string }> = {
     agent: { en: 'Sales Agent', ar: 'وكيل المبيعات' },
+    employee: { en: 'Employee', ar: 'موظف' },
     team_lead: { en: 'Team Lead', ar: 'قائد الفريق' },
   };
   readonly statusNames: Record<TeamMember['status'], { en: string; ar: string }> = {
@@ -60,8 +61,9 @@ export class Team {
   readonly eligible = computed(() =>
     this.items().filter(
       (m) =>
-        (['active', 'invited'].includes(m.status) && !m.teamId) ||
-        (!!this.editing() && m.teamId === this.editing()?.id),
+        (m.roles ?? [m.role]).some((r) => r === 'agent' || r === 'team_lead') &&
+        ((['active', 'invited'].includes(m.status) && !m.teamId) ||
+          (!!this.editing() && m.teamId === this.editing()?.id)),
     ),
   );
   leadName(team: SalesTeam) {
@@ -118,6 +120,42 @@ export class Team {
       this.busy.set(null);
     }
   }
+  readonly roleMember = signal<TeamMember | null>(null);
+  readonly selectedRoles = signal<TeamRole[]>([]);
+  readonly rolesError = signal('');
+  assignedRoles(m: TeamMember) {
+    return m.roles ?? [m.role];
+  }
+  roleSummary(m: TeamMember) {
+    return this.assignedRoles(m)
+      .map((r) => this.roleNames[r]?.[this.lang()] ?? r)
+      .join(' · ');
+  }
+  editRoles(m: TeamMember) {
+    this.roleMember.set(m);
+    this.selectedRoles.set([...this.assignedRoles(m)]);
+    this.rolesError.set('');
+  }
+  toggleRole(r: TeamRole, checked: boolean, invite = false) {
+    const target = invite ? this.inviteRoles : this.selectedRoles;
+    target.set(checked ? [...new Set([...target(), r])] : target().filter((x) => x !== r));
+  }
+  async saveRoles() {
+    const m = this.roleMember();
+    if (!m || this.busy() || !this.canManage() || !this.selectedRoles().length) return;
+    this.busy.set(m.id);
+    this.rolesError.set('');
+    try {
+      await this.api.assignRoles(m.id, this.selectedRoles(), m.rolesVersion ?? 0);
+      this.roleMember.set(null);
+      await this.reload();
+      this.toast.set(this.t('Roles updated', 'تم تحديث الأدوار'));
+    } catch (e) {
+      this.rolesError.set((e as Error).message);
+    } finally {
+      this.busy.set(null);
+    }
+  }
   readonly items = signal<TeamMember[]>([]);
   /** The API returns the whole team (no paging), so search / status filter on the client. */
   readonly search = signal('');
@@ -165,7 +203,7 @@ export class Team {
   readonly inviteOpen = signal(false);
   readonly inviteName = signal('');
   readonly inviteEmail = signal('');
-  readonly inviteRole = signal<TeamRole>('agent');
+  readonly inviteRoles = signal<TeamRole[]>(['agent']);
   readonly inviteError = signal('');
   readonly inviting = signal(false);
   readonly inviteLink = signal('');
@@ -192,7 +230,7 @@ export class Team {
     this.inviteOpen.set(true);
     this.inviteName.set('');
     this.inviteEmail.set('');
-    this.inviteRole.set('agent');
+    this.inviteRoles.set(['agent']);
     this.inviteError.set('');
     this.inviteLink.set('');
   }
@@ -202,14 +240,14 @@ export class Team {
   }
 
   async submitInvite() {
-    if (this.inviting()) return;
+    if (this.inviting() || !this.inviteRoles().length) return;
     this.inviting.set(true);
     this.inviteError.set('');
     try {
       const r = await this.api.invite({
         name: this.inviteName().trim(),
         email: this.inviteEmail().trim(),
-        role: this.inviteRole(),
+        roles: this.inviteRoles(),
       });
       this.inviteLink.set(location.origin + '/activate/team#token=' + r.token);
       await this.reload();

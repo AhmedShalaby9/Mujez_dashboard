@@ -86,7 +86,7 @@
           <thead>
             <tr>
               <th>{{ t('Member', 'العضو') }}</th>
-              <th>{{ t('Role', 'الدور') }}</th>
+              <th>{{ t('Roles', 'الأدوار') }}</th>
               <th>{{ t('Status', 'الحالة') }}</th>
               <th>{{ t('Last login', 'آخر دخول') }}</th>
               <th>{{ t('Added', 'تاريخ الإضافة') }}</th>
@@ -106,19 +106,21 @@
                   </span>
                 </td>
                 <td class="soft">
+                  <span class="role-badges">
+                    @for (r of assignedRoles(m); track r) {
+                      <span class="role-badge">{{ roleNames[r][lang()] }}</span>
+                    }
+                  </span>
                   @if (canManage()) {
-                    <select
-                      [attr.aria-label]="t('Role for ', 'دور ') + m.name"
-                      [ngModel]="m.role"
-                      (ngModelChange)="changeRole(m, $event)"
+                    <button
+                      type="button"
+                      class="btn btn--sm"
+                      [attr.aria-label]="t('Edit roles for ', 'تعديل أدوار ') + m.name"
                       [disabled]="!!busy() || loading()"
+                      (click)="editRoles(m)"
                     >
-                      @for (r of roles; track r) {
-                        <option [value]="r">{{ roleNames[r][lang()] }}</option>
-                      }
-                    </select>
-                  } @else {
-                    {{ roleNames[m.role]?.[lang()] ?? m.roleName[lang()] }}
+                      {{ t('Edit roles', 'تعديل الأدوار') }}
+                    </button>
                   }
                 </td>
                 <td>
@@ -336,20 +338,36 @@
               dir="ltr"
             />
           </label>
-          <label class="field">
-            <span>{{ t('Role', 'الدور') }}</span>
-            <select name="role" [(ngModel)]="inviteRole">
-              @for (r of roles; track r) {
-                <option [value]="r">{{ roleNames[r][lang()] }}</option>
-              }
-            </select>
-          </label>
+          <fieldset class="role-options" [disabled]="inviting()">
+            <legend>{{ t('Roles (choose one or more)', 'الأدوار (اختر دورًا أو أكثر)') }}</legend>
+            @for (r of roles; track r) {
+              <label class="role-option"
+                ><input
+                  type="checkbox"
+                  [checked]="inviteRoles().includes(r)"
+                  (change)="toggleRole(r, $any($event.target).checked, true)"
+                />{{ roleNames[r][lang()] }}</label
+              >
+            }
+          </fieldset>
+          <p class="muted">
+            {{
+              t(
+                'Employee is an additional role. Employee self-service tabs will be added later; this role does not grant HR management or sales access.',
+                'الموظف دور إضافي. ستُضاف صفحات الخدمة الذاتية لاحقًا؛ هذا الدور لا يمنح إدارة الموارد البشرية أو المبيعات.'
+              )
+            }}
+          </p>
         </div>
         <div class="dialog__foot">
           <button type="button" class="btn" (click)="closeInvite()" [disabled]="inviting()">
             {{ t('Cancel', 'إلغاء') }}
           </button>
-          <button type="submit" class="btn btn--dark" [disabled]="inviting()">
+          <button
+            type="submit"
+            class="btn btn--dark"
+            [disabled]="inviting() || !inviteRoles().length"
+          >
             {{ inviting() ? t('Sending…', 'جارٍ الإرسال…') : t('Create invite', 'إنشاء الدعوة') }}
           </button>
         </div>
@@ -446,6 +464,65 @@
           {{ teamSaving() ? t('Saving…', 'جارٍ الحفظ…') : t('Save team', 'حفظ الفريق') }}
         </button>
       </div>
+    </form>
+  </section>
+}
+
+@if (roleMember(); as m) {
+  <div class="scrim scrim--top" (click)="!busy() && roleMember.set(null)"></div>
+  <section
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.dir]="ar() ? 'rtl' : 'ltr'"
+    [attr.aria-label]="t('Manage user roles', 'إدارة أدوار المستخدم')"
+  >
+    <form (ngSubmit)="saveRoles()">
+      <header class="dialog__head">
+        <span class="dialog__title">{{ t('Roles for ', 'أدوار ') + m.name }}</span
+        ><span class="dialog__body">{{
+          t(
+            'Choose one or more roles. Existing records are retained when access changes.',
+            'اختر دورًا أو أكثر. يتم الاحتفاظ بالسجلات عند تغيير الصلاحيات.'
+          )
+        }}</span>
+      </header>
+      <div class="dialog__main">
+        @if (rolesError()) {
+          <p class="note note--bad" role="alert">{{ rolesError() }}</p>
+        }
+        <fieldset class="role-options" [disabled]="!!busy()">
+          <legend>{{ t('Assigned roles', 'الأدوار المسندة') }}</legend>
+          @for (r of roles; track r) {
+            <label class="role-option"
+              ><input
+                type="checkbox"
+                [checked]="selectedRoles().includes(r)"
+                (change)="toggleRole(r, $any($event.target).checked)"
+              />{{ roleNames[r][lang()] }}</label
+            >
+          }
+        </fieldset>
+        <p class="muted">
+          {{
+            t(
+              'Employee self-service is planned for a later release. Employee alone gives no CRM or HR management access.',
+              'الخدمة الذاتية للموظف ستتوفر لاحقًا. دور الموظف وحده لا يمنح صلاحيات النظام أو إدارة الموارد البشرية.'
+            )
+          }}
+        </p>
+      </div>
+      <footer class="dialog__foot">
+        <button class="btn" type="button" [disabled]="!!busy()" (click)="roleMember.set(null)">
+          {{ t('Cancel', 'إلغاء') }}</button
+        ><button
+          class="btn btn--dark"
+          type="submit"
+          [disabled]="!!busy() || !selectedRoles().length"
+        >
+          {{ busy() ? t('Saving…', 'جارٍ الحفظ…') : t('Save roles', 'حفظ الأدوار') }}
+        </button>
+      </footer>
     </form>
   </section>
 }

@@ -8,7 +8,13 @@ import {
   type CompanyReport,
   type Overview,
 } from '../../../company-insights-api.service';
-import { SalesApi, SALES_STAGES, STAGE_NAMES, isClosedStage, type SalesStage } from '../../../sales-api.service';
+import {
+  SalesApi,
+  SALES_STAGES,
+  STAGE_NAMES,
+  isClosedStage,
+  type SalesStage,
+} from '../../../sales-api.service';
 import type { CalendarEvent } from '../../../calendar-api.service';
 type Segment = 'all' | 'res' | 'com';
 const ALERTS: Record<string, [string, string]> = {
@@ -57,6 +63,11 @@ export class Dashboard {
   readonly api = inject(CompanyInsightsApi);
   private readonly sales = inject(SalesApi);
   private readonly auth = inject(AuthService);
+  readonly employeeOnly = computed(
+    () =>
+      this.auth.user()?.pool === 'company_user' &&
+      !this.auth.user()?.permissions.includes('leads.read'),
+  );
   readonly ar = computed(() => this.ui.lang() === 'ar');
   readonly segment = signal<Segment>('all');
   readonly segments: Segment[] = ['all', 'res', 'com'];
@@ -302,6 +313,7 @@ export class Dashboard {
     return { from: start.toISOString(), to: end.toISOString() };
   }
   async load(segment = this.segment()) {
+    if (this.employeeOnly()) return;
     this.segment.set(segment);
     const n = ++this.generation;
     this.busy.set(true);

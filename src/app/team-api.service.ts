@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { AuthService } from './auth.service';
-export const TEAM_ROLES = ['agent', 'team_lead'] as const;
+export const TEAM_ROLES = ['agent', 'team_lead', 'employee'] as const;
 export type TeamRole = (typeof TEAM_ROLES)[number];
 export interface TeamMember {
   id: string;
@@ -8,6 +8,8 @@ export interface TeamMember {
   name: string;
   email: string;
   role: TeamRole;
+  roles?: TeamRole[];
+  rolesVersion?: number;
   teamId: string | null;
   roleName: { en: string; ar: string };
   status: 'invited' | 'active' | 'disabled';
@@ -160,7 +162,13 @@ export class TeamApi {
   role(id: string, role: TeamRole) {
     return this.auth.request('/api/v1/team/' + encodeURIComponent(id) + '/role', { role });
   }
-  invite(body: { name: string; email: string; role: TeamRole }) {
+  assignRoles(id: string, roles: TeamRole[], version: number) {
+    return this.auth.request('/api/v1/team/' + encodeURIComponent(id) + '/roles', {
+      roles,
+      version,
+    });
+  }
+  invite(body: { name: string; email: string; role?: TeamRole; roles?: TeamRole[] }) {
     return this.auth.request('/api/v1/team/invite', body) as Promise<{
       status: string;
       accountId: string;

@@ -6,6 +6,8 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  roles?: string[];
+  rolesVersion?: number;
   roleName?: { en: string; ar: string };
   permissions: string[];
   pool: string;

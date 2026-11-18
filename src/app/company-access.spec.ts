@@ -187,6 +187,7 @@ describe('Company navigation redesign', () => {
     const f = TestBed.createComponent(CompanyShell);
     f.detectChanges();
     const hrPaths = [
+      '/company/hr/leave',
       '/company/hr/employees',
       '/company/hr/departments',
       '/company/hr/documents',

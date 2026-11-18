@@ -1,0 +1,116 @@
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.filter input,
+.filter select {
+  max-width: 220px;
+}
+.reason {
+  max-width: 240px;
+  overflow-wrap: anywhere;
+}
+.row-actions {
+  max-width: 400px;
+}
+.policy-card {
+  padding: 22px;
+  border: 1px solid var(--border-card-alt);
+  border-radius: 16px;
+  background: var(--surface);
+  max-width: 900px;
+}
+.policy-card h2 {
+  font-size: 17px;
+  margin: 0 0 10px;
+}
+.weekends {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.weekends label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+.calendar-card {
+  padding: 18px;
+  border: 1px solid var(--border-card-alt);
+  border-radius: 14px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+}
+.leave-dialog {
+  width: min(680px, calc(100vw - 32px));
+}
+.history li {
+  margin-bottom: 15px;
+  font-size: 13px;
+}
+.history small {
+  display: block;
+  color: var(--text-muted);
+}
+.policy-card fieldset {
+  margin-bottom: 18px;
+}
+.tabs {
+  flex-wrap: wrap;
+}
+.tools {
+  justify-content: space-between;
+}
+@media (max-width: 640px) {
+  .filter {
+    flex-wrap: wrap;
+  }
+  .row-actions {
+    max-width: 260px;
+  }
+  .policy-card {
+    padding: 16px;
+  }
+}
+
+.month-calendar {
+  table-layout: fixed;
+  min-width: 800px;
+}
+.month-calendar td {
+  height: 105px;
+  vertical-align: top;
+  padding: 10px;
+}
+.month-calendar time {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.month-calendar .weekend {
+  background: #f6f6f2;
+}
+.absence {
+  display: block;
+  margin-top: 6px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: #eef6da;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.calendar-grid {
+  margin-top: 12px;
+}

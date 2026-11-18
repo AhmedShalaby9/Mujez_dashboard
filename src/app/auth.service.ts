@@ -43,6 +43,22 @@ export function hasHrAccess(u: User | null | undefined) {
     (u.roles ?? [u.role]).some((r) => r === 'hr_manager' || r === 'hr_officer')
   );
 }
+export function hasLeaveSelf(u: User | null | undefined) {
+  return (
+    !!u &&
+    !u.workspace &&
+    u.pool === 'company_user' &&
+    (u.roles ?? [u.role]).includes('employee') &&
+    u.permissions.includes('leave.self')
+  );
+}
+export function managesLeave(u: User | null | undefined) {
+  return (
+    hasHrAccess(u) &&
+    ((u?.role === 'company_owner' && u?.pool === 'company_admin') ||
+      !!u?.permissions.includes('leave.manage'))
+  );
+}
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -121,7 +137,9 @@ export class AuthService {
             hasHrAccess(this.user()) &&
             !this.user()?.permissions.includes('leads.read')
           ? '/company/hr/employees'
-          : '/company/dashboard';
+          : hasLeaveSelf(this.user()) && !this.user()?.permissions.includes('leads.read')
+            ? '/company/my-leave'
+            : '/company/dashboard';
   }
   async logout() {
     await this.request('/api/v1/auth/logout', {});
@@ -153,6 +171,18 @@ export const companyGuard: CanActivateFn = async (route) => {
     u?.permissions.includes('workspace.view');
   const isWorkspace = u?.pool === 'company_admin' && !!u?.workspace;
   const isEmployee = u?.pool === 'company_user';
+  if (route.data['leaveView'] === 'manage' && !managesLeave(u))
+    return router.createUrlTree(['/company/dashboard']);
+  if (route.data['leaveView'] === 'my' && !hasLeaveSelf(u) && !isOwner)
+    return router.createUrlTree(['/company/dashboard']);
+  if (route.data['leaveView'] === 'approvals') {
+    try {
+      const c = await auth.request('/api/v1/leave/context');
+      if (!c.isManager && !c.canFinalize) return router.createUrlTree(['/company/dashboard']);
+    } catch {
+      return router.createUrlTree(['/company/dashboard']);
+    }
+  }
   if (route.data['hrAccess'] && !hasHrAccess(u))
     return router.createUrlTree(['/company/dashboard']);
   if (route.data['ownerOnly'] && (!isOwner || isWorkspace))

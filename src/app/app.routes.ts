@@ -190,6 +190,21 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
+        path: 'my-leave',
+        data: { leaveView: 'my' },
+        loadComponent: () => import('./pages/company-shell/leave/leave').then((m) => m.Leave),
+      },
+      {
+        path: 'leave-approvals',
+        data: { leaveView: 'approvals' },
+        loadComponent: () => import('./pages/company-shell/leave/leave').then((m) => m.Leave),
+      },
+      {
+        path: 'hr/leave',
+        data: { hrAccess: true, leaveView: 'manage' },
+        loadComponent: () => import('./pages/company-shell/leave/leave').then((m) => m.Leave),
+      },
+      {
         path: 'hr/employees',
         data: { hrAccess: true, hrView: 'employees' },
         loadComponent: () => import('./pages/company-shell/hr/hr').then((m) => m.Hr),

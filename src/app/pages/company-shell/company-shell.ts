@@ -1,6 +1,6 @@
 import { NavigationState, RouteSkeleton } from '../../route-skeleton';
 import { NotificationsApi } from '../../notifications-api.service';
-import { AuthService, hasHrAccess } from '../../auth.service';
+import { AuthService, hasHrAccess, hasLeaveSelf, managesLeave } from '../../auth.service';
 import { Router } from '@angular/router';
 import {
   Component,
@@ -21,6 +21,9 @@ import { CompanyUiState, type Lang } from './company-ui-state';
 /** Nav item -> permission required to see it. Items without an entry here
  * (e.g. the dashboard) are always shown to any signed-in tenant principal. */
 const NAV_PERMISSION: Record<string, string> = {
+  'my-leave': 'leave.self',
+  'leave-approvals': 'leave.review',
+  'hr/leave': 'leave.manage',
   'hr/employees': 'hr.read',
   'hr/departments': 'hr.read',
   'hr/documents': 'hr.read',
@@ -47,6 +50,9 @@ const NAV_PERMISSION: Record<string, string> = {
 };
 
 const COMPANY_ICONS: Record<string, string> = {
+  'my-leave': 'M4 5h16v16H4zM8 3v4M16 3v4M4 10h16',
+  'leave-approvals': 'M5 3h14v18H5zM8 12l3 3 5-6',
+  'hr/leave': 'M4 5h16v16H4zM8 3v4M16 3v4M4 10h16',
   'hr/employees': 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0',
   'hr/departments': 'M3 21h18M5 21V5h14v16M9 9h6M9 13h6',
   'hr/documents': 'M5 3h10l4 4v14H5zM9 12h6M9 16h6',
@@ -138,6 +144,9 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Reports', path: 'reports' },
   { kind: 'item', label: 'AI analytics', path: 'ai-analytics' },
   { kind: 'head', label: 'People' },
+  { kind: 'item', label: 'My leave', path: 'my-leave' },
+  { kind: 'item', label: 'Leave approvals', path: 'leave-approvals' },
+  { kind: 'item', label: 'Leave management', path: 'hr/leave' },
   { kind: 'item', label: 'Employees', path: 'hr/employees' },
   { kind: 'item', label: 'Departments', path: 'hr/departments' },
   { kind: 'item', label: 'Employee documents', path: 'hr/documents' },
@@ -171,6 +180,9 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'التقارير', path: 'reports' },
   { kind: 'item', label: 'تحليلات الذكاء الاصطناعي', path: 'ai-analytics' },
   { kind: 'head', label: 'الموارد البشرية' },
+  { kind: 'item', label: 'إجازاتي', path: 'my-leave' },
+  { kind: 'item', label: 'مراجعة الإجازات', path: 'leave-approvals' },
+  { kind: 'item', label: 'إدارة الإجازات', path: 'hr/leave' },
   { kind: 'item', label: 'الموظفون', path: 'hr/employees' },
   { kind: 'item', label: 'الأقسام', path: 'hr/departments' },
   { kind: 'item', label: 'مستندات الموظفين', path: 'hr/documents' },
@@ -286,6 +298,7 @@ export class CompanyShell {
   /** Sidebar counts: tasks due today + alert counts on the page each alert opens. */
   private readonly counts = signal<Record<string, number>>({});
 
+  readonly leaveContext = signal<any>(null);
   readonly visibleNav = computed<NavEntry[]>(() => {
     const perms = this.auth.user()?.permissions ?? [];
     const all = this.L().nav;
@@ -297,6 +310,13 @@ export class CompanyShell {
         (u?.pool !== 'company_admin' || u?.role !== 'company_owner' || u?.workspace)
       )
         return false;
+      if (item.path === 'my-leave')
+        return (
+          hasLeaveSelf(u) ||
+          (!u?.workspace && u?.pool === 'company_admin' && !!this.leaveContext()?.self)
+        );
+      if (item.path === 'leave-approvals') return !u?.workspace && !!this.leaveContext()?.isManager;
+      if (item.path === 'hr/leave') return managesLeave(u);
       if (item.path.startsWith('hr/')) return hasHrAccess(u);
       const permission = NAV_PERMISSION[item.path];
       return !permission || perms.includes(permission);
@@ -483,12 +503,22 @@ export class CompanyShell {
   private readonly navSub = this.router.events
     .pipe(filter((e) => e instanceof NavigationEnd))
     .subscribe(() => {
+      void this.loadLeaveContext();
       void this.loadAlerts();
       void this.loadAnnouncements();
       void this.notificationFeed.refresh();
       void this.loadTools();
     });
   private readonly navCleanup = inject(DestroyRef).onDestroy(() => this.navSub.unsubscribe());
+  async loadLeaveContext() {
+    try {
+      if (this.auth.user()?.workspace) return;
+      this.leaveContext.set(await this.auth.request('/api/v1/leave/context'));
+    } catch {
+      this.leaveContext.set(null);
+    }
+  }
+  private readonly initLeave = void this.loadLeaveContext();
   private readonly initAlerts = void this.loadAlerts();
   private readonly initAnnouncements = void this.loadAnnouncements();
   private readonly initNotifications = void this.notificationFeed.refresh();

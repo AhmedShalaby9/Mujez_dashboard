@@ -40,11 +40,16 @@
         <p>
           {{
             text(
-              'Your Employee role is active. Employee self-service pages will be available in a future release.',
-              'دور الموظف مفعّل. ستتوفر صفحات الخدمة الذاتية في إصدار لاحق.'
+              'Your Employee role is active. Use My leave to request annual leave and track your balance.',
+              'دور الموظف مفعّل. استخدم إجازاتي لطلب الإجازة السنوية ومتابعة الرصيد.'
             )
           }}
         </p>
+      }
+      @if (hasSelfLeave()) {
+        <a class="btn btn--dark" routerLink="/company/my-leave">{{
+          text('Open My leave', 'فتح إجازاتي')
+        }}</a>
       }
       <p class="muted">
         {{

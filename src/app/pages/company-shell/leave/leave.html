@@ -1,0 +1,676 @@
+<div class="pg" [attr.dir]="ui.lang() === 'ar' ? 'rtl' : 'ltr'">
+  <div class="head">
+    <div class="head__text">
+      <span>{{ t('People · Annual leave', 'الموارد البشرية · الإجازة السنوية') }}</span>
+      <h1>{{ title() }}</h1>
+    </div>
+    <div class="head__actions">
+      <button class="btn" [disabled]="busy()" (click)="reload()">
+        {{ t('Refresh', 'تحديث') }}
+      </button>
+      @if (mode === 'manage' || context()?.canRequest) {
+        <button class="btn btn--dark" [disabled]="!policy()?.configured" (click)="openRequest()">
+          {{ t('+ Request leave', '+ طلب إجازة') }}
+        </button>
+      }
+    </div>
+  </div>
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="note" role="status">{{ notice() }}</p>
+  }
+  @if (policy() && !policy().configured) {
+    <p class="note">
+      {{
+        t(
+          'Annual leave is not configured yet. The company owner or HR Manager must set the annual allowance, weekends and holidays before requests can be submitted.',
+          'لم تُضبط الإجازة السنوية بعد. يجب على مالك الشركة أو مدير الموارد البشرية تحديد الرصيد وأيام العطلة والأعياد قبل تقديم الطلبات.'
+        )
+      }}
+    </p>
+  }
+  @if (mode === 'my' && !context()?.self) {
+    <p class="note">
+      {{
+        t(
+          'Ask HR to link your login account to your employee profile before requesting leave.',
+          'اطلب من الموارد البشرية ربط حسابك بملف الموظف قبل طلب الإجازة.'
+        )
+      }}
+    </p>
+  }
+  @if (mode === 'my' && balance(); as b) {
+    <div class="kpis">
+      <div class="kpi">
+        <span>{{ t('Available days', 'الرصيد المتاح') }}</span
+        ><strong class="kpi__value">{{ b.availableDays }}</strong>
+      </div>
+      <div class="kpi">
+        <span>{{ t('Used days', 'الأيام المستخدمة') }}</span
+        ><strong class="kpi__value">{{ b.usedDays }}</strong>
+      </div>
+      <div class="kpi">
+        <span>{{ t('Approved upcoming days', 'الأيام القادمة المعتمدة') }}</span
+        ><strong class="kpi__value">{{ b.upcomingDays }}</strong>
+      </div>
+      <div class="kpi">
+        <span>{{ t('Pending request days', 'أيام الطلبات المعلقة') }}</span
+        ><strong class="kpi__value">{{ b.pendingDays }}</strong>
+      </div>
+    </div>
+    <p class="muted">
+      {{ t('Annual allowance', 'الرصيد السنوي') }}: {{ b.annualDays }} ·
+      {{ t('Carryover', 'الترحيل') }}: {{ b.carryDays }} ·
+      {{ t('Carryover expires', 'انتهاء الترحيل') }}: {{ b.carryExpiry }} ·
+      {{ t('Expired unused carryover', 'ترحيل غير مستخدم منتهي') }}: {{ b.expiredCarryDays }}
+    </p>
+  }
+  <div class="tools">
+    <nav class="tabs" [attr.aria-label]="t('Leave views', 'طرق عرض الإجازات')">
+      <button class="tab" [class.tab--on]="tab() === 'requests'" (click)="switchTab('requests')">
+        {{ t('Requests', 'الطلبات') }}
+      </button>
+      @if (mode === 'manage') {
+        <button class="tab" [class.tab--on]="tab() === 'balances'" (click)="switchTab('balances')">
+          {{ t('Balances', 'الأرصدة') }}
+        </button>
+      }
+      <button class="tab" [class.tab--on]="tab() === 'calendar'" (click)="switchTab('calendar')">
+        {{ t('Calendar', 'التقويم') }}
+      </button>
+      @if (mode === 'manage') {
+        <button class="tab" [class.tab--on]="tab() === 'policy'" (click)="switchTab('policy')">
+          {{ t('Policy', 'السياسة') }}
+        </button>
+      }
+    </nav>
+    @if (tab() === 'requests' || tab() === 'balances') {
+      <label class="filter"
+        >{{ t('Leave year', 'سنة الإجازة')
+        }}<input type="number" [(ngModel)]="year" min="2000" max="2200" (change)="reload(true)"
+      /></label>
+    }
+  </div>
+  @if (tab() === 'requests') {
+    <div class="tools">
+      <label class="filter"
+        >{{ t('Status', 'الحالة')
+        }}<select class="sel" [(ngModel)]="status" (change)="reload(true)">
+          <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
+          @for (s of statuses; track s) {
+            <option [value]="s">{{ label(s) }}</option>
+          }
+        </select></label
+      >
+      @if (mode !== 'my') {
+        <label class="filter"
+          >{{ t('Employee', 'الموظف')
+          }}<select class="sel" [(ngModel)]="employeeFilter" (change)="reload(true)">
+            <option value="">{{ t('All employees', 'كل الموظفين') }}</option>
+            @for (e of targets(); track e.id) {
+              <option [value]="e.id">{{ e.name }}</option>
+            }
+          </select></label
+        >
+      }
+    </div>
+    <section class="table-card" [attr.aria-busy]="busy()">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('Employee', 'الموظف') }}</th>
+              <th>{{ t('Dates / days', 'التواريخ / الأيام') }}</th>
+              <th>{{ t('Status', 'الحالة') }}</th>
+              <th>{{ t('Details', 'التفاصيل') }}</th>
+              <th>{{ t('Actions', 'الإجراءات') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of rows(); track r.id) {
+              <tr>
+                <td>
+                  <strong>{{ r.employee }}</strong
+                  ><small>{{ r.employeeCode }}</small>
+                </td>
+                <td>
+                  {{ r.startDate }} → {{ r.endDate
+                  }}<small
+                    >{{ r.days }} {{ t('working days', 'يوم عمل') }}
+                    @if (r.half) {
+                      · {{ r.half === 'am' ? t('Morning', 'صباحًا') : t('Afternoon', 'مساءً') }}
+                    }
+                  </small>
+                </td>
+                <td>
+                  <span class="badge">{{ label(r.status) }}</span
+                  ><small>{{
+                    r.manager ||
+                      t(
+                        'No linked manager — HR review',
+                        'لا يوجد مدير مرتبط — مراجعة الموارد البشرية'
+                      )
+                  }}</small>
+                </td>
+                <td class="reason">
+                  {{ r.reason || '—' }}
+                  @if (r.hasAttachment) {
+                    <small>{{ t('Private attachment provided', 'يوجد مرفق خاص') }}</small>
+                  }
+                </td>
+                <td>
+                  <div class="row-actions">
+                    @for (a of actions(r); track a) {
+                      <button
+                        class="btn"
+                        [class.btn--dark]="a === 'hr_approve' || a === 'manager_approve'"
+                        (click)="openAction(r, a)"
+                      >
+                        {{ t(actionLabels[a][0], actionLabels[a][1]) }}
+                      </button>
+                    }
+                    <button class="btn" (click)="openHistory(r)">
+                      {{ t('History', 'السجل') }}
+                    </button>
+                    @if (canAttach(r)) {
+                      <button class="btn" (click)="openAttachment(r)">
+                        {{ t('Add attachment', 'إضافة مرفق') }}
+                      </button>
+                    }
+                    @if (r.canDownloadAttachment) {
+                      <button class="btn" (click)="download(r)">
+                        {{ t('Download attachment', 'تنزيل المرفق') }}
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="empty">
+                  {{
+                    busy()
+                      ? t('Loading…', 'جارٍ التحميل…')
+                      : t('No leave requests found.', 'لا توجد طلبات إجازة.')
+                  }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <footer class="pager">
+        <span>{{ total() }} {{ t('requests', 'طلب') }} · {{ t('Page', 'صفحة') }} {{ page() }}</span>
+        <div>
+          <button class="btn" [disabled]="busy() || page() === 1" (click)="next(-1)">
+            {{ t('Previous', 'السابق') }}</button
+          ><button class="btn" [disabled]="busy() || page() * 25 >= total()" (click)="next(1)">
+            {{ t('Next', 'التالي') }}
+          </button>
+        </div>
+      </footer>
+    </section>
+    <p class="muted">
+      {{
+        t(
+          'Approved requests reserve your balance immediately. Pending requests do not reserve balance. Nobody may approve their own request.',
+          'الطلبات المعتمدة تحجز الرصيد فورًا، والطلبات المعلقة لا تحجزه. لا يمكن لأحد اعتماد طلبه الشخصي.'
+        )
+      }}
+    </p>
+  }
+  @if (tab() === 'balances') {
+    <section class="table-card">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('Employee', 'الموظف') }}</th>
+              <th>{{ t('Annual / carryover', 'سنوي / مرحّل') }}</th>
+              <th>{{ t('Used / upcoming', 'مستخدم / قادم') }}</th>
+              <th>{{ t('Available', 'متاح') }}</th>
+              <th>{{ t('Adjustment', 'تعديل') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (b of balanceRows(); track b.employeeId) {
+              <tr>
+                <td>
+                  <strong>{{ b.name }}</strong
+                  ><small>{{ b.status }}</small>
+                </td>
+                <td>
+                  {{ b.annualDays }} / {{ b.carryDays
+                  }}<small
+                    >{{ t('Carryover expires', 'انتهاء الترحيل') }} {{ b.carryExpiry }}</small
+                  >
+                </td>
+                <td>{{ b.usedDays }} / {{ b.upcomingDays }}</td>
+                <td>{{ b.availableDays }}</td>
+                <td>
+                  @if (context()?.canFinalize) {
+                    <button class="btn" [disabled]="!policy()?.configured" (click)="openBalance(b)">
+                      {{ t('Adjust balance', 'تعديل الرصيد') }}
+                    </button>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="empty">
+                  {{ t('No employee balances found.', 'لا توجد أرصدة موظفين.') }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <footer class="pager">
+        <span>{{ total() }} {{ t('employees', 'موظف') }}</span>
+        <div>
+          <button class="btn" [disabled]="busy() || page() === 1" (click)="next(-1)">
+            {{ t('Previous', 'السابق') }}</button
+          ><button class="btn" [disabled]="busy() || page() * 25 >= total()" (click)="next(1)">
+            {{ t('Next', 'التالي') }}
+          </button>
+        </div>
+      </footer>
+    </section>
+    <p class="muted">
+      {{
+        t(
+          'Balances use the full annual allowance upfront. Existing balances change only through an adjustment with a reason. Carryover transfers unused annual days from an initialized previous-year balance.',
+          'يُمنح الرصيد السنوي كاملًا مقدمًا. تعديل الأرصدة يتطلب سببًا. الترحيل ينقل الأيام السنوية غير المستخدمة من رصيد مسجّل للسنة السابقة.'
+        )
+      }}
+    </p>
+  }
+  @if (tab() === 'calendar') {
+    <label class="filter"
+      >{{ t('Calendar month', 'شهر التقويم')
+      }}<input type="month" [(ngModel)]="month" (change)="reload()"
+    /></label>
+    <p class="muted">
+      {{
+        t(
+          'Approved absences, including requests waiting for cancellation approval. Reasons and attachments are private.',
+          'الإجازات المعتمدة، بما فيها طلبات الإلغاء المعلقة. الأسباب والمرفقات خاصة.'
+        )
+      }}
+    </p>
+    @if (mode !== 'my') {
+      <label class="filter"
+        >{{ t('Employee', 'الموظف')
+        }}<select class="sel" [(ngModel)]="employeeFilter" (change)="reload()">
+          <option value="">{{ t('All employees', 'كل الموظفين') }}</option>
+          @for (e of targets(); track e.id) {
+            <option [value]="e.id">{{ e.name }}</option>
+          }
+        </select></label
+      >
+    }
+    @if (calendarTruncated()) {
+      <p class="note">
+        {{
+          t(
+            'Only the first 1,000 requests are shown. Select an employee to narrow this calendar.',
+            'يُعرض أول ١٠٠٠ طلب فقط. اختر موظفًا لتصفية التقويم.'
+          )
+        }}
+      </p>
+    }
+    <section class="table-card table-scroll">
+      <table class="month-calendar">
+        <thead>
+          <tr>
+            @for (w of weekdays; track $index) {
+              <th>{{ t(w, weekdaysAr[$index]) }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (week of calendarWeeks(); track $index) {
+            <tr>
+              @for (day of week; track $index) {
+                <td [class.weekend]="day?.weekend">
+                  @if (day) {
+                    <time [attr.datetime]="day.date">{{ day.day }}</time>
+                    @if (day.holiday) {
+                      <small>{{ day.holiday }}</small>
+                    }
+                    @for (r of day.items; track r.id) {
+                      <span class="absence" [title]="r.employee"
+                        >{{ r.employee }}
+                        @if (r.half) {
+                          · {{ r.half === 'am' ? t('AM', 'ص') : t('PM', 'م') }}
+                        }
+                      </span>
+                    }
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+    <section class="calendar-grid">
+      @for (r of calendar(); track r.id) {
+        <article class="calendar-card">
+          <strong>{{ r.employee }}</strong
+          ><span>{{ r.startDate }} → {{ r.endDate }}</span
+          ><small
+            >{{ r.days }} {{ t('days', 'يوم') }}
+            @if (r.half) {
+              · {{ r.half === 'am' ? t('Morning', 'صباحًا') : t('Afternoon', 'مساءً') }}
+            }
+          </small>
+        </article>
+      } @empty {
+        <p class="empty">
+          {{ t('No approved absences in this month.', 'لا توجد إجازات معتمدة هذا الشهر.') }}
+        </p>
+      }
+    </section>
+  }
+  @if (tab() === 'policy' && policy()) {
+    <form class="policy-card" (ngSubmit)="savePolicy()">
+      <h2>{{ t('Annual leave policy', 'سياسة الإجازة السنوية') }}</h2>
+      <p class="muted">
+        {{
+          t(
+            'Set your company’s annual allowance and working calendar. Leave is granted upfront for each calendar year.',
+            'حدّد الرصيد السنوي وتقويم العمل في شركتك. يُمنح الرصيد مقدمًا لكل سنة ميلادية.'
+          )
+        }}
+      </p>
+      <fieldset class="form-grid" [disabled]="saving() || !context()?.canFinalize">
+        <label class="field"
+          ><span>{{ t('Default annual days', 'الأيام السنوية الافتراضية') }}</span
+          ><input
+            type="number"
+            name="annualDays"
+            [(ngModel)]="policyForm.annualDays"
+            min="0"
+            max="366"
+            step="0.5"
+            required
+        /></label>
+        <div class="field wide">
+          <span>{{ t('Weekend days (not counted)', 'أيام العطلة الأسبوعية (لا تُحتسب)') }}</span>
+          <div class="weekends">
+            @for (day of [0, 1, 2, 3, 4, 5, 6]; track day) {
+              <label
+                ><input
+                  type="checkbox"
+                  [checked]="policyForm.weekends.includes(day)"
+                  (change)="toggleWeekend(day, $any($event.target).checked)"
+                />{{ t(weekdays[day], weekdaysAr[day]) }}</label
+              >
+            }
+          </div>
+        </div>
+        <label class="field"
+          ><span>{{
+            t('Maximum carryover days (0 disables transfers)', 'حد الترحيل بالأيام (صفر لإيقافه)')
+          }}</span
+          ><input
+            type="number"
+            name="carryLimitDays"
+            [(ngModel)]="policyForm.carryLimitDays"
+            min="0"
+            max="366"
+            step="0.5"
+            required /></label
+        ><label class="field"
+          ><span>{{ t('Carryover expiry (MM-DD)', 'انتهاء الترحيل (شهر-يوم)') }}</span
+          ><input
+            name="carryExpiry"
+            [(ngModel)]="policyForm.carryExpiry"
+            placeholder="03-31"
+            pattern="[0-9]{2}-[0-9]{2}"
+            required /></label
+        ><label class="field wide"
+          ><span>{{
+            t(
+              'Public holidays: one YYYY-MM-DD | Name per line',
+              'الأعياد: كل سطر بصيغة YYYY-MM-DD | الاسم'
+            )
+          }}</span
+          ><textarea
+            name="holidays"
+            [(ngModel)]="holidayText"
+            rows="7"
+            placeholder="2027-01-07 | Public holiday"
+          ></textarea>
+        </label>
+      </fieldset>
+      @if (context()?.canFinalize) {
+        <button class="btn btn--dark" type="submit" [disabled]="saving()">
+          {{ t('Save policy', 'حفظ السياسة') }}
+        </button>
+      } @else {
+        <p class="muted">
+          {{
+            t(
+              'Only the company owner or HR Manager can change the policy.',
+              'مالك الشركة أو مدير الموارد البشرية فقط يمكنه تعديل السياسة.'
+            )
+          }}
+        </p>
+      }
+    </form>
+  }
+</div>
+@if (modal()) {
+  <div class="scrim scrim--top" (click)="close()"></div>
+  <section
+    class="dialog leave-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="leave-dialog-title"
+    [attr.dir]="ui.lang() === 'ar' ? 'rtl' : 'ltr'"
+  >
+    <form (ngSubmit)="save()">
+      <header class="dialog__head">
+        <h2 id="leave-dialog-title" class="dialog__title">
+          {{
+            modal() === 'request'
+              ? t('Request annual leave', 'طلب إجازة سنوية')
+              : modal() === 'balance'
+                ? t('Adjust leave balance', 'تعديل رصيد الإجازة')
+                : modal() === 'attachment'
+                  ? t('Private attachment', 'مرفق خاص')
+                  : modal() === 'history'
+                    ? t('Request history', 'سجل الطلب')
+                    : t(actionLabels[form.action][0], actionLabels[form.action][1])
+          }}
+        </h2>
+        <button
+          type="button"
+          class="x"
+          [disabled]="saving()"
+          [attr.aria-label]="t('Close dialog', 'إغلاق النافذة')"
+          (click)="close()"
+        >
+          ×
+        </button>
+      </header>
+      <div class="dialog__main">
+        @if (formError()) {
+          <p class="note note--bad" role="alert">{{ formError() }}</p>
+        }
+        @if (modal() === 'request') {
+          <fieldset class="form-grid" [disabled]="saving() || !!created">
+            <label class="field wide"
+              ><span>{{ t('Employee', 'الموظف') }}</span
+              ><select
+                name="employeeId"
+                [(ngModel)]="form.employeeId"
+                required
+                [disabled]="mode === 'my'"
+              >
+                <option value="">{{ t('Choose an employee', 'اختر موظفًا') }}</option>
+                @for (e of targets(); track e.id) {
+                  @if (e.status !== 'offboarded') {
+                    <option [value]="e.id">{{ e.name }}</option>
+                  }
+                }
+              </select></label
+            ><label class="field"
+              ><span>{{ t('Start date', 'تاريخ البداية') }}</span
+              ><input
+                type="date"
+                name="startDate"
+                [(ngModel)]="form.startDate"
+                [min]="context()?.today"
+                required /></label
+            ><label class="field"
+              ><span>{{ t('End date', 'تاريخ النهاية') }}</span
+              ><input
+                type="date"
+                name="endDate"
+                [(ngModel)]="form.endDate"
+                [min]="form.startDate || context()?.today"
+                required /></label
+            ><label class="field"
+              ><span>{{ t('Duration', 'المدة') }}</span
+              ><select name="half" [(ngModel)]="form.half">
+                <option value="">{{ t('Full working days', 'أيام عمل كاملة') }}</option>
+                <option value="am">{{ t('Half day — morning', 'نصف يوم — صباحًا') }}</option>
+                <option value="pm">{{ t('Half day — afternoon', 'نصف يوم — مساءً') }}</option>
+              </select></label
+            ><label class="field wide"
+              ><span>{{ t('Reason (optional)', 'السبب (اختياري)') }}</span
+              ><textarea
+                name="reason"
+                [(ngModel)]="form.reason"
+                maxlength="2000"
+                rows="3"
+              ></textarea>
+            </label>
+            <p class="muted wide">
+              {{ t('Estimated working days', 'أيام العمل المقدّرة') }}: {{ previewDays() }}.
+              {{
+                t(
+                  'Weekends and public holidays are excluded.',
+                  'لا تُحتسب العطلات الأسبوعية والأعياد.'
+                )
+              }}
+            </p>
+          </fieldset>
+        }
+        @if (modal() === 'request' || modal() === 'attachment') {
+          <label class="field"
+            ><span>{{
+              t(
+                'Optional file — PDF, PNG, JPEG or text, up to 5 MB',
+                'مرفق اختياري — PDF أو PNG أو JPEG أو نص، حتى ٥ ميجابايت'
+              )
+            }}</span
+            ><input
+              type="file"
+              accept=".pdf,.png,.jpg,.jpeg,.txt"
+              (change)="selectFile($event)"
+              [disabled]="saving()"
+          /></label>
+          <p class="muted">
+            {{
+              t(
+                'The attachment is visible only to the employee and authorized HR staff. Reporting managers cannot download it.',
+                'المرفق متاح للموظف والموارد البشرية المخولة فقط. لا يستطيع المدير المباشر تنزيله.'
+              )
+            }}
+          </p>
+        }
+        @if (modal() === 'action') {
+          <p>
+            {{ selected.employee }} · {{ selected.startDate }} → {{ selected.endDate }} ·
+            {{ selected.days }} {{ t('days', 'يوم') }}
+          </p>
+          <label class="field"
+            ><span>{{ t('Decision note', 'ملاحظة القرار') }}</span
+            ><textarea
+              name="note"
+              [(ngModel)]="form.note"
+              [required]="needsReason()"
+              [minlength]="needsReason() ? 3 : 0"
+              maxlength="1000"
+              rows="3"
+              [disabled]="saving()"
+            ></textarea>
+          </label>
+        }
+        @if (modal() === 'balance') {
+          <p>
+            {{ selected.name }} · {{ year }} · {{ t('Used / upcoming', 'مستخدم / قادم') }}
+            {{ selected.usedDays }} / {{ selected.upcomingDays }}
+          </p>
+          <fieldset class="form-grid" [disabled]="saving()">
+            <label class="field"
+              ><span>{{ t('Annual allowance days', 'الرصيد السنوي بالأيام') }}</span
+              ><input
+                type="number"
+                name="annualDays"
+                [(ngModel)]="form.annualDays"
+                min="0"
+                max="366"
+                step="0.5"
+                required /></label
+            ><label class="field"
+              ><span>{{ t('Carryover days', 'الأيام المرحلة') }}</span
+              ><input
+                type="number"
+                name="carryDays"
+                [(ngModel)]="form.carryDays"
+                min="0"
+                max="366"
+                step="0.5"
+                required /></label
+            ><label class="field wide"
+              ><span>{{ t('Reason for adjustment', 'سبب التعديل') }}</span
+              ><textarea
+                name="reason"
+                [(ngModel)]="form.reason"
+                required
+                minlength="3"
+                maxlength="1000"
+                rows="3"
+              ></textarea>
+            </label>
+          </fieldset>
+        }
+        @if (modal() === 'history') {
+          <ol class="history">
+            @for (h of history(); track $index) {
+              <li>
+                <strong>{{ h.actor }}</strong> · {{ h.action }}<small>{{ h.at }}</small>
+                @if (h.note) {
+                  <p>{{ h.note }}</p>
+                }
+              </li>
+            }
+          </ol>
+        }
+      </div>
+      <footer class="dialog__foot">
+        <button type="button" class="btn" [disabled]="saving()" (click)="close()">
+          {{ t('Close', 'إغلاق') }}
+        </button>
+        @if (modal() !== 'history') {
+          <button class="btn btn--dark" type="submit" [disabled]="saving()">
+            {{
+              saving()
+                ? t('Saving…', 'جارٍ الحفظ…')
+                : modal() === 'request' && !created
+                  ? t('Submit request', 'إرسال الطلب')
+                  : t('Save', 'حفظ')
+            }}
+          </button>
+        }
+      </footer>
+    </form>
+  </section>
+}

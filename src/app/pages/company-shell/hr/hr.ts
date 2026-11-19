@@ -218,6 +218,7 @@ export class Hr {
       const row = this.editing();
       if (row) b.version = row.version;
       if (this.view === 'employees') {
+        delete b.employeeCode;
         for (const k of ['departmentId', 'managerId', 'userId', 'joiningDate', 'endDate', 'email'])
           b[k] = b[k] || null;
       }

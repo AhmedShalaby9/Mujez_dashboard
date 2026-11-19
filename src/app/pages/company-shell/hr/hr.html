@@ -282,12 +282,12 @@
         <fieldset [disabled]="saving()" class="form-grid">
           @if (view === 'employees') {
             <label class="field"
-              ><span>{{ t('Employee code', 'رقم الموظف') }} *</span
+              ><span>{{ t('Employee code', 'رقم الموظف') }}</span
               ><input
                 name="employeeCode"
-                [(ngModel)]="form.employeeCode"
+                [value]="editing()?.employeeCode || t('Assigned automatically', 'يُعيّن تلقائيًا')"
                 type="text"
-                required
+                readonly
                 maxlength="40" /></label
             ><label class="field"
               ><span>{{ t('Full name', 'الاسم الكامل') }} *</span

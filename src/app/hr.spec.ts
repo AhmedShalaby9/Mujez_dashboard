@@ -70,18 +70,17 @@ describe('HR workspace', () => {
   it('creates an HR record with optional CRM fields null and preserves failed forms', async () => {
     const { c, request } = await setup();
     c.show();
-    c.form.employeeCode = 'HR-2';
     c.form.name = 'New Employee';
     await c.save();
     const call = request.mock.calls.find((c) => c[0] === '/api/v1/hr/employees');
     expect(call?.[1]).toMatchObject({
-      employeeCode: 'HR-2',
       name: 'New Employee',
       userId: null,
       managerId: null,
       email: null,
       joiningDate: null,
     });
+    expect(call?.[1]).not.toHaveProperty('employeeCode');
     expect(c.open()).toBe(false);
     c.show();
     request.mockRejectedValueOnce(new Error('Employee code already used'));

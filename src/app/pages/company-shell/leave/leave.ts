@@ -1,9 +1,10 @@
-import { Component, inject, signal, HostListener } from '@angular/core';
+import { Component, computed, inject, signal, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../auth.service';
 import { RUNTIME_CONFIG } from '../../../runtime-config';
 import { CompanyUiState } from '../company-ui-state';
+type CalendarHoliday = { date: string; name: string; localName?: string };
 @Component({
   selector: 'app-leave',
   imports: [FormsModule],
@@ -25,6 +26,86 @@ export class Leave {
   readonly context = signal<any>(null);
   readonly policy = signal<any>(null);
   readonly balance = signal<any>(null);
+  readonly holidaysExpanded = signal(false);
+  readonly toggleBoolean = (value: boolean) => !value;
+  readonly holidayDates = computed<CalendarHoliday[]>(() =>
+    [...(this.policy()?.holidays || [])].sort((a, b) => a.date.localeCompare(b.date)),
+  );
+  readonly holidaysAhead = computed(() =>
+    this.holidayDates().filter(
+      (h) => h.date >= (this.context()?.today || new Date().toISOString().slice(0, 10)),
+    ),
+  );
+  readonly nextHoliday = computed(() => this.holidaysAhead()[0] || null);
+  readonly holidayGroups = computed(() => {
+    const groups = new Map<string, { month: string; label: string; items: CalendarHoliday[] }>();
+    for (const holiday of this.holidayDates()) {
+      const month = holiday.date.slice(0, 7);
+      if (!groups.has(month))
+        groups.set(month, {
+          month,
+          label: new Intl.DateTimeFormat(this.ui.lang() === 'ar' ? 'ar-EG' : 'en-GB', {
+            month: 'long',
+            timeZone: 'UTC',
+          }).format(new Date(holiday.date + 'T12:00:00Z')),
+          items: [],
+        });
+      groups.get(month)!.items.push(holiday);
+    }
+    return [...groups.values()];
+  });
+  holidayYear() {
+    return this.policy()?.year ?? this.year;
+  }
+  async changeHolidayYear(delta: number) {
+    if (this.busy()) return;
+    const year = this.holidayYear() + delta;
+    if (year < 2000 || year > 2200) return;
+    this.year = year;
+    if (this.tab() === 'calendar') this.month = year + this.month.slice(4);
+    await this.reload(true);
+  }
+  holidayDate(date: string, part: 'month' | 'day' | 'weekday' | 'full' | 'short') {
+    const format: Intl.DateTimeFormatOptions =
+      part === 'month'
+        ? { month: 'short' }
+        : part === 'day'
+          ? { day: '2-digit' }
+          : part === 'weekday'
+            ? { weekday: 'short' }
+            : part === 'full'
+              ? { weekday: 'long', day: 'numeric', month: 'long' }
+              : { day: 'numeric', month: 'short' };
+    return new Intl.DateTimeFormat(this.ui.lang() === 'ar' ? 'ar-EG' : 'en-GB', {
+      ...format,
+      timeZone: 'UTC',
+    }).format(new Date(date + 'T12:00:00Z'));
+  }
+  holidayCountdown(date: string) {
+    const today = this.context()?.today || new Date().toISOString().slice(0, 10);
+    const days = Math.round(
+      (Date.parse(date + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86400000,
+    );
+    return days === 0
+      ? this.t('Enjoy today', 'استمتع بعطلتك اليوم')
+      : days === 1
+        ? this.t('Tomorrow', 'غدًا')
+        : this.t(
+            'In ' + days + ' days',
+            'بعد ' + new Intl.NumberFormat('ar-EG').format(days) + ' يوم',
+          );
+  }
+  holidayUpdated() {
+    const date = this.policy()?.fetchedAt;
+    return date
+      ? new Intl.DateTimeFormat(this.ui.lang() === 'ar' ? 'ar-EG' : 'en-GB', {
+          day: 'numeric',
+          month: 'short',
+          timeZone: 'Africa/Cairo',
+        }).format(new Date(date))
+      : '';
+  }
+
   readonly targets = signal<any[]>([]);
   readonly rows = signal<any[]>([]);
   readonly calendar = signal<any[]>([]);

@@ -67,37 +67,200 @@
       {{ t('Expired unused carryover', 'ترحيل غير مستخدم منتهي') }}: {{ b.expiredCarryDays }}
     </p>
   }
-  <section class="note">
-    <strong>{{ t('Egypt public holidays', 'العطلات الرسمية في مصر') }}</strong>
-    <p>
-      {{
-        t(
-          'Imported automatically from Nager.Date. Future-year dates may be incomplete, especially Eid, until the provider updates them.',
-          'تُجلب تلقائيًا من Nager.Date. قد تكون تواريخ السنوات القادمة غير مكتملة، خصوصًا العيدين، حتى يحدّثها المصدر.'
-        )
-      }}
-    </p>
-    <p>
-      {{ policy()?.year }} · {{ policy()?.holidays?.length || 0 }} {{ t('holidays', 'عطلة') }} ·
-      {{ t('Last updated', 'آخر تحديث') }}:
-      {{ policy()?.fetchedAt || t('Not available', 'غير متاح') }}
-    </p>
+  <section class="holiday-panel" aria-labelledby="holiday-panel-title" [attr.aria-busy]="busy()">
+    <header class="holiday-panel__head">
+      <div class="holiday-panel__identity">
+        <span class="holiday-panel__icon" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.65"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3.5" y="5.5" width="17" height="15" rx="3" />
+            <path d="M7.5 3v5M16.5 3v5M3.5 11h17M8 15.5h2M14 15.5h2" />
+          </svg>
+        </span>
+        <div>
+          <div class="holiday-panel__eyebrow">{{ t('THE WORK CALENDAR', 'تقويم العمل') }}</div>
+          <h2 id="holiday-panel-title">
+            {{ t('Egypt public holidays', 'العطلات الرسمية في مصر') }}
+          </h2>
+          <p>{{ t('A little room to switch off.', 'مساحة صغيرة لالتقاط الأنفاس.') }}</p>
+        </div>
+      </div>
+      <div class="holiday-year" [attr.aria-label]="t('Holiday calendar year', 'سنة تقويم العطلات')">
+        <button
+          type="button"
+          [disabled]="busy() || holidayYear() <= 2000"
+          (click)="changeHolidayYear(-1)"
+          [attr.aria-label]="t('Previous year', 'السنة السابقة')"
+        >
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12 5-5 5 5 5" /></svg>
+        </button>
+        <span>{{ holidayYear() }}</span>
+        <button
+          type="button"
+          [disabled]="busy() || holidayYear() >= 2200"
+          (click)="changeHolidayYear(1)"
+          [attr.aria-label]="t('Next year', 'السنة التالية')"
+        >
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m8 5 5 5-5 5" /></svg>
+        </button>
+      </div>
+    </header>
+    <div class="holiday-panel__body">
+      <div class="holiday-spotlight">
+        @if (nextHoliday(); as holiday) {
+          <div class="holiday-stamp" aria-hidden="true">
+            <span>{{ holidayDate(holiday.date, 'month') }}</span
+            ><strong>{{ holidayDate(holiday.date, 'day') }}</strong
+            ><i></i>
+          </div>
+          <div class="holiday-spotlight__copy">
+            <span class="holiday-kicker">{{
+              holiday.date === context()?.today
+                ? t('TODAY’S HOLIDAY', 'عطلة اليوم')
+                : t('NEXT ON THE CALENDAR', 'العطلة القادمة')
+            }}</span>
+            <h3>{{ t(holiday.name, holiday.localName || holiday.name) }}</h3>
+            <p>{{ holidayDate(holiday.date, 'full') }}</p>
+            <span class="holiday-countdown"
+              >{{ holidayCountdown(holiday.date)
+              }}<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" /></svg
+            ></span>
+          </div>
+        } @else {
+          <div class="holiday-stamp holiday-stamp--quiet" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><path d="m10 16 4 4 8-9" /></svg>
+          </div>
+          <div class="holiday-spotlight__copy">
+            <span class="holiday-kicker">{{ t('YOUR YEAR, AT A GLANCE', 'نظرة على عامك') }}</span>
+            <h3>
+              {{
+                !policy()
+                  ? t('Loading your calendar…', 'جارٍ تحميل التقويم…')
+                  : !policy()?.available
+                    ? t('Calendar temporarily unavailable', 'التقويم غير متاح مؤقتًا')
+                    : t('No more holidays this year', 'لا توجد عطلات أخرى هذا العام')
+              }}
+            </h3>
+            <p>
+              {{
+                policy()?.available
+                  ? t(
+                      'Explore the dates below, or look ahead to next year.',
+                      'استعرض التواريخ أدناه أو ألقِ نظرة على العام القادم.'
+                    )
+                  : t(
+                      'Refresh to check for calendar updates.',
+                      'حدّث الصفحة للتحقق من تحديثات التقويم.'
+                    )
+              }}
+            </p>
+          </div>
+        }
+      </div>
+      <div class="holiday-totals">
+        <div>
+          <span>{{ t('Holiday dates', 'أيام العطلات') }}</span
+          ><strong>{{ policy()?.available ? holidayDates().length : '—' }}</strong
+          ><small>{{ t('Across the year', 'خلال العام') }}</small>
+        </div>
+        <div>
+          <span>{{ t('Still ahead', 'العطلات القادمة') }}</span
+          ><strong>{{ policy()?.available ? holidaysAhead().length : '—' }}</strong
+          ><small>{{ t('Including today', 'بما فيها اليوم') }}</small>
+        </div>
+      </div>
+    </div>
     @if (policy()?.stale) {
-      <p role="alert">
-        {{
+      <p class="holiday-warning" role="status">
+        <span aria-hidden="true">!</span
+        >{{
           t(
-            'Holiday updates are temporarily unavailable. Leave submission and final approval require current holiday data.',
-            'تحديث العطلات غير متاح مؤقتًا. تقديم الطلبات واعتمادها النهائي يتطلب بيانات عطلات حديثة.'
+            'Calendar updates are delayed. Submission and final approval need an up-to-date calendar.',
+            'تحديث التقويم متأخر. تقديم الطلبات والاعتماد النهائي يتطلبان تقويمًا محدثًا.'
           )
         }}
       </p>
     }
-    @if (tab() === 'policy') {
-      <ul>
-        @for (h of policy()?.holidays || []; track h.date) {
-          <li>{{ h.date }} — {{ t(h.name, h.localName || h.name) }}</li>
+    <footer class="holiday-panel__foot">
+      <div class="holiday-sync" [class.holiday-sync--stale]="policy()?.stale">
+        <span class="holiday-sync__dot" aria-hidden="true"></span>
+        <span>{{
+          policy()?.fetchedAt
+            ? t('Updated ', 'آخر تحديث ') + holidayUpdated()
+            : t('Awaiting calendar', 'بانتظار التقويم')
+        }}</span>
+        <span class="holiday-sync__divider" aria-hidden="true">·</span>
+        <span>{{ t('Excluded from leave days', 'لا تُخصم من رصيد الإجازات') }}</span>
+      </div>
+      <button
+        class="holiday-toggle"
+        type="button"
+        (click)="holidaysExpanded.update(toggleBoolean)"
+        [attr.aria-expanded]="holidaysExpanded()"
+        aria-controls="holiday-dates"
+        [disabled]="!holidayDates().length"
+      >
+        {{
+          holidaysExpanded()
+            ? t('Hide dates', 'إخفاء التواريخ')
+            : t('Explore all dates', 'عرض كل التواريخ')
+        }}
+        <svg viewBox="0 0 20 20" [class.is-open]="holidaysExpanded()" aria-hidden="true">
+          <path d="m6 8 4 4 4-4" />
+        </svg>
+      </button>
+    </footer>
+    @if (holidaysExpanded()) {
+      <div
+        class="holiday-dates"
+        id="holiday-dates"
+        role="region"
+        [attr.aria-label]="t('All public holiday dates', 'جميع تواريخ العطلات الرسمية')"
+      >
+        @for (group of holidayGroups(); track group.month) {
+          <section class="holiday-month">
+            <h3>
+              {{ group.label }}<span>{{ group.items.length }}</span>
+            </h3>
+            @for (holiday of group.items; track holiday.date) {
+              <article
+                class="holiday-date"
+                [class.holiday-date--past]="holiday.date < (context()?.today || '')"
+                [class.holiday-date--next]="holiday.date === nextHoliday()?.date"
+              >
+                <time [attr.datetime]="holiday.date"
+                  ><strong>{{ holidayDate(holiday.date, 'day') }}</strong
+                  ><span>{{ holidayDate(holiday.date, 'weekday') }}</span></time
+                >
+                <div>
+                  <h4>{{ t(holiday.name, holiday.localName || holiday.name) }}</h4>
+                  <span>{{ holidayDate(holiday.date, 'short') }}</span>
+                </div>
+                @if (holiday.date === nextHoliday()?.date) {
+                  <span
+                    class="holiday-next-dot"
+                    [attr.aria-label]="t('Next holiday', 'العطلة القادمة')"
+                  ></span>
+                }
+              </article>
+            }
+          </section>
         }
-      </ul>
+        <p class="holiday-caveat">
+          {{
+            t(
+              'Future-year dates may change. Eid dates may be added later.',
+              'قد تتغير تواريخ السنوات القادمة، وقد تُضاف تواريخ العيدين لاحقًا.'
+            )
+          }}
+        </p>
+      </div>
     }
   </section>
   <div class="tools">

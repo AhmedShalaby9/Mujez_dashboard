@@ -160,7 +160,9 @@ describe('Annual leave workspace', () => {
     const { c, f, request } = await setup('manage', { isHr: true, canFinalize: true });
     await c.switchTab('policy');
     f.detectChanges();
-    expect(f.nativeElement.textContent).toContain('Imported automatically from Nager.Date');
+    expect(f.nativeElement.textContent).toContain('Egypt public holidays');
+    expect(f.nativeElement.textContent).not.toContain('Nager.Date');
+    expect(f.nativeElement.textContent).not.toContain('Source');
     expect(f.nativeElement.querySelector('textarea[name="holidays"]')).toBeNull();
     await c.savePolicy();
     const body = request.mock.calls.find(([path, b]) => path === '/api/v1/leave/policy' && b)?.[1];
@@ -168,6 +170,31 @@ describe('Annual leave workspace', () => {
     c.form.startDate = '2027-01-07';
     await c.loadRequestHolidays();
     expect(request).toHaveBeenCalledWith('/api/v1/leave/policy?year=2027');
+  });
+  it('highlights the next date using Cairo today and keeps the full calendar collapsed', async () => {
+    const { c, f } = await setup();
+    c.context.set({ ...ctx, today: '2027-01-07' });
+    c.policy.set({
+      ...policy,
+      year: 2027,
+      holidays: [
+        { date: '2027-01-25', name: 'National Police Day' },
+        { date: '2027-01-07', name: 'Christmas Day' },
+        { date: '2026-12-31', name: 'Past holiday' },
+      ],
+    });
+    f.detectChanges();
+    expect(c.nextHoliday()?.date).toBe('2027-01-07');
+    expect(c.holidaysAhead()).toHaveLength(2);
+    expect(c.holidayCountdown('2027-01-07')).toBe('Enjoy today');
+    expect(c.holidayCountdown('2027-01-08')).toBe('Tomorrow');
+    expect(f.nativeElement.querySelector('#holiday-dates')).toBeNull();
+    c.holidaysExpanded.set(true);
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('#holiday-dates')).not.toBeNull();
+    expect(c.holidayGroups()).toHaveLength(2);
+    c.context.set({ ...ctx, today: '2027-12-31' });
+    expect(c.nextHoliday()).toBeNull();
   });
   it('keeps Employee leave separate from HR administration and routes self-only accounts to My leave', () => {
     const employee = {

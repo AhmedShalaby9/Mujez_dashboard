@@ -148,6 +148,9 @@
                 <td>
                   {{ row.department || t('Not set', 'غير محدد')
                   }}<small>{{ row.manager || t('No manager', 'بدون مدير') }}</small>
+                  @if (row.reportingTeam) {
+                    <small>{{ t('From team: ', 'من الفريق: ') }}{{ row.reportingTeam }}</small>
+                  }
                 </td>
                 <td>
                   <span class="badge">{{ label(row.status) }}</span
@@ -326,14 +329,27 @@
               </select></label
             ><label class="field"
               ><span>{{ t('Reports to', 'المدير المباشر') }}</span
-              ><select name="managerId" [(ngModel)]="form.managerId">
+              ><select
+                name="managerId"
+                [(ngModel)]="form.managerId"
+                [disabled]="!!editing()?.reportingTeamId"
+              >
                 <option value="">{{ t('Not set', 'غير محدد') }}</option>
                 @for (e of options().employees; track e.id) {
                   @if (e.status !== 'offboarded' && e.id !== editing()?.id) {
                     <option [value]="e.id">{{ e.name }}</option>
                   }
                 }
-              </select></label
+              </select>
+              @if (editing()?.reportingTeam) {
+                <small class="muted"
+                  >{{ t('Automatically assigned from ', 'يُعيّن تلقائيًا من فريق ')
+                  }}{{ editing().reportingTeam
+                  }}{{
+                    t('. Update team membership to change it.', '. حدّث عضوية الفريق لتغييره.')
+                  }}</small
+                >
+              }</label
             ><label class="field"
               ><span>{{ t('Employment status', 'حالة التوظيف') }}</span
               ><select name="status" [(ngModel)]="form.status">
@@ -358,7 +374,11 @@
               ><span>{{
                 t('Link existing CRM account (optional)', 'ربط حساب نظام موجود (اختياري)')
               }}</span
-              ><select name="userId" [(ngModel)]="form.userId">
+              ><select
+                name="userId"
+                [(ngModel)]="form.userId"
+                [disabled]="!!editing()?.reportingTeamId"
+              >
                 <option value="">{{ t('Not set', 'غير محدد') }}</option>
                 @for (u of options().users; track u.id) {
                   <option [value]="u.id">{{ u.name }} · {{ u.email }}</option>

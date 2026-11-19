@@ -41,7 +41,7 @@
       <nav class="rail">
         @for (s of steps(); track $index; let i = $index) {
           <button type="button" class="rail__step" [class.on]="step() === i" (click)="go(i)">
-            <span class="rail__n" [class.cur]="step() === i" [class.ok]="i < step()">{{
+            <span class="rail__n" [class.cur]="step() === i" [class.complete]="i < step()">{{
               i < step() ? '✓' : i + 1
             }}</span>
             <span class="rail__text"

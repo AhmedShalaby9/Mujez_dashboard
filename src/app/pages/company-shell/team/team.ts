@@ -1,3 +1,4 @@
+import { visibleCompanyRoles } from '../../../company-role-labels';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
@@ -136,8 +137,11 @@ export class Team {
   assignedRoles(m: TeamMember) {
     return m.roles ?? [m.role];
   }
+  visibleRoles(m: TeamMember) {
+    return visibleCompanyRoles(this.assignedRoles(m));
+  }
   roleSummary(m: TeamMember) {
-    return this.assignedRoles(m)
+    return this.visibleRoles(m)
       .map((r) => this.roleNames[r]?.[this.lang()] ?? r)
       .join(' · ');
   }

@@ -109,7 +109,7 @@
                 </td>
                 <td class="soft">
                   <span class="role-badges">
-                    @for (r of assignedRoles(m); track r) {
+                    @for (r of visibleRoles(m); track r) {
                       <span class="role-badge">{{ roleNames[r][lang()] }}</span>
                     }
                   </span>

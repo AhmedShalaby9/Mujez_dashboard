@@ -67,10 +67,15 @@ async function setup() {
 }
 afterEach(() => TestBed.resetTestingModule());
 describe('Multiple company roles', () => {
-  it('shows all assigned role badges and excludes employee-only accounts from sales teams', async () => {
+  it('hides the baseline Employee badge for combined roles while preserving assignments and sales eligibility', async () => {
     const { f, c } = await setup();
     expect(f.nativeElement.textContent).toContain('Employee');
     expect(c.assignedRoles(member)).toEqual(['agent', 'employee']);
+    expect(c.visibleRoles(member)).toEqual(['agent']);
+    expect(c.visibleRoles({ ...member, role: 'employee', roles: ['employee'] })).toEqual([
+      'employee',
+    ]);
+    expect(c.roleSummary(member)).toBe('Sales Agent');
     expect(c.eligible().map((m) => m.userId)).toEqual(['user']);
   });
   it('explicitly saves role selections with the observed version', async () => {

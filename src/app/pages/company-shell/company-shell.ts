@@ -1,3 +1,4 @@
+import { visibleCompanyRoles } from '../../company-role-labels';
 import { NavigationState, RouteSkeleton } from '../../route-skeleton';
 import { NotificationsApi } from '../../notifications-api.service';
 import { AuthService, hasHrAccess, hasLeaveSelf, managesLeave } from '../../auth.service';
@@ -357,7 +358,9 @@ export class CompanyShell {
       ? (ws.platformRoleName?.[this.ui.lang()] ??
         (this.ui.lang() === 'ar' ? 'مدير منصة' : 'Platform Admin'))
       : u?.roles?.length && u.pool === 'company_user'
-        ? u.roles.map((r) => roleLabels[r]?.[this.ui.lang()] ?? r).join(' · ')
+        ? visibleCompanyRoles(u.roles)
+            .map((r) => roleLabels[r]?.[this.ui.lang()] ?? r)
+            .join(' · ')
         : (u?.roleName?.[this.ui.lang()] ??
           roleLabels[u?.role ?? '']?.[this.ui.lang()] ??
           (this.ui.lang() === 'ar' ? 'مستخدم الشركة' : 'Company User'));

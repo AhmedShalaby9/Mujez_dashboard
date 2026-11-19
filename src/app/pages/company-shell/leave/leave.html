@@ -25,8 +25,8 @@
     <p class="note">
       {{
         t(
-          'Annual leave is not configured yet. The company owner or HR Manager must set the annual allowance, weekends and holidays before requests can be submitted.',
-          'لم تُضبط الإجازة السنوية بعد. يجب على مالك الشركة أو مدير الموارد البشرية تحديد الرصيد وأيام العطلة والأعياد قبل تقديم الطلبات.'
+          'Annual leave is not configured yet. The company owner or HR Manager must set the annual allowance and weekend days before requests can be submitted.',
+          'لم تُضبط الإجازة السنوية بعد. يجب على مالك الشركة أو مدير الموارد البشرية تحديد الرصيد وأيام العطلة الأسبوعية قبل تقديم الطلبات.'
         )
       }}
     </p>
@@ -91,7 +91,11 @@
           <p>{{ t('A little room to switch off.', 'مساحة صغيرة لالتقاط الأنفاس.') }}</p>
         </div>
       </div>
-      <div class="holiday-year" [attr.aria-label]="t('Holiday calendar year', 'سنة تقويم العطلات')">
+      <div
+        class="holiday-year"
+        role="group"
+        [attr.aria-label]="t('Holiday calendar year', 'سنة تقويم العطلات')"
+      >
         <button
           type="button"
           [disabled]="busy() || holidayYear() <= 2000"

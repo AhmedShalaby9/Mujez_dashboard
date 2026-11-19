@@ -11,11 +11,9 @@
         {{
           view === 'documents'
             ? t('+ Upload document', '+ رفع مستند')
-            : view === 'onboarding'
-              ? t('+ Add checklist task', '+ إضافة مهمة')
-              : view === 'departments'
-                ? t('+ Add department', '+ إضافة قسم')
-                : t('+ Add employee', '+ إضافة موظف')
+            : view === 'departments'
+              ? t('+ Add department', '+ إضافة قسم')
+              : t('+ Add employee', '+ إضافة موظف')
         }}
       </button>
     </div>
@@ -37,17 +35,9 @@
       <span>{{ t('Active employees', 'الموظفون النشطون') }}</span
       ><strong class="kpi__value">{{ summary().active ?? 0 }}</strong>
     </div>
-    <div class="kpi">
-      <span>{{ t('Onboarding', 'قيد التهيئة') }}</span
-      ><strong class="kpi__value">{{ summary().onboarding ?? 0 }}</strong>
-    </div>
-    <div class="kpi">
-      <span>{{ t('Overdue onboarding tasks', 'مهام تهيئة متأخرة') }}</span
-      ><strong class="kpi__value">{{ summary().overdue ?? 0 }}</strong>
-    </div>
   </div>
   <nav class="tabs" [attr.aria-label]="t('HR pages', 'صفحات الموارد البشرية')">
-    @for (v of ['employees', 'departments', 'documents', 'onboarding']; track v) {
+    @for (v of ['employees', 'departments', 'documents']; track v) {
       <a class="tab" [class.tab--on]="view === v" [routerLink]="'/company/hr/' + v">{{
         t(titles[$any(v)][0], titles[$any(v)][1])
       }}</a>
@@ -82,7 +72,7 @@
         }
       </select>
     }
-    @if (view === 'employees' || view === 'onboarding') {
+    @if (view === 'employees') {
       <select
         class="sel"
         name="status"
@@ -90,12 +80,12 @@
         [attr.aria-label]="t('Filter status', 'تصفية الحالة')"
       >
         <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
-        @for (s of view === 'employees' ? employeeStatuses : taskStatuses; track s) {
+        @for (s of employeeStatuses; track s) {
           <option [value]="s">{{ label(s) }}</option>
         }
       </select>
     }
-    @if (view === 'onboarding' || view === 'documents') {
+    @if (view === 'documents') {
       <select
         class="sel"
         name="employee"
@@ -127,7 +117,6 @@
               <th>{{ t('Department / manager', 'القسم / المدير') }}</th>
               <th>{{ t('Employment', 'التوظيف') }}</th>
               <th>{{ t('CRM access', 'حساب النظام') }}</th>
-              <th>{{ t('Onboarding', 'التهيئة') }}</th>
             }
             @if (view === 'departments') {
               <th>{{ t('Department', 'القسم') }}</th>
@@ -141,13 +130,7 @@
               <th>{{ t('Kind', 'النوع') }}</th>
               <th>{{ t('Expiry', 'الصلاحية') }}</th>
             }
-            @if (view === 'onboarding') {
-              <th>{{ t('Checklist task', 'مهمة التهيئة') }}</th>
-              <th>{{ t('Employee', 'الموظف') }}</th>
-              <th>{{ t('Responsible employee', 'المسؤول') }}</th>
-              <th>{{ t('Due date', 'تاريخ الاستحقاق') }}</th>
-              <th>{{ t('Status', 'الحالة') }}</th>
-            }
+
             <th>{{ t('Actions', 'الإجراءات') }}</th>
           </tr>
         </thead>
@@ -178,11 +161,6 @@
                   @if (row.crmStatus) {
                     <small>{{ label(row.crmStatus) }}</small>
                   }
-                </td>
-                <td>
-                  <a [routerLink]="'/company/hr/onboarding'" [queryParams]="{ employeeId: row.id }"
-                    >{{ row.openTasks }} {{ t('open tasks', 'مهام مفتوحة') }}</a
-                  >
                 </td>
               }
               @if (view === 'departments') {
@@ -218,22 +196,7 @@
                   }
                 </td>
               }
-              @if (view === 'onboarding') {
-                <td>
-                  <strong>{{ row.title }}</strong>
-                </td>
-                <td>{{ row.employee }}</td>
-                <td>{{ row.assignee || t('Not assigned', 'غير مسند') }}</td>
-                <td [class.warning]="row.overdue">
-                  {{ row.dueDate || t('Not set', 'غير محدد') }}
-                  @if (row.overdue) {
-                    <small>{{ t('Overdue', 'متأخر') }}</small>
-                  }
-                </td>
-                <td>
-                  <span class="badge">{{ label(row.status) }}</span>
-                </td>
-              }
+
               <td>
                 <div class="row-actions">
                   @if (view === 'documents') {
@@ -408,8 +371,8 @@
             <p class="muted wide">
               {{
                 t(
-                  'Adding an employee does not create a login or send an invitation. A new employee receives an editable onboarding checklist.',
-                  'إضافة موظف لا تنشئ حساب دخول ولا ترسل دعوة. تُنشأ قائمة تهيئة قابلة للتعديل للموظف الجديد.'
+                  'Adding an employee does not create a login or send an invitation. Link an existing login account to enable My leave.',
+                  'إضافة موظف لا تنشئ حساب دخول ولا ترسل دعوة. اربط حسابًا موجودًا لإتاحة إجازاتي.'
                 )
               }}
             </p>
@@ -440,7 +403,7 @@
               }}</label
             >
           }
-          @if (view === 'documents' || view === 'onboarding') {
+          @if (view === 'documents') {
             <label class="field"
               ><span>{{ t('Employee', 'الموظف') }}</span
               ><select name="employeeId" [(ngModel)]="form.employeeId" required>
@@ -479,29 +442,6 @@
                 required
                 (change)="selectFile($event)"
             /></label>
-          }
-          @if (view === 'onboarding') {
-            <label class="field"
-              ><span>{{ t('Responsible employee', 'الموظف المسؤول') }}</span
-              ><select name="assigneeId" [(ngModel)]="form.assigneeId">
-                <option value="">{{ t('Not set', 'غير محدد') }}</option>
-                @for (e of options().employees; track e.id) {
-                  @if (e.status !== 'offboarded') {
-                    <option [value]="e.id">{{ e.name }}</option>
-                  }
-                }
-              </select></label
-            ><label class="field"
-              ><span>{{ t('Due date', 'تاريخ الاستحقاق') }}</span
-              ><input name="dueDate" [(ngModel)]="form.dueDate" type="date" /></label
-            ><label class="field"
-              ><span>{{ t('Task status', 'حالة المهمة') }}</span
-              ><select name="status" [(ngModel)]="form.status">
-                @for (s of taskStatuses; track s) {
-                  <option [value]="s">{{ label(s) }}</option>
-                }
-              </select></label
-            >
           }
         </fieldset>
       </div>

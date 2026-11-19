@@ -221,8 +221,8 @@ export const routes: Routes = [
       },
       {
         path: 'hr/onboarding',
-        data: { hrAccess: true, hrView: 'onboarding' },
-        loadComponent: () => import('./pages/company-shell/hr/hr').then((m) => m.Hr),
+        redirectTo: 'hr/employees',
+        pathMatch: 'full',
       },
       {
         path: 'dashboard',

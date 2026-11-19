@@ -108,7 +108,6 @@ describe('HR-role navigation and boundaries', () => {
       '/company/hr/employees',
       '/company/hr/departments',
       '/company/hr/documents',
-      '/company/hr/onboarding',
     ]);
     expect(f.componentInstance.me.role).toBe('HR Officer');
   });

@@ -47,7 +47,6 @@ export class Leave {
   employeeFilter = '';
   form: any = {};
   policyForm: any = {};
-  holidayText = '';
   file: File | null = null;
   selected: any = null;
   created: any = null;
@@ -116,7 +115,10 @@ export class Leave {
     try {
       const [ctx, policy, options] = await Promise.all([
         this.auth.request('/api/v1/leave/context'),
-        this.auth.request('/api/v1/leave/policy'),
+        this.auth.request(
+          '/api/v1/leave/policy?year=' +
+            (this.tab() === 'calendar' ? this.month.slice(0, 4) : this.year),
+        ),
         this.auth.request('/api/v1/leave/options'),
       ]);
       if (!this.initialized) {
@@ -134,7 +136,6 @@ export class Leave {
         carryLimitDays: policy.carryLimitDays,
         carryExpiry: policy.carryExpiry,
       };
-      this.holidayText = policy.holidays.map((h: any) => h.date + ' | ' + h.name).join('\n');
       const q = new URLSearchParams({
         view: this.mode,
         year: String(this.year),
@@ -181,11 +182,29 @@ export class Leave {
     this.page.update((p) => p + delta);
     await this.reload();
   }
+  readonly requestHolidays = signal<any>(null);
+  async loadRequestHolidays() {
+    this.requestHolidays.set(null);
+    if (!this.form.startDate) return;
+    try {
+      this.requestHolidays.set(
+        await this.auth.request('/api/v1/leave/policy?year=' + this.form.startDate.slice(0, 4)),
+      );
+    } catch (e) {
+      this.formError.set(this.message(e));
+    }
+  }
   previewDays() {
-    if (!this.form.startDate || !this.form.endDate || !this.policy()) return 0;
+    if (
+      !this.form.startDate ||
+      !this.form.endDate ||
+      !this.requestHolidays()?.available ||
+      this.requestHolidays()?.year !== Number(this.form.startDate.slice(0, 4))
+    )
+      return 0;
     let count = 0,
       iterations = 0;
-    const holidays = new Set(this.policy().holidays.map((h: any) => h.date));
+    const holidays = new Set(this.requestHolidays().holidays.map((h: any) => h.date));
     for (
       let x = Date.parse(this.form.startDate + 'T00:00:00Z'),
         end = Date.parse(this.form.endDate + 'T00:00:00Z');
@@ -227,6 +246,7 @@ export class Leave {
     return Array.from({ length: 6 }, (_, i) => cells.slice(i * 7, i * 7 + 7));
   }
   openRequest() {
+    this.requestHolidays.set(null);
     this.form = {
       employeeId: this.mode === 'my' ? this.context()?.self?.id || '' : '',
       startDate: '',
@@ -375,18 +395,9 @@ export class Leave {
     this.saving.set(true);
     this.error.set('');
     try {
-      const holidays = this.holidayText
-        .split('\n')
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .map((line) => {
-          const [date, ...name] = line.split('|');
-          return { date: date.trim(), name: name.join('|').trim() };
-        });
       await this.auth.request('/api/v1/leave/policy', {
         requestId: crypto.randomUUID(),
         ...this.policyForm,
-        holidays,
       });
       this.notice.set(
         this.t(

@@ -4,7 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../auth.service';
 import { RUNTIME_CONFIG } from '../../../runtime-config';
 import { CompanyUiState } from '../company-ui-state';
-type View = 'employees' | 'departments' | 'documents' | 'onboarding';
+type View = 'employees' | 'departments' | 'documents';
 @Component({
   selector: 'app-hr',
   imports: [FormsModule, RouterLink],
@@ -32,7 +32,6 @@ export class Hr {
     employees: ['Employees', 'الموظفون'],
     departments: ['Departments', 'الأقسام'],
     documents: ['Employee documents', 'مستندات الموظفين'],
-    onboarding: ['Employee onboarding', 'تهيئة الموظفين'],
   };
   readonly items = signal<any[]>([]);
   readonly options = signal<any>({ employees: [], departments: [], users: [] });
@@ -53,10 +52,9 @@ export class Hr {
   archived = false;
   form: any = {};
   file: File | null = null;
-  readonly employeeStatuses = ['onboarding', 'active', 'on_leave', 'offboarded'];
+  readonly employeeStatuses = ['active', 'on_leave', 'offboarded'];
   readonly types = ['full_time', 'part_time', 'contract', 'intern'];
   readonly kinds = ['contract', 'identity', 'certificate', 'other'];
-  readonly taskStatuses = ['open', 'done', 'cancelled'];
   constructor() {
     this.employeeId = this.route.snapshot.queryParamMap.get('employeeId') || '';
     void this.reload();
@@ -66,7 +64,6 @@ export class Hr {
   }
   label(s: string) {
     const labels: Record<string, string> = {
-      onboarding: 'قيد التهيئة',
       active: 'نشط',
       on_leave: 'في إجازة',
       offboarded: 'انتهت الخدمة',
@@ -143,7 +140,7 @@ export class Hr {
         userId = '',
         workLocation = '',
         employmentType = 'full_time',
-        status = 'onboarding',
+        status = 'active',
         joiningDate = '',
         endDate = '',
         notes = '',
@@ -169,14 +166,6 @@ export class Hr {
         name: row?.name || '',
         description: row?.description || '',
         archived: row?.archived || false,
-      };
-    } else if (this.view === 'onboarding') {
-      this.form = {
-        employeeId: row?.employeeId || this.employeeId,
-        title: row?.title || '',
-        assigneeId: row?.assigneeId || '',
-        dueDate: row?.dueDate || '',
-        status: row?.status || 'open',
       };
     } else {
       this.form = { employeeId: this.employeeId, title: '', kind: 'contract', expiresDate: '' };
@@ -232,10 +221,7 @@ export class Hr {
         for (const k of ['departmentId', 'managerId', 'userId', 'joiningDate', 'endDate', 'email'])
           b[k] = b[k] || null;
       }
-      if (this.view === 'onboarding') {
-        b.assigneeId = b.assigneeId || null;
-        b.dueDate = b.dueDate || null;
-      }
+
       if (this.view === 'documents') {
         if (!this.file)
           throw new Error(this.t('Choose a document to upload.', 'اختر مستندًا للرفع.'));

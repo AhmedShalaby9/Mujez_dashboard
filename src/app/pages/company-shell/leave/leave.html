@@ -67,6 +67,39 @@
       {{ t('Expired unused carryover', 'ترحيل غير مستخدم منتهي') }}: {{ b.expiredCarryDays }}
     </p>
   }
+  <section class="note">
+    <strong>{{ t('Egypt public holidays', 'العطلات الرسمية في مصر') }}</strong>
+    <p>
+      {{
+        t(
+          'Imported automatically from Nager.Date. Future-year dates may be incomplete, especially Eid, until the provider updates them.',
+          'تُجلب تلقائيًا من Nager.Date. قد تكون تواريخ السنوات القادمة غير مكتملة، خصوصًا العيدين، حتى يحدّثها المصدر.'
+        )
+      }}
+    </p>
+    <p>
+      {{ policy()?.year }} · {{ policy()?.holidays?.length || 0 }} {{ t('holidays', 'عطلة') }} ·
+      {{ t('Last updated', 'آخر تحديث') }}:
+      {{ policy()?.fetchedAt || t('Not available', 'غير متاح') }}
+    </p>
+    @if (policy()?.stale) {
+      <p role="alert">
+        {{
+          t(
+            'Holiday updates are temporarily unavailable. Leave submission and final approval require current holiday data.',
+            'تحديث العطلات غير متاح مؤقتًا. تقديم الطلبات واعتمادها النهائي يتطلب بيانات عطلات حديثة.'
+          )
+        }}
+      </p>
+    }
+    @if (tab() === 'policy') {
+      <ul>
+        @for (h of policy()?.holidays || []; track h.date) {
+          <li>{{ h.date }} — {{ t(h.name, h.localName || h.name) }}</li>
+        }
+      </ul>
+    }
+  </section>
   <div class="tools">
     <nav class="tabs" [attr.aria-label]="t('Leave views', 'طرق عرض الإجازات')">
       <button class="tab" [class.tab--on]="tab() === 'requests'" (click)="switchTab('requests')">
@@ -86,7 +119,7 @@
         </button>
       }
     </nav>
-    @if (tab() === 'requests' || tab() === 'balances') {
+    @if (tab() === 'requests' || tab() === 'balances' || tab() === 'policy') {
       <label class="filter"
         >{{ t('Leave year', 'سنة الإجازة')
         }}<input type="number" [(ngModel)]="year" min="2000" max="2200" (change)="reload(true)"
@@ -431,21 +464,8 @@
             [(ngModel)]="policyForm.carryExpiry"
             placeholder="03-31"
             pattern="[0-9]{2}-[0-9]{2}"
-            required /></label
-        ><label class="field wide"
-          ><span>{{
-            t(
-              'Public holidays: one YYYY-MM-DD | Name per line',
-              'الأعياد: كل سطر بصيغة YYYY-MM-DD | الاسم'
-            )
-          }}</span
-          ><textarea
-            name="holidays"
-            [(ngModel)]="holidayText"
-            rows="7"
-            placeholder="2027-01-07 | Public holiday"
-          ></textarea>
-        </label>
+            required
+        /></label>
       </fieldset>
       @if (context()?.canFinalize) {
         <button class="btn btn--dark" type="submit" [disabled]="saving()">
@@ -525,6 +545,7 @@
                 type="date"
                 name="startDate"
                 [(ngModel)]="form.startDate"
+                (change)="loadRequestHolidays()"
                 [min]="context()?.today"
                 required /></label
             ><label class="field"
@@ -552,7 +573,12 @@
               ></textarea>
             </label>
             <p class="muted wide">
-              {{ t('Estimated working days', 'أيام العمل المقدّرة') }}: {{ previewDays() }}.
+              {{ t('Estimated working days', 'أيام العمل المقدّرة') }}:
+              {{
+                requestHolidays()?.available
+                  ? previewDays()
+                  : t('Choose dates to load holidays', 'اختر التواريخ لجلب العطلات')
+              }}.
               {{
                 t(
                   'Weekends and public holidays are excluded.',
@@ -660,7 +686,16 @@
           {{ t('Close', 'إغلاق') }}
         </button>
         @if (modal() !== 'history') {
-          <button class="btn btn--dark" type="submit" [disabled]="saving()">
+          <button
+            class="btn btn--dark"
+            type="submit"
+            [disabled]="
+              saving() ||
+              (modal() === 'request' &&
+                !created &&
+                (!requestHolidays()?.available || requestHolidays()?.stale))
+            "
+          >
             {{
               saving()
                 ? t('Saving…', 'جارٍ الحفظ…')

@@ -19,6 +19,11 @@ const ctx = {
 };
 const policy = {
   configured: true,
+  available: true,
+  stale: false,
+  year,
+  source: 'Nager.Date',
+  fetchedAt: today,
   annualDays: 20,
   weekends: [5, 6],
   holidays: [],
@@ -150,6 +155,19 @@ describe('Annual leave workspace', () => {
     expect(request.mock.calls.some(([path, b]) => path === '/api/v1/leave/policy' && !!b)).toBe(
       false,
     );
+  });
+  it('loads holidays for the chosen year and never submits a manual holiday list', async () => {
+    const { c, f, request } = await setup('manage', { isHr: true, canFinalize: true });
+    await c.switchTab('policy');
+    f.detectChanges();
+    expect(f.nativeElement.textContent).toContain('Imported automatically from Nager.Date');
+    expect(f.nativeElement.querySelector('textarea[name="holidays"]')).toBeNull();
+    await c.savePolicy();
+    const body = request.mock.calls.find(([path, b]) => path === '/api/v1/leave/policy' && b)?.[1];
+    expect(body.holidays).toBeUndefined();
+    c.form.startDate = '2027-01-07';
+    await c.loadRequestHolidays();
+    expect(request).toHaveBeenCalledWith('/api/v1/leave/policy?year=2027');
   });
   it('keeps Employee leave separate from HR administration and routes self-only accounts to My leave', () => {
     const employee = {

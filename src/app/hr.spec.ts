@@ -89,22 +89,12 @@ describe('HR workspace', () => {
     expect(c.open()).toBe(true);
     expect(c.formError()).toContain('already used');
   });
-  it('sends employee checklist filters and task version for updates', async () => {
-    const { c, request } = await setup('onboarding', 'person');
-    expect(request.mock.calls[0][0]).toContain('employeeId=person');
-    c.show({ id: 'task', employeeId: 'person', title: 'Orientation', status: 'open', version: 4 });
-    c.form.status = 'done';
-    await c.save();
-    expect(request).toHaveBeenCalledWith(
-      '/api/v1/hr/onboarding/task',
-      expect.objectContaining({
-        employeeId: 'person',
-        version: 4,
-        status: 'done',
-        assigneeId: null,
-        dueDate: null,
-      }),
-    );
+  it('removes employee onboarding and defaults new staff to active', async () => {
+    const { c, f } = await setup('employees');
+    expect(f.nativeElement.textContent).not.toContain('Onboarding');
+    expect(f.nativeElement.querySelector('a[href="/company/hr/onboarding"]')).toBeNull();
+    c.show();
+    expect(c.form.status).toBe('active');
   });
   it('uploads private files as multipart and validates missing file before network', async () => {
     const { c, request } = await setup('documents');

@@ -191,7 +191,6 @@ describe('Company navigation redesign', () => {
       '/company/hr/employees',
       '/company/hr/departments',
       '/company/hr/documents',
-      '/company/hr/onboarding',
     ];
     const paths = () =>
       [...f.nativeElement.querySelectorAll('.sidebar__item')].map((a: any) =>

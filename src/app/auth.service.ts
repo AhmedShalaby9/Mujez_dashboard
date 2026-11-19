@@ -13,7 +13,13 @@ export interface User {
   pool: string;
   mustChangePassword?: boolean;
   companyId?: string;
-  company?: { id: string; slug: string; name: { en: string; ar: string }; status: string };
+  company?: {
+    id: string;
+    slug: string;
+    name: { en: string; ar: string };
+    status: string;
+    hrEnabled?: boolean;
+  };
   /** Present only when this session is a platform admin inside a controlled workspace session. */
   workspace?: {
     sessionId: string;
@@ -32,9 +38,12 @@ export interface User {
     };
   };
 }
+export function hrModuleEnabled(u: User | null | undefined) {
+  return !!u && u.company?.hrEnabled !== false;
+}
 /** HR company access is an explicit module grant; CRM scope stays personal. */
 export function hasHrAccess(u: User | null | undefined) {
-  if (!u || u.workspace) return false;
+  if (!u || u.workspace || !hrModuleEnabled(u)) return false;
   if (u.pool === 'company_admin' && u.role === 'company_owner')
     return u.permissions.includes('workspace.view');
   return (
@@ -46,6 +55,7 @@ export function hasHrAccess(u: User | null | undefined) {
 export function hasLeaveSelf(u: User | null | undefined) {
   return (
     !!u &&
+    hrModuleEnabled(u) &&
     !u.workspace &&
     u.pool === 'company_user' &&
     (u.roles ?? [u.role]).includes('employee') &&
@@ -171,6 +181,8 @@ export const companyGuard: CanActivateFn = async (route) => {
     u?.permissions.includes('workspace.view');
   const isWorkspace = u?.pool === 'company_admin' && !!u?.workspace;
   const isEmployee = u?.pool === 'company_user';
+  if ((route.data['hrAccess'] || route.data['leaveView']) && !hrModuleEnabled(u))
+    return router.createUrlTree(['/company/dashboard']);
   if (route.data['leaveView'] === 'manage' && !managesLeave(u))
     return router.createUrlTree(['/company/dashboard']);
   if (route.data['leaveView'] === 'my' && !hasLeaveSelf(u) && !isOwner)

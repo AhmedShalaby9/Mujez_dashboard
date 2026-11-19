@@ -1,7 +1,13 @@
 import { visibleCompanyRoles } from '../../company-role-labels';
 import { NavigationState, RouteSkeleton } from '../../route-skeleton';
 import { NotificationsApi } from '../../notifications-api.service';
-import { AuthService, hasHrAccess, hasLeaveSelf, managesLeave } from '../../auth.service';
+import {
+  AuthService,
+  hrModuleEnabled,
+  hasHrAccess,
+  hasLeaveSelf,
+  managesLeave,
+} from '../../auth.service';
 import { Router } from '@angular/router';
 import {
   Component,
@@ -303,6 +309,11 @@ export class CompanyShell {
     const canSee = (item: NavItem) => {
       const u = this.auth.user();
       if (
+        (item.path.startsWith('hr/') || ['my-leave', 'leave-approvals'].includes(item.path)) &&
+        !hrModuleEnabled(u)
+      )
+        return false;
+      if (
         item.path === 'ai-analytics' &&
         (u?.pool !== 'company_admin' || u?.role !== 'company_owner' || u?.workspace)
       )
@@ -511,7 +522,10 @@ export class CompanyShell {
   private readonly navCleanup = inject(DestroyRef).onDestroy(() => this.navSub.unsubscribe());
   async loadLeaveContext() {
     try {
-      if (this.auth.user()?.workspace) return;
+      if (this.auth.user()?.workspace || !hrModuleEnabled(this.auth.user())) {
+        this.leaveContext.set(null);
+        return;
+      }
       this.leaveContext.set(await this.auth.request('/api/v1/leave/context'));
     } catch {
       this.leaveContext.set(null);

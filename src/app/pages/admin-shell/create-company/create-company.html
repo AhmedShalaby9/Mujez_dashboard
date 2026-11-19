@@ -483,11 +483,31 @@
               </button>
             }
             @case (4) {
+              <button
+                type="button"
+                class="feat"
+                role="switch"
+                [attr.aria-checked]="f().hrEnabled"
+                aria-label="HR module"
+                (click)="set('hrEnabled', !f().hrEnabled)"
+              >
+                <span class="feat__text"
+                  ><b>{{ t('HR module', 'وحدة الموارد البشرية') }}</b>
+                  <small>{{
+                    t(
+                      'Employees, departments, documents and leave. Optional for this company.',
+                      'الموظفون والأقسام والمستندات والإجازات. اختيارية لهذه الشركة.'
+                    )
+                  }}</small>
+                </span>
+                <span class="tog" [class.on]="f().hrEnabled"><span></span></span>
+              </button>
+
               <p class="note note--warn">
                 {{
                   t(
-                    'Preview of module access for this plan. Per-company feature changes at creation are not saved yet — use Feature management afterwards.',
-                    'معاينة لوحدات هذه الباقة. تغييرات الميزات لكل شركة عند الإنشاء لا تُحفظ بعد — استخدم إدارة الميزات لاحقًا.'
+                    'HR access is saved for this company. Other module toggles below are a plan preview; use Feature management for changes.',
+                    'يتم حفظ تفعيل الموارد البشرية لهذه الشركة. بقية الوحدات أدناه معاينة للباقة؛ استخدم إدارة الميزات لتغييرها.'
                   )
                 }}
               </p>
@@ -575,8 +595,8 @@
                   <p class="muted">
                     {{
                       t(
-                        'Start dates, discounts, other currencies, custom limits and module overrides are pending. Company details, administrator details, cycle and payment method are saved. No free trial is offered.',
-                        'يتم حفظ بيانات الشركة والمدير ودورة الفوترة وطريقة الدفع. تواريخ البدء والخصومات والعملات الأخرى والحدود والميزات المخصصة قيد التطوير. لا توجد تجربة مجانية.'
+                        'Start dates, discounts, other currencies, custom limits and other module overrides are pending. Company details, administrator details, HR access, cycle and payment method are saved. No free trial is offered.',
+                        'يتم حفظ بيانات الشركة والمدير وتفعيل الموارد البشرية ودورة الفوترة وطريقة الدفع. تواريخ البدء والخصومات والعملات الأخرى والحدود وبقية الميزات المخصصة قيد التطوير. لا توجد تجربة مجانية.'
                       )
                     }}
                   </p>

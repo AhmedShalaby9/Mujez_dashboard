@@ -423,6 +423,18 @@
           </div>
         }
         <div class="kv">
+          <span>{{ lang() === 'ar' ? 'وحدة الموارد البشرية' : 'HR module' }}</span>
+          <b>{{
+            c.hrEnabled !== false
+              ? lang() === 'ar'
+                ? 'مفعّلة'
+                : 'Enabled'
+              : lang() === 'ar'
+                ? 'معطّلة'
+                : 'Disabled'
+          }}</b>
+        </div>
+        <div class="kv">
           <span>{{ L().drawerFields.created }}</span
           ><b>{{ date(c.createdAt) }}</b>
         </div>
@@ -911,6 +923,18 @@
           }
         </select></label
       >
+      <label class="field">
+        <span>{{ lang() === 'ar' ? 'وحدة الموارد البشرية' : 'HR module' }}</span>
+        <select name="hrEnabled" [(ngModel)]="draft.hrEnabled">
+          <option [ngValue]="false">{{ lang() === 'ar' ? 'معطّلة' : 'Disabled' }}</option>
+          <option [ngValue]="true">{{ lang() === 'ar' ? 'مفعّلة' : 'Enabled' }}</option>
+        </select>
+        <small>{{
+          lang() === 'ar'
+            ? 'الموظفون والأقسام والمستندات والإجازات. لا يؤثر على صلاحيات CRM.'
+            : 'Employees, departments, documents and leave. CRM access is unchanged.'
+        }}</small>
+      </label>
       <p class="muted">
         @if (!editing()) {
           {{

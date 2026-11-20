@@ -153,6 +153,7 @@ describe('Company navigation redesign', () => {
         [
           'dashboard',
           ...pages,
+          'my-finance',
           'developers',
           'compounds',
           'units',
@@ -186,6 +187,16 @@ describe('Company navigation redesign', () => {
     }).compileComponents();
     const f = TestBed.createComponent(CompanyShell);
     f.detectChanges();
+    const financePaths = [
+      '/company/finance',
+      '/company/finance/journals',
+      '/company/finance/treasury',
+      '/company/finance/receivables-payables',
+      '/company/finance/commissions',
+      '/company/finance/expenses',
+      '/company/finance/reports',
+      '/company/finance/settings',
+    ];
     const hrPaths = [
       '/company/hr/assets',
       '/company/hr/salary-advances',
@@ -200,20 +211,32 @@ describe('Company navigation redesign', () => {
       [...f.nativeElement.querySelectorAll('.sidebar__item')].map((a: any) =>
         a.getAttribute('href'),
       );
-    expect(paths()).toEqual(['/company/dashboard', '/company/leads', '/company/tasks', ...hrPaths]);
+    expect(paths()).toEqual([
+      '/company/dashboard',
+      '/company/leads',
+      '/company/tasks',
+      ...financePaths,
+      ...hrPaths,
+    ]);
     f.nativeElement.querySelector('.sidebar__groupLabel').click();
     f.detectChanges();
-    expect(paths()).toEqual(hrPaths);
+    expect(paths()).toEqual([...financePaths, ...hrPaths]);
     f.componentInstance.collapsed.set(true);
     f.detectChanges();
-    expect(paths()).toEqual(['/company/dashboard', '/company/leads', '/company/tasks', ...hrPaths]);
+    expect(paths()).toEqual([
+      '/company/dashboard',
+      '/company/leads',
+      '/company/tasks',
+      ...financePaths,
+      ...hrPaths,
+    ]);
     expect(f.nativeElement.querySelector('.sidebar__item').getAttribute('aria-label')).toBe(
       'Dashboard',
     );
     expect(f.nativeElement.querySelector('.sidebar__itemLabel')).toBeNull();
     user.set({ ...owner, permissions: ['workspace.view'] });
     f.detectChanges();
-    expect(paths()).toEqual(['/company/dashboard', ...hrPaths]);
+    expect(paths()).toEqual(['/company/dashboard', ...financePaths, ...hrPaths]);
   });
   it('uses expanded navigation on mobile even after collapsing it on desktop', async () => {
     await TestBed.configureTestingModule({

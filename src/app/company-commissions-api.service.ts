@@ -19,6 +19,7 @@ export interface CompanyCommission {
   }>;
   status: 'calculated' | 'approved' | 'payable' | 'paid' | 'canceled';
   forecast: boolean;
+  accountingManaged?: boolean;
   needsRecalculation: boolean;
   version: number;
   sample: boolean;

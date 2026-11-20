@@ -49,6 +49,7 @@ export function employeeArea(u: User | null | undefined) {
 }
 export function companyHomePath(u: User | null | undefined) {
   if (u?.pool === 'company_user' && !u.permissions.includes('leads.read')) {
+    if (hasAccountingAccess(u)) return '/company/finance';
     if (hasHrAccess(u)) return '/company/hr/employees';
     if (employeeArea(u)) return '/company/employee';
   }
@@ -63,6 +64,25 @@ export function hasHrAccess(u: User | null | undefined) {
     u.pool === 'company_user' &&
     u.permissions.includes('hr.read') &&
     (u.roles ?? [u.role]).some((r) => r === 'hr_manager' || r === 'hr_officer')
+  );
+}
+export function hasAccountingAccess(u: User | null | undefined, permission = 'finance.read') {
+  if (!u || u.workspace) return false;
+  if (u.pool === 'company_admin' && u.role === 'company_owner')
+    return u.permissions.includes('workspace.view');
+  return (
+    u.pool === 'company_user' &&
+    (u.roles ?? [u.role]).some((r) => r === 'accountant' || r === 'finance_manager') &&
+    u.permissions.includes(permission)
+  );
+}
+export function hasAccountingSelf(u: User | null | undefined) {
+  return (
+    !!u &&
+    !u.workspace &&
+    u.pool === 'company_user' &&
+    (u.roles ?? [u.role]).some((r) => r === 'agent' || r === 'team_lead') &&
+    u.permissions.includes('commissions.read')
   );
 }
 export function hasFinanceAccess(u: User | null | undefined) {
@@ -199,6 +219,11 @@ export const companyGuard: CanActivateFn = async (route) => {
     u?.permissions.includes('workspace.view');
   const isWorkspace = u?.pool === 'company_admin' && !!u?.workspace;
   const isEmployee = u?.pool === 'company_user';
+  if (
+    route.data['accountingView'] &&
+    !(route.data['accountingView'] === 'self' ? hasAccountingSelf(u) : hasAccountingAccess(u))
+  )
+    return router.parseUrl(companyHomePath(u));
   if (route.data['employeeView'] && !employeeArea(u)) return router.parseUrl(companyHomePath(u));
   if (route.data['crmView'] && !hasCrmWorkspace(u)) return router.parseUrl(companyHomePath(u));
   if (

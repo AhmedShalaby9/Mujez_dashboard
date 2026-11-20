@@ -1,3 +1,4 @@
+import { hasAccountingAccess, hasAccountingSelf } from '../../auth.service';
 import { hasFinanceAccess } from '../../auth.service';
 import { visibleCompanyRoles } from '../../company-role-labels';
 import { NavigationState, RouteSkeleton } from '../../route-skeleton';
@@ -87,6 +88,15 @@ const COMPANY_ICONS: Record<string, string> = {
   compounds: 'M3 10l9-7 9 7M5 9v12h14V9M9 21v-7h6v7',
   units: 'M3 10l9-7 9 7M5 9v12h14V9M9 21v-7h6v7',
   reservations: 'M5 3h14v18l-7-4-7 4zM9 8h6M9 12h6',
+  finance: 'M3 5h18v16H3zM7 9h3M7 13h10M7 17h10',
+  'finance/settings': 'M3 5h18v16H3zM7 9h3M7 13h10M7 17h10',
+  'finance/journals': 'M3 5h18v16H3zM7 9h3M7 13h10M7 17h10',
+  'finance/treasury': 'M3 6h18v12H3zM12 9v6',
+  'finance/receivables-payables': 'M5 3h14v18H5zM8 8h8M8 12h8M8 16h5',
+  'finance/commissions': 'M12 3v18M6 8h12M6 16h12',
+  'finance/expenses': 'M4 5h16v16H4zM8 9h8M8 13h8M8 17h5',
+  'finance/reports': 'M4 21V3M4 21h17M8 17V9M13 17V5M18 17v-6',
+  'my-finance': 'M5 3h14v18H5zM8 8h8M8 12h8',
   contracts: 'M5 3h10l4 4v14H5zM9 8h3M9 12h6M9 16h6',
   commissions: 'M12 3v18M17 7c-1-2-9-2-9 2s8 2 8 6-8 4-10 1',
   documents: 'M5 3h9l5 5v13H5zM14 3v6h5M9 13h6M9 17h6',
@@ -154,6 +164,15 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Units', path: 'units' },
   { kind: 'item', label: 'Reservations', path: 'reservations' },
   { kind: 'head', label: 'Finance' },
+  { kind: 'item', label: 'Finance overview', path: 'finance' },
+  { kind: 'item', label: 'Journal entries', path: 'finance/journals' },
+  { kind: 'item', label: 'Cash & banks', path: 'finance/treasury' },
+  { kind: 'item', label: 'Receivables & payables', path: 'finance/receivables-payables' },
+  { kind: 'item', label: 'Commission accounting', path: 'finance/commissions' },
+  { kind: 'item', label: 'Expenses & cash custody', path: 'finance/expenses' },
+  { kind: 'item', label: 'Financial reports', path: 'finance/reports' },
+  { kind: 'item', label: 'Finance settings', path: 'finance/settings' },
+  { kind: 'item', label: 'My financial statement', path: 'my-finance' },
   { kind: 'item', label: 'Contracts', path: 'contracts' },
   { kind: 'item', label: 'Commissions', path: 'commissions' },
   { kind: 'item', label: 'Documents', path: 'documents' },
@@ -198,6 +217,15 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'الوحدات', path: 'units' },
   { kind: 'item', label: 'الحجوزات', path: 'reservations' },
   { kind: 'head', label: 'الفوترة' },
+  { kind: 'item', label: 'نظرة مالية عامة', path: 'finance' },
+  { kind: 'item', label: 'القيود اليومية', path: 'finance/journals' },
+  { kind: 'item', label: 'الخزينة والبنوك', path: 'finance/treasury' },
+  { kind: 'item', label: 'المستحقات والالتزامات', path: 'finance/receivables-payables' },
+  { kind: 'item', label: 'محاسبة العمولات', path: 'finance/commissions' },
+  { kind: 'item', label: 'المصروفات والعهد النقدية', path: 'finance/expenses' },
+  { kind: 'item', label: 'التقارير المالية', path: 'finance/reports' },
+  { kind: 'item', label: 'إعدادات الحسابات', path: 'finance/settings' },
+  { kind: 'item', label: 'كشف حسابي', path: 'my-finance' },
   { kind: 'item', label: 'العقود', path: 'contracts' },
   { kind: 'item', label: 'العمولات', path: 'commissions' },
   { kind: 'item', label: 'المستندات', path: 'documents' },
@@ -339,6 +367,9 @@ export class CompanyShell {
     const kept: NavEntry[] = [];
     const canSee = (item: NavItem) => {
       const u = this.auth.user();
+      if (item.path === 'finance' || item.path.startsWith('finance/'))
+        return hasAccountingAccess(u);
+      if (item.path === 'my-finance') return hasAccountingSelf(u);
       if (item.path === 'dashboard') return hasCrmWorkspace(u);
       if (item.path === 'employee') return employeeArea(u);
       if (
@@ -406,6 +437,8 @@ export class CompanyShell {
       employee: { en: 'Employee', ar: 'موظف' },
       hr_officer: { en: 'HR Officer', ar: 'مسؤول الموارد البشرية' },
       hr_manager: { en: 'HR Manager', ar: 'مدير الموارد البشرية' },
+      accountant: { en: 'Accountant', ar: 'محاسب' },
+      finance_manager: { en: 'Finance Manager', ar: 'مدير مالي' },
       payroll_officer: { en: 'Payroll Officer', ar: 'مسؤول الرواتب' },
     };
     const role = ws

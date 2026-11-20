@@ -7,6 +7,8 @@ export const TEAM_ROLES = [
   'hr_officer',
   'hr_manager',
   'payroll_officer',
+  'accountant',
+  'finance_manager',
 ] as const;
 export type TeamRole = (typeof TEAM_ROLES)[number];
 export interface TeamMember {

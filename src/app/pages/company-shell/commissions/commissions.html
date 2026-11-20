@@ -232,7 +232,7 @@
         }
 
         <div class="p-acts">
-          @if (canManage()) {
+          @if (canManage() && !c.accountingManaged) {
             @if (['calculated', 'approved', 'payable'].includes(c.status)) {
               <button
                 type="button"
@@ -253,18 +253,24 @@
               </button>
             }
           }
-          <button
-            type="button"
+          <a
             class="btn btn--sm"
-            (click)="
-              soon(
-                t('Commission statements are not available yet.', 'كشوف العمولات غير متاحة بعد.')
-              )
+            [routerLink]="
+              auth.user()?.pool === 'company_admin'
+                ? '/company/finance/commissions'
+                : '/company/my-finance'
             "
+            >{{
+              c.accountingManaged
+                ? t('View accounting settlements', 'عرض التسويات المحاسبية')
+                : t('Financial statements', 'الكشوف المالية')
+            }}</a
           >
-            {{ t('Statement PDF', 'كشف PDF') }}<i class="soon">{{ t('Soon', 'قريبًا') }}</i>
-          </button>
-          @if (canManage() && ['calculated', 'approved', 'payable'].includes(c.status)) {
+          @if (
+            canManage() &&
+            !c.accountingManaged &&
+            ['calculated', 'approved', 'payable'].includes(c.status)
+          ) {
             <button type="button" class="btn btn--sm btn--badText" (click)="advance(c, 'cancel')">
               {{ t('Cancel', 'إلغاء') }}
             </button>

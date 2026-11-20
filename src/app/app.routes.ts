@@ -202,6 +202,60 @@ export const routes: Routes = [
           import('./pages/company-shell/employee/employee').then((m) => m.Employee),
       },
       {
+        path: 'finance',
+        data: { accountingView: 'overview' },
+        loadComponent: () =>
+          import('./pages/company-shell/accounting/accounting').then((m) => m.Accounting),
+      },
+      {
+        path: 'finance/settings',
+        data: { accountingView: 'settings' },
+        loadComponent: () =>
+          import('./pages/company-shell/accounting/accounting').then((m) => m.Accounting),
+      },
+      {
+        path: 'finance/journals',
+        data: { accountingView: 'journals' },
+        loadComponent: () =>
+          import('./pages/company-shell/accounting/accounting').then((m) => m.Accounting),
+      },
+      {
+        path: 'finance/treasury',
+        data: { accountingView: 'treasury' },
+        loadComponent: () =>
+          import('./pages/company-shell/accounting/accounting').then((m) => m.Accounting),
+      },
+      {
+        path: 'finance/receivables-payables',
+        data: { accountingView: 'obligations' },
+        loadComponent: () =>
+          import('./pages/company-shell/accounting/accounting').then((m) => m.Accounting),
+      },
+      {
+        path: 'finance/commissions',
+        data: { accountingView: 'commissions' },
+        loadComponent: () =>
+          import('./pages/company-shell/accounting/accounting').then((m) => m.Accounting),
+      },
+      {
+        path: 'finance/expenses',
+        data: { accountingView: 'expenses' },
+        loadComponent: () =>
+          import('./pages/company-shell/accounting/accounting').then((m) => m.Accounting),
+      },
+      {
+        path: 'finance/reports',
+        data: { accountingView: 'reports' },
+        loadComponent: () =>
+          import('./pages/company-shell/accounting/accounting').then((m) => m.Accounting),
+      },
+      {
+        path: 'my-finance',
+        data: { accountingView: 'self' },
+        loadComponent: () =>
+          import('./pages/company-shell/accounting/accounting').then((m) => m.Accounting),
+      },
+      {
         path: 'my-assets',
         data: { resourcesView: 'my-assets' },
         loadComponent: () =>

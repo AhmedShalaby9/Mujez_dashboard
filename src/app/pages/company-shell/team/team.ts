@@ -38,6 +38,8 @@ export class Team {
     employee: { en: 'Employee', ar: 'موظف' },
     hr_officer: { en: 'HR Officer', ar: 'مسؤول الموارد البشرية' },
     hr_manager: { en: 'HR Manager', ar: 'مدير الموارد البشرية' },
+    accountant: { en: 'Accountant', ar: 'محاسب' },
+    finance_manager: { en: 'Finance Manager', ar: 'مدير مالي' },
     payroll_officer: { en: 'Payroll Officer', ar: 'مسؤول الرواتب' },
     team_lead: { en: 'Team Lead', ar: 'قائد الفريق' },
   };

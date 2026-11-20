@@ -1,0 +1,749 @@
+<div class="resource-page" [attr.dir]="ui.lang() === 'ar' ? 'rtl' : 'ltr'">
+  <header class="attendance-head">
+    <div>
+      <p class="muted">{{ t('People · Employee services', 'الأفراد · خدمات الموظفين') }}</p>
+      <h1>{{ title() }}</h1>
+      <p class="muted">
+        {{
+          isAsset
+            ? t('Track custody, condition and returns.', 'متابعة العهد وحالتها واستردادها.')
+            : t(
+                'Interest-free advances. Payouts and repayments are recorded manually.',
+                'سُلَف بدون فوائد. يتم تسجيل الصرف والسداد يدويًا.'
+              )
+        }}
+      </p>
+    </div>
+    <div class="row-actions">
+      <button type="button" class="btn" (click)="reload()" [disabled]="loading()">
+        {{ t('Refresh', 'تحديث') }}
+      </button>
+      @if (isAsset && !mine && context()?.canManageAssets) {
+        <button type="button" class="btn btn--dark" (click)="editAsset()">
+          {{ t('+ New asset', '+ عهدة جديدة') }}
+        </button>
+      }
+      @if (!isAsset && mine && context()?.canRequest) {
+        <button type="button" class="btn btn--dark" (click)="request()">
+          {{ t('+ Request advance', '+ طلب سلفة') }}
+        </button>
+      }
+    </div>
+  </header>
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="note note--ok" role="status">{{ notice() }}</p>
+  }
+  @if (loading()) {
+    <p class="muted" role="status">{{ t('Loading…', 'جارٍ التحميل…') }}</p>
+  }
+  <section class="resource-kpis" [attr.aria-label]="t('Summary', 'الملخص')">
+    @if (isAsset) {
+      @for (s of ['available', 'assigned', 'repair', 'retired']; track s) {
+        <article class="card">
+          <span>{{ label(s) }}</span
+          ><strong>{{ count(s) }}</strong>
+        </article>
+      }
+    } @else {
+      <article class="card">
+        <span>{{ t('Outstanding balance', 'الرصيد المستحق') }}</span
+        ><strong>{{ money(data().summary.outstandingMinor ?? '0') }}</strong>
+      </article>
+      <article class="card">
+        <span>{{ t('Overdue', 'متأخر السداد') }}</span
+        ><strong class="warning">{{ money(data().summary.overdueMinor ?? '0') }}</strong>
+      </article>
+      <article class="card">
+        <span>{{ t('Pending review', 'بانتظار المراجعة') }}</span
+        ><strong>{{ data().summary.pending ?? 0 }}</strong>
+      </article>
+      <article class="card">
+        <span>{{ t('Awaiting payout', 'بانتظار الصرف') }}</span
+        ><strong>{{ data().summary.awaitingPayout ?? 0 }}</strong>
+      </article>
+    }
+  </section>
+  <form class="tools" (ngSubmit)="reload(true)">
+    <label class="field search"
+      ><span class="sr-only">{{ t('Search', 'بحث') }}</span
+      ><input
+        name="search"
+        [(ngModel)]="search"
+        [placeholder]="
+          isAsset
+            ? t('Search name or asset code…', 'بحث بالاسم أو رقم العهدة…')
+            : t('Search employee or code…', 'بحث بالموظف أو رقمه…')
+        "
+        maxlength="120" /></label
+    ><label class="field"
+      ><span class="sr-only">{{ t('Status', 'الحالة') }}</span
+      ><select name="status" [(ngModel)]="status" (ngModelChange)="reload(true)">
+        <option value="all">{{ t('All statuses', 'كل الحالات') }}</option>
+        @for (
+          s of isAsset
+            ? ['available', 'assigned', 'repair', 'retired']
+            : ['pending', 'approved', 'active', 'paid', 'rejected', 'cancelled'];
+          track s
+        ) {
+          <option [value]="s">{{ label(s) }}</option>
+        }
+      </select></label
+    ><button type="submit" class="btn" [disabled]="loading()">{{ t('Search', 'بحث') }}</button>
+  </form>
+  <section class="table-card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            @if (isAsset) {
+              <th>{{ t('Asset', 'العهدة') }}</th>
+              <th>{{ t('Details', 'التفاصيل') }}</th>
+              <th>{{ t('Custody', 'الحيازة') }}</th>
+            } @else {
+              <th>{{ t('Employee', 'الموظف') }}</th>
+              <th>{{ t('Amount & repayment', 'المبلغ والسداد') }}</th>
+              <th>{{ t('Outstanding', 'المستحق') }}</th>
+            }
+            <th>{{ t('Status', 'الحالة') }}</th>
+            <th>{{ t('Actions', 'الإجراءات') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of data().items; track r.id) {
+            <tr>
+              @if (isAsset) {
+                <td>
+                  <strong>{{ r.name }}</strong
+                  ><small>{{ r.code }} · {{ kind(r.kind) }}</small>
+                </td>
+                <td>
+                  {{ r.details.brand }} {{ r.details.model
+                  }}<small>{{
+                    r.details.serial || r.details.phoneNumber || t('Not set', 'غير محدد')
+                  }}</small>
+                </td>
+                <td>
+                  {{
+                    r.previousCustody
+                      ? t('Previously held', 'عهدة سابقة')
+                      : r.employee || t('Not assigned', 'غير مسلمة')
+                  }}<small>{{ r.assignedDate || '—' }}</small>
+                  @if (r.employeeStatus === 'offboarded') {
+                    <small class="warning">{{
+                      t('Offboarded employee · return needed', 'موظف غادر الشركة · يلزم الاسترداد')
+                    }}</small>
+                  }
+                  @if (r.custodyId) {
+                    <small>{{
+                      r.acknowledgedAt
+                        ? t('Receipt acknowledged', 'تم تأكيد الاستلام')
+                        : t('Awaiting acknowledgment', 'بانتظار تأكيد الاستلام')
+                    }}</small>
+                  }
+                </td>
+              } @else {
+                <td>
+                  <strong>{{ r.employee }}</strong
+                  ><small>{{ r.employeeCode }}</small>
+                  @if (r.employeeStatus === 'offboarded') {
+                    <small class="warning">{{
+                      t('Offboarded employee', 'موظف غادر الشركة')
+                    }}</small>
+                  }
+                </td>
+                <td>
+                  <strong>{{ money(r.amountMinor) }}</strong
+                  ><small
+                    >{{
+                      r.mode === 'monthly' ? t('Monthly', 'شهري') : t('One payment', 'دفعة واحدة')
+                    }}
+                    · {{ r.installments }} {{ t('payment(s)', 'دفعات') }}</small
+                  ><small>{{ t('First due: ', 'أول استحقاق: ') }}{{ r.firstDue }}</small>
+                </td>
+                <td>
+                  {{ money(r.balanceMinor) }}
+                  @if (r.overdueMinor !== '0') {
+                    <small class="warning"
+                      >{{ t('Overdue: ', 'متأخر: ') }}{{ money(r.overdueMinor) }}</small
+                    >
+                  }
+                </td>
+              }
+              <td>
+                <span class="badge">{{ label(r.status) }}</span>
+              </td>
+              <td>
+                <button type="button" class="btn" (click)="details(r)" [disabled]="loading()">
+                  {{ t('View details', 'عرض التفاصيل') }}
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="empty">
+                {{
+                  loading()
+                    ? t('Loading…', 'جارٍ التحميل…')
+                    : t('No records yet.', 'لا توجد سجلات بعد.')
+                }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <footer class="pager">
+      <span
+        >{{ data().total }} {{ t('records', 'سجلات') }} · {{ t('Page', 'صفحة') }} {{ page() }}</span
+      >
+      <div>
+        <button
+          type="button"
+          class="btn"
+          (click)="paginate(-1)"
+          [disabled]="page() === 1 || loading()"
+        >
+          {{ t('Previous', 'السابق') }}</button
+        ><button
+          type="button"
+          class="btn"
+          (click)="paginate(1)"
+          [disabled]="page() * 25 >= data().total || loading()"
+        >
+          {{ t('Next', 'التالي') }}
+        </button>
+      </div>
+    </footer>
+  </section>
+  @if (!isAsset) {
+    <p class="muted">
+      {{
+        t(
+          'Approval does not transfer money. HR records the actual payout and each repayment. Partial and early repayments are supported; overdue amounts are calculated from the agreed dates.',
+          'الموافقة لا تحوّل أموالًا. تسجل الموارد البشرية الصرف الفعلي وكل دفعة سداد. يمكن السداد الجزئي أو المبكر، ويُحسب التأخير حسب مواعيد الاستحقاق.'
+        )
+      }}
+    </p>
+  }
+</div>
+@if (dialog()) {
+  <div class="scrim scrim--top" (click)="close()" aria-hidden="true"></div>
+  <form
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="resource-dialog-title"
+    #resourceForm="ngForm"
+    (ngSubmit)="save()"
+  >
+    <header class="dialog__head">
+      <h2 id="resource-dialog-title">
+        {{
+          dialog() === 'asset'
+            ? t('Asset details', 'بيانات العهدة')
+            : dialog() === 'request'
+              ? t('Request salary advance', 'طلب سلفة')
+              : dialog() === 'action'
+                ? label(action)
+                : selected()?.name || t('Advance details', 'تفاصيل السلفة')
+        }}
+      </h2>
+      <button
+        type="button"
+        class="x"
+        [attr.aria-label]="t('Close', 'إغلاق')"
+        (click)="close()"
+        [disabled]="saving()"
+      >
+        ×
+      </button>
+    </header>
+    <div class="dialog__body">
+      @if (formError()) {
+        <p role="alert" class="note note--bad">{{ formError() }}</p>
+      }
+      @if (dialog() === 'detail') {
+        @let r = selected();
+        @if (isAsset) {
+          <dl class="details-grid">
+            <div>
+              <dt>{{ t('Code / type', 'الرقم / النوع') }}</dt>
+              <dd>{{ r.code }} · {{ kind(r.kind) }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('Status', 'الحالة') }}</dt>
+              <dd>{{ label(r.status) }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('Brand / model', 'العلامة / الموديل') }}</dt>
+              <dd>{{ r.details.brand || '—' }} {{ r.details.model }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('Serial / IMEI', 'الرقم التسلسلي / IMEI') }}</dt>
+              <dd>{{ r.details.serial || '—' }} / {{ r.details.imei || '—' }}</dd>
+            </div>
+            @if (r.kind === 'sim_card') {
+              <div>
+                <dt>{{ t('Phone number / carrier', 'رقم الهاتف / الشبكة') }}</dt>
+                <dd>{{ r.details.phoneNumber || '—' }} / {{ r.details.carrier || '—' }}</dd>
+              </div>
+              <div>
+                <dt>ICCID / {{ t('Plan', 'الباقة') }}</dt>
+                <dd>{{ r.details.iccid || '—' }} / {{ r.details.plan || '—' }}</dd>
+              </div>
+            }
+            @if (!mine) {
+              <div>
+                <dt>{{ t('Purchase / warranty', 'الشراء / الضمان') }}</dt>
+                <dd>{{ r.details.purchaseDate || '—' }} / {{ r.details.warrantyUntil || '—' }}</dd>
+              </div>
+              <div>
+                <dt>{{ t('Notes', 'ملاحظات') }}</dt>
+                <dd>{{ r.details.notes || '—' }}</dd>
+              </div>
+            }
+          </dl>
+          <div class="row-actions">
+            @if (!mine && context()?.canManageAssets) {
+              <button type="button" class="btn" (click)="editAsset(r)">
+                {{ t('Edit asset', 'تعديل العهدة') }}
+              </button>
+              @if (r.status === 'available') {
+                <button type="button" class="btn btn--dark" (click)="startAction('assign')">
+                  {{ label('assign') }}
+                </button>
+              }
+              @if (r.status === 'assigned') {
+                <button type="button" class="btn btn--dark" (click)="startAction('return')">
+                  {{ label('return') }}
+                </button>
+              }
+            }
+            @if (r.custodyId && !r.acknowledgedAt && r.employeeId === context()?.self?.id) {
+              <button type="button" class="btn btn--dark" (click)="startAction('acknowledge')">
+                {{ label('acknowledge') }}
+              </button>
+            }
+          </div>
+          <section class="history">
+            <h3>{{ t('Custody history', 'سجل الحيازة') }}</h3>
+            @for (x of r.history; track x.id) {
+              <article>
+                <strong>{{ x.employee }}</strong>
+                <p>{{ x.assigned_date }} · {{ x.handover_condition }}</p>
+                <p class="muted">
+                  {{
+                    x.acknowledged_at
+                      ? t('Receipt acknowledged', 'تم تأكيد الاستلام')
+                      : t('Not acknowledged', 'لم يؤكد الاستلام')
+                  }}
+                </p>
+                <p>
+                  {{
+                    x.returned_date
+                      ? t('Returned: ', 'تم الاسترداد: ') + x.returned_date
+                      : t('Currently assigned', 'عهدة حالية')
+                  }}
+                  {{ x.return_condition }}
+                </p>
+              </article>
+            } @empty {
+              <p class="muted">{{ t('No handovers yet.', 'لا توجد عمليات تسليم بعد.') }}</p>
+            }
+          </section>
+        } @else {
+          <dl class="details-grid">
+            <div>
+              <dt>{{ t('Employee', 'الموظف') }}</dt>
+              <dd>{{ r.employee }} · {{ r.employeeCode }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('Status', 'الحالة') }}</dt>
+              <dd>{{ label(r.status) }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('Requested amount', 'المبلغ المطلوب') }}</dt>
+              <dd>{{ money(r.amountMinor) }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('Outstanding / overdue', 'المستحق / المتأخر') }}</dt>
+              <dd>{{ money(r.balanceMinor) }} / {{ money(r.overdueMinor) }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('Reason', 'السبب') }}</dt>
+              <dd>{{ r.reason }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('Review note', 'ملاحظة المراجعة') }}</dt>
+              <dd>{{ r.reviewNote || '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('Actual payout', 'الصرف الفعلي') }}</dt>
+              <dd>
+                {{ r.paidOutDate || t('Not paid out', 'لم يتم الصرف') }} {{ r.payoutReference }}
+              </dd>
+            </div>
+            <div>
+              <dt>{{ t('Repaid', 'المسدد') }}</dt>
+              <dd>{{ money(r.repaidMinor) }}</dd>
+            </div>
+          </dl>
+          <div class="row-actions">
+            @if (r.status === 'pending' && mine) {
+              <button type="button" class="btn" (click)="startAction('cancel')">
+                {{ label('cancel') }}
+              </button>
+            }
+            @if (context()?.canFinance) {
+              @if (r.status === 'pending' && r.canReview) {
+                <button type="button" class="btn btn--dark" (click)="startAction('approve')">
+                  {{ label('approve') }}</button
+                ><button type="button" class="btn" (click)="startAction('reject')">
+                  {{ label('reject') }}
+                </button>
+              }
+              @if (r.status === 'approved') {
+                <button type="button" class="btn btn--dark" (click)="startAction('payout')">
+                  {{ label('payout') }}
+                </button>
+              }
+              @if (r.status === 'active') {
+                <button type="button" class="btn btn--dark" (click)="startAction('repay')">
+                  {{ label('repay') }}
+                </button>
+              }
+              @if (r.payments.some(unreversed)) {
+                <button type="button" class="btn" (click)="startAction('reverse')">
+                  {{ label('reverse') }}
+                </button>
+              }
+            }
+          </div>
+          <section class="history">
+            <h3>{{ t('Repayment schedule', 'جدول السداد') }}</h3>
+            <p class="muted">
+              {{
+                t(
+                  'Payments are allocated to the oldest unpaid installment first.',
+                  'تُخصم المدفوعات من أقدم دفعة غير مسددة أولًا.'
+                )
+              }}
+            </p>
+            <div class="table-scroll">
+              <table class="detail-table">
+                <thead>
+                  <tr>
+                    <th>{{ t('Due date', 'الاستحقاق') }}</th>
+                    <th>{{ t('Amount', 'المبلغ') }}</th>
+                    <th>{{ t('Paid', 'المسدد') }}</th>
+                    <th>{{ t('Remaining', 'المتبقي') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (x of r.plan; track x.number) {
+                    <tr>
+                      <td>
+                        {{ x.dueDate }}
+                        @if (x.overdue && r.paidOutDate) {
+                          <small class="warning">{{ t('Overdue', 'متأخر') }}</small>
+                        }
+                      </td>
+                      <td>{{ money(x.amountMinor) }}</td>
+                      <td>{{ money(x.paidMinor) }}</td>
+                      <td>{{ money(x.remainingMinor) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <section class="history">
+            <h3>{{ t('Repayment history', 'سجل السداد') }}</h3>
+            @for (x of r.payments; track x.id) {
+              <article>
+                <strong>{{ money(x.amount_minor) }}</strong>
+                <p>{{ x.paid_date }} · {{ x.reference || '—' }}</p>
+                @if (x.reversed_at) {
+                  <p class="warning">{{ t('Reversed: ', 'تم العكس: ') }}{{ x.reversal_reason }}</p>
+                }
+              </article>
+            } @empty {
+              <p class="muted">{{ t('No repayments recorded.', 'لا توجد دفعات مسجلة.') }}</p>
+            }
+          </section>
+        }
+      } @else {
+        <fieldset class="form-grid" [disabled]="saving()">
+          @if (dialog() === 'asset') {
+            <label class="field"
+              ><span>{{ t('Asset type', 'نوع العهدة') }} *</span
+              ><select name="kind" [(ngModel)]="form.kind" required>
+                @for (k of kinds; track k[0]) {
+                  <option [value]="k[0]">{{ kind(k[0]) }}</option>
+                }
+              </select></label
+            ><label class="field"
+              ><span>{{ t('Asset name', 'اسم العهدة') }} *</span
+              ><input name="name" [(ngModel)]="form.name" required maxlength="120"
+            /></label>
+            <label class="field"
+              ><span>{{ t('Brand', 'العلامة التجارية') }}</span
+              ><input name="brand" [(ngModel)]="form.details.brand" maxlength="100" /></label
+            ><label class="field"
+              ><span>{{ t('Model', 'الموديل') }}</span
+              ><input name="model" [(ngModel)]="form.details.model" maxlength="100" /></label
+            ><label class="field"
+              ><span>{{ t('Serial number', 'الرقم التسلسلي') }}</span
+              ><input name="serial" [(ngModel)]="form.details.serial" maxlength="120"
+            /></label>
+            @if (form.kind === 'phone' || form.kind === 'tablet') {
+              <label class="field"
+                ><span>IMEI</span><input name="imei" [(ngModel)]="form.details.imei" maxlength="30"
+              /></label>
+            }
+            @if (form.kind === 'sim_card') {
+              <label class="field"
+                ><span>{{ t('Phone number', 'رقم الهاتف') }}</span
+                ><input name="phone" [(ngModel)]="form.details.phoneNumber" maxlength="40" /></label
+              ><label class="field"
+                ><span>ICCID</span
+                ><input name="iccid" [(ngModel)]="form.details.iccid" maxlength="40" /></label
+              ><label class="field"
+                ><span>{{ t('Carrier', 'شبكة الاتصال') }}</span
+                ><input name="carrier" [(ngModel)]="form.details.carrier" maxlength="100" /></label
+              ><label class="field"
+                ><span>{{ t('Plan details', 'تفاصيل الباقة') }}</span
+                ><input name="plan" [(ngModel)]="form.details.plan" maxlength="200"
+              /></label>
+            }
+            <label class="field"
+              ><span>{{ t('Purchase date', 'تاريخ الشراء') }}</span
+              ><input name="purchase" type="date" [(ngModel)]="form.details.purchaseDate" /></label
+            ><label class="field"
+              ><span>{{ t('Warranty until', 'انتهاء الضمان') }}</span
+              ><input name="warranty" type="date" [(ngModel)]="form.details.warrantyUntil"
+            /></label>
+            @if (form.status !== 'assigned') {
+              <label class="field wide"
+                ><span>{{ t('Availability', 'الإتاحة') }}</span
+                ><select name="availability" [(ngModel)]="form.status">
+                  @for (s of ['available', 'repair', 'retired']; track s) {
+                    <option [value]="s">{{ label(s) }}</option>
+                  }
+                </select></label
+              >
+            }
+            <label class="field wide"
+              ><span>{{ t('HR notes', 'ملاحظات الموارد البشرية') }}</span
+              ><textarea
+                name="notes"
+                [(ngModel)]="form.details.notes"
+                maxlength="2000"
+                rows="3"
+              ></textarea>
+            </label>
+            <p class="muted wide">
+              {{
+                t(
+                  'Do not store device passwords, SIM PINs or PUK codes here.',
+                  'لا تسجّل كلمات مرور الأجهزة أو رموز PIN وPUK هنا.'
+                )
+              }}
+            </p>
+          }
+          @if (dialog() === 'request') {
+            <label class="field"
+              ><span>{{ t('Amount (EGP)', 'المبلغ (جنيه)') }} *</span
+              ><input
+                compactAmount
+                name="amount"
+                [(ngModel)]="form.amount"
+                placeholder="10k"
+                required /></label
+            ><label class="field"
+              ><span>{{ t('Repayment method', 'طريقة السداد') }}</span
+              ><select name="mode" [(ngModel)]="form.mode">
+                <option value="lump_sum">{{ t('One payment', 'دفعة واحدة') }}</option>
+                <option value="monthly">{{ t('Monthly installments', 'أقساط شهرية') }}</option>
+              </select></label
+            >
+            @if (form.mode === 'monthly') {
+              <label class="field"
+                ><span>{{ t('Number of months', 'عدد الأشهر') }} *</span
+                ><input
+                  name="installments"
+                  type="number"
+                  min="1"
+                  max="60"
+                  [(ngModel)]="form.installments"
+                  required
+              /></label>
+            }
+            <label class="field"
+              ><span>{{ t('First repayment date', 'أول موعد للسداد') }} *</span
+              ><input
+                name="firstDue"
+                type="date"
+                [(ngModel)]="form.firstDue"
+                [min]="context()?.today"
+                required /></label
+            ><label class="field wide"
+              ><span>{{ t('Request reason', 'سبب الطلب') }} *</span
+              ><textarea
+                name="reason"
+                [(ngModel)]="form.reason"
+                required
+                minlength="3"
+                maxlength="2000"
+                rows="3"
+              ></textarea>
+            </label>
+            <p class="muted wide">
+              {{
+                t(
+                  'No interest or fees. HR reviews the requested amount and schedule. This request does not move money.',
+                  'بدون فوائد أو رسوم. تراجع الموارد البشرية المبلغ والجدول المطلوبين. تقديم الطلب لا يحوّل أموالًا.'
+                )
+              }}
+            </p>
+          }
+          @if (dialog() === 'action') {
+            <p class="wide actions-note">
+              {{ isAsset ? selected()?.name : money(selected()?.amountMinor) }} ·
+              {{ label(selected()?.status) }}
+            </p>
+            @if (action === 'assign') {
+              <label class="field wide"
+                ><span>{{ t('Employee', 'الموظف') }} *</span
+                ><select name="employee" [(ngModel)]="form.employeeId" required>
+                  <option value="">{{ t('Choose employee', 'اختر موظفًا') }}</option>
+                  @for (e of options().employees; track e.id) {
+                    <option [value]="e.id">{{ e.name }} · {{ e.code }}</option>
+                  }
+                </select></label
+              >
+            }
+            @if (['assign', 'return', 'payout', 'repay'].includes(action)) {
+              <label class="field"
+                ><span>{{ t('Date', 'التاريخ') }} *</span
+                ><input
+                  name="date"
+                  type="date"
+                  [(ngModel)]="form.date"
+                  [max]="context()?.today"
+                  required
+              /></label>
+            }
+            @if (action === 'repay') {
+              <label class="field"
+                ><span>{{ t('Repayment amount (EGP)', 'مبلغ السداد (جنيه)') }} *</span
+                ><input
+                  compactAmount
+                  name="repayment"
+                  [(ngModel)]="form.amount"
+                  required
+                  placeholder="2.5k"
+              /></label>
+              <p class="muted wide">
+                {{ t('Outstanding balance: ', 'الرصيد المستحق: ')
+                }}{{ money(selected()?.balanceMinor) }}
+              </p>
+            }
+            @if (['payout', 'repay'].includes(action)) {
+              <label class="field wide"
+                ><span>{{ t('Receipt / transfer reference', 'مرجع الإيصال / التحويل') }}</span
+                ><input name="reference" [(ngModel)]="form.reference" maxlength="200"
+              /></label>
+              <p class="muted wide">
+                {{
+                  t(
+                    'Confirm the money has actually changed hands before saving.',
+                    'تأكد من إتمام حركة الأموال فعليًا قبل الحفظ.'
+                  )
+                }}
+              </p>
+            }
+            @if (['assign', 'return'].includes(action)) {
+              <label class="field wide"
+                ><span>{{ t('Condition & handover notes', 'الحالة وملاحظات التسليم') }} *</span
+                ><textarea
+                  name="condition"
+                  [(ngModel)]="form.condition"
+                  required
+                  minlength="3"
+                  maxlength="2000"
+                  rows="3"
+                ></textarea>
+              </label>
+            }
+            @if (action === 'reverse') {
+              <label class="field wide"
+                ><span>{{ t('Repayment to reverse', 'الدفعة المراد عكسها') }} *</span
+                ><select name="payment" [(ngModel)]="form.paymentId" required>
+                  <option value="">{{ t('Choose payment', 'اختر الدفعة') }}</option>
+                  @for (p of selected()?.payments; track p.id) {
+                    @if (!p.reversed_at) {
+                      <option [value]="p.id">
+                        {{ p.paid_date }} · {{ money(p.amount_minor) }} · {{ p.reference }}
+                      </option>
+                    }
+                  }
+                </select></label
+              >
+            }
+            @if (['approve', 'reject', 'reverse'].includes(action)) {
+              <label class="field wide"
+                ><span
+                  >{{ t('Reason / review note', 'السبب / ملاحظة المراجعة')
+                  }}{{ action === 'approve' ? '' : ' *' }}</span
+                ><textarea
+                  name="reviewNote"
+                  [(ngModel)]="form.note"
+                  [required]="action !== 'approve'"
+                  [minlength]="action === 'approve' ? 0 : 3"
+                  maxlength="2000"
+                  rows="3"
+                ></textarea>
+              </label>
+            }
+            @if (action === 'acknowledge') {
+              <p class="wide">
+                {{
+                  t(
+                    'Confirm that you received this asset in the recorded condition.',
+                    'أؤكد استلام هذه العهدة بالحالة المسجلة.'
+                  )
+                }}
+              </p>
+              <p class="wide">{{ selected()?.handoverCondition }}</p>
+            }
+            @if (action === 'cancel') {
+              <p class="wide">
+                {{ t('Cancel this pending request?', 'هل تريد إلغاء هذا الطلب المعلق؟') }}
+              </p>
+            }
+          }
+        </fieldset>
+      }
+    </div>
+    <footer class="dialog__foot">
+      <button type="button" class="btn" (click)="close()" [disabled]="saving()">
+        {{ t('Close', 'إغلاق') }}
+      </button>
+      @if (dialog() !== 'detail') {
+        <button type="submit" class="btn btn--dark" [disabled]="saving() || resourceForm.invalid">
+          {{
+            saving()
+              ? t('Saving…', 'جارٍ الحفظ…')
+              : dialog() === 'action'
+                ? label(action)
+                : t('Save', 'حفظ')
+          }}
+        </button>
+      }
+    </footer>
+  </form>
+}

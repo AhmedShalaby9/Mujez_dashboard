@@ -1,3 +1,4 @@
+import { hasFinanceAccess } from '../../auth.service';
 import { visibleCompanyRoles } from '../../company-role-labels';
 import { NavigationState, RouteSkeleton } from '../../route-skeleton';
 import { NotificationsApi } from '../../notifications-api.service';
@@ -60,6 +61,10 @@ const NAV_PERMISSION: Record<string, string> = {
 
 const COMPANY_ICONS: Record<string, string> = {
   employee: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0',
+  'my-assets': 'M4 5h16v16H4zM8 5V3h8v2',
+  'hr/assets': 'M4 5h16v16H4zM8 5V3h8v2',
+  'my-advances': 'M3 6h18v12H3zM12 9v6M9 12h6',
+  'hr/salary-advances': 'M3 6h18v12H3zM12 9v6M9 12h6',
   'my-attendance': 'M12 8v4l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
   'team-attendance': 'M5 3h14v18H5zM8 12l3 3 5-6',
   'hr/attendance': 'M4 5h16v16H4zM8 3v4M16 3v4M4 10h16',
@@ -158,6 +163,10 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'AI analytics', path: 'ai-analytics' },
   { kind: 'head', label: 'People' },
   { kind: 'item', label: 'Employee area', path: 'employee' },
+  { kind: 'item', label: 'My assets', path: 'my-assets' },
+  { kind: 'item', label: 'My salary advances', path: 'my-advances' },
+  { kind: 'item', label: 'Company assets', path: 'hr/assets' },
+  { kind: 'item', label: 'Salary advances', path: 'hr/salary-advances' },
   { kind: 'item', label: 'My attendance', path: 'my-attendance' },
   { kind: 'item', label: 'Team attendance', path: 'team-attendance' },
   { kind: 'item', label: 'Attendance overview', path: 'hr/attendance' },
@@ -198,6 +207,10 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'تحليلات الذكاء الاصطناعي', path: 'ai-analytics' },
   { kind: 'head', label: 'الموارد البشرية' },
   { kind: 'item', label: 'مساحة الموظف', path: 'employee' },
+  { kind: 'item', label: 'عُهدي', path: 'my-assets' },
+  { kind: 'item', label: 'سُلَفي', path: 'my-advances' },
+  { kind: 'item', label: 'عُهد الشركة', path: 'hr/assets' },
+  { kind: 'item', label: 'سُلَف الموظفين', path: 'hr/salary-advances' },
   { kind: 'item', label: 'حضوري', path: 'my-attendance' },
   { kind: 'item', label: 'حضور الفريق', path: 'team-attendance' },
   { kind: 'item', label: 'متابعة الحضور', path: 'hr/attendance' },
@@ -330,9 +343,14 @@ export class CompanyShell {
       if (item.path === 'employee') return employeeArea(u);
       if (
         (item.path.startsWith('hr/') ||
-          ['my-leave', 'leave-approvals', 'my-attendance', 'team-attendance'].includes(
-            item.path,
-          )) &&
+          [
+            'my-assets',
+            'my-advances',
+            'my-leave',
+            'leave-approvals',
+            'my-attendance',
+            'team-attendance',
+          ].includes(item.path)) &&
         !hrModuleEnabled(u)
       )
         return false;
@@ -341,7 +359,7 @@ export class CompanyShell {
         (u?.pool !== 'company_admin' || u?.role !== 'company_owner' || u?.workspace)
       )
         return false;
-      if (item.path === 'my-attendance' || item.path === 'my-leave')
+      if (['my-assets', 'my-advances', 'my-attendance', 'my-leave'].includes(item.path))
         return (
           hasLeaveSelf(u) ||
           (!u?.workspace && u?.pool === 'company_admin' && !!this.leaveContext()?.self)
@@ -349,6 +367,7 @@ export class CompanyShell {
       if (item.path === 'team-attendance') return !u?.workspace && !!this.leaveContext()?.isManager;
       if (item.path === 'leave-approvals') return !u?.workspace && !!this.leaveContext()?.isManager;
       if (item.path === 'hr/leave') return managesLeave(u);
+      if (item.path === 'hr/salary-advances') return hasFinanceAccess(u);
       if (item.path.startsWith('hr/')) return hasHrAccess(u);
       const permission = NAV_PERMISSION[item.path];
       return !permission || perms.includes(permission);

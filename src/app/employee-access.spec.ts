@@ -49,7 +49,13 @@ describe('Employee login workspace', () => {
       [...f.nativeElement.querySelectorAll('.sidebar__item')].map((a: any) =>
         a.getAttribute('href'),
       );
-    expect(paths()).toEqual(['/company/employee', '/company/my-attendance', '/company/my-leave']);
+    expect(paths()).toEqual([
+      '/company/employee',
+      '/company/my-assets',
+      '/company/my-advances',
+      '/company/my-attendance',
+      '/company/my-leave',
+    ]);
     expect(f.nativeElement.querySelector('#company-search')).toBeNull();
     expect(f.nativeElement.textContent).not.toContain('+ New lead');
     for (const data of [

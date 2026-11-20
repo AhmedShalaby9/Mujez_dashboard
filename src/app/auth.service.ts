@@ -65,6 +65,17 @@ export function hasHrAccess(u: User | null | undefined) {
     (u.roles ?? [u.role]).some((r) => r === 'hr_manager' || r === 'hr_officer')
   );
 }
+export function hasFinanceAccess(u: User | null | undefined) {
+  if (!u || u.workspace || !hrModuleEnabled(u)) return false;
+  if (u.pool === 'company_admin' && u.role === 'company_owner')
+    return u.permissions.includes('workspace.view');
+  return (
+    u.pool === 'company_user' &&
+    (u.roles ?? [u.role]).includes('hr_manager') &&
+    u.permissions.includes('leave.approve') &&
+    u.permissions.includes('leave.manage')
+  );
+}
 export function hasLeaveSelf(u: User | null | undefined) {
   return (
     !!u &&
@@ -191,9 +202,16 @@ export const companyGuard: CanActivateFn = async (route) => {
   if (route.data['employeeView'] && !employeeArea(u)) return router.parseUrl(companyHomePath(u));
   if (route.data['crmView'] && !hasCrmWorkspace(u)) return router.parseUrl(companyHomePath(u));
   if (
-    (route.data['hrAccess'] || route.data['leaveView'] || route.data['attendanceView']) &&
+    (route.data['hrAccess'] ||
+      route.data['leaveView'] ||
+      route.data['attendanceView'] ||
+      route.data['resourcesView']) &&
     !hrModuleEnabled(u)
   )
+    return router.parseUrl(companyHomePath(u));
+  if (route.data['financeAccess'] && !hasFinanceAccess(u))
+    return router.parseUrl(companyHomePath(u));
+  if (String(route.data['resourcesView'] ?? '').startsWith('my-') && !hasLeaveSelf(u) && !isOwner)
     return router.parseUrl(companyHomePath(u));
   if (route.data['attendanceView'] === 'my' && !hasLeaveSelf(u) && !isOwner)
     return router.parseUrl(companyHomePath(u));

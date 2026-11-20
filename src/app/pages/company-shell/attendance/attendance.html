@@ -478,7 +478,7 @@
                   </td>
                   <td class="reason-cell">
                     {{ r.reason }}
-                    @if (r.stale) {
+                    @if (r.status === 'pending' && r.stale) {
                       <small class="warning">{{
                         t(
                           'Attendance changed. Reject or cancel this request and submit a fresh correction.',

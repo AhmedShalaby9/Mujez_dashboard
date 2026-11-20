@@ -43,6 +43,35 @@
   </section>
   @if (data()?.hrEnabled) {
     <section class="card">
+      <h2>{{ t('My salary advances', 'سُلَفي') }}</h2>
+      <p class="muted">
+        {{
+          t(
+            'Request an interest-free advance and follow your repayments.',
+            'اطلب سلفة بدون فوائد وتابع السداد.'
+          )
+        }}
+      </p>
+      <a class="btn btn--dark" routerLink="/company/my-advances">{{
+        t('Open My salary advances', 'فتح سُلَفي')
+      }}</a>
+    </section>
+    <section class="card">
+      <h2>{{ t('My assets', 'عُهدي') }}</h2>
+      <p class="muted">
+        {{
+          t(
+            'View your assigned equipment and acknowledge receipt.',
+            'عرض العهد المسلمة لك وتأكيد استلامها.'
+          )
+        }}
+      </p>
+      <a class="btn btn--dark" routerLink="/company/my-assets">{{
+        t('Open My assets', 'فتح عُهدي')
+      }}</a>
+    </section>
+
+    <section class="card">
       <h2>{{ t('My attendance', 'حضوري') }}</h2>
       <p class="muted">
         {{

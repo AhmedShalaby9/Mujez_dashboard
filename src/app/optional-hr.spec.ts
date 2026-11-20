@@ -58,6 +58,10 @@ describe('Optional company HR', () => {
     expect(paths()).not.toContain('leave-approvals');
     expect(request.mock.calls.some(([path]) => path === '/api/v1/leave/context')).toBe(false);
     for (const data of [
+      { resourcesView: 'my-assets' },
+      { resourcesView: 'my-advances' },
+      { resourcesView: 'assets', hrAccess: true },
+      { resourcesView: 'advances', financeAccess: true },
       { hrAccess: true },
       { leaveView: 'my' },
       { leaveView: 'approvals' },

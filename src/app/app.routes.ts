@@ -202,6 +202,30 @@ export const routes: Routes = [
           import('./pages/company-shell/employee/employee').then((m) => m.Employee),
       },
       {
+        path: 'my-assets',
+        data: { resourcesView: 'my-assets' },
+        loadComponent: () =>
+          import('./pages/company-shell/hr-resources/hr-resources').then((m) => m.HrResources),
+      },
+      {
+        path: 'hr/assets',
+        data: { resourcesView: 'assets', hrAccess: true },
+        loadComponent: () =>
+          import('./pages/company-shell/hr-resources/hr-resources').then((m) => m.HrResources),
+      },
+      {
+        path: 'my-advances',
+        data: { resourcesView: 'my-advances' },
+        loadComponent: () =>
+          import('./pages/company-shell/hr-resources/hr-resources').then((m) => m.HrResources),
+      },
+      {
+        path: 'hr/salary-advances',
+        data: { resourcesView: 'advances', financeAccess: true },
+        loadComponent: () =>
+          import('./pages/company-shell/hr-resources/hr-resources').then((m) => m.HrResources),
+      },
+      {
         path: 'my-attendance',
         data: { attendanceView: 'my' },
         loadComponent: () =>

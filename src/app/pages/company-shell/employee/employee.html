@@ -43,6 +43,21 @@
   </section>
   @if (data()?.hrEnabled) {
     <section class="card">
+      <h2>{{ t('My attendance', 'حضوري') }}</h2>
+      <p class="muted">
+        {{
+          t(
+            'Check in, check out and review your attendance history.',
+            'سجّل حضورك وانصرافك وراجع سجلات الحضور.'
+          )
+        }}
+      </p>
+      <a class="btn btn--dark" routerLink="/company/my-attendance">{{
+        t('Open My attendance', 'فتح حضوري')
+      }}</a>
+    </section>
+
+    <section class="card">
       <h2>{{ t('My leave', 'إجازاتي') }}</h2>
       <p class="muted">
         {{

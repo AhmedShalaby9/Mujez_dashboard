@@ -190,8 +190,21 @@ export const companyGuard: CanActivateFn = async (route) => {
   const isEmployee = u?.pool === 'company_user';
   if (route.data['employeeView'] && !employeeArea(u)) return router.parseUrl(companyHomePath(u));
   if (route.data['crmView'] && !hasCrmWorkspace(u)) return router.parseUrl(companyHomePath(u));
-  if ((route.data['hrAccess'] || route.data['leaveView']) && !hrModuleEnabled(u))
+  if (
+    (route.data['hrAccess'] || route.data['leaveView'] || route.data['attendanceView']) &&
+    !hrModuleEnabled(u)
+  )
     return router.parseUrl(companyHomePath(u));
+  if (route.data['attendanceView'] === 'my' && !hasLeaveSelf(u) && !isOwner)
+    return router.parseUrl(companyHomePath(u));
+  if (route.data['attendanceView'] === 'team') {
+    try {
+      const c = await auth.request('/api/v1/attendance/context');
+      if (!c.isManager) return router.parseUrl(companyHomePath(u));
+    } catch {
+      return router.parseUrl(companyHomePath(u));
+    }
+  }
   if (route.data['leaveView'] === 'manage' && !managesLeave(u))
     return router.parseUrl(companyHomePath(u));
   if (route.data['leaveView'] === 'my' && !hasLeaveSelf(u) && !isOwner)

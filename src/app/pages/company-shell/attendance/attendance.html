@@ -1,0 +1,782 @@
+<div class="attendance-page" [attr.dir]="ui.lang() === 'ar' ? 'rtl' : 'ltr'">
+  <header class="attendance-head">
+    <div>
+      <p class="muted">{{ t('People · Attendance', 'الأفراد · الحضور') }}</p>
+      <h1>{{ title() }}</h1>
+      <p class="muted">
+        {{ t('Workdays and times follow Cairo time.', 'أيام العمل والأوقات حسب توقيت القاهرة.') }}
+      </p>
+    </div>
+    <div class="row-actions">
+      <button type="button" class="btn" [disabled]="loading()" (click)="reload()">
+        {{ t('Refresh', 'تحديث') }}
+      </button>
+      @if (mode === 'schedules' && context()?.canManage) {
+        <button type="button" class="btn" (click)="assign()">
+          {{ t('Assign schedule', 'تعيين جدول') }}</button
+        ><button type="button" class="btn btn--dark" (click)="editSchedule()">
+          {{ t('+ New schedule', '+ جدول جديد') }}
+        </button>
+      }
+      @if (mode === 'company') {
+        <a class="btn" routerLink="/company/hr/work-schedules">{{
+          t('Work schedules', 'جداول العمل')
+        }}</a>
+      }
+    </div>
+  </header>
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="note note--ok" role="status">{{ notice() }}</p>
+  }
+  @if (loading()) {
+    <p class="muted" role="status">{{ t('Loading attendance…', 'جارٍ تحميل الحضور…') }}</p>
+  }
+  @if (mode === 'schedules') {
+    <section class="schedule-grid">
+      @for (s of schedules(); track s.id) {
+        <article class="card schedule-card">
+          <div class="row-actions">
+            <h2>{{ s.name }}</h2>
+            @if (s.archived) {
+              <span class="badge">{{ t('Archived', 'مؤرشف') }}</span>
+            }
+          </div>
+          <p>
+            {{ clockTime(s.startMinute) }} — {{ clockTime(s.endMinute) }}
+            @if (s.endMinute < s.startMinute) {
+              <span class="muted">{{ t('(next day)', '(اليوم التالي)') }}</span>
+            }
+          </p>
+          <p class="muted">{{ dayNames(s.workdays) }}</p>
+          <p class="muted">
+            {{ t('Grace period: ', 'فترة السماح: ') }}{{ s.graceMinutes }}
+            {{ t('minutes', 'دقيقة') }}
+          </p>
+          @if (context()?.canManage) {
+            <button type="button" class="btn" (click)="editSchedule(s)">
+              {{ t('Edit template', 'تعديل القالب') }}
+            </button>
+          }
+        </article>
+      } @empty {
+        <section class="card empty">
+          <h2>{{ t('Set up your work schedules', 'أعدّ جداول العمل') }}</h2>
+          <p class="muted">
+            {{
+              t(
+                'Create a schedule, then assign it to employees. No working hours are assumed.',
+                'أنشئ جدولًا ثم عيّنه للموظفين. لا تُفترض ساعات عمل تلقائيًا.'
+              )
+            }}
+          </p>
+        </section>
+      }
+    </section>
+    <p class="muted">
+      {{
+        t(
+          'Editing a template does not change existing assignments. Assign the updated template from a new date.',
+          'تعديل القالب لا يغيّر التعيينات الحالية. عيّن القالب المحدّث من تاريخ جديد.'
+        )
+      }}
+    </p>
+    <section class="table-card">
+      <header class="section-head">
+        <h2>{{ t('Current and upcoming assignments', 'التعيينات الحالية والقادمة') }}</h2>
+      </header>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('Employee', 'الموظف') }}</th>
+              <th>{{ t('Schedule', 'الجدول') }}</th>
+              <th>{{ t('Effective from', 'يسري من') }}</th>
+              <th>{{ t('Hours', 'الساعات') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of assignments().items; track a.id) {
+              <tr>
+                <td>
+                  <strong>{{ a.employee }}</strong
+                  ><small>{{ a.employeeCode }}</small>
+                </td>
+                <td>
+                  {{ a.policy.name }}<small>{{ dayNames(a.policy.workdays) }}</small>
+                </td>
+                <td>{{ a.effectiveFrom }}</td>
+                <td>{{ clockTime(a.policy.startMinute) }} — {{ clockTime(a.policy.endMinute) }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4" class="empty">
+                  {{ t('No assigned schedules yet', 'لا توجد جداول معيّنة بعد') }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <footer class="pager">
+        <span>{{ assignments().total }} {{ t('assignments', 'تعيين') }}</span>
+        <div>
+          <button
+            class="btn"
+            [disabled]="loading() || assignmentPage() === 1"
+            (click)="paginate('assignments', -1)"
+          >
+            {{ t('Previous', 'السابق') }}</button
+          ><button
+            class="btn"
+            [disabled]="loading() || assignmentPage() * 25 >= assignments().total"
+            (click)="paginate('assignments', 1)"
+          >
+            {{ t('Next', 'التالي') }}
+          </button>
+        </div>
+      </footer>
+    </section>
+  } @else {
+    @if (mode === 'my' && context()?.self) {
+      <section class="card clock-card">
+        <div>
+          <p class="muted">{{ context()?.shift?.workDate || context()?.today }}</p>
+          <h2>
+            {{ context()?.shift?.name || t('No work schedule assigned', 'لا يوجد جدول عمل معيّن') }}
+          </h2>
+          @if (context()?.shift) {
+            <p class="muted">{{ time(context().shift.start) }} — {{ time(context().shift.end) }}</p>
+          }
+          @if (context()?.openRecord) {
+            <p>{{ t('Checked in: ', 'وقت الحضور: ') }}{{ time(context().openRecord.checkIn) }}</p>
+          } @else if (context()?.dayRecord?.checkOut) {
+            <p>
+              {{ t('Checked out: ', 'وقت الانصراف: ') }}{{ time(context().dayRecord.checkOut) }}
+            </p>
+          }
+        </div>
+        <div class="row-actions">
+          @if (context()?.openRecord) {
+            <button
+              type="button"
+              class="btn btn--dark"
+              [disabled]="saving() || context().self.status === 'offboarded'"
+              (click)="punch('out')"
+            >
+              {{ t('Check out', 'تسجيل الانصراف') }}
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="btn btn--dark"
+              [disabled]="
+                saving() ||
+                !context()?.shift ||
+                !!context()?.dayRecord ||
+                context().self.status === 'offboarded'
+              "
+              (click)="punch('in')"
+            >
+              {{ t('Check in', 'تسجيل الحضور') }}
+            </button>
+          }
+          <button
+            type="button"
+            class="btn"
+            [disabled]="saving() || context().self.status === 'offboarded'"
+            (click)="correct()"
+          >
+            {{ t('Request correction', 'طلب تصحيح') }}
+          </button>
+        </div>
+      </section>
+    }
+    <div class="tools attendance-filters">
+      <div class="toggle">
+        <button [class.on]="period === 'daily'" (click)="period = 'daily'; reload(true)">
+          {{ t('Daily', 'يومي') }}</button
+        ><button [class.on]="period === 'monthly'" (click)="period = 'monthly'; reload(true)">
+          {{ t('Monthly', 'شهري') }}
+        </button>
+      </div>
+      @if (period === 'daily') {
+        <label class="field"
+          ><span>{{ t('Date', 'التاريخ') }}</span
+          ><input type="date" [(ngModel)]="date" (change)="reload(true)"
+        /></label>
+      } @else {
+        <label class="field"
+          ><span>{{ t('Month', 'الشهر') }}</span
+          ><input type="month" [(ngModel)]="month" (change)="reload(true)" /></label
+        ><button
+          type="button"
+          class="btn"
+          [disabled]="loading() || !report().monthly.length"
+          (click)="exportMonthly()"
+        >
+          {{ t('Export monthly CSV', 'تصدير التقرير الشهري') }}
+        </button>
+      }
+    </div>
+    @if (mode === 'company') {
+      <div class="tools">
+        <label class="field"
+          ><span>{{ t('Department', 'القسم') }}</span
+          ><select [(ngModel)]="departmentId" (change)="employeeId = ''; reload(true)">
+            <option value="">{{ t('All departments', 'جميع الأقسام') }}</option>
+            @for (d of options().departments; track d.id) {
+              <option [value]="d.id">{{ d.name }}</option>
+            }
+          </select></label
+        ><label class="field"
+          ><span>{{ t('Employee', 'الموظف') }}</span
+          ><select [(ngModel)]="employeeId" (change)="reload(true)">
+            <option value="">{{ t('All employees', 'جميع الموظفين') }}</option>
+            @for (e of options().employees; track e.id) {
+              @if (!departmentId || e.departmentId === departmentId) {
+                <option [value]="e.id">{{ e.name }}</option>
+              }
+            }
+          </select></label
+        >
+      </div>
+    }
+    @if (report().calendarAvailable === false) {
+      <p class="note note--warn" role="status">
+        {{
+          t(
+            'The holiday calendar is temporarily unavailable. Absence and lateness classification is held until it can be verified. Your recorded times are preserved.',
+            'تقويم العطلات غير متاح مؤقتًا. يتوقف احتساب الغياب والتأخير حتى التحقق من التقويم، مع الاحتفاظ بالأوقات المسجّلة.'
+          )
+        }}
+      </p>
+    }
+    <section class="attendance-kpis">
+      <div class="card">
+        <span>{{ t('Present days', 'أيام الحضور') }}</span
+        ><strong>{{ (report().summary.present || 0) + (report().summary.late || 0) }}</strong>
+      </div>
+      <div class="card">
+        <span>{{ t('Late days', 'أيام التأخير') }}</span
+        ><strong>{{ report().summary.late || 0 }}</strong>
+      </div>
+      <div class="card">
+        <span>{{ t('Absent days', 'أيام الغياب') }}</span
+        ><strong>{{ report().summary.absent || 0 }}</strong>
+      </div>
+      <div class="card">
+        <span>{{ t('Leave days', 'أيام الإجازة') }}</span
+        ><strong>{{ report().summary.leaveDays || 0 }}</strong>
+      </div>
+      <div class="card">
+        <span>{{ t('Work time', 'وقت العمل') }}</span
+        ><strong>{{ hours(report().summary.workedMinutes) }}</strong>
+      </div>
+      <div class="card">
+        <span>{{ t('Missing check-out', 'انصراف غير مسجّل') }}</span
+        ><strong>{{ report().summary.missingCheckout || 0 }}</strong>
+      </div>
+    </section>
+    <nav class="tabs" aria-label="Attendance views">
+      <button
+        type="button"
+        [class.on]="activeTab() === 'records'"
+        (click)="activeTab.set('records')"
+      >
+        {{ t('Attendance', 'الحضور') }}</button
+      ><button
+        type="button"
+        [class.on]="activeTab() === 'corrections'"
+        (click)="activeTab.set('corrections')"
+      >
+        {{ t('Correction requests', 'طلبات التصحيح') }}
+      </button>
+    </nav>
+    @if (activeTab() === 'records') {
+      @if (period === 'monthly') {
+        <section class="table-card">
+          <header class="section-head">
+            <h2>{{ t('Monthly summary', 'الملخص الشهري') }}</h2>
+          </header>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>{{ t('Employee', 'الموظف') }}</th>
+                  <th>{{ t('Present', 'حضور') }}</th>
+                  <th>{{ t('Late', 'تأخير') }}</th>
+                  <th>{{ t('Absent', 'غياب') }}</th>
+                  <th>{{ t('Leave days', 'أيام الإجازة') }}</th>
+                  <th>{{ t('Work time', 'وقت العمل') }}</th>
+                  <th>{{ t('Late time', 'وقت التأخير') }}</th>
+                  <th>{{ t('Missing check-out', 'انصراف غير مسجّل') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of report().monthly; track r.employeeId) {
+                  <tr>
+                    <td>
+                      <strong>{{ r.employee }}</strong
+                      ><small>{{ r.employeeCode }}</small>
+                    </td>
+                    <td>{{ r.present + r.late }}</td>
+                    <td>{{ r.late }}</td>
+                    <td>{{ r.absent }}</td>
+                    <td>{{ r.leaveDays }}</td>
+                    <td>{{ hours(r.workedMinutes) }}</td>
+                    <td>{{ hours(r.lateMinutes) }}</td>
+                    <td>{{ r.missingCheckout }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="8" class="empty">
+                      {{
+                        t(
+                          'No employee records in this period',
+                          'لا توجد سجلات موظفين في هذه الفترة'
+                        )
+                      }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+      <section class="table-card">
+        <header class="section-head">
+          <h2>{{ t('Attendance records', 'سجلات الحضور') }}</h2>
+        </header>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('Employee', 'الموظف') }}</th>
+                <th>{{ t('Workday', 'يوم العمل') }}</th>
+                <th>{{ t('Status', 'الحالة') }}</th>
+                <th>{{ t('Check-in', 'الحضور') }}</th>
+                <th>{{ t('Check-out', 'الانصراف') }}</th>
+                <th>{{ t('Work time', 'وقت العمل') }}</th>
+                <th>{{ t('Late time', 'وقت التأخير') }}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of report().items; track r.employeeId + ':' + r.date) {
+                <tr>
+                  <td>
+                    <strong>{{ r.employee }}</strong
+                    ><small>{{ r.employeeCode }}</small>
+                  </td>
+                  <td>
+                    {{ r.date }}<small>{{ r.schedule || t('No schedule', 'بدون جدول') }}</small>
+                  </td>
+                  <td>
+                    <span
+                      class="badge"
+                      [class.warning]="r.status === 'late' || r.status === 'absent'"
+                      >{{ label(r.status) }}</span
+                    >
+                    @if (r.missingCheckout) {
+                      <small class="warning">{{
+                        t('Missing check-out', 'انصراف غير مسجّل')
+                      }}</small>
+                    }
+                    @if (r.dayType === 'partial_leave') {
+                      <small>{{ label('partial_leave') }}</small>
+                    }
+                    @if (r.workedOnDayOff) {
+                      <small>{{
+                        t('Worked on a holiday or leave day', 'عمل في يوم راحة أو إجازة')
+                      }}</small>
+                    }
+                  </td>
+                  <td>{{ time(r.checkIn) }}</td>
+                  <td>{{ time(r.checkOut) }}</td>
+                  <td>{{ hours(r.workedMinutes) }}</td>
+                  <td>{{ hours(r.lateMinutes) }}</td>
+                  <td>
+                    @if (
+                      mode === 'my' &&
+                      r.date <= context()?.today &&
+                      r.schedule &&
+                      context()?.self?.status !== 'offboarded'
+                    ) {
+                      <button class="btn" (click)="correct(r)">{{ t('Correct', 'تصحيح') }}</button>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="8" class="empty">
+                    {{
+                      t('No attendance records in this period', 'لا توجد سجلات حضور في هذه الفترة')
+                    }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <footer class="pager">
+          <span>{{ report().total }} {{ t('workdays', 'يوم عمل') }}</span>
+          <div>
+            <button
+              class="btn"
+              [disabled]="loading() || page() === 1"
+              (click)="paginate('records', -1)"
+            >
+              {{ t('Previous', 'السابق') }}</button
+            ><button
+              class="btn"
+              [disabled]="loading() || page() * 50 >= report().total"
+              (click)="paginate('records', 1)"
+            >
+              {{ t('Next', 'التالي') }}
+            </button>
+          </div>
+        </footer>
+      </section>
+    } @else {
+      <div class="tools">
+        <label class="field"
+          ><span>{{ t('Request status', 'حالة الطلب') }}</span
+          ><select [(ngModel)]="correctionStatus" (change)="correctionPage.set(1); reload()">
+            <option value="pending">{{ label('pending') }}</option>
+            <option value="approved">{{ label('approved') }}</option>
+            <option value="rejected">{{ label('rejected') }}</option>
+            <option value="cancelled">{{ label('cancelled') }}</option>
+            <option value="all">{{ t('All', 'الكل') }}</option>
+          </select></label
+        >
+      </div>
+      <section class="table-card">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('Employee / workday', 'الموظف / يوم العمل') }}</th>
+                <th>{{ t('Proposed times', 'الأوقات المقترحة') }}</th>
+                <th>{{ t('Reason', 'السبب') }}</th>
+                <th>{{ t('Status', 'الحالة') }}</th>
+                <th>{{ t('Actions', 'الإجراءات') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of corrections().items; track r.id) {
+                <tr>
+                  <td>
+                    <strong>{{ r.employee }}</strong
+                    ><small>{{ r.date }}</small>
+                  </td>
+                  <td>
+                    {{ time(r.checkIn) }}<small>{{ time(r.checkOut) }}</small>
+                  </td>
+                  <td class="reason-cell">
+                    {{ r.reason }}
+                    @if (r.stale) {
+                      <small class="warning">{{
+                        t(
+                          'Attendance changed. Reject or cancel this request and submit a fresh correction.',
+                          'تغيّر سجل الحضور. ارفض الطلب أو ألغِه ثم قدّم تصحيحًا جديدًا.'
+                        )
+                      }}</small>
+                    }
+                    @if (r.note) {
+                      <small>{{ t('Review note: ', 'ملاحظة المراجعة: ') }}{{ r.note }}</small>
+                    }
+                  </td>
+                  <td>
+                    <span class="badge">{{ label(r.status) }}</span>
+                  </td>
+                  <td>
+                    <div class="row-actions">
+                      @if (r.canReview) {
+                        <button
+                          class="btn btn--dark"
+                          [disabled]="saving() || r.stale"
+                          (click)="review(r, 'approve')"
+                        >
+                          {{ t('Approve', 'قبول') }}</button
+                        ><button class="btn" [disabled]="saving()" (click)="review(r, 'reject')">
+                          {{ t('Reject', 'رفض') }}
+                        </button>
+                      }
+                      @if (r.canCancel) {
+                        <button class="btn" [disabled]="saving()" (click)="review(r, 'cancel')">
+                          {{ t('Cancel request', 'إلغاء الطلب') }}
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="empty">
+                    {{ t('No correction requests', 'لا توجد طلبات تصحيح') }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <footer class="pager">
+          <span>{{ corrections().total }} {{ t('requests', 'طلب') }}</span>
+          <div>
+            <button
+              class="btn"
+              [disabled]="loading() || correctionPage() === 1"
+              (click)="paginate('corrections', -1)"
+            >
+              {{ t('Previous', 'السابق') }}</button
+            ><button
+              class="btn"
+              [disabled]="loading() || correctionPage() * 25 >= corrections().total"
+              (click)="paginate('corrections', 1)"
+            >
+              {{ t('Next', 'التالي') }}
+            </button>
+          </div>
+        </footer>
+      </section>
+    }
+    <p class="muted">
+      {{
+        t(
+          'Absence is shown only after the assigned shift ends. Work time uses completed check-in/out records; it does not calculate payroll.',
+          'يظهر الغياب بعد انتهاء الوردية المعيّنة فقط. يُحتسب وقت العمل من سجلات الحضور والانصراف المكتملة، ولا تُحتسب رواتب.'
+        )
+      }}
+    </p>
+  }
+</div>
+@if (dialog()) {
+  <div class="scrim scrim--top" (click)="close()"></div>
+  <form
+    #attendanceForm="ngForm"
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="attendance-dialog-title"
+    (ngSubmit)="save()"
+  >
+    <header class="dialog__head">
+      <h2 id="attendance-dialog-title">
+        {{
+          dialog() === 'schedule'
+            ? t('Work schedule', 'جدول العمل')
+            : dialog() === 'assign'
+              ? t('Assign schedule', 'تعيين جدول')
+              : dialog() === 'correction'
+                ? t('Request attendance correction', 'طلب تصحيح الحضور')
+                : form.action === 'approve'
+                  ? t('Approve correction', 'قبول التصحيح')
+                  : form.action === 'reject'
+                    ? t('Reject correction', 'رفض التصحيح')
+                    : t('Cancel request', 'إلغاء الطلب')
+        }}
+      </h2>
+      <button
+        type="button"
+        class="x"
+        aria-label="Close dialog"
+        [disabled]="saving()"
+        (click)="close()"
+      >
+        ×
+      </button>
+    </header>
+    <div class="dialog__body">
+      @if (formError()) {
+        <p class="note note--bad" role="alert">{{ formError() }}</p>
+      }
+      <fieldset class="form-grid" [disabled]="saving()">
+        @if (dialog() === 'schedule') {
+          <label class="field wide"
+            ><span>{{ t('Schedule name', 'اسم الجدول') }} *</span
+            ><input name="scheduleName" [(ngModel)]="form.name" required maxlength="120"
+          /></label>
+          <div class="wide">
+            <span>{{ t('Working days', 'أيام العمل') }} *</span>
+            <div class="days-picker">
+              @for (day of days; track $index; let i = $index) {
+                <label
+                  ><input
+                    type="checkbox"
+                    [name]="'workday-' + i"
+                    [checked]="form.workdays.includes(i)"
+                    (change)="toggleDay(i, $any($event.target).checked)"
+                  />{{ t(day[0], day[1]) }}</label
+                >
+              }
+            </div>
+          </div>
+          <label class="field"
+            ><span>{{ t('Start time', 'وقت البداية') }} *</span
+            ><input name="startTime" type="time" [(ngModel)]="form.start" required /></label
+          ><label class="field"
+            ><span>{{ t('End time', 'وقت النهاية') }} *</span
+            ><input name="endTime" type="time" [(ngModel)]="form.end" required /></label
+          ><label class="field"
+            ><span>{{ t('Grace period (minutes)', 'فترة السماح (دقيقة)') }}</span
+            ><input
+              name="grace"
+              type="number"
+              min="0"
+              max="120"
+              step="1"
+              [(ngModel)]="form.graceMinutes"
+              required /></label
+          ><label class="archive"
+            ><input type="checkbox" name="archived" [(ngModel)]="form.archived" />{{
+              t('Archive template', 'أرشفة القالب')
+            }}</label
+          >
+          <p class="muted wide">
+            {{
+              t(
+                'An end time before the start time means an overnight shift. Existing assignments retain their saved times.',
+                'وقت النهاية قبل البداية يعني وردية ليلية. تحتفظ التعيينات الحالية بأوقاتها المحفوظة.'
+              )
+            }}
+          </p>
+        }
+        @if (dialog() === 'assign') {
+          <label class="field wide"
+            ><span>{{ t('Schedule', 'الجدول') }} *</span
+            ><select name="schedule" [(ngModel)]="form.scheduleId" required>
+              <option value="">{{ t('Choose a schedule', 'اختر جدولًا') }}</option>
+              @for (s of schedules(); track s.id) {
+                @if (!s.archived) {
+                  <option [value]="s.id">{{ s.name }}</option>
+                }
+              }
+            </select></label
+          >
+          <label class="field"
+            ><span>{{ t('Assign to', 'التعيين إلى') }}</span
+            ><select name="target" [(ngModel)]="form.target" (change)="form.targetId = ''" required>
+              <option value="employee">{{ t('Employee', 'موظف') }}</option>
+              <option value="department">{{ t('Department members', 'أعضاء قسم') }}</option>
+              <option value="all">
+                {{ t('All current employees', 'جميع الموظفين الحاليين') }}
+              </option>
+            </select></label
+          >
+          @if (form.target !== 'all') {
+            <label class="field"
+              ><span
+                >{{
+                  form.target === 'employee' ? t('Employee', 'الموظف') : t('Department', 'القسم')
+                }}
+                *</span
+              ><select name="targetId" [(ngModel)]="form.targetId" required>
+                <option value="">{{ t('Choose', 'اختر') }}</option>
+                @for (
+                  r of form.target === 'employee' ? options().employees : options().departments;
+                  track r.id
+                ) {
+                  <option [value]="r.id">{{ r.name }}</option>
+                }
+              </select></label
+            >
+          }
+          <label class="field"
+            ><span>{{ t('Effective from', 'يسري من') }} *</span
+            ><input
+              name="effectiveFrom"
+              type="date"
+              [min]="context()?.today"
+              [(ngModel)]="form.effectiveFrom"
+              required
+          /></label>
+          <p class="muted wide">
+            {{
+              t(
+                'Department and company selections cover current employees. Assign new employees when they join. Assignments start today or later and cannot overwrite the same start date.',
+                'اختيار القسم أو الشركة يشمل الموظفين الحاليين. عيّن الموظفين الجدد عند انضمامهم. تبدأ التعيينات اليوم أو لاحقًا، ولا يمكن استبدال تعيين بنفس تاريخ البداية.'
+              )
+            }}
+          </p>
+        }
+        @if (dialog() === 'correction') {
+          <p class="muted wide">
+            {{
+              t(
+                'Enter Cairo local times. Past workdays require both times. Corrections need manager or HR approval.',
+                'أدخل الأوقات بتوقيت القاهرة. تتطلب الأيام السابقة وقتي الحضور والانصراف، وتحتاج التصحيحات موافقة المدير أو الموارد البشرية.'
+              )
+            }}
+          </p>
+          <label class="field"
+            ><span>{{ t('Workday', 'يوم العمل') }} *</span
+            ><input
+              name="workDate"
+              type="date"
+              [max]="context()?.today"
+              [(ngModel)]="form.workDate"
+              required /></label
+          ><label class="field"
+            ><span>{{ t('Check-in', 'وقت الحضور') }} *</span
+            ><input
+              name="checkIn"
+              type="datetime-local"
+              [(ngModel)]="form.checkIn"
+              required /></label
+          ><label class="field"
+            ><span>{{ t('Check-out', 'وقت الانصراف') }}</span
+            ><input
+              name="checkOut"
+              type="datetime-local"
+              [(ngModel)]="form.checkOut"
+              [required]="form.workDate < context()?.today" /></label
+          ><label class="field wide"
+            ><span>{{ t('Reason', 'السبب') }} *</span
+            ><textarea
+              name="reason"
+              [(ngModel)]="form.reason"
+              minlength="3"
+              maxlength="2000"
+              required
+              rows="3"
+            ></textarea>
+          </label>
+        }
+        @if (dialog() === 'review') {
+          <p class="wide">{{ reviewing.employee }} · {{ reviewing.date }}</p>
+          <p class="wide">{{ reviewing.reason }}</p>
+          <div class="wide">
+            <p class="muted">{{ t('Current recorded times', 'الأوقات المسجّلة حاليًا') }}</p>
+            <p>{{ time(reviewing.currentCheckIn) }} — {{ time(reviewing.currentCheckOut) }}</p>
+            <p class="muted">{{ t('Proposed times', 'الأوقات المقترحة') }}</p>
+            <p>{{ time(reviewing.checkIn) }} — {{ time(reviewing.checkOut) }}</p>
+          </div>
+          <label class="field wide"
+            ><span
+              >{{ t('Review note', 'ملاحظة المراجعة')
+              }}{{ form.action === 'reject' ? ' *' : '' }}</span
+            ><textarea
+              name="reviewNote"
+              [(ngModel)]="form.note"
+              [required]="form.action === 'reject'"
+              [minlength]="form.action === 'reject' ? 3 : 0"
+              maxlength="1000"
+              rows="3"
+            ></textarea>
+          </label>
+        }
+      </fieldset>
+    </div>
+    <footer class="dialog__foot">
+      <button type="button" class="btn" [disabled]="saving()" (click)="close()">
+        {{ t('Cancel', 'إلغاء') }}</button
+      ><button type="submit" class="btn btn--dark" [disabled]="saving() || attendanceForm.invalid">
+        {{ saving() ? t('Saving…', 'جارٍ الحفظ…') : t('Save', 'حفظ') }}
+      </button>
+    </footer>
+  </form>
+}

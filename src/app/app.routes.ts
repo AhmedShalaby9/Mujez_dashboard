@@ -202,6 +202,30 @@ export const routes: Routes = [
           import('./pages/company-shell/employee/employee').then((m) => m.Employee),
       },
       {
+        path: 'my-attendance',
+        data: { attendanceView: 'my' },
+        loadComponent: () =>
+          import('./pages/company-shell/attendance/attendance').then((m) => m.Attendance),
+      },
+      {
+        path: 'team-attendance',
+        data: { attendanceView: 'team' },
+        loadComponent: () =>
+          import('./pages/company-shell/attendance/attendance').then((m) => m.Attendance),
+      },
+      {
+        path: 'hr/attendance',
+        data: { attendanceView: 'company', hrAccess: true },
+        loadComponent: () =>
+          import('./pages/company-shell/attendance/attendance').then((m) => m.Attendance),
+      },
+      {
+        path: 'hr/work-schedules',
+        data: { attendanceView: 'schedules', hrAccess: true },
+        loadComponent: () =>
+          import('./pages/company-shell/attendance/attendance').then((m) => m.Attendance),
+      },
+      {
         path: 'my-leave',
         data: { leaveView: 'my' },
         loadComponent: () => import('./pages/company-shell/leave/leave').then((m) => m.Leave),

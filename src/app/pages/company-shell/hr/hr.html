@@ -21,8 +21,8 @@
   <p class="muted">
     {{
       t(
-        'Company staff login accounts appear here automatically. Add records for employees without a login. HR records are private to the company owner and authorized HR staff.',
-        'تظهر حسابات موظفي الشركة هنا تلقائيًا. أضف سجلات للموظفين الذين ليس لديهم حساب دخول. السجلات متاحة لمالك الشركة وموظفي الموارد البشرية المخولين فقط.'
+        'Every new employee gets login access and an activation email. HR records are private to the company owner and authorized HR staff.',
+        'يحصل كل موظف جديد على حساب دخول وبريد تفعيل. السجلات متاحة لمالك الشركة وموظفي الموارد البشرية المخولين فقط.'
       )
     }}
   </p>
@@ -116,7 +116,7 @@
               <th>{{ t('Employee', 'الموظف') }}</th>
               <th>{{ t('Department / manager', 'القسم / المدير') }}</th>
               <th>{{ t('Employment', 'التوظيف') }}</th>
-              <th>{{ t('CRM access', 'حساب النظام') }}</th>
+              <th>{{ t('Login access', 'حساب الدخول') }}</th>
             }
             @if (view === 'departments') {
               <th>{{ t('Department', 'القسم') }}</th>
@@ -160,7 +160,15 @@
                   >
                 </td>
                 <td>
-                  {{ row.crmName || t('No CRM account', 'بدون حساب للنظام') }}
+                  {{
+                    row.loginEmail || row.crmName || t('Email required', 'البريد الإلكتروني مطلوب')
+                  }}
+                  @if (row.loginDelivery) {
+                    <small
+                      >{{ t('Activation email: ', 'بريد التفعيل: ')
+                      }}{{ label(row.loginDelivery) }}</small
+                    >
+                  }
                   @if (row.crmStatus) {
                     <small>{{ label(row.crmStatus) }}</small>
                   }
@@ -209,6 +217,20 @@
                     </button>
                   } @else {
                     <button class="btn" (click)="show(row)">{{ t('Edit', 'تعديل') }}</button>
+                    @if (
+                      view === 'employees' &&
+                      row.status !== 'offboarded' &&
+                      ((!row.userId && row.email) || row.crmStatus === 'invited')
+                    ) {
+                      <button
+                        type="button"
+                        class="btn"
+                        [disabled]="saving()"
+                        (click)="inviteLogin(row)"
+                      >
+                        {{ t('Send activation email', 'إرسال بريد التفعيل') }}
+                      </button>
+                    }
                   }
                 </div>
               </td>
@@ -244,8 +266,8 @@
   <p class="muted">
     {{
       t(
-        'Job titles and HR employment statuses do not change CRM roles or login access. Manage CRM invitations and access in Team.',
-        'المسمى الوظيفي وحالة التوظيف لا يغيّران صلاحيات النظام أو تسجيل الدخول. تُدار الحسابات والدعوات من صفحة الفريق.'
+        'Employee-only accounts see their personal employee area. Assign additional roles from Team for CRM or HR management access.',
+        'يرى حساب الموظف فقط مساحته الشخصية. أضف أدوارًا من صفحة الفريق لإتاحة المبيعات أو إدارة الموارد البشرية.'
       )
     }}
   </p>
@@ -298,8 +320,15 @@
                 required
                 maxlength="160" /></label
             ><label class="field"
-              ><span>{{ t('Email', 'البريد الإلكتروني') }}</span
-              ><input name="email" [(ngModel)]="form.email" type="email" maxlength="254" /></label
+              ><span
+                >{{ t('Email', 'البريد الإلكتروني')
+                }}{{ !form.userId && form.status !== 'offboarded' ? ' *' : '' }}</span
+              ><input
+                name="email"
+                [(ngModel)]="form.email"
+                type="email"
+                maxlength="254"
+                [required]="!form.userId && form.status !== 'offboarded'" /></label
             ><label class="field"
               ><span>{{ t('Phone', 'الهاتف') }}</span
               ><input name="phone" [(ngModel)]="form.phone" type="text" maxlength="50" /></label
@@ -384,8 +413,8 @@
             <p class="muted wide">
               {{
                 t(
-                  'Adding an employee does not create a login or send an invitation. Link an existing login account to enable My leave.',
-                  'إضافة موظف لا تنشئ حساب دخول ولا ترسل دعوة. اربط حسابًا موجودًا لإتاحة إجازاتي.'
+                  'Saving an employee with an email creates an Employee login and emails an activation link. Existing linked accounts keep their passwords and roles.',
+                  'حفظ الموظف ببريد إلكتروني ينشئ حساب موظف ويرسل رابط التفعيل. تحتفظ الحسابات المرتبطة بكلمات المرور والأدوار الحالية.'
                 )
               }}
             </p>

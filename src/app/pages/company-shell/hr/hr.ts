@@ -65,6 +65,12 @@ export class Hr {
   label(s: string) {
     const labels: Record<string, string> = {
       active: 'نشط',
+      invited: 'بانتظار التفعيل',
+      queued: 'قيد الإرسال',
+      processing: 'جارٍ الإرسال',
+      accepted: 'تم الإرسال',
+      retry: 'إعادة المحاولة',
+      failed: 'تعذر الإرسال',
       on_leave: 'في إجازة',
       offboarded: 'انتهت الخدمة',
       full_time: 'دوام كامل',
@@ -239,6 +245,23 @@ export class Hr {
       await this.reload();
     } catch (e) {
       this.formError.set(this.message(e));
+    } finally {
+      this.saving.set(false);
+    }
+  }
+  async inviteLogin(row: any) {
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.error.set('');
+    try {
+      await this.auth.request('/api/v1/hr/employees/' + row.id + '/login-invitation', {
+        requestId: crypto.randomUUID(),
+        version: row.version,
+      });
+      this.notice.set(this.t('Activation email queued.', 'تمت جدولة بريد تفعيل الحساب.'));
+      await this.reload();
+    } catch (e) {
+      this.error.set(this.message(e));
     } finally {
       this.saving.set(false);
     }

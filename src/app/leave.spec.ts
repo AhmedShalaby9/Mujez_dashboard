@@ -213,6 +213,6 @@ describe('Annual leave workspace', () => {
     });
     const auth = TestBed.inject(AuthService);
     auth.user.set(employee);
-    expect(auth.homePath()).toBe('/company/my-leave');
+    expect(auth.homePath()).toBe('/company/employee');
   });
 });

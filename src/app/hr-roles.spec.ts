@@ -104,7 +104,6 @@ describe('HR-role navigation and boundaries', () => {
       a.getAttribute('href'),
     );
     expect(paths).toEqual([
-      '/company/dashboard',
       '/company/hr/employees',
       '/company/hr/departments',
       '/company/hr/documents',

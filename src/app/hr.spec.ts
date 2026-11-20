@@ -60,10 +60,10 @@ async function setup(view = 'employees', queryEmployee = '') {
 }
 afterEach(() => TestBed.resetTestingModule());
 describe('HR workspace', () => {
-  it('renders real staff without CRM access and requests only HR data', async () => {
+  it('renders real staff with missing login setup and requests only HR data', async () => {
     const { f, request } = await setup();
     expect(f.nativeElement.textContent).toContain('Operations Employee');
-    expect(f.nativeElement.textContent).toContain('No CRM account');
+    expect(f.nativeElement.textContent).toContain('Email required');
     expect(request.mock.calls.map((c) => c[0])).toContain('/api/v1/hr/options');
     expect(request.mock.calls.every((c) => c[1] === undefined)).toBe(true);
   });

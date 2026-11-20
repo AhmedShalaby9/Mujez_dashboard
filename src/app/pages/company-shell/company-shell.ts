@@ -4,6 +4,8 @@ import { NotificationsApi } from '../../notifications-api.service';
 import {
   AuthService,
   hrModuleEnabled,
+  hasCrmWorkspace,
+  employeeArea,
   hasHrAccess,
   hasLeaveSelf,
   managesLeave,
@@ -26,8 +28,9 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { CompanyUiState, type Lang } from './company-ui-state';
 
 /** Nav item -> permission required to see it. Items without an entry here
- * (e.g. the dashboard) are always shown to any signed-in tenant principal. */
+ * are checked separately when they depend on the workspace or assigned roles. */
 const NAV_PERMISSION: Record<string, string> = {
+  employee: 'leave.self',
   'my-leave': 'leave.self',
   'leave-approvals': 'leave.review',
   'hr/leave': 'leave.manage',
@@ -56,6 +59,7 @@ const NAV_PERMISSION: Record<string, string> = {
 };
 
 const COMPANY_ICONS: Record<string, string> = {
+  employee: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0',
   'my-leave': 'M4 5h16v16H4zM8 3v4M16 3v4M4 10h16',
   'leave-approvals': 'M5 3h14v18H5zM8 12l3 3 5-6',
   'hr/leave': 'M4 5h16v16H4zM8 3v4M16 3v4M4 10h16',
@@ -149,6 +153,7 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Reports', path: 'reports' },
   { kind: 'item', label: 'AI analytics', path: 'ai-analytics' },
   { kind: 'head', label: 'People' },
+  { kind: 'item', label: 'Employee area', path: 'employee' },
   { kind: 'item', label: 'My leave', path: 'my-leave' },
   { kind: 'item', label: 'Leave approvals', path: 'leave-approvals' },
   { kind: 'item', label: 'Leave management', path: 'hr/leave' },
@@ -184,6 +189,7 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'التقارير', path: 'reports' },
   { kind: 'item', label: 'تحليلات الذكاء الاصطناعي', path: 'ai-analytics' },
   { kind: 'head', label: 'الموارد البشرية' },
+  { kind: 'item', label: 'مساحة الموظف', path: 'employee' },
   { kind: 'item', label: 'إجازاتي', path: 'my-leave' },
   { kind: 'item', label: 'مراجعة الإجازات', path: 'leave-approvals' },
   { kind: 'item', label: 'إدارة الإجازات', path: 'hr/leave' },
@@ -308,6 +314,8 @@ export class CompanyShell {
     const kept: NavEntry[] = [];
     const canSee = (item: NavItem) => {
       const u = this.auth.user();
+      if (item.path === 'dashboard') return hasCrmWorkspace(u);
+      if (item.path === 'employee') return employeeArea(u);
       if (
         (item.path.startsWith('hr/') || ['my-leave', 'leave-approvals'].includes(item.path)) &&
         !hrModuleEnabled(u)

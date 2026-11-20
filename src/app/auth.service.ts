@@ -41,6 +41,19 @@ export interface User {
 export function hrModuleEnabled(u: User | null | undefined) {
   return !!u && u.company?.hrEnabled !== false;
 }
+export function hasCrmWorkspace(u: User | null | undefined) {
+  return !!u && (u.pool === 'company_admin' || u.permissions.includes('leads.read'));
+}
+export function employeeArea(u: User | null | undefined) {
+  return !!u && u.pool === 'company_user' && (u.roles ?? [u.role]).includes('employee');
+}
+export function companyHomePath(u: User | null | undefined) {
+  if (u?.pool === 'company_user' && !u.permissions.includes('leads.read')) {
+    if (hasHrAccess(u)) return '/company/hr/employees';
+    if (employeeArea(u)) return '/company/employee';
+  }
+  return '/company/dashboard';
+}
 /** HR company access is an explicit module grant; CRM scope stays personal. */
 export function hasHrAccess(u: User | null | undefined) {
   if (!u || u.workspace || !hrModuleEnabled(u)) return false;
@@ -143,13 +156,7 @@ export class AuthService {
       ? '/change-password'
       : this.user()?.pool === 'platform'
         ? '/admin/dashboard'
-        : this.user()?.pool === 'company_user' &&
-            hasHrAccess(this.user()) &&
-            !this.user()?.permissions.includes('leads.read')
-          ? '/company/hr/employees'
-          : hasLeaveSelf(this.user()) && !this.user()?.permissions.includes('leads.read')
-            ? '/company/my-leave'
-            : '/company/dashboard';
+        : companyHomePath(this.user());
   }
   async logout() {
     await this.request('/api/v1/auth/logout', {});
@@ -181,28 +188,29 @@ export const companyGuard: CanActivateFn = async (route) => {
     u?.permissions.includes('workspace.view');
   const isWorkspace = u?.pool === 'company_admin' && !!u?.workspace;
   const isEmployee = u?.pool === 'company_user';
+  if (route.data['employeeView'] && !employeeArea(u)) return router.parseUrl(companyHomePath(u));
+  if (route.data['crmView'] && !hasCrmWorkspace(u)) return router.parseUrl(companyHomePath(u));
   if ((route.data['hrAccess'] || route.data['leaveView']) && !hrModuleEnabled(u))
-    return router.createUrlTree(['/company/dashboard']);
+    return router.parseUrl(companyHomePath(u));
   if (route.data['leaveView'] === 'manage' && !managesLeave(u))
-    return router.createUrlTree(['/company/dashboard']);
+    return router.parseUrl(companyHomePath(u));
   if (route.data['leaveView'] === 'my' && !hasLeaveSelf(u) && !isOwner)
-    return router.createUrlTree(['/company/dashboard']);
+    return router.parseUrl(companyHomePath(u));
   if (route.data['leaveView'] === 'approvals') {
     try {
       const c = await auth.request('/api/v1/leave/context');
-      if (!c.isManager && !c.canFinalize) return router.createUrlTree(['/company/dashboard']);
+      if (!c.isManager && !c.canFinalize) return router.parseUrl(companyHomePath(u));
     } catch {
-      return router.createUrlTree(['/company/dashboard']);
+      return router.parseUrl(companyHomePath(u));
     }
   }
-  if (route.data['hrAccess'] && !hasHrAccess(u))
-    return router.createUrlTree(['/company/dashboard']);
+  if (route.data['hrAccess'] && !hasHrAccess(u)) return router.parseUrl(companyHomePath(u));
   if (route.data['ownerOnly'] && (!isOwner || isWorkspace))
-    return router.createUrlTree(['/company/dashboard']);
+    return router.parseUrl(companyHomePath(u));
   return isOwner || isWorkspace || isEmployee
     ? !route.data['permission'] || u?.permissions.includes(route.data['permission'])
       ? true
-      : router.createUrlTree(['/company/dashboard'])
+      : router.parseUrl(companyHomePath(u))
     : router.createUrlTree(['/']);
 };
 

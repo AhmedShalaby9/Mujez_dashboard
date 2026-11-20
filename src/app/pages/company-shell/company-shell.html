@@ -159,32 +159,34 @@
         </div>
       }
     </div>
-    <div class="sidebar__searchWrap">
-      <button
-        type="button"
-        class="sidebar__search"
-        [attr.aria-label]="lang() === 'ar' ? 'بحث في مساحة الشركة' : 'Search company workspace'"
-        [disabled]="!canSearchLeads()"
-        (click)="$event.stopPropagation(); focusSearch()"
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.7"
-          aria-hidden="true"
+    @if (canSearchLeads()) {
+      <div class="sidebar__searchWrap">
+        <button
+          type="button"
+          class="sidebar__search"
+          [attr.aria-label]="lang() === 'ar' ? 'بحث في مساحة الشركة' : 'Search company workspace'"
+          [disabled]="!canSearchLeads()"
+          (click)="$event.stopPropagation(); focusSearch()"
         >
-          <circle cx="10.5" cy="10.5" r="6.5" />
-          <path d="m16 16 4 4" />
-        </svg>
-        @if (!isCollapsed()) {
-          <span>{{ lang() === 'ar' ? 'بحث' : 'Search' }}</span
-          ><kbd class="sidebar__kbd">⌘K</kbd>
-        }
-      </button>
-    </div>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            aria-hidden="true"
+          >
+            <circle cx="10.5" cy="10.5" r="6.5" />
+            <path d="m16 16 4 4" />
+          </svg>
+          @if (!isCollapsed()) {
+            <span>{{ lang() === 'ar' ? 'بحث' : 'Search' }}</span
+            ><kbd class="sidebar__kbd">⌘K</kbd>
+          }
+        </button>
+      </div>
+    }
     <nav
       class="sidebar__nav"
       [attr.aria-label]="lang() === 'ar' ? 'تنقل الشركة' : 'Company navigation'"
@@ -323,27 +325,29 @@
         ≡
       </button>
 
-      <form
-        class="topbar__search"
-        role="search"
-        (submit)="$event.preventDefault(); submitSearch(q)"
-      >
-        <input
-          #q
-          #companySearch
-          id="company-search"
-          type="search"
-          class="topbar__searchInput"
-          [disabled]="!canSearchLeads()"
-          [placeholder]="
-            lang() === 'ar'
-              ? 'ابحث في العملاء وجهات الاتصال والوحدات والعقود…'
-              : 'Search leads, contacts, units and contracts…'
-          "
-          [attr.aria-label]="lang() === 'ar' ? 'بحث العملاء' : 'Search leads'"
-        />
-        <span class="topbar__kbd mono">Ctrl K</span>
-      </form>
+      @if (canSearchLeads()) {
+        <form
+          class="topbar__search"
+          role="search"
+          (submit)="$event.preventDefault(); submitSearch(q)"
+        >
+          <input
+            #q
+            #companySearch
+            id="company-search"
+            type="search"
+            class="topbar__searchInput"
+            [disabled]="!canSearchLeads()"
+            [placeholder]="
+              lang() === 'ar'
+                ? 'ابحث في العملاء وجهات الاتصال والوحدات والعقود…'
+                : 'Search leads, contacts, units and contracts…'
+            "
+            [attr.aria-label]="lang() === 'ar' ? 'بحث العملاء' : 'Search leads'"
+          />
+          <span class="topbar__kbd mono">Ctrl K</span>
+        </form>
+      }
 
       <div class="topbar__actions">
         <div class="topbar__lang" role="group" aria-label="Language">

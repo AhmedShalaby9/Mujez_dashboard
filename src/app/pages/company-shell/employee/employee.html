@@ -1,0 +1,72 @@
+<div class="employee-page" [attr.dir]="ui.lang() === 'ar' ? 'rtl' : 'ltr'">
+  <header class="page-head">
+    <div>
+      <p class="muted">{{ t('People · My workspace', 'الأفراد · مساحة عملي') }}</p>
+      <h1>{{ t('Employee area', 'مساحة الموظف') }}</h1>
+      <p class="muted">
+        {{ t('Your account and personal employee services.', 'حسابك وخدماتك الشخصية كموظف.') }}
+      </p>
+    </div>
+    <button type="button" class="btn" (click)="load()" [disabled]="loading()">
+      {{ t('Refresh', 'تحديث') }}
+    </button>
+  </header>
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+  <section class="card">
+    <h2>{{ auth.user()?.name }}</h2>
+    <dl>
+      <div>
+        <dt>{{ t('Login email', 'بريد الدخول') }}</dt>
+        <dd dir="ltr">{{ auth.user()?.email }}</dd>
+      </div>
+      @if (data()?.employee; as e) {
+        <div>
+          <dt>{{ t('Employee code', 'رقم الموظف') }}</dt>
+          <dd>{{ e.employeeCode }}</dd>
+        </div>
+        <div>
+          <dt>{{ t('Job title', 'المسمى الوظيفي') }}</dt>
+          <dd>{{ e.jobTitle || t('Not set', 'غير محدد') }}</dd>
+        </div>
+        <div>
+          <dt>{{ t('Department', 'القسم') }}</dt>
+          <dd>{{ e.department || t('Not set', 'غير محدد') }}</dd>
+        </div>
+        <div>
+          <dt>{{ t('Reporting manager', 'المدير المباشر') }}</dt>
+          <dd>{{ e.manager || t('Not set', 'غير محدد') }}</dd>
+        </div>
+      }
+    </dl>
+  </section>
+  @if (data()?.hrEnabled) {
+    <section class="card">
+      <h2>{{ t('My leave', 'إجازاتي') }}</h2>
+      <p class="muted">
+        {{
+          t(
+            'View your balance, submit leave requests and track their status.',
+            'اعرض رصيدك وقدّم طلبات الإجازات وتابع حالتها.'
+          )
+        }}
+      </p>
+      <a class="btn btn--dark" routerLink="/company/my-leave">{{
+        t('Open My leave', 'فتح إجازاتي')
+      }}</a>
+    </section>
+  } @else if (data()) {
+    <section class="card">
+      <h2>{{ t('Employee services', 'خدمات الموظف') }}</h2>
+      <p class="muted">
+        {{
+          t(
+            'HR services are not enabled for your company. Your login remains available.',
+            'خدمات الموارد البشرية غير مفعّلة لشركتك. يظل حساب الدخول متاحًا.'
+          )
+        }}
+      </p>
+    </section>
+  }
+</div>

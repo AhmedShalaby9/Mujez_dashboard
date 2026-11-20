@@ -19,6 +19,12 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
+        path: 'employee',
+        data: { employeeView: true },
+        loadComponent: () =>
+          import('./pages/company-shell/employee/employee').then((m) => m.Employee),
+      },
+      {
         path: 'developers',
         data: { permission: 'co.view', view: 'devs' },
         loadComponent: () =>
@@ -190,6 +196,12 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
+        path: 'employee',
+        data: { employeeView: true },
+        loadComponent: () =>
+          import('./pages/company-shell/employee/employee').then((m) => m.Employee),
+      },
+      {
         path: 'my-leave',
         data: { leaveView: 'my' },
         loadComponent: () => import('./pages/company-shell/leave/leave').then((m) => m.Leave),
@@ -226,6 +238,7 @@ export const routes: Routes = [
       },
       {
         path: 'dashboard',
+        data: { crmView: true },
         loadComponent: () =>
           import('./pages/company-shell/dashboard/dashboard').then((m) => m.Dashboard),
       },

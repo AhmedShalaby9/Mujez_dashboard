@@ -202,3 +202,14 @@ table .row-actions {
   margin: 7px 0;
   font-size: 12px;
 }
+
+.finance-dialog .dialog__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: start;
+  gap: 16px;
+}
+.finance-dialog .dialog__head h2 {
+  margin: 0;
+}

@@ -129,7 +129,7 @@ export class Accounting {
     lease: ['Lease', 'إيجار'],
     listing: ['Listing', 'عرض'],
     account: ['Account', 'حساب'],
-    dimension: ['Branch / cost centre', 'فرع أو مركز تكلفة'],
+    dimension: ['Cost centre / project', 'مركز تكلفة أو مشروع'],
     party: ['Party', 'طرف'],
     period: ['Period', 'فترة مالية'],
     transaction: ['Voucher', 'سند'],
@@ -154,7 +154,7 @@ export class Accounting {
     overview: ['Finance overview', 'نظرة مالية عامة'],
     settings: ['Finance settings', 'إعدادات الحسابات'],
     accounts: ['Chart of accounts', 'دليل الحسابات'],
-    dimensions: ['Branches & cost centres', 'الفروع ومراكز التكلفة'],
+    dimensions: ['Cost centres & projects', 'مراكز التكلفة والمشاريع'],
     parties: ['Customers, developers & suppliers', 'العملاء والمطورون والموردون'],
     periods: ['Financial periods', 'الفترات المالية'],
     journals: ['Journal entries', 'القيود اليومية'],
@@ -282,7 +282,6 @@ export class Accounting {
       ...(this.to ? { to: this.to } : {}),
       ...(this.accountId ? { accountId: this.accountId } : {}),
       ...(this.partyId ? { partyId: this.partyId } : {}),
-      ...(this.branchId ? { branchId: this.branchId } : {}),
       ...(this.costCentreId ? { costCentreId: this.costCentreId } : {}),
       ...(this.projectId ? { projectId: this.projectId } : {}),
       ...(this.teamId ? { teamId: this.teamId } : {}),
@@ -450,7 +449,6 @@ export class Accounting {
       date = f('date', 'Date', 'التاريخ', 'date', true),
       reason = f('reason', 'Reason / notes', 'السبب / ملاحظات', 'textarea', true),
       dims = [
-        f('branchId', 'Branch', 'الفرع', 'select', false, this.opts(this.dims('branch'))),
         f(
           'costCentreId',
           'Cost centre',
@@ -609,7 +607,6 @@ export class Accounting {
           'amount',
           true,
         ),
-        f('branchId', 'Branch', 'الفرع', 'select', false, this.opts(this.dims('branch'))),
         f(
           'teamId',
           'Team dimension',
@@ -715,7 +712,7 @@ export class Accounting {
           'النوع',
           'select',
           true,
-          this.choices(['branch', 'cost_centre', 'project', 'team']),
+          this.choices(['cost_centre', 'project', 'team']),
         ),
         f('name', 'Name', 'الاسم', 'text', true),
         f('active', 'Active', 'نشط', 'checkbox'),
@@ -1260,7 +1257,6 @@ export class Accounting {
       if (this.reportKind === 'expenses_by_centre')
         return [
           c('account', 'Expense account', 'حساب المصروف'),
-          c('branch', 'Branch', 'الفرع'),
           c('cost_centre', 'Cost centre', 'مركز التكلفة'),
           c('amount_minor', 'Net expense', 'صافي المصروف', 'money'),
         ];
@@ -1355,7 +1351,6 @@ export class Accounting {
         c('name', 'Target', 'المستهدف'),
         c('start_date', 'Start', 'البداية', 'date'),
         c('end_date', 'End', 'النهاية', 'date'),
-        c('branch', 'Branch', 'الفرع'),
         c('team', 'Team', 'الفريق'),
         c('amount_minor', 'Target amount', 'المبلغ المستهدف', 'money'),
       ],
@@ -1604,7 +1599,7 @@ export class Accounting {
           : dialog === 'account'
             ? 'asset'
             : dialog === 'dimension'
-              ? 'branch'
+              ? 'cost_centre'
               : dialog === 'party'
                 ? 'developer'
                 : dialog === 'transaction'
@@ -1982,9 +1977,7 @@ export class Accounting {
           ),
         dims = () =>
           Object.fromEntries(
-            ['branchId', 'costCentreId', 'projectId', 'teamId']
-              .filter((k) => f[k])
-              .map((k) => [k, f[k]]),
+            ['costCentreId', 'projectId', 'teamId'].filter((k) => f[k]).map((k) => [k, f[k]]),
           );
       if (d === 'setup') {
         path = 'setup';
@@ -2430,7 +2423,7 @@ export class Accounting {
     const k = kind.replace(/^request\./, '');
     const labels: Record<string, [string, string]> = {
       'account.save': ['Account saved', 'حفظ الحساب'],
-      'dimension.save': ['Branch or cost centre saved', 'حفظ الفرع أو مركز التكلفة'],
+      'dimension.save': ['Cost centre or project saved', 'حفظ مركز التكلفة أو المشروع'],
       'party.save': ['Party saved', 'حفظ الطرف'],
       'settings.save': ['Settings saved', 'حفظ الإعدادات'],
       'journal.save': ['Journal saved', 'حفظ القيد'],

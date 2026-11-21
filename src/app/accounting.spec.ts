@@ -281,3 +281,18 @@ describe('Finance workflow extensions', () => {
     );
   });
 });
+
+describe('Single office accounting', () => {
+  it('does not require or display branch fields for journals, reports or targets', async () => {
+    const { c, fixture } = await setup('reports');
+    expect(fixture.nativeElement.textContent).not.toContain('All branches');
+    c.edit(undefined, 'journal');
+    expect(c.fields().some((f) => f.key === 'branchId')).toBe(false);
+    c.edit(undefined, 'target');
+    expect(c.fields().some((f) => f.key === 'branchId')).toBe(false);
+    c.edit(undefined, 'dimension');
+    const choices = c.fields().find((f) => f.key === 'kind')?.options ?? [];
+    expect(choices.some((x) => x.value === 'branch')).toBe(false);
+    expect(choices.some((x) => x.value === 'cost_centre')).toBe(true);
+  });
+});

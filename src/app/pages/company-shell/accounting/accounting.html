@@ -252,14 +252,6 @@
           >
         }
         <label class="field"
-          ><span>{{ t('Branch', 'الفرع') }}</span
-          ><select name="branch" [(ngModel)]="branchId">
-            <option value="">{{ t('All branches', 'كل الفروع') }}</option>
-            @for (b of dims('branch'); track b.id) {
-              <option [value]="b.id">{{ b.name }}</option>
-            }
-          </select></label
-        ><label class="field"
           ><span>{{ t('Cost centre', 'مركز التكلفة') }}</span
           ><select name="centre" [(ngModel)]="costCentreId">
             <option value="">{{ t('All cost centres', 'كل مراكز التكلفة') }}</option>

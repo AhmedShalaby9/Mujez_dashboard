@@ -16,17 +16,22 @@
       <button type="button" class="btn" (click)="load()" [disabled]="loading()">
         {{ t('Refresh', 'تحديث') }}
       </button>
+      @if (current() === 'automation-rules' && context()?.canApprove) {
+        <button type="button" class="btn" [disabled]="loading()" (click)="processAutomation()">
+          {{ t('Process pending CRM deals', 'معالجة صفقات CRM المعلقة') }}
+        </button>
+      }
       @if (canCreate()) {
         <button type="button" class="btn btn--dark" (click)="edit()">
           {{ t('+ New ', '+ إضافة ') }}{{ newLabel() }}
         </button>
       }
-      @if (mode === 'reports') {
+      @if (mode === 'reports' || current() === 'staff-statements' || isSelf) {
         <button
           type="button"
           class="btn"
           (click)="exportRows()"
-          [disabled]="loading() || !data().items?.length"
+          [disabled]="loading() || !(isSelf ? data().staff?.items?.length : data().items?.length)"
         >
           {{ t('Export shown rows', 'تصدير الصفوف المعروضة') }}
         </button>
@@ -56,7 +61,7 @@
           )
         }}
       </p>
-      @if (context().canSettings) {
+      @if (mode === 'payroll' ? context().canSetup : context().canSettings) {
         <button type="button" class="btn btn--dark" (click)="edit(undefined, 'setup')">
           {{ t('Set up finance', 'إعداد الحسابات') }}
         </button>
@@ -73,6 +78,88 @@
     </section>
   }
   @if (isSelf || context()?.configured) {
+    @if (isSelf || current() === 'staff-statements') {
+      <form class="tools" (ngSubmit)="load(true)">
+        <label class="field"
+          ><span>{{ t('From', 'من') }}</span
+          ><input name="statementFrom" type="date" [(ngModel)]="from" required
+        /></label>
+        <label class="field"
+          ><span>{{ t('As of', 'حتى تاريخ') }}</span
+          ><input name="statementTo" type="date" [(ngModel)]="to" required
+        /></label>
+        <button type="submit" class="btn">{{ t('Apply period', 'تطبيق الفترة') }}</button>
+      </form>
+      <p class="note">
+        {{
+          t(
+            'Net position includes posted salary and commission balances less outstanding advances and recoveries. This is a statement, not an automatic deduction authorization.',
+            'صافي الموقف يشمل الرواتب والعمولات المرحلة بعد أرصدة السلف والاستردادات. كشف الحساب لا يمثل موافقة تلقائية على الخصم.'
+          )
+        }}
+      </p>
+    }
+    @if (current() === 'commission-policies') {
+      <p class="note">
+        {{
+          t(
+            'Employee policy overrides team policy, then the role default. Percentages apply to brokerage commission; tiers use property value thresholds. Booked deals retain their policy snapshot.',
+            'سياسة الموظف مقدمة على الفريق ثم السياسة العامة للدور. النسبة من عمولة الوساطة، وحدود الشرائح حسب قيمة العقار. تحتفظ الصفقة بنسخة السياسة المستخدمة.'
+          )
+        }}
+      </p>
+    }
+    @if (current() === 'automation-rules') {
+      <p class="note">
+        {{
+          t(
+            'Only explicitly enabled rules can post signed CRM contracts. Failed or ambiguous records stay in Finance for review. Changes to linked installment amounts require manual reconciliation.',
+            'القواعد المفعلة صراحة فقط ترحّل العقود الموقعة. تظل الحالات غير القابلة للمعالجة للمراجعة. تعديل قيمة عقد له أقساط مرتبطة يتطلب تسوية يدوية.'
+          )
+        }}
+      </p>
+    }
+    @if (mode === 'payroll') {
+      <p class="note">
+        {{
+          t(
+            'Payroll records approved salaries and manual deductions. Advance installments are capped by the salary policy. Approval and posting do not transfer money; record the actual net salary payment in Finance. Tax and insurance amounts are not calculated automatically.',
+            'المسير يسجل الرواتب والخصومات المعتمدة. تُخصم أقساط السلف ضمن حد سياسة الراتب. الاعتماد والترحيل لا يحوّلان أموالًا؛ سجّل صرف صافي الرواتب الفعلي في Finance. الضرائب والتأمينات لا تُحسب تلقائيًا.'
+          )
+        }}
+      </p>
+    }
+    @if (isSelf && data().staff?.items?.length) {
+      <section class="table-card">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                @for (c of staffColumns(); track c.key) {
+                  <th>{{ t(c.en, c.ar) }}</th>
+                }
+                <th>{{ t('Details', 'التفاصيل') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (s of data().staff.items; track s.id) {
+                <tr>
+                  @for (c of staffColumns(); track c.key) {
+                    <td>{{ statementValue(s, c) }}</td>
+                  }
+                  <td>
+                    <button type="button" class="btn" (click)="detail(s)">
+                      {{ t('Statement activity', 'حركات كشف الحساب') }}
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
     @if (tabs().length) {
       <nav class="finance-tabs" [attr.aria-label]="t('Finance sections', 'أقسام الحسابات')">
         @for (x of tabs(); track x) {
@@ -531,7 +618,7 @@
             }
           </section>
         }
-        @if (selected()?.lines) {
+        @if (selected()?.lines && current() !== 'payroll-runs') {
           <div class="table-scroll">
             <table class="detail-table">
               <thead>
@@ -549,6 +636,73 @@
                     <td>{{ l.party || '—' }}</td>
                     <td>{{ money(l.debit_minor) }}</td>
                     <td>{{ money(l.credit_minor) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        @if (selected()?.activity) {
+          @if (selected()?.unlinkedAdvances) {
+            <p class="note note--bad">
+              {{
+                t(
+                  'Unlinked HR advances need reconciliation: ',
+                  'سلف في الموارد البشرية تحتاج ربطًا محاسبيًا: '
+                )
+              }}{{ selected().unlinkedAdvances }}
+            </p>
+          }
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>{{ t('Date', 'التاريخ') }}</th>
+                  <th>{{ t('Journal', 'القيد') }}</th>
+                  <th>{{ t('Account', 'الحساب') }}</th>
+                  <th>{{ t('Description', 'البيان') }}</th>
+                  <th>{{ t('Debit', 'مدين') }}</th>
+                  <th>{{ t('Credit', 'دائن') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of selected().activity; track l.id) {
+                  <tr>
+                    <td>{{ l.entry_date }}</td>
+                    <td>{{ l.code }}</td>
+                    <td>{{ l.account }}</td>
+                    <td>{{ l.description }}</td>
+                    <td>{{ money(l.debit_minor) }}</td>
+                    <td>{{ money(l.credit_minor) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (current() === 'payroll-runs' && selected()?.lines) {
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>{{ t('Employee', 'الموظف') }}</th>
+                  <th>{{ t('Base', 'الأساسي') }}</th>
+                  <th>{{ t('Allowances', 'البدلات') }}</th>
+                  <th>{{ t('Deduction / reason', 'الخصم / السبب') }}</th>
+                  <th>{{ t('Advance deduction', 'خصم السلفة') }}</th>
+                  <th>{{ t('Net salary', 'صافي الراتب') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of selected().lines; track l.id) {
+                  <tr>
+                    <td>{{ l.employee }}</td>
+                    <td>{{ money(l.base_minor) }}</td>
+                    <td>{{ money(l.allowance_minor) }}</td>
+                    <td>{{ money(l.deduction_minor) }} · {{ l.deduction_note }}</td>
+                    <td>{{ money(l.advance_minor) }}</td>
+                    <td>{{ money(l.net_minor) }}</td>
                   </tr>
                 }
               </tbody>
@@ -653,6 +807,30 @@
               )
             }}
           </p>
+        }
+
+        @if (dialog() === 'payrollrun') {
+          <fieldset class="payroll-employees" [disabled]="saving()">
+            <legend>{{ t('Employees included', 'الموظفون المشمولون') }}</legend>
+            @for (e of options().employees; track e.id) {
+              <label class="archive"
+                ><input
+                  type="checkbox"
+                  [name]="'payrollEmployee-' + e.id"
+                  [checked]="form.employeeIds?.includes(e.id)"
+                  (change)="toggleEmployee(e.id, $any($event.target).checked)"
+                />{{ e.name }} · {{ e.employee_code }}</label
+              >
+            }
+            <p class="muted">
+              {{
+                t(
+                  'Every selected employee must have an active salary profile. Draft values are fixed until cancelled and prepared again.',
+                  'يلزم إعداد راتب نشط لكل موظف مختار. تُحفظ قيم المسودة حتى إلغائها وإعداد مسير جديد.'
+                )
+              }}
+            </p>
+          </fieldset>
         }
         <fieldset class="form-grid" [disabled]="saving()">
           @for (f of fields(); track f.key) {
@@ -776,7 +954,7 @@
             </p>
           </section>
         }
-        @if (dialog() === 'agreement' && form.mode === 'tiers') {
+        @if ((dialog() === 'agreement' || dialog() === 'policy') && form.mode === 'tiers') {
           <section class="history">
             <h3>{{ t('Rate by property value band', 'النسبة حسب شريحة قيمة العقار') }}</h3>
             <p class="muted">

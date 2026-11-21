@@ -50,6 +50,7 @@ export function employeeArea(u: User | null | undefined) {
 export function companyHomePath(u: User | null | undefined) {
   if (u?.pool === 'company_user' && !u.permissions.includes('leads.read')) {
     if (hasAccountingAccess(u)) return '/company/finance';
+    if (hasPayrollAccess(u)) return '/company/payroll';
     if (hasHrAccess(u)) return '/company/hr/employees';
     if (employeeArea(u)) return '/company/employee';
   }
@@ -74,6 +75,16 @@ export function hasAccountingAccess(u: User | null | undefined, permission = 'fi
     u.pool === 'company_user' &&
     (u.roles ?? [u.role]).some((r) => r === 'accountant' || r === 'finance_manager') &&
     u.permissions.includes(permission)
+  );
+}
+export function hasPayrollAccess(u: User | null | undefined) {
+  return (
+    hasAccountingAccess(u) ||
+    (!!u &&
+      !u.workspace &&
+      u.pool === 'company_user' &&
+      (u.roles ?? [u.role]).includes('payroll_officer') &&
+      u.permissions.includes('payroll.read'))
   );
 }
 export function hasAccountingSelf(u: User | null | undefined) {
@@ -221,7 +232,11 @@ export const companyGuard: CanActivateFn = async (route) => {
   const isEmployee = u?.pool === 'company_user';
   if (
     route.data['accountingView'] &&
-    !(route.data['accountingView'] === 'self' ? hasAccountingSelf(u) : hasAccountingAccess(u))
+    !(route.data['accountingView'] === 'self'
+      ? hasAccountingSelf(u)
+      : route.data['accountingView'] === 'payroll'
+        ? hasPayrollAccess(u)
+        : hasAccountingAccess(u))
   )
     return router.parseUrl(companyHomePath(u));
   if (route.data['employeeView'] && !employeeArea(u)) return router.parseUrl(companyHomePath(u));

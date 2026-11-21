@@ -202,6 +202,12 @@ export const routes: Routes = [
           import('./pages/company-shell/employee/employee').then((m) => m.Employee),
       },
       {
+        path: 'payroll',
+        data: { accountingView: 'payroll' },
+        loadComponent: () =>
+          import('./pages/company-shell/accounting/accounting').then((m) => m.Accounting),
+      },
+      {
         path: 'finance',
         data: { accountingView: 'overview' },
         loadComponent: () =>

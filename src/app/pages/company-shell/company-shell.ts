@@ -1,4 +1,4 @@
-import { hasAccountingAccess, hasAccountingSelf } from '../../auth.service';
+import { hasAccountingAccess, hasAccountingSelf, hasPayrollAccess } from '../../auth.service';
 import { hasFinanceAccess } from '../../auth.service';
 import { visibleCompanyRoles } from '../../company-role-labels';
 import { NavigationState, RouteSkeleton } from '../../route-skeleton';
@@ -172,6 +172,7 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Expenses & cash custody', path: 'finance/expenses' },
   { kind: 'item', label: 'Financial reports', path: 'finance/reports' },
   { kind: 'item', label: 'Finance settings', path: 'finance/settings' },
+  { kind: 'item', label: 'Payroll', path: 'payroll' },
   { kind: 'item', label: 'My financial statement', path: 'my-finance' },
   { kind: 'item', label: 'Contracts', path: 'contracts' },
   { kind: 'item', label: 'Commissions', path: 'commissions' },
@@ -225,6 +226,7 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'المصروفات والعهد النقدية', path: 'finance/expenses' },
   { kind: 'item', label: 'التقارير المالية', path: 'finance/reports' },
   { kind: 'item', label: 'إعدادات الحسابات', path: 'finance/settings' },
+  { kind: 'item', label: 'الرواتب', path: 'payroll' },
   { kind: 'item', label: 'كشف حسابي', path: 'my-finance' },
   { kind: 'item', label: 'العقود', path: 'contracts' },
   { kind: 'item', label: 'العمولات', path: 'commissions' },
@@ -369,6 +371,7 @@ export class CompanyShell {
       const u = this.auth.user();
       if (item.path === 'finance' || item.path.startsWith('finance/'))
         return hasAccountingAccess(u);
+      if (item.path === 'payroll') return hasPayrollAccess(u);
       if (item.path === 'my-finance') return hasAccountingSelf(u);
       if (item.path === 'dashboard') return hasCrmWorkspace(u);
       if (item.path === 'employee') return employeeArea(u);

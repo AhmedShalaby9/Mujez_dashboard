@@ -95,10 +95,12 @@ export class Accounting {
         : this.mode === 'treasury'
           ? ['treasuries', 'transactions', 'cheques', 'reconciliations']
           : this.mode === 'commissions'
-            ? ['deals', 'agreements']
+            ? ['deals', 'agreements', 'commission-policies', 'automation-rules', 'staff-statements']
             : this.mode === 'expenses'
               ? ['expenses', 'custodies', 'hr-advances']
-              : [],
+              : this.mode === 'payroll'
+                ? ['payroll-runs', 'salary-profiles']
+                : [],
   );
   readonly title = computed(() => this.label(this.mode));
   readonly money = compactMoney;
@@ -106,6 +108,26 @@ export class Accounting {
     return this.ui.lang() === 'ar' ? ar : en;
   }
   readonly names: Record<string, [string, string]> = {
+    payroll: ['Payroll', 'الرواتب'],
+    'payroll-runs': ['Payroll runs', 'مسيرات الرواتب'],
+    'salary-profiles': ['Salary profiles', 'إعدادات رواتب الموظفين'],
+    'commission-policies': ['Commission policies', 'سياسات عمولات الموظفين'],
+    'automation-rules': ['CRM automation', 'أتمتة صفقات CRM'],
+    'staff-statements': ['Employee statements', 'كشوف حساب الموظفين'],
+    policy: ['Commission policy', 'سياسة عمولة'],
+    automation: ['Automation rule', 'قاعدة أتمتة'],
+    salary: ['Salary profile', 'إعداد راتب'],
+    payrollrun: ['Payroll run', 'مسير رواتب'],
+    submitted: ['Awaiting review', 'بانتظار المراجعة'],
+    reversed: ['Reversed', 'معكوس'],
+    salary_payable: ['Net salary payable', 'صافي راتب مستحق'],
+    agent: ['Sales agent', 'مندوب مبيعات'],
+    team_lead: ['Team lead', 'قائد فريق'],
+    broker_agreement: ['Brokerage agreement', 'اتفاق وساطة'],
+    sale: ['Sale', 'بيع'],
+    reservation: ['Reservation', 'حجز'],
+    lease: ['Lease', 'إيجار'],
+    listing: ['Listing', 'عرض'],
     account: ['Account', 'حساب'],
     dimension: ['Branch / cost centre', 'فرع أو مركز تكلفة'],
     party: ['Party', 'طرف'],
@@ -280,18 +302,34 @@ export class Accounting {
               page: String(this.page()),
               limit: '25',
               ...(this.selfTeam ? { kind: 'team' } : {}),
+              ...(this.from ? { from: this.from } : {}),
+              ...(this.to ? { to: this.to } : {}),
             }),
         );
-        if (n === this.serial) this.data.set(data);
+        if (n === this.serial) {
+          this.data.set(data);
+          this.from ||= data.staff?.from ?? '';
+          this.to ||= data.staff?.to ?? '';
+        }
         return;
       }
       const [ctx, options] = await Promise.all([
-        this.auth.request(this.base + 'context'),
-        this.auth.request(this.base + 'options'),
+        this.auth.request(this.base + (this.mode === 'payroll' ? 'payroll-context' : 'context')),
+        this.auth.request(this.base + (this.mode === 'payroll' ? 'payroll-options' : 'options')),
       ]);
       if (n !== this.serial) return;
       this.context.set(ctx);
-      this.options.set(options);
+      this.options.set({
+        accounts: [],
+        parties: [],
+        dimensions: [],
+        treasuries: [],
+        users: [],
+        teams: [],
+        crmProjects: [],
+        employees: [],
+        ...options,
+      });
       this.to ||= ctx.today;
       if (!this.from) {
         const m = options.settings?.fiscal_month ?? 1,
@@ -345,7 +383,7 @@ export class Accounting {
         const opts = await this.auth.request(this.base + 'obligations?status=posted&limit=100');
         if (n === this.serial) this.invoices.set(opts.items);
       }
-      if (tab === 'deals') {
+      if (tab === 'deals' || tab === 'automation-rules') {
         const a = await this.auth.request(this.base + 'agreements');
         if (n === this.serial) this.agreements.set(a.items);
       }
@@ -424,6 +462,141 @@ export class Accounting {
         f('projectId', 'Project', 'المشروع', 'select', false, this.opts(this.dims('project'))),
         f('teamId', 'Sales team', 'فريق المبيعات', 'select', false, this.opts(this.dims('team'))),
       ];
+    if (tab === 'policy')
+      return [
+        f('name', 'Policy name', 'اسم السياسة', 'text', true),
+        f(
+          'roleKey',
+          'Commission role',
+          'دور العمولة',
+          'select',
+          true,
+          this.choices(['agent', 'team_lead']),
+        ),
+        f('userId', 'Employee override', 'سياسة لموظف', 'select', false, this.opts(op.users)),
+        f('policyTeamId', 'Team override', 'سياسة لفريق', 'select', false, this.opts(op.teams)),
+        f(
+          'mode',
+          'Calculation',
+          'الحساب',
+          'select',
+          true,
+          this.choices(['percent', 'fixed', 'tiers']),
+        ),
+        ...(this.form.mode === 'fixed'
+          ? [f('fixedMinor', 'Fixed commission (EGP)', 'عمولة ثابتة', 'amount', true)]
+          : this.form.mode === 'percent'
+            ? [
+                f(
+                  'ratePercent',
+                  'Share of brokerage commission %',
+                  'نسبة من عمولة الوساطة',
+                  'text',
+                  true,
+                ),
+              ]
+            : []),
+        f('from', 'Effective from', 'تاريخ السريان', 'date', true),
+        f('to', 'Effective until (optional)', 'نهاية السريان (اختياري)', 'date'),
+        f('active', 'Active', 'نشط', 'checkbox'),
+      ];
+    if (tab === 'automation')
+      return [
+        f('name', 'Rule name', 'اسم القاعدة', 'text', true),
+        f(
+          'contractType',
+          'Contract type',
+          'نوع العقد',
+          'select',
+          true,
+          this.choices(['sale', 'reservation', 'lease', 'listing', 'broker_agreement']),
+        ),
+        f(
+          'crmProjectId',
+          'CRM project (empty means all)',
+          'مشروع CRM (فارغ لكل المشاريع)',
+          'select',
+          false,
+          this.opts(op.crmProjects),
+        ),
+        f(
+          'agreementId',
+          'Developer agreement',
+          'اتفاقية المطور',
+          'select',
+          true,
+          this.opts(this.agreements()),
+        ),
+        f(
+          'autoAdjust',
+          'Automatically adjust changes and cancellations',
+          'تسوية التغييرات والإلغاءات تلقائيًا',
+          'checkbox',
+        ),
+        f(
+          'createInstallments',
+          'Create linked customer installments',
+          'إنشاء أقساط مرتبطة للعميل',
+          'checkbox',
+        ),
+        ...(this.form.createInstallments
+          ? [
+              f('installments', 'Installments', 'عدد الأقساط', 'number', true),
+              f(
+                'intervalMonths',
+                'Months between installments',
+                'عدد الأشهر بين الأقساط',
+                'number',
+                true,
+              ),
+              f(
+                'firstDueDays',
+                'Days after signing for first due',
+                'أيام بعد التوقيع لأول استحقاق',
+                'number',
+                true,
+              ),
+              f(
+                'collectionOwner',
+                'Collection responsibility',
+                'مسؤولية التحصيل',
+                'select',
+                true,
+                this.choices(['company', 'developer']),
+              ),
+            ]
+          : []),
+        f(
+          'active',
+          'Enable automatic posting under my authority',
+          'تفعيل الترحيل التلقائي بصلاحيتي',
+          'checkbox',
+        ),
+      ];
+    if (tab === 'salary')
+      return [
+        f('employeeId', 'Employee', 'الموظف', 'select', true, this.opts(op.employees)),
+        f('baseMinor', 'Monthly base salary (EGP)', 'الراتب الأساسي الشهري', 'amount', true),
+        f('allowanceMinor', 'Monthly allowances (EGP)', 'البدلات الشهرية', 'amount', true),
+        f(
+          'deductionMinor',
+          'Approved recurring deduction (EGP)',
+          'الخصم الشهري المعتمد',
+          'amount',
+          true,
+        ),
+        f('deductionNote', 'Deduction reason', 'سبب الخصم', 'textarea', false),
+        f(
+          'advanceCapPercent',
+          'Maximum advance deduction % of net before advances',
+          'الحد الأقصى لخصم السلف من الراتب بعد الخصومات',
+          'text',
+          true,
+        ),
+        f('active', 'Active', 'نشط', 'checkbox'),
+      ];
+    if (tab === 'payrollrun')
+      return [f('month', 'Payroll month (YYYY-MM)', 'شهر الرواتب (YYYY-MM)', 'text', true), date];
     if (tab === 'target')
       return [
         f('name', 'Target name', 'اسم المستهدف', 'text', true),
@@ -1139,6 +1312,45 @@ export class Accounting {
       ];
     }
     const map: Record<string, Column[]> = {
+      'commission-policies': [
+        c('name', 'Policy', 'السياسة'),
+        c('role_key', 'Role', 'الدور', 'status'),
+        c('employee', 'Employee override', 'موظف'),
+        c('team', 'Team override', 'فريق'),
+        c('mode', 'Calculation', 'الحساب', 'status'),
+        c('rate_bps', 'Rate', 'النسبة', 'percent'),
+        c('fixed_minor', 'Fixed amount', 'القيمة الثابتة', 'money'),
+        c('effective_from', 'From', 'من', 'date'),
+        c('active', 'Enabled', 'مفعلة', 'boolean'),
+      ],
+      'automation-rules': [
+        c('name', 'Rule', 'القاعدة'),
+        c('contract_type', 'Contract type', 'نوع العقد', 'status'),
+        c('project', 'Project scope', 'نطاق المشروع'),
+        c('agreement', 'Agreement', 'الاتفاقية'),
+        c('authorized_by_name', 'Authorized by', 'المفوّض'),
+        c('auto_adjust', 'Auto adjustments', 'تسوية تلقائية', 'boolean'),
+        c('create_installments', 'Linked installments', 'أقساط مرتبطة', 'boolean'),
+        c('active', 'Enabled', 'مفعلة', 'boolean'),
+      ],
+      'salary-profiles': [
+        c('employee', 'Employee', 'الموظف'),
+        c('base_minor', 'Base salary', 'الراتب الأساسي', 'money'),
+        c('allowance_minor', 'Allowances', 'البدلات', 'money'),
+        c('deduction_minor', 'Deductions', 'الخصومات', 'money'),
+        c('advance_cap_bps', 'Advance cap', 'حد السلف', 'percent'),
+        c('active', 'Active', 'نشط', 'boolean'),
+      ],
+      'payroll-runs': [
+        c('code', 'Payroll', 'المسير'),
+        c('month', 'Month', 'الشهر', 'date'),
+        c('gross_minor', 'Gross salary', 'الإجمالي', 'money'),
+        c('deduction_minor', 'Deductions', 'الخصومات', 'money'),
+        c('advance_minor', 'Advance deductions', 'خصم السلف', 'money'),
+        c('net_minor', 'Net salary', 'الصافي', 'money'),
+        c('status', 'Status', 'الحالة', 'status'),
+      ],
+      'staff-statements': this.staffColumns(),
       'collection-targets': [
         c('name', 'Target', 'المستهدف'),
         c('start_date', 'Start', 'البداية', 'date'),
@@ -1221,6 +1433,7 @@ export class Accounting {
         c('agent', 'Agent', 'السيلز'),
         c('property_value_minor', 'Property value', 'قيمة العقار', 'money'),
         c('state', 'Finance status', 'الحالة المحاسبية', 'status'),
+        c('automation_error', 'Needs attention', 'تحتاج مراجعة'),
       ],
       agreements: [
         c('name', 'Agreement', 'الاتفاقية'),
@@ -1309,6 +1522,10 @@ export class Accounting {
         reconciliations: 'reconcile',
         'installment-plans': 'installment',
         'collection-targets': 'target',
+        'commission-policies': 'policy',
+        'automation-rules': 'automation',
+        'salary-profiles': 'salary',
+        'payroll-runs': 'payrollrun',
       }[this.current()] ?? '',
     );
   }
@@ -1318,7 +1535,7 @@ export class Accounting {
       this.isSelf ||
       this.mode === 'reports' ||
       this.mode === 'overview' ||
-      ['settings', 'deals', 'hr-advances'].includes(this.current())
+      ['settings', 'deals', 'hr-advances', 'staff-statements'].includes(this.current())
     )
       return false;
     return [
@@ -1328,6 +1545,8 @@ export class Accounting {
       'treasuries',
       'agreements',
       'collection-targets',
+      'commission-policies',
+      'automation-rules',
     ].includes(this.current())
       ? this.context()?.canSettings
       : this.current() === 'reconciliations'
@@ -1363,6 +1582,10 @@ export class Accounting {
       reconciliations: 'reconcile',
       'installment-plans': 'installment',
       'collection-targets': 'target',
+      'commission-policies': 'policy',
+      'automation-rules': 'automation',
+      'salary-profiles': 'salary',
+      'payroll-runs': 'payrollrun',
     };
     const dialog = kind ?? map[this.current()] ?? this.current();
     this.selected.set(row ?? null);
@@ -1427,6 +1650,39 @@ export class Accounting {
       this.form.branchId = row.branch_id ?? '';
       this.form.teamId = row.team_id ?? '';
     }
+    if (dialog === 'policy')
+      Object.assign(this.form, {
+        roleKey: row?.role_key ?? 'agent',
+        userId: row?.user_id ?? '',
+        policyTeamId: row?.team_id ?? '',
+        from: row?.effective_from ?? this.context()?.today,
+        to: row?.effective_to ?? '',
+      });
+    if (dialog === 'automation')
+      Object.assign(this.form, {
+        contractType: row?.contract_type ?? 'sale',
+        crmProjectId: row?.crm_project_id ?? '',
+        agreementId: row?.agreement_id ?? '',
+        autoAdjust: row?.auto_adjust ?? false,
+        createInstallments: row?.create_installments ?? false,
+        installments: row?.installments ?? 1,
+        intervalMonths: row?.interval_months ?? 1,
+        firstDueDays: row?.first_due_days ?? 30,
+        collectionOwner: row?.collection_owner ?? 'developer',
+        active: row?.active ?? false,
+      });
+    if (dialog === 'salary')
+      Object.assign(this.form, {
+        employeeId: row?.employee_id ?? '',
+        baseMinor: compactAmountInput(row?.base_minor ?? '0'),
+        allowanceMinor: compactAmountInput(row?.allowance_minor ?? '0'),
+        deductionMinor: compactAmountInput(row?.deduction_minor ?? '0'),
+        deductionNote: row?.deduction_note ?? '',
+        advanceCapPercent: String((row?.advance_cap_bps ?? 10000) / 100),
+        active: row?.active ?? true,
+      });
+    if (dialog === 'payrollrun')
+      Object.assign(this.form, { month: this.context()?.today?.slice(0, 7), employeeIds: [] });
     this.lines = [
       { accountId: '', partyId: '', debit: '', credit: '' },
       { accountId: '', partyId: '', debit: '', credit: '' },
@@ -1445,9 +1701,9 @@ export class Accounting {
       const tab = this.current(),
         entity = tab === 'expenses' ? 'obligations' : tab;
       let r = row;
-      if (['journals', 'obligations'].includes(entity))
+      if (['journals', 'obligations', 'payroll-runs'].includes(entity))
         r = await this.auth.request(this.base + entity + '/' + row.id);
-      if (!this.isSelf)
+      if (!this.isSelf && !['staff-statements', 'payroll-runs', 'salary-profiles'].includes(entity))
         r = {
           ...r,
           historyData: (await this.auth.request(this.base + 'history/' + entity + '/' + row.id))
@@ -1487,9 +1743,19 @@ export class Accounting {
         'treasuries',
         'agreements',
         'collection-targets',
+        'commission-policies',
+        'automation-rules',
+        'salary-profiles',
       ].includes(tab)
     )
       return ctx?.canSettings || (tab === 'parties' && ctx?.canWrite) ? ['edit'] : [];
+    if (tab === 'payroll-runs')
+      return [
+        ...(r.status === 'draft' && ctx?.canWrite ? ['submit', 'cancel'] : []),
+        ...(r.status === 'submitted' && ctx?.canApprove ? ['approve', 'reject'] : []),
+        ...(r.status === 'approved' && ctx?.canApprove ? ['post', 'cancel'] : []),
+        ...(r.status === 'posted' && ctx?.canApprove ? ['reverse'] : []),
+      ];
     if (tab === 'installment-plans')
       return ctx?.canApprove
         ? r.status === 'pending'
@@ -1524,7 +1790,7 @@ export class Accounting {
                 : ['developer_claim', 'customer_funds', 'employee_recovery'].includes(r.kind)
                   ? 'receive'
                   : 'pay',
-              ...(r.journal_id && !r.deal_id && !r.plan_id ? ['reverse'] : []),
+              ...(r.journal_id && !r.deal_id && !r.plan_id && !r.payroll_run_id ? ['reverse'] : []),
             ]
           : []),
         ...(r.kind === 'commission_payable' && r.status === 'posted' && ctx?.canApprove
@@ -1723,6 +1989,58 @@ export class Accounting {
       if (d === 'setup') {
         path = 'setup';
         body = { ...body, year: Number(f.year), fiscalMonth: Number(f.fiscalMonth) };
+      } else if (d === 'policy') {
+        path = 'commission-policies' + (r ? '/' + r.id : '');
+        body = {
+          ...body,
+          ...(r ? { version: r.version } : {}),
+          ...pick(['name', 'roleKey', 'mode', 'from', 'active']),
+          to: f.to || null,
+          userId: f.userId || null,
+          teamId: f.policyTeamId || null,
+          rateBps: f.mode === 'percent' ? this.percent(f.ratePercent) : 0,
+          fixedMinor: f.mode === 'fixed' ? this.amount(f.fixedMinor) : '0',
+          tiers:
+            f.mode === 'tiers'
+              ? this.tiers.map((x) => ({
+                  fromMinor: this.amount(x.from),
+                  rateBps: this.percent(x.rate),
+                }))
+              : [],
+        };
+      } else if (d === 'automation') {
+        path = 'automation-rules' + (r ? '/' + r.id : '');
+        body = {
+          ...body,
+          ...(r ? { version: r.version } : {}),
+          ...pick([
+            'name',
+            'contractType',
+            'agreementId',
+            'autoAdjust',
+            'createInstallments',
+            'collectionOwner',
+            'active',
+          ]),
+          crmProjectId: f.crmProjectId || null,
+          installments: Number(f.installments),
+          intervalMonths: Number(f.intervalMonths),
+          firstDueDays: Number(f.firstDueDays),
+        };
+      } else if (d === 'salary') {
+        path = 'salary-profiles' + (r ? '/' + r.id : '');
+        body = {
+          ...body,
+          ...(r ? { version: r.version } : {}),
+          ...pick(['employeeId', 'deductionNote', 'active']),
+          baseMinor: this.amount(f.baseMinor),
+          allowanceMinor: this.amount(f.allowanceMinor),
+          deductionMinor: this.amount(f.deductionMinor),
+          advanceCapBps: this.percent(f.advanceCapPercent),
+        };
+      } else if (d === 'payrollrun') {
+        path = 'payroll-runs';
+        body = { ...body, month: f.month, date: f.date, employeeIds: f.employeeIds };
       } else if (d === 'settings') {
         path = 'settings';
         body = {
@@ -1933,6 +2251,54 @@ export class Accounting {
       this.saving.set(false);
     }
   }
+
+  staffColumns(): Column[] {
+    return [
+      { key: 'employee', en: 'Employee', ar: 'الموظف' },
+      ...[
+        ['saleValueMinor', 'Sales value', 'قيمة الصفقات'],
+        ['earnedMinor', 'Earned commission', 'العمولة المكتسبة'],
+        ['adjustmentsMinor', 'Adjustments', 'التسويات'],
+        ['paidMinor', 'Commission paid', 'العمولة المدفوعة'],
+        ['advanceOffsetsMinor', 'Advance offsets', 'خصم السلف من العمولة'],
+        ['commissionOutstandingMinor', 'Commission remaining', 'العمولة المتبقية'],
+        ['salaryOutstandingMinor', 'Salary remaining', 'الراتب المتبقي'],
+        ['advanceBalanceMinor', 'Advance balance', 'رصيد السلف'],
+        ['recoveryBalanceMinor', 'Recoveries', 'مبالغ مستردة من الموظف'],
+        ['netPositionMinor', 'Net financial position', 'صافي الموقف المالي'],
+      ].map(([key, en, ar]) => ({ key, en, ar, type: 'money' as const })),
+    ];
+  }
+  statementValue(row: any, column: Column) {
+    return this.value(row, column);
+  }
+  toggleEmployee(id: string, checked: boolean) {
+    this.form.employeeIds = checked
+      ? [...(this.form.employeeIds ?? []), id]
+      : (this.form.employeeIds ?? []).filter((x: string) => x !== id);
+  }
+  async processAutomation() {
+    this.error.set('');
+    this.loading.set(true);
+    try {
+      const r = await this.auth.request(this.base + 'automation-process', {
+        requestId: crypto.randomUUID(),
+        version: 1,
+        action: 'process',
+      });
+      this.notice.set(
+        this.t('Processed deals: ', 'الصفقات المعالجة: ') +
+          r.processed +
+          this.t(' · Needs review: ', ' · تحتاج مراجعة: ') +
+          r.errors.length,
+      );
+      await this.load();
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.loading.set(false);
+    }
+  }
   changeReport() {
     this.page.set(1);
     this.accountId = '';
@@ -2088,6 +2454,11 @@ export class Accounting {
     }).format(new Date(v));
   }
   detailPairs() {
+    if (this.selected()?.activity)
+      return this.staffColumns().map((c) => ({
+        label: this.t(c.en, c.ar),
+        value: this.value(this.selected(), c),
+      }));
     const r = this.selected();
     if (!r) return [];
     const labels: Record<string, [string, string]> = {
@@ -2107,6 +2478,12 @@ export class Accounting {
       description: ['Description', 'البيان'],
       purpose: ['Purpose', 'الغرض'],
       review_note: ['Review note', 'ملاحظة المراجعة'],
+      base_minor: ['Base salary', 'الراتب الأساسي'],
+      allowance_minor: ['Allowances', 'البدلات'],
+      deduction_minor: ['Approved deductions', 'الخصومات المعتمدة'],
+      deduction_note: ['Deduction reason', 'سبب الخصم'],
+      advance_cap_bps: ['Advance deduction cap %', 'حد خصم السلف %'],
+      month: ['Payroll month', 'شهر الرواتب'],
       net_minor: ['Net amount', 'الصافي'],
       tax_minor: ['Tax', 'الضريبة'],
       total_minor: ['Total', 'الإجمالي'],
@@ -2122,8 +2499,9 @@ export class Accounting {
       .filter(([k]) => r[k] !== undefined && r[k] !== null && r[k] !== '')
       .map(([k, v]) => ({
         label: this.t(v[0], v[1]),
-        value:
-          k.endsWith('_minor') || k.endsWith('Minor')
+        value: k.endsWith('_bps')
+          ? String(r[k] / 100) + '%'
+          : k.endsWith('_minor') || k.endsWith('Minor')
             ? this.money(String(r[k]))
             : k === 'status' || k === 'kind'
               ? this.label(r[k])
@@ -2143,6 +2521,7 @@ export class Accounting {
     clientFundsMinor: ['Developer client funds', 'أموال العملاء للمطورين'],
     employeeCustodyMinor: ['Employee cash custody', 'العهد النقدية'],
     salaryAdvancesMinor: ['Salary advances', 'سلف الموظفين'],
+    salariesPayableMinor: ['Salaries payable', 'رواتب مستحقة'],
     revenueMinor: ['Revenue', 'الإيرادات'],
     expenseMinor: ['Expenses', 'المصروفات'],
     profitMinor: ['Net profit / loss', 'صافي الربح أو الخسارة'],
@@ -2169,14 +2548,25 @@ export class Accounting {
       }));
   }
   exportRows() {
-    const cols = this.columns(),
+    const cols = this.isSelf ? this.staffColumns() : this.columns(),
       esc = (v: string) => {
         if (/^[=+@\-\t\r]/.test(v)) v = "'" + v;
         return '"' + v.replaceAll('"', '""') + '"';
       },
       rows = [
         cols.map((c) => this.t(c.en, c.ar)),
-        ...(this.data().items ?? []).map((r: any) => cols.map((c) => this.value(r, c))),
+        ...((this.isSelf ? this.data().staff?.items : this.data().items) ?? []).map((r: any) =>
+          cols.map((c) => {
+            if (c.type === 'money') {
+              const n = BigInt(r[c.key] ?? '0'),
+                abs = n < 0n ? -n : n;
+              return (
+                (n < 0n ? '-' : '') + String(abs / 100n) + '.' + String(abs % 100n).padStart(2, '0')
+              );
+            }
+            return this.value(r, c);
+          }),
+        ),
       ];
     const url = URL.createObjectURL(
         new Blob(['\uFEFF' + rows.map((r) => r.map(esc).join(',')).join('\r\n')], {

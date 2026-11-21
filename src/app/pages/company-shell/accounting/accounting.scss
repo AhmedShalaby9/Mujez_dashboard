@@ -214,3 +214,12 @@ table .row-actions {
 .finance-dialog .dialog__head h2 {
   margin: 0;
 }
+
+.payroll-employees {
+  border: 1px solid var(--border-card-alt);
+  border-radius: 12px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  margin-block: 16px;
+}

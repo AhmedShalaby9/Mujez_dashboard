@@ -196,6 +196,7 @@ describe('Company navigation redesign', () => {
       '/company/finance/expenses',
       '/company/finance/reports',
       '/company/finance/settings',
+      '/company/payroll',
     ];
     const hrPaths = [
       '/company/hr/assets',

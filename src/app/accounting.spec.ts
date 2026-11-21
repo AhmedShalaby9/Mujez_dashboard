@@ -3,7 +3,13 @@ import { provideRouter, ActivatedRoute, Router, UrlTree } from '@angular/router'
 import { signal } from '@angular/core';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Accounting } from './pages/company-shell/accounting/accounting';
-import { AuthService, hasAccountingAccess, companyHomePath, companyGuard } from './auth.service';
+import {
+  AuthService,
+  hasAccountingAccess,
+  hasPayrollAccess,
+  companyHomePath,
+  companyGuard,
+} from './auth.service';
 import { CompanyUiState } from './pages/company-shell/company-ui-state';
 import { RUNTIME_CONFIG } from './runtime-config';
 const ctx = {
@@ -29,8 +35,8 @@ const options = {
 async function setup(mode = 'journals') {
   const request = vi.fn(async (path: string, body?: any): Promise<any> => {
     if (body) return { id: 'saved' };
-    if (path.endsWith('/context')) return ctx;
-    if (path.endsWith('/options')) return options;
+    if (path.endsWith('/context') || path.endsWith('/payroll-context')) return ctx;
+    if (path.endsWith('/options') || path.endsWith('/payroll-options')) return options;
     if (path.includes('reconciliation-lines'))
       return {
         prior: { statement_minor: '10000' },
@@ -173,5 +179,105 @@ describe('Company accounting', () => {
     );
     expect(denied).toBeInstanceOf(UrlTree);
     expect(TestBed.inject(Router).serializeUrl(denied as UrlTree)).toBe('/company/hr/employees');
+  });
+});
+
+describe('Finance workflow extensions', () => {
+  it('keeps payroll staff out of general accounting and routes them to payroll', () => {
+    const officer: any = {
+      pool: 'company_user',
+      role: 'payroll_officer',
+      roles: ['payroll_officer', 'employee'],
+      permissions: ['payroll.read', 'payroll.manage', 'leave.self'],
+      company: { hrEnabled: true },
+    };
+    expect(hasPayrollAccess(officer)).toBe(true);
+    expect(hasAccountingAccess(officer)).toBe(false);
+    expect(companyHomePath(officer)).toBe('/company/payroll');
+    expect(hasPayrollAccess({ ...officer, workspace: {} })).toBe(false);
+  });
+  it('sends a scoped commission policy with exact fixed amounts and effective dates', async () => {
+    const { c, request } = await setup('commissions');
+    await c.choose('commission-policies');
+    c.edit();
+    c.form = {
+      name: 'Agent policy',
+      roleKey: 'agent',
+      userId: 'agent-id',
+      policyTeamId: '',
+      mode: 'fixed',
+      fixedMinor: '10k',
+      from: '2026-11-01',
+      to: '',
+      active: true,
+    };
+    await c.save();
+    expect(request).toHaveBeenCalledWith(
+      '/api/v1/accounting/commission-policies',
+      expect.objectContaining({
+        userId: 'agent-id',
+        teamId: null,
+        fixedMinor: '1000000',
+        from: '2026-11-01',
+        to: null,
+      }),
+    );
+  });
+  it('starts CRM automation disabled and submits explicit installment settings', async () => {
+    const { c, request } = await setup('commissions');
+    await c.choose('automation-rules');
+    c.edit();
+    expect(c.form.active).toBe(false);
+    Object.assign(c.form, {
+      name: 'Sale rule',
+      contractType: 'sale',
+      agreementId: 'agreement',
+      createInstallments: true,
+      installments: 12,
+      intervalMonths: 1,
+      firstDueDays: 30,
+      collectionOwner: 'developer',
+      active: true,
+    });
+    await c.save();
+    expect(request).toHaveBeenCalledWith(
+      '/api/v1/accounting/automation-rules',
+      expect.objectContaining({
+        active: true,
+        createInstallments: true,
+        installments: 12,
+        collectionOwner: 'developer',
+      }),
+    );
+  });
+  it('prepares payroll only for explicitly selected employees and preserves salary amounts', async () => {
+    const { c, request } = await setup('payroll');
+    c.edit();
+    c.toggleEmployee('employee', true);
+    await c.save();
+    expect(request).toHaveBeenCalledWith(
+      '/api/v1/accounting/payroll-runs',
+      expect.objectContaining({ employeeIds: ['employee'], month: '2026-11', date: '2026-11-20' }),
+    );
+    await c.choose('salary-profiles');
+    c.edit();
+    Object.assign(c.form, {
+      employeeId: 'employee',
+      baseMinor: '10k',
+      allowanceMinor: '2k',
+      deductionMinor: '500',
+      deductionNote: 'Approved',
+      advanceCapPercent: '25',
+    });
+    await c.save();
+    expect(request).toHaveBeenCalledWith(
+      '/api/v1/accounting/salary-profiles',
+      expect.objectContaining({
+        baseMinor: '1000000',
+        allowanceMinor: '200000',
+        deductionMinor: '50000',
+        advanceCapBps: 2500,
+      }),
+    );
   });
 });

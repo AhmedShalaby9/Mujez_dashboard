@@ -390,6 +390,16 @@
       </section>
     } @else {
       @if (isSelf) {
+        @if (selfTeam) {
+          <p class="note">
+            {{
+              t(
+                'Team access follows your permissions. Personal salary and advance balances are visible only to the employee and authorized Finance staff.',
+                'عرض الفريق يتبع صلاحيات حسابك. تفاصيل الرواتب والسلف الشخصية تظهر للموظف نفسه والمخولين ماليًا فقط.'
+              )
+            }}
+          </p>
+        }
         <div class="tools">
           @if ((auth.user()?.roles ?? [auth.user()?.role]).includes('team_lead')) {
             <label class="archive"

@@ -2558,6 +2558,7 @@ export class Accounting {
         ...((this.isSelf ? this.data().staff?.items : this.data().items) ?? []).map((r: any) =>
           cols.map((c) => {
             if (c.type === 'money') {
+              if (r[c.key] === null || r[c.key] === undefined) return '';
               const n = BigInt(r[c.key] ?? '0'),
                 abs = n < 0n ? -n : n;
               return (

@@ -19,10 +19,21 @@ async function setup(manage = true) {
       };
     if (path.includes('/import')) return { imported: 1, duplicates: 1, rejected: 1, errors: [] };
     if (path.includes('/convert')) return { leadId: 'lead-1' };
-    if (path.includes('options')) return { owners: [{ id: 'self', name: 'Sales' }] };
+    if (path.includes('options'))
+      return { scope: 'team', canAssign: manage, owners: [{ id: 'self', name: 'Sales' }] };
+    if (path.includes('/history'))
+      return { item: { id: 'cold-1', name: 'Old contact', version: 2 }, history: [], total: 0 };
+    if (/\/(calls|notes|follow-up|assign)$/.test(path)) return { version: 3 };
     return {
       items: [
-        { id: 'cold-1', name: 'Old contact', phone: '+12025550199', owner: 'Sales', version: 0 },
+        {
+          id: 'cold-1',
+          name: 'Old contact',
+          phone: '+12025550199',
+          owner: 'Sales',
+          version: 0,
+          canConvert: true,
+        },
       ],
       total: 1,
     };
@@ -83,5 +94,44 @@ describe('Cold calls', () => {
     const labels = [...f.nativeElement.querySelectorAll('button')].map((b: any) => b.textContent);
     expect(labels.some((x) => x.includes('Import file'))).toBe(false);
     expect(labels.some((x) => x.includes('Convert to lead'))).toBe(false);
+  });
+});
+
+describe('Cold call follow-ups and team assignment', () => {
+  it('filters callbacks and submits versioned Cairo appointment and notes', async () => {
+    const { c, request } = await setup();
+    c.setCallback('due');
+    await c.load();
+    expect(request.mock.calls.some(([p]) => p.includes('callback=due'))).toBe(true);
+    await c.openDetail(c.rows()[0]);
+    c.callOutcome = 'callback';
+    await c.saveActivity();
+    expect(request.mock.calls.some(([p]) => p.endsWith('/calls'))).toBe(false);
+    c.followUpAt = '2027-02-01T10:30';
+    c.notes = ' Call after work ';
+    await c.saveActivity();
+    expect(request.mock.calls.find(([p]) => p.endsWith('/calls'))![1]).toMatchObject({
+      version: 2,
+      outcome: 'callback',
+      notes: 'Call after work',
+      followUpAt: '2027-02-01T10:30',
+    });
+    c.setActivityMode('follow_up');
+    await c.saveActivity(true);
+    expect(request.mock.calls.find(([p]) => p.endsWith('/follow-up'))![1]).toMatchObject({
+      followUpAt: null,
+    });
+  });
+  it('assigns selected records with their current versions and preserves history', async () => {
+    const { c, request } = await setup();
+    c.toggleSelected('cold-1', true);
+    c.openAssignment();
+    c.assignOwner = 'self';
+    await c.assign();
+    expect(request.mock.calls.find(([p]) => p.endsWith('/assign'))![1]).toMatchObject({
+      ownerId: 'self',
+      items: [{ id: 'cold-1', version: 0 }],
+    });
+    expect(c.notice()).toContain('history are preserved');
   });
 });

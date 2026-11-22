@@ -16,7 +16,7 @@
           {{ t('Commercial', 'تجاري') }}
         </button>
       </div>
-      @if (canManage()) {
+      @if (canCreate()) {
         <button type="button" class="btn btn--dark" (click)="openNew()">
           {{ t('+ New lead', '+ عميل جديد') }}
         </button>

@@ -43,6 +43,12 @@ export interface User {
 export function hrModuleEnabled(u: User | null | undefined) {
   return !!u && u.company?.hrEnabled !== false;
 }
+/** Sales agents keep edit/conversion access while manual-new-lead entry is hidden. */
+export function canCreateLead(u: User | null | undefined) {
+  if (!u?.permissions.includes('leads.manage')) return false;
+  const roles = u.roles ?? [u.role];
+  return !(u.pool === 'company_user' && roles.includes('agent') && !roles.includes('team_lead'));
+}
 export function hasCrmWorkspace(u: User | null | undefined) {
   return !!u && (u.pool === 'company_admin' || u.permissions.includes('leads.read'));
 }

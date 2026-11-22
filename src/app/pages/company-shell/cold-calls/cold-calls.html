@@ -28,10 +28,244 @@
   @if (notice()) {
     <p class="note" role="status">
       {{ notice() }}
-      <a [routerLink]="'/company/leads'" [queryParams]="{ leadId: leadId() }">{{
-        t('Open lead', 'فتح العميل')
-      }}</a>
+      @if (leadId()) {
+        <a [routerLink]="'/company/leads'" [queryParams]="{ leadId: leadId() }">{{
+          t('Open lead', 'فتح العميل')
+        }}</a>
+      }
     </p>
+  }
+  <div class="callback-cards" aria-label="Callback queue">
+    <button type="button" [class.active]="callback === 'all'" (click)="setCallback('all')">
+      <span>{{ t('Open contacts', 'جهات الاتصال المفتوحة') }}</span
+      ><b>{{ summary().open ?? 0 }}</b>
+    </button>
+    <button type="button" [class.active]="callback === 'due'" (click)="setCallback('due')">
+      <span>{{ t('Due / overdue callbacks', 'متابعات مستحقة أو متأخرة') }}</span
+      ><b>{{ summary().due ?? 0 }}</b>
+    </button>
+    <button type="button" [class.active]="callback === 'today'" (click)="setCallback('today')">
+      <span>{{ t('Callbacks today', 'متابعات اليوم') }}</span
+      ><b>{{ summary().today ?? 0 }}</b>
+    </button>
+    <button
+      type="button"
+      [class.active]="callback === 'upcoming'"
+      (click)="setCallback('upcoming')"
+    >
+      <span>{{ t('Later callbacks', 'متابعات قادمة') }}</span
+      ><b>{{ summary().upcoming ?? 0 }}</b>
+    </button>
+  </div>
+  <p class="muted">
+    {{
+      t(
+        'All callback times use Cairo time. The queue follows the selected owner and visibility scope.',
+        'جميع المواعيد بتوقيت القاهرة. قائمة المتابعة حسب المسؤول ونطاق العرض المحددين.'
+      )
+    }}
+  </p>
+  @if (options().canAssign && selected().length) {
+    <div class="bulk-actions">
+      <b>{{ selected().length }} {{ t('selected', 'محدد') }}</b
+      ><button type="button" class="btn btn--dark" (click)="openAssignment()">
+        {{ t('Assign selected', 'إسناد المحدد') }}</button
+      ><button type="button" class="btn" (click)="selected.set([])">
+        {{ t('Clear selection', 'إلغاء التحديد') }}
+      </button>
+    </div>
+  }
+  @if (assignOpen) {
+    <section class="card import-panel" aria-labelledby="cold-assign-title">
+      <h2 id="cold-assign-title">{{ t('Assign cold calls', 'إسناد المكالمات الباردة') }}</h2>
+      <p>
+        {{
+          t(
+            'Existing call notes, outcomes and callback dates stay with the contact.',
+            'تظل نتائج المكالمات والملاحظات ومواعيد المتابعة محفوظة مع السجل.'
+          )
+        }}
+      </p>
+      <label class="field"
+        ><span>{{ t('Salesperson', 'مسؤول المبيعات') }}</span
+        ><select [(ngModel)]="assignOwner" [disabled]="saving()">
+          <option value="">{{ t('Select salesperson', 'اختر مسؤول المبيعات') }}</option>
+          @for (o of owners(); track o.id) {
+            <option [value]="o.id">{{ o.name }}</option>
+          }
+        </select></label
+      >
+      <div class="actions">
+        <button type="button" class="btn" [disabled]="saving()" (click)="assignOpen = false">
+          {{ t('Cancel', 'إلغاء') }}</button
+        ><button
+          type="button"
+          class="btn btn--dark"
+          [disabled]="saving() || !assignOwner"
+          (click)="assign()"
+        >
+          {{ t('Save assignment', 'حفظ الإسناد') }}
+        </button>
+      </div>
+    </section>
+  }
+  @if (detail(); as d) {
+    <section class="card import-panel" aria-labelledby="cold-history-title">
+      <div class="detail-head">
+        <div>
+          <h2 id="cold-history-title">{{ d.item.name }}</h2>
+          <p>
+            <span dir="ltr">{{ d.item.phone }}</span> · {{ outcomeLabel(d.item.outcome) }}
+          </p>
+        </div>
+        <button type="button" class="btn" [disabled]="saving()" (click)="closeDetail()">
+          {{ t('Close', 'إغلاق') }}
+        </button>
+      </div>
+      @if (canManage()) {
+        <div class="actions mode-tabs">
+          @if (!d.item.leadId) {
+            <button
+              type="button"
+              class="btn"
+              [class.btn--dark]="activityMode === 'call'"
+              (click)="setActivityMode('call')"
+              [disabled]="saving()"
+            >
+              {{ t('Log call', 'تسجيل مكالمة') }}
+            </button>
+          }
+          <button
+            type="button"
+            class="btn"
+            [class.btn--dark]="activityMode === 'note'"
+            (click)="setActivityMode('note')"
+            [disabled]="saving()"
+          >
+            {{ t('Add note', 'إضافة ملاحظة') }}
+          </button>
+          @if (!d.item.leadId) {
+            <button
+              type="button"
+              class="btn"
+              [class.btn--dark]="activityMode === 'follow_up'"
+              (click)="setActivityMode('follow_up')"
+              [disabled]="saving()"
+            >
+              {{ t('Reschedule callback', 'تعديل موعد المتابعة') }}
+            </button>
+          }
+        </div>
+        <div class="import-fields">
+          @if (activityMode === 'call') {
+            <label class="field"
+              ><span>{{ t('Call outcome', 'نتيجة المكالمة') }}</span
+              ><select
+                [(ngModel)]="callOutcome"
+                (ngModelChange)="outcomeChanged()"
+                [disabled]="saving()"
+              >
+                @for (o of outcomes; track o.key) {
+                  <option [value]="o.key">{{ t(o.en, o.ar) }}</option>
+                }
+              </select></label
+            >
+          }
+          @if (activityMode !== 'note') {
+            <label class="field"
+              ><span>{{
+                t('Next callback — Cairo time', 'المتابعة القادمة — بتوقيت القاهرة')
+              }}</span
+              ><input
+                type="datetime-local"
+                [(ngModel)]="followUpAt"
+                [disabled]="
+                  saving() ||
+                  (activityMode === 'call' &&
+                    ['not_interested', 'wrong_number'].includes(callOutcome))
+                "
+              /><small>{{
+                t(
+                  'Required for Callback requested. A new call replaces the previous callback appointment.',
+                  'مطلوب عند طلب إعادة الاتصال. تسجيل مكالمة جديدة يستبدل موعد المتابعة السابق.'
+                )
+              }}</small></label
+            >
+          }
+          <label class="field note-field"
+            ><span>{{ t('Notes', 'الملاحظات') }}</span
+            ><textarea
+              [(ngModel)]="notes"
+              maxlength="2000"
+              rows="3"
+              [disabled]="saving()"
+            ></textarea>
+          </label>
+        </div>
+        <div class="actions">
+          <button
+            type="button"
+            class="btn btn--dark"
+            (click)="saveActivity()"
+            [disabled]="
+              saving() ||
+              (activityMode === 'note' && !notes.trim()) ||
+              (activityMode === 'follow_up' && !followUpAt)
+            "
+          >
+            {{ t('Save activity', 'حفظ المتابعة') }}
+          </button>
+          @if (activityMode === 'follow_up' && d.item.followUpAt) {
+            <button type="button" class="btn" (click)="saveActivity(true)" [disabled]="saving()">
+              {{ t('Cancel scheduled callback', 'إلغاء موعد المتابعة') }}
+            </button>
+          }
+        </div>
+      }
+      <h3>{{ t('Activity history', 'سجل المتابعة') }}</h3>
+      @for (a of d.history; track a.id) {
+        <article class="activity-item">
+          <div>
+            <b>{{ activityLabel(a.kind) }}</b> · {{ a.actor }} <time>{{ date(a.createdAt) }}</time>
+          </div>
+          @if (a.outcome) {
+            <p>{{ outcomeLabel(a.outcome) }}</p>
+          }
+          @if (a.notes) {
+            <p class="note-text">{{ a.notes }}</p>
+          }
+          @if (a.kind === 'assigned' && a.details?.ownerName) {
+            <p>{{ a.details.previousOwnerName }} → {{ a.details.ownerName }}</p>
+          }
+          @if (a.kind === 'follow_up' && !a.followUpAt) {
+            <p>{{ t('Callback canceled', 'تم إلغاء موعد المتابعة') }}</p>
+          }
+          @if (a.followUpAt) {
+            <p>{{ t('Callback', 'متابعة') }}: {{ date(a.followUpAt) }}</p>
+          }
+        </article>
+      } @empty {
+        <p class="muted">{{ t('No call activity recorded yet.', 'لا توجد متابعة مسجلة بعد.') }}</p>
+      }
+      <div class="pagination">
+        <span>{{ d.total }} · {{ t('Page', 'صفحة') }} {{ historyPage }}</span
+        ><button
+          type="button"
+          class="btn"
+          [disabled]="historyLoading() || historyPage === 1"
+          (click)="historyPageChange(-1)"
+        >
+          {{ t('Previous', 'السابق') }}</button
+        ><button
+          type="button"
+          class="btn"
+          [disabled]="historyLoading() || historyPage * 25 >= d.total"
+          (click)="historyPageChange(1)"
+        >
+          {{ t('Next', 'التالي') }}
+        </button>
+      </div>
+    </section>
   }
   @if (uploading()) {
     <section class="card import-panel" aria-labelledby="cold-import-title">
@@ -182,12 +416,48 @@
     </section>
   }
   <div class="toolbar">
+    @if (options().scope !== 'own') {
+      <label class="field"
+        ><span>{{ t('Visibility', 'نطاق العرض') }}</span
+        ><select [(ngModel)]="view" (ngModelChange)="apply()">
+          <option value="all">
+            {{ options().scope === 'team' ? t('My team', 'فريقي') : t('Company', 'الشركة') }}
+          </option>
+          <option value="mine">{{ t('My calls', 'مكالماتي') }}</option>
+        </select></label
+      >
+    }
+    @if (options().canAssign && view !== 'mine') {
+      <label class="field"
+        ><span>{{ t('Owner', 'المسؤول') }}</span
+        ><select [(ngModel)]="filterOwner" (ngModelChange)="apply()">
+          <option value="">{{ t('All permitted owners', 'كل المسؤولين المتاحين') }}</option>
+          @for (o of owners(); track o.id) {
+            <option [value]="o.id">{{ o.name }}</option>
+          }
+        </select></label
+      >
+    }
+    <label class="field"
+      ><span>{{ t('Outcome', 'النتيجة') }}</span
+      ><select [(ngModel)]="outcomeFilter" (ngModelChange)="apply()">
+        <option value="">{{ t('All outcomes', 'كل النتائج') }}</option>
+        @for (o of outcomes; track o.key) {
+          <option [value]="o.key">{{ t(o.en, o.ar) }}</option>
+        }
+      </select></label
+    >
+
     <label class="field"
       ><span>{{ t('Search name or phone', 'البحث بالاسم أو الهاتف') }}</span
       ><input [(ngModel)]="search" (keydown.enter)="apply()" /></label
     ><label class="field"
       ><span>{{ t('Status', 'الحالة') }}</span
       ><select [(ngModel)]="status" (ngModelChange)="apply()">
+        <option value="open">{{ t('Open', 'مفتوح') }}</option>
+        <option value="closed">
+          {{ t('Closed — no interest / wrong number', 'مغلق — غير مهتم أو رقم خاطئ') }}
+        </option>
         <option value="pending">{{ t('Not converted', 'لم يتم تحويله') }}</option>
         <option value="converted">{{ t('Converted', 'تم تحويله') }}</option>
         <option value="all">{{ t('All', 'الكل') }}</option>
@@ -198,27 +468,75 @@
     <table class="tbl">
       <thead>
         <tr>
+          @if (options().canAssign) {
+            <th>
+              <input
+                type="checkbox"
+                aria-label="Select page of cold calls"
+                (change)="selectPage($any($event.target).checked)"
+              />
+            </th>
+          }
           <th>{{ t('Name', 'الاسم') }}</th>
           <th>{{ t('Phone', 'الهاتف') }}</th>
           <th>{{ t('Owner', 'المسؤول') }}</th>
+          <th>{{ t('Outcome', 'النتيجة') }}</th>
+          <th>{{ t('Next callback — Cairo', 'المتابعة القادمة — القاهرة') }}</th>
           <th>{{ t('Actions', 'الإجراءات') }}</th>
         </tr>
       </thead>
       <tbody>
         @for (r of rows(); track r.id) {
           <tr>
+            @if (options().canAssign) {
+              <td>
+                @if (!r.leadId) {
+                  <input
+                    type="checkbox"
+                    [attr.aria-label]="t('Select ', 'تحديد ') + r.name"
+                    [checked]="selected().includes(r.id)"
+                    (change)="toggleSelected(r.id, $any($event.target).checked)"
+                  />
+                }
+              </td>
+            }
             <td>{{ r.name }}</td>
             <td dir="ltr">{{ r.phone }}</td>
             <td>{{ r.owner }}</td>
+            <td>{{ outcomeLabel(r.outcome) }}</td>
+            <td [class.callback-due]="r.callbackDue">
+              {{ date(r.followUpAt) }}
+              @if (r.callbackDue) {
+                <small>{{ t('Due / overdue', 'مستحق أو متأخر') }}</small>
+              }
+            </td>
             <td>
-              @if (r.leadId) {
+              <button
+                type="button"
+                class="btn btn--sm"
+                (click)="openDetail(r)"
+                [disabled]="historyLoading() || saving()"
+              >
+                {{ t('History / log call', 'السجل والمتابعة') }}
+              </button>
+              @if (options().canAssign && !r.leadId) {
+                <button
+                  type="button"
+                  class="btn btn--sm"
+                  (click)="openAssignment(r)"
+                  [disabled]="saving()"
+                >
+                  {{ t('Assign', 'إسناد') }}
+                </button>
+              }
+              @if (r.leadId && r.canOpenLead) {
                 <a
                   class="btn btn--sm"
                   routerLink="/company/leads"
                   [queryParams]="{ leadId: r.leadId }"
                   >{{ t('Open lead', 'فتح العميل') }}</a
                 >
-              } @else if (canManage()) {
+              } @else if (canManage() && r.canConvert) {
                 <button
                   type="button"
                   class="btn btn--sm"
@@ -232,7 +550,7 @@
           </tr>
         } @empty {
           <tr>
-            <td colspan="4">
+            <td [attr.colspan]="options().canAssign ? 7 : 6">
               {{
                 loading()
                   ? t('Loading…', 'جار التحميل…')

@@ -5,7 +5,7 @@ import type { CompanyTask } from '../../../tasks-api.service';
 import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CompanyUiState } from '../company-ui-state';
-import { AuthService, ApiError, aiModuleEnabled } from '../../../auth.service';
+import { AuthService, ApiError, aiModuleEnabled, canCreateLead } from '../../../auth.service';
 import {
   SalesApi,
   SALES_STAGES,
@@ -74,6 +74,7 @@ export class Leads {
   readonly stageNames = computed(() => STAGE_NAMES[this.lang()]);
   readonly sources = Object.keys(SOURCE_NAMES);
   readonly money = salesMoney;
+  readonly canCreate = computed(() => canCreateLead(this.auth.user()));
   readonly canManage = computed(
     () => this.auth.user()?.permissions.includes('leads.manage') ?? false,
   );
@@ -159,7 +160,7 @@ export class Leads {
         void this.reload();
       }
       // Any value works; the shell sends a timestamp so repeated clicks re-trigger.
-      if (p.get('new') && this.canManage()) this.openNew();
+      if (p.get('new') && this.canCreate()) this.openNew();
     });
     this.destroy.onDestroy(() => sub?.unsubscribe());
     void this.loadOwners();
@@ -391,6 +392,7 @@ export class Leads {
     );
   }
   openNew(l?: SalesLead) {
+    if (!l && !this.canCreate()) return;
     this.editing.set(l ?? null);
     this.draft = l
       ? {

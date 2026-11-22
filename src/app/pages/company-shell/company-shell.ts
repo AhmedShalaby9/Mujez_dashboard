@@ -1,3 +1,4 @@
+import { canCreateLead } from '../../auth.service';
 import {
   aiModuleEnabled,
   financeModuleEnabled,
@@ -643,9 +644,7 @@ export class CompanyShell {
           ['leads.read', 'contacts.read', 'units.read', 'contracts.read'].includes(p),
         ) ?? false,
   );
-  readonly canNewLead = computed(
-    () => this.auth.user()?.permissions.includes('leads.manage') ?? false,
-  );
+  readonly canNewLead = computed(() => canCreateLead(this.auth.user()));
   /** Top-bar search goes to Leads (there is no global search endpoint yet). */
   readonly searchResults = signal<Array<{ id: string; name: string; type: string; route: string }>>(
     [],
@@ -692,6 +691,7 @@ export class CompanyShell {
     void this.router.navigate(['/company/leads'], { queryParams: v.filters });
   }
   newLead() {
+    if (!this.canNewLead()) return;
     void this.router.navigate(['/company/leads'], { queryParams: { new: Date.now() } });
   }
   setLang(l: Lang) {

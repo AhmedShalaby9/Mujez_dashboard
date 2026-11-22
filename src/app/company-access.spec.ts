@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideRouter, Router, UrlTree } from '@angular/router';
 import { vi } from 'vitest';
-import { AuthService, adminGuard, companyGuard } from './auth.service';
+import { AuthService, adminGuard, companyGuard, canCreateLead } from './auth.service';
 import { RUNTIME_CONFIG } from './runtime-config';
 import { CompanyShell } from './pages/company-shell/company-shell';
 import { Companies } from './pages/admin-shell/companies/companies';
@@ -417,4 +417,19 @@ describe('Workspace navigation identity refresh', () => {
       ]);
     },
   );
+});
+
+describe('Manual lead creation controls', () => {
+  it('hides new lead for sales including employee multi-role, and preserves team lead and owner access', () => {
+    const sales: any = {
+      pool: 'company_user',
+      role: 'agent',
+      permissions: ['leads.manage'],
+      roles: ['agent', 'employee'],
+    };
+    expect(canCreateLead(sales)).toBe(false);
+    expect(canCreateLead({ ...sales, roles: ['agent', 'team_lead', 'employee'] })).toBe(true);
+    expect(canCreateLead({ ...sales, pool: 'company_admin' })).toBe(true);
+    expect(canCreateLead({ ...sales, permissions: [] })).toBe(false);
+  });
 });

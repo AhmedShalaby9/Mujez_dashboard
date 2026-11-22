@@ -1,0 +1,263 @@
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <span>{{ total() }} {{ t('records', 'سجل') }}</span>
+      <h1>{{ t('Cold calls', 'المكالمات الباردة') }}</h1>
+    </div>
+    @if (canManage()) {
+      <div class="head__actions">
+        <button type="button" class="btn" (click)="template()">
+          {{ t('Download Excel template', 'تحميل قالب Excel') }}</button
+        ><button type="button" class="btn btn--dark" (click)="openImport()">
+          {{ t('Import file', 'استيراد ملف') }}
+        </button>
+      </div>
+    }
+  </div>
+  <p class="muted">
+    {{
+      t(
+        'Old contacts for initial outreach. Imported records stay outside Leads and the pipeline until you explicitly convert an interested contact.',
+        'جهات اتصال قديمة للتواصل الأولي. تظل منفصلة عن العملاء والـPipeline حتى تحويل العميل المهتم بشكل صريح.'
+      )
+    }}
+  </p>
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="note" role="status">
+      {{ notice() }}
+      <a [routerLink]="'/company/leads'" [queryParams]="{ leadId: leadId() }">{{
+        t('Open lead', 'فتح العميل')
+      }}</a>
+    </p>
+  }
+  @if (uploading()) {
+    <section class="card import-panel" aria-labelledby="cold-import-title">
+      <h2 id="cold-import-title">{{ t('Import old contacts', 'استيراد جهات الاتصال القديمة') }}</h2>
+      <p>
+        {{
+          t(
+            'XLSX or UTF-8 CSV. Exactly two columns: name, phone. Maximum 2,000 rows and 5 MB. Use one worksheet; keep phone cells as Text to preserve 0 and +.',
+            'ملف XLSX أو CSV بترميز UTF-8. عمودان فقط: name وphone. الحد الأقصى 2,000 صف و5 MB. استخدم ورقة واحدة ونسّق الهاتف كنص للحفاظ على 0 و+.'
+          )
+        }}
+      </p>
+      <div class="import-fields">
+        <label class="field"
+          ><span>{{ t('File', 'الملف') }}</span
+          ><input
+            type="file"
+            accept=".xlsx,.csv"
+            (change)="fileChanged($event)"
+            [disabled]="saving()"
+        /></label>
+        <label class="field"
+          ><span>{{ t('Assign imported contacts to', 'إسناد السجلات المستوردة إلى') }}</span
+          ><select [(ngModel)]="ownerId" (ngModelChange)="ownerChanged()" [disabled]="saving()">
+            <option value="">{{ t('Me', 'أنا') }}</option>
+            @for (o of owners(); track o.id) {
+              <option [value]="o.id">{{ o.name }}</option>
+            }
+          </select></label
+        >
+      </div>
+      <div class="actions">
+        <button type="button" class="btn" [disabled]="saving()" (click)="uploading.set(false)">
+          {{ t('Close', 'إغلاق') }}</button
+        ><button
+          type="button"
+          class="btn btn--dark"
+          [disabled]="!file || saving()"
+          (click)="upload(false)"
+        >
+          {{
+            saving() ? t('Processing…', 'جار المعالجة…') : t('Preview import', 'معاينة الاستيراد')
+          }}
+        </button>
+      </div>
+      @if (preview(); as p) {
+        <div class="summary">
+          <span
+            >{{ t('Ready', 'جاهز') }} <b>{{ p.valid }}</b></span
+          ><span
+            >{{ t('Duplicates skipped', 'مكرر يتم تجاهله') }} <b>{{ p.duplicates }}</b></span
+          ><span
+            >{{ t('Rejected', 'مرفوض') }} <b>{{ p.rejected }}</b></span
+          ><span
+            >{{ t('Empty rows', 'صفوف فارغة') }} <b>{{ p.empty }}</b></span
+          >
+        </div>
+        <div class="table-wrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>{{ t('Name', 'الاسم') }}</th>
+                <th>{{ t('Phone', 'الهاتف') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of p.sample; track r.row) {
+                <tr>
+                  <td>{{ r.name }}</td>
+                  <td dir="ltr">{{ r.phone }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="muted">
+          {{
+            t(
+              'Preview shows the first 10 valid contacts. Numbers already in Cold calls or Leads are skipped.',
+              'المعاينة تعرض أول 10 سجلات صالحة. يتم تجاهل الأرقام الموجودة في المكالمات الباردة أو العملاء.'
+            )
+          }}
+        </p>
+        <button
+          type="button"
+          class="btn btn--dark"
+          [disabled]="saving() || !p.valid"
+          (click)="upload(true)"
+        >
+          {{ t('Import valid contacts', 'استيراد السجلات الصالحة') }} ({{ p.valid }})
+        </button>
+        @if (p.errors.length) {
+          <details>
+            <summary>{{ t('Validation errors', 'أخطاء التحقق') }} ({{ p.rejected }})</summary>
+            @for (e of p.errors.slice(0, 50); track e.row) {
+              <p>{{ t('Row', 'صف') }} {{ e.row }}: {{ e.reason }}</p>
+            }
+          </details>
+        }
+      }
+      @if (result(); as r) {
+        <p class="note" role="status">
+          {{ t('Imported', 'تم استيراد') }} {{ r.imported }} ·
+          {{ t('Duplicates skipped', 'مكرر تم تجاهله') }} {{ r.duplicates }} ·
+          {{ t('Rejected', 'مرفوض') }} {{ r.rejected }}
+        </p>
+        @if (r.errors.length) {
+          <details>
+            <summary>{{ t('Validation errors', 'أخطاء التحقق') }}</summary>
+            @for (e of r.errors.slice(0, 50); track e.row) {
+              <p>{{ t('Row', 'صف') }} {{ e.row }}: {{ e.reason }}</p>
+            }
+          </details>
+        }
+      }
+    </section>
+  }
+  @if (converting(); as c) {
+    <section class="card import-panel" aria-labelledby="cold-convert-title">
+      <h2 id="cold-convert-title">{{ t('Convert to lead', 'تحويل إلى عميل محتمل') }}</h2>
+      <p>
+        {{ c.name }} · <span dir="ltr">{{ c.phone }}</span>
+      </p>
+      <div class="import-fields">
+        <label class="field"
+          ><span>{{ t('Segment', 'الفئة') }}</span
+          ><select [(ngModel)]="segment">
+            <option value="res">{{ t('Residential', 'سكني') }}</option>
+            <option value="com">{{ t('Commercial', 'تجاري') }}</option>
+          </select></label
+        ><label class="field"
+          ><span>{{ t('Property needs', 'احتياجات العقار') }}</span
+          ><input type="text" [(ngModel)]="want" maxlength="160"
+        /></label>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn" [disabled]="saving()" (click)="converting.set(null)">
+          {{ t('Cancel', 'إلغاء') }}</button
+        ><button
+          type="button"
+          class="btn btn--dark"
+          [disabled]="saving() || !want.trim()"
+          (click)="convert()"
+        >
+          {{ t('Convert to lead', 'تحويل إلى عميل محتمل') }}
+        </button>
+      </div>
+    </section>
+  }
+  <div class="toolbar">
+    <label class="field"
+      ><span>{{ t('Search name or phone', 'البحث بالاسم أو الهاتف') }}</span
+      ><input [(ngModel)]="search" (keydown.enter)="apply()" /></label
+    ><label class="field"
+      ><span>{{ t('Status', 'الحالة') }}</span
+      ><select [(ngModel)]="status" (ngModelChange)="apply()">
+        <option value="pending">{{ t('Not converted', 'لم يتم تحويله') }}</option>
+        <option value="converted">{{ t('Converted', 'تم تحويله') }}</option>
+        <option value="all">{{ t('All', 'الكل') }}</option>
+      </select></label
+    ><button type="button" class="btn" (click)="apply()">{{ t('Search', 'بحث') }}</button>
+  </div>
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>{{ t('Name', 'الاسم') }}</th>
+          <th>{{ t('Phone', 'الهاتف') }}</th>
+          <th>{{ t('Owner', 'المسؤول') }}</th>
+          <th>{{ t('Actions', 'الإجراءات') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of rows(); track r.id) {
+          <tr>
+            <td>{{ r.name }}</td>
+            <td dir="ltr">{{ r.phone }}</td>
+            <td>{{ r.owner }}</td>
+            <td>
+              @if (r.leadId) {
+                <a
+                  class="btn btn--sm"
+                  routerLink="/company/leads"
+                  [queryParams]="{ leadId: r.leadId }"
+                  >{{ t('Open lead', 'فتح العميل') }}</a
+                >
+              } @else if (canManage()) {
+                <button
+                  type="button"
+                  class="btn btn--sm"
+                  [disabled]="saving()"
+                  (click)="startConvert(r)"
+                >
+                  {{ t('Convert to lead', 'تحويل إلى عميل محتمل') }}
+                </button>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="4">
+              {{
+                loading()
+                  ? t('Loading…', 'جار التحميل…')
+                  : t(
+                      'No cold calls yet. Import a file to get started.',
+                      'لا توجد سجلات. استورد ملفًا للبدء.'
+                    )
+              }}
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination">
+    <span>{{ total() }} · {{ t('Page', 'صفحة') }} {{ page() }}</span
+    ><button class="btn" type="button" [disabled]="page() === 1 || loading()" (click)="next(-1)">
+      {{ t('Previous', 'السابق') }}</button
+    ><button
+      class="btn"
+      type="button"
+      [disabled]="page() * 50 >= total() || loading()"
+      (click)="next(1)"
+    >
+      {{ t('Next', 'التالي') }}
+    </button>
+  </div>
+</div>

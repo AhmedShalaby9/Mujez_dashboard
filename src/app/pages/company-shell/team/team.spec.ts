@@ -197,13 +197,13 @@ describe('Team lead workspace', () => {
         .visibleNav()
         .filter((x) => x.kind === 'item')
         .map((x) => (x as any).path);
-    expect(paths()).toEqual(['dashboard', 'leads', 'tasks']);
+    expect(paths()).toEqual(['dashboard', 'leads', 'cold-calls', 'tasks']);
     user.set({
       ...user(),
       role: 'team_lead',
       permissions: [...user().permissions, 'team.self.read'],
     });
-    expect(paths()).toEqual(['dashboard', 'leads', 'tasks', 'my-team']);
+    expect(paths()).toEqual(['dashboard', 'leads', 'cold-calls', 'tasks', 'my-team']);
     expect(paths()).not.toContain('team');
   });
 });

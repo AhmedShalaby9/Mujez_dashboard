@@ -1,0 +1,87 @@
+:host {
+  display: block;
+}
+.import-panel {
+  padding: 24px;
+  margin: 20px 0;
+  border: 1px solid var(--line, #deded8);
+  border-radius: 20px;
+  background: var(--surface, #fff);
+}
+.import-panel h2 {
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+.import-panel p {
+  line-height: 1.7;
+}
+.import-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 18px 0;
+}
+.actions,
+.summary,
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.summary {
+  padding: 16px 0;
+}
+.summary span {
+  background: var(--bg, #f5f5ef);
+  border-radius: 12px;
+  padding: 12px;
+}
+.toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+.toolbar .field:first-child {
+  flex: 1;
+  min-width: 220px;
+}
+.table-wrap {
+  overflow: auto;
+  border: 1px solid var(--line, #deded8);
+  border-radius: 18px;
+  background: #fff;
+}
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+}
+.tbl th,
+.tbl td {
+  padding: 16px;
+  text-align: start;
+  border-bottom: 1px solid var(--line, #deded8);
+}
+.tbl th {
+  color: var(--muted, #6b6b73);
+  font-size: 13px;
+}
+.pagination {
+  margin-top: 18px;
+}
+.pagination span {
+  margin-inline-end: auto;
+}
+details {
+  margin-top: 16px;
+}
+@media (max-width: 640px) {
+  .import-fields {
+    grid-template-columns: 1fr;
+  }
+  .import-panel {
+    padding: 16px;
+  }
+}

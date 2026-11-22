@@ -153,6 +153,7 @@ describe('Company navigation redesign', () => {
         [
           'dashboard',
           ...pages,
+          'cold-calls',
           'my-finance',
           'developers',
           'compounds',
@@ -215,6 +216,7 @@ describe('Company navigation redesign', () => {
     expect(paths()).toEqual([
       '/company/dashboard',
       '/company/leads',
+      '/company/cold-calls',
       '/company/tasks',
       ...financePaths,
       ...hrPaths,
@@ -227,6 +229,7 @@ describe('Company navigation redesign', () => {
     expect(paths()).toEqual([
       '/company/dashboard',
       '/company/leads',
+      '/company/cold-calls',
       '/company/tasks',
       ...financePaths,
       ...hrPaths,

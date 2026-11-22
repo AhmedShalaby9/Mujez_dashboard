@@ -357,6 +357,12 @@ export const routes: Routes = [
           import('./pages/company-shell/pipeline/pipeline').then((m) => m.Pipeline),
       },
       {
+        path: 'cold-calls',
+        data: { permission: 'leads.read', crmView: true },
+        loadComponent: () =>
+          import('./pages/company-shell/cold-calls/cold-calls').then((m) => m.ColdCalls),
+      },
+      {
         path: 'leads',
         data: { permission: 'leads.read' },
         loadComponent: () => import('./pages/company-shell/leads/leads').then((m) => m.Leads),

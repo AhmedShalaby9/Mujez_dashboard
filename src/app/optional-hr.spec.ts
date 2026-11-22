@@ -28,7 +28,11 @@ const owner = (hrEnabled: boolean) => ({
 afterEach(() => TestBed.resetTestingModule());
 describe('Optional company HR', () => {
   it('hides HR and leave pages and blocks direct HR routes while keeping CRM routes', async () => {
-    const user = signal<any>(owner(false));
+    const user = signal<any>({
+      ...owner(false),
+      permissions: [...owner(false).permissions, 'commissions.read'],
+      company: { ...owner(false).company, financeEnabled: false, aiEnabled: false },
+    });
     const request = vi.fn(async (path: string) =>
       path.includes('announcements')
         ? []
@@ -53,6 +57,15 @@ describe('Optional company HR', () => {
         .filter((x) => x.kind === 'item')
         .map((x: any) => x.path);
     expect(paths()).toContain('leads');
+    expect(paths()).toContain('commissions');
+    expect(paths()).not.toContain('finance');
+    expect(paths()).not.toContain('payroll');
+    expect(paths()).not.toContain('ai-analytics');
+    expect(
+      f.componentInstance
+        .visibleNav()
+        .some((x) => x.kind === 'head' && x.label === 'Contracts & commissions'),
+    ).toBe(true);
     expect(paths()).not.toContain('hr/employees');
     expect(paths()).not.toContain('my-leave');
     expect(paths()).not.toContain('leave-approvals');

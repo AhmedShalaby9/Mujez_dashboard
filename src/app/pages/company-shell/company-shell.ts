@@ -1,5 +1,6 @@
 import {
   aiModuleEnabled,
+  financeModuleEnabled,
   hasAccountingAccess,
   hasAccountingSelf,
   hasPayrollAccess,
@@ -423,7 +424,15 @@ export class CompanyShell {
         const next = all.slice(i + 1).findIndex((e) => e.kind === 'head');
         const group = all.slice(i + 1, next === -1 ? undefined : i + 1 + next);
         const hasVisible = group.some((e) => e.kind === 'item' && canSee(e));
-        if (hasVisible) kept.push(entry);
+        if (hasVisible)
+          kept.push(
+            ['Finance', 'المالية'].includes(entry.label) && !financeModuleEnabled(this.auth.user())
+              ? {
+                  ...entry,
+                  label: this.lang() === 'ar' ? 'العقود والعمولات' : 'Contracts & commissions',
+                }
+              : entry,
+          );
       }
     }
     return kept;

@@ -100,7 +100,11 @@ describe('Optional company HR', () => {
   it('defaults HR off, saves the toggle in drafts and creation, and resumes a disabled draft correctly', async () => {
     const api = {
       drafts: vi.fn(async () => ({ items: [] })),
-      draft: vi.fn(async () => ({ id: 'draft', version: 2, payload: { hrEnabled: false } })),
+      draft: vi.fn(async () => ({
+        id: 'draft',
+        version: 2,
+        payload: { hrEnabled: false, financeEnabled: false },
+      })),
       quote: vi.fn(async () => ({ planVersionId: 'plan' })),
       saveDraft: vi.fn(async (_body: unknown) => ({ id: 'draft', version: 1 })),
       create: vi.fn(async (_body: unknown) => ({ id: 'created' })),
@@ -118,20 +122,34 @@ describe('Optional company HR', () => {
     await f.whenStable();
     const c = f.componentInstance;
     expect(c.f().hrEnabled).toBe(false);
-    c.step.set(4);
+    c.setX('amount', '12k');
+    c.step.set(3);
     f.detectChanges();
     const toggle = f.nativeElement.querySelector('[role="switch"][aria-label="HR module"]');
     expect(toggle.getAttribute('aria-checked')).toBe('false');
     toggle.click();
     f.detectChanges();
     expect(c.f().hrEnabled).toBe(true);
+    expect(c.f().financeEnabled).toBe(false);
+    const finance = f.nativeElement.querySelector('[role="switch"][aria-label="Finance module"]');
+    finance.click();
+    f.detectChanges();
+    expect(c.f().financeEnabled).toBe(true);
     await c.saveDraft();
-    expect(api.saveDraft.mock.calls[0][0]).toMatchObject({ hrEnabled: true });
-    c.step.set(5);
+    expect(api.saveDraft.mock.calls[0][0]).toMatchObject({ hrEnabled: true, financeEnabled: true });
+    c.step.set(4);
     await c.next();
-    expect(api.create.mock.calls[0][0]).toMatchObject({ hrEnabled: true });
+    expect(api.create.mock.calls[0][0]).toMatchObject({
+      hrEnabled: true,
+      financeEnabled: true,
+      aiEnabled: false,
+      customContract: { amountMinor: '1200000', durationMonths: 12 },
+    });
+    expect(api.create.mock.calls[0][0]).not.toHaveProperty('plan');
+    expect(api.quote).not.toHaveBeenCalled();
     await c.resumeDraft('draft');
     expect(c.f().hrEnabled).toBe(false);
+    expect(c.f().financeEnabled).toBe(false);
     c.set('hrEnabled', true);
     api.draft.mockResolvedValueOnce({ id: 'legacy', version: 1, payload: {} } as any);
     await c.resumeDraft('legacy');

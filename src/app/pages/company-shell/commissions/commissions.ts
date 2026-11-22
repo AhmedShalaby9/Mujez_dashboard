@@ -2,7 +2,7 @@ import { Component, computed, inject, signal, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { CompanyUiState, type Lang } from '../company-ui-state';
-import { AuthService } from '../../../auth.service';
+import { AuthService, financeModuleEnabled } from '../../../auth.service';
 import {
   CompanyCommissionsApi,
   type CompanyCommission,
@@ -98,6 +98,7 @@ const COPY: Record<Lang, Copy> = {
 export class Commissions implements OnDestroy {
   readonly ui = inject(CompanyUiState);
   readonly api = inject(CompanyCommissionsApi);
+  readonly financeModuleEnabled = financeModuleEnabled;
   readonly auth = inject(AuthService);
   readonly lang = computed<Lang>(() => this.ui.lang());
   readonly L = computed(() => COPY[this.lang()]);

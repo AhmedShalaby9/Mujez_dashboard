@@ -1,3 +1,4 @@
+import { AuthService, aiModuleEnabled } from '../../../auth.service';
 import { TeamAiInsights } from './ai-insights/team-ai-insights';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -23,6 +24,8 @@ import { CompanyUiState } from '../company-ui-state';
   ],
 })
 export class MyTeam {
+  readonly auth = inject(AuthService);
+  readonly aiModuleEnabled = aiModuleEnabled;
   readonly ui = inject(CompanyUiState);
   readonly ar = computed(() => this.ui.lang() === 'ar');
   private readonly api = inject(TeamApi);

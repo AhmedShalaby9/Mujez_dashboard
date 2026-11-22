@@ -5,7 +5,7 @@ import type { CompanyTask } from '../../../tasks-api.service';
 import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CompanyUiState } from '../company-ui-state';
-import { AuthService, ApiError } from '../../../auth.service';
+import { AuthService, ApiError, aiModuleEnabled } from '../../../auth.service';
 import {
   SalesApi,
   SALES_STAGES,
@@ -31,6 +31,7 @@ import {
 })
 export class Leads {
   private readonly ui = inject(CompanyUiState);
+  readonly aiModuleEnabled = aiModuleEnabled;
   readonly auth = inject(AuthService);
   readonly api = inject(SalesApi);
   private readonly destroy = inject(DestroyRef);

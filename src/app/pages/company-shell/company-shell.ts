@@ -1,4 +1,9 @@
-import { hasAccountingAccess, hasAccountingSelf, hasPayrollAccess } from '../../auth.service';
+import {
+  aiModuleEnabled,
+  hasAccountingAccess,
+  hasAccountingSelf,
+  hasPayrollAccess,
+} from '../../auth.service';
 import { hasFinanceAccess } from '../../auth.service';
 import { visibleCompanyRoles } from '../../company-role-labels';
 import { NavigationState, RouteSkeleton } from '../../route-skeleton';
@@ -373,6 +378,7 @@ export class CompanyShell {
         return hasAccountingAccess(u);
       if (item.path === 'payroll') return hasPayrollAccess(u);
       if (item.path === 'my-finance') return hasAccountingSelf(u);
+      if (item.path === 'ai-analytics' && !aiModuleEnabled(u)) return false;
       if (item.path === 'dashboard') return hasCrmWorkspace(u);
       if (item.path === 'employee') return employeeArea(u);
       if (

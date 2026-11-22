@@ -1,4 +1,4 @@
-import { compactMoney, compactMajor } from '../../../compact-numbers';
+import { compactMoney, compactMajor, parseCompactAmount } from '../../../compact-numbers';
 import { FormsModule } from '@angular/forms';
 import { SubscriptionsApi } from '../../../subscriptions-api.service';
 import { CompaniesApi } from '../../../companies-api.service';
@@ -33,7 +33,9 @@ interface Subscription {
   companyEn: string;
   companyAr: string;
   plan: Plan;
-  cycle: 'monthly' | 'annual';
+  cycle: 'monthly' | 'annual' | 'custom';
+  durationMonths?: number | null;
+  durationDays?: number | null;
   status: SubStatus;
   payment: PaymentMethod;
   renewsOn: string;
@@ -42,8 +44,20 @@ interface Subscription {
 }
 
 const PLAN_LABEL: Record<Lang, Record<Plan, string>> = {
-  en: { starter: 'Starter', pro: 'Pro', business: 'Business', enterprise: 'Enterprise' },
-  ar: { starter: 'أساسية', pro: 'احترافية', business: 'أعمال', enterprise: 'مؤسسات' },
+  en: {
+    custom: 'Custom',
+    starter: 'Starter',
+    pro: 'Pro',
+    business: 'Business',
+    enterprise: 'Enterprise',
+  },
+  ar: {
+    custom: 'مخصص',
+    starter: 'أساسية',
+    pro: 'احترافية',
+    business: 'أعمال',
+    enterprise: 'مؤسسات',
+  },
 };
 
 const PLAN_DOT: Record<Plan, string> = {
@@ -310,13 +324,29 @@ export class Subscriptions {
   readonly availablePlans = signal<
     Array<{ key: Plan; nameEn: string; nameAr: string; archived: boolean; planVersionId: string }>
   >([]);
-  readonly companies = signal<Array<{ id: string; nameEn: string; status: string }>>([]);
+  readonly companies = signal<
+    Array<{
+      id: string;
+      nameEn: string;
+      status: string;
+      aiEnabled?: boolean;
+      hrEnabled?: boolean;
+      financeEnabled?: boolean;
+    }>
+  >([]);
   draft = {
     companyId: '',
     plan: 'starter' as Plan,
     cycle: 'monthly',
     payment: 'bank',
     status: 'active',
+    amount: '',
+    years: 1,
+    durationMode: 'years',
+    endsOn: '',
+    aiEnabled: false,
+    financeEnabled: false,
+    hrEnabled: false,
   };
   readonly activePlans = computed(() => this.availablePlans().filter((p) => !p.archived));
   async reload() {
@@ -332,14 +362,94 @@ export class Subscriptions {
       this.loading.set(false);
     }
   }
+  readonly editingCustom = signal<Subscription | null>(null);
+  openNewCustom() {
+    this.editingCustom.set(null);
+    this.draft = {
+      companyId: '',
+      plan: 'custom',
+      cycle: 'custom',
+      payment: 'bank',
+      status: 'active',
+      amount: '',
+      years: 1,
+      durationMode: 'years',
+      endsOn: '',
+      aiEnabled: false,
+      hrEnabled: false,
+      financeEnabled: false,
+    };
+    this.creating.set(true);
+  }
+  selectCompanyModules() {
+    const c = this.companies().find((c) => c.id === this.draft.companyId);
+    if (c) {
+      this.draft.aiEnabled = c.aiEnabled !== false;
+      this.draft.hrEnabled = c.hrEnabled !== false;
+      this.draft.financeEnabled = c.financeEnabled !== false;
+    }
+  }
+  openCustom(s: Subscription) {
+    this.editingCustom.set(s);
+    this.draft = {
+      companyId: s.companyId,
+      plan: 'custom',
+      cycle: 'custom',
+      payment: s.payment,
+      status: 'active',
+      amount: String(Number(s.amountMinor) / 100),
+      years: (s.durationMonths ?? 12) / 12,
+      durationMode: s.durationMonths && s.durationMonths % 12 === 0 ? 'years' : 'date',
+      endsOn: new Date(Date.parse(s.renewsOn) - 1).toLocaleDateString('en-CA', {
+        timeZone: 'Africa/Cairo',
+      }),
+      aiEnabled: false,
+      hrEnabled: false,
+      financeEnabled: false,
+    };
+    this.selectCompanyModules();
+    this.creating.set(true);
+    this.kebabFor.set(null);
+    this.error.set('');
+  }
   async createSubscription() {
     if (this.saving()) return;
     this.saving.set(true);
     this.error.set('');
     try {
-      const plan = this.availablePlans().find((p) => p.key === this.draft.plan && !p.archived);
-      if (!plan) throw new Error('Select an available plan');
-      await this.api.create({ ...this.draft, planVersionId: plan.planVersionId });
+      const d = this.draft;
+      if (
+        d.durationMode === 'years' &&
+        (!Number.isInteger(Number(d.years)) || Number(d.years) < 1 || Number(d.years) > 10)
+      )
+        throw new Error(this.lang() === 'ar' ? 'اختر من سنة إلى 10 سنوات' : 'Choose 1 to 10 years');
+      const customContract = {
+        amountMinor: parseCompactAmount(d.amount, 1000000000000n),
+        ...(d.durationMode === 'years'
+          ? { durationMonths: Number(d.years) * 12 }
+          : { endsOn: d.endsOn }),
+      };
+      const modules = {
+        aiEnabled: d.aiEnabled,
+        hrEnabled: d.hrEnabled,
+        financeEnabled: d.financeEnabled,
+      };
+      if (this.editingCustom())
+        await this.api.action(this.editingCustom()!.subId, 'custom', {
+          version: this.editingCustom()!.version,
+          ...customContract,
+          ...modules,
+        });
+      else
+        await this.api.create({
+          companyId: d.companyId,
+          status: 'active',
+          payment: d.payment,
+          customContract,
+          ...modules,
+        });
+      this.editingCustom.set(null);
+      this.viewing.set(null);
       this.creating.set(false);
       await this.reload();
     } catch (error) {
@@ -482,11 +592,21 @@ export class Subscriptions {
   }
 
   cycleLabel(s: Subscription): string {
-    return this.L().cycleLabel[s.cycle];
+    return s.cycle === 'custom'
+      ? s.durationMonths
+        ? s.durationMonths / 12 + ' ' + (this.lang() === 'ar' ? 'سنة' : 'year(s)')
+        : this.lang() === 'ar'
+          ? 'مدة مخصصة'
+          : 'Custom term'
+      : this.L().cycleLabel[s.cycle];
   }
 
   formatMrr(v: number): string {
-    return v === 0 ? '—' : this.lang() === 'ar' ? compactMajor(v) + ' ج.م' : 'EGP ' + compactMajor(v);
+    return v === 0
+      ? '—'
+      : this.lang() === 'ar'
+        ? compactMajor(v) + ' ج.م'
+        : 'EGP ' + compactMajor(v);
   }
 
   private logo(s: Subscription): [string, string] {
@@ -632,7 +752,7 @@ export class Subscriptions {
     this.openChangePlan(s);
     this.newPlan.set(plan);
   }
-  planPrice(key: Plan, cycle: 'monthly' | 'annual') {
+  planPrice(key: Plan, cycle: 'monthly' | 'annual' | 'custom') {
     const p = this.availablePlans().find((x) => x.key === key) as any;
     const v = p?.[cycle === 'annual' ? 'annualMinor' : 'monthlyMinor'];
     return typeof v === 'number' ? compactMoney(String(v)) : '—';
@@ -642,17 +762,36 @@ export class Subscriptions {
   readonly staticForm = signal<{ kind: StaticKind; sub: Subscription | null } | null>(null);
   readonly cancelReason = signal('price');
   readonly cancelNote = signal('');
-  readonly cycleDraft=signal<'monthly'|'annual'>('monthly');
-  readonly changeTiming=signal<'now'|'renewal'>('now');
-  readonly cancelTiming=signal<'now'|'renewal'>('renewal');
-  readonly history=signal<any[]>([]);
+  readonly cycleDraft = signal<'monthly' | 'annual'>('monthly');
+  readonly changeTiming = signal<'now' | 'renewal'>('now');
+  readonly cancelTiming = signal<'now' | 'renewal'>('renewal');
+  readonly history = signal<any[]>([]);
   openStatic(kind: StaticKind, sub: Subscription | null = null) {
     this.kebabFor.set(null);
     this.staticForm.set({ kind, sub });
-    this.cycleDraft.set(sub?.cycle==='annual'?'monthly':'annual');
+    this.cycleDraft.set(sub?.cycle === 'annual' ? 'monthly' : 'annual');
   }
   async submitStatic() {
-    const target=this.staticForm();if(target?.kind==='cycle'&&target.sub){try{await this.api.action(target.sub.subId,'cycle',{version:target.sub.version,cycle:this.cycleDraft()});this.staticForm.set(null);this.viewing.set(null);await this.reload();this.showToast(this.lang()==='ar'?'تم جدولة دورة الفوترة للتجديد':'Billing cycle scheduled for renewal');}catch(e){this.error.set((e as Error).message);}return;}
+    const target = this.staticForm();
+    if (target?.kind === 'cycle' && target.sub) {
+      try {
+        await this.api.action(target.sub.subId, 'cycle', {
+          version: target.sub.version,
+          cycle: this.cycleDraft(),
+        });
+        this.staticForm.set(null);
+        this.viewing.set(null);
+        await this.reload();
+        this.showToast(
+          this.lang() === 'ar'
+            ? 'تم جدولة دورة الفوترة للتجديد'
+            : 'Billing cycle scheduled for renewal',
+        );
+      } catch (e) {
+        this.error.set((e as Error).message);
+      }
+      return;
+    }
     const ar = this.lang() === 'ar';
     this.staticForm.set(null);
     this.showToast(
@@ -681,7 +820,13 @@ export class Subscriptions {
 
   openView(s: Subscription): void {
     this.viewing.set(s);
-    this.history.set([]);void this.api.history(s.subId).then(r=>{if(this.viewing()?.subId===s.subId)this.history.set(r.items);}).catch(e=>this.error.set(e.message));
+    this.history.set([]);
+    void this.api
+      .history(s.subId)
+      .then((r) => {
+        if (this.viewing()?.subId === s.subId) this.history.set(r.items);
+      })
+      .catch((e) => this.error.set(e.message));
     this.kebabFor.set(null);
   }
 
@@ -720,7 +865,7 @@ export class Subscriptions {
         version: target.version,
         plan: plan.key,
         planVersionId: plan.planVersionId,
-        when:this.changeTiming(),
+        when: this.changeTiming(),
       });
       this.changingPlan.set(null);
       this.viewing.set(null);
@@ -751,7 +896,12 @@ export class Subscriptions {
     this.saving.set(true);
     this.error.set('');
     try {
-      await this.api.action(target.sub.subId, target.kind, { version: target.sub.version,...(target.kind==='cancel'?{when:this.cancelTiming(),reason:this.cancelReason(),note:this.cancelNote()}: {}) });
+      await this.api.action(target.sub.subId, target.kind, {
+        version: target.sub.version,
+        ...(target.kind === 'cancel'
+          ? { when: this.cancelTiming(), reason: this.cancelReason(), note: this.cancelNote() }
+          : {}),
+      });
       this.confirming.set(null);
       this.viewing.set(null);
       await this.reload();

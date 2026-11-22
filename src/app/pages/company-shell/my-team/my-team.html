@@ -86,19 +86,21 @@
         >
           {{ t('Tasks', 'المهام') }}
         </button>
-        <button
-          class="tab"
-          role="tab"
-          [class.tab--on]="tab() === 'ai'"
-          [attr.aria-selected]="tab() === 'ai'"
-          [disabled]="busy() || loading()"
-          (click)="changeTab('ai')"
-        >
-          {{ t('AI analytics', 'تحليلات الذكاء الاصطناعي') }}
-        </button>
+        @if (aiModuleEnabled(auth.user())) {
+          <button
+            class="tab"
+            role="tab"
+            [class.tab--on]="tab() === 'ai'"
+            [attr.aria-selected]="tab() === 'ai'"
+            [disabled]="busy() || loading()"
+            (click)="changeTab('ai')"
+          >
+            {{ t('AI analytics', 'تحليلات الذكاء الاصطناعي') }}
+          </button>
+        }
       </div>
     </div>
-    @if (tab() === 'ai') {
+    @if (tab() === 'ai' && aiModuleEnabled(auth.user())) {
       <app-team-ai-insights [days]="days()" (daysChange)="changeDays($event)" />
     }
     @if (tab() === 'performance') {

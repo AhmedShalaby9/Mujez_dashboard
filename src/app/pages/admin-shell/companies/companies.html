@@ -435,6 +435,30 @@
           }}</b>
         </div>
         <div class="kv">
+          <span>{{ lang() === 'ar' ? 'الذكاء الاصطناعي' : 'AI module' }}</span
+          ><b>{{
+            c.aiEnabled !== false
+              ? lang() === 'ar'
+                ? 'مفعّلة'
+                : 'Enabled'
+              : lang() === 'ar'
+                ? 'معطّلة'
+                : 'Disabled'
+          }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ lang() === 'ar' ? 'وحدة المالية' : 'Finance module' }}</span>
+          <b>{{
+            c.financeEnabled !== false
+              ? lang() === 'ar'
+                ? 'مفعّلة'
+                : 'Enabled'
+              : lang() === 'ar'
+                ? 'معطّلة'
+                : 'Disabled'
+          }}</b>
+        </div>
+        <div class="kv">
           <span>{{ L().drawerFields.created }}</span
           ><b>{{ date(c.createdAt) }}</b>
         </div>
@@ -915,14 +939,13 @@
           }
         </select></label
       >
-      <label class="field"
-        ><span>{{ lang() === 'ar' ? 'الخطة' : 'Plan' }}</span
-        ><select name="plan" [(ngModel)]="draft.plan" [disabled]="!!editing()">
-          @for (plan of planTypes; track plan) {
-            <option [value]="plan">{{ planLabel(plan) }}</option>
-          }
-        </select></label
-      >
+      <p class="muted">
+        {{
+          lang() === 'ar'
+            ? 'لتعديل مدة الاشتراك والسعر، استخدم شاشة الاشتراكات.'
+            : 'Edit subscription duration and total price from Subscriptions.'
+        }}
+      </p>
       <label class="field">
         <span>{{ lang() === 'ar' ? 'وحدة الموارد البشرية' : 'HR module' }}</span>
         <select name="hrEnabled" [(ngModel)]="draft.hrEnabled">
@@ -933,6 +956,25 @@
           lang() === 'ar'
             ? 'الموظفون والأقسام والمستندات والإجازات. لا يؤثر على صلاحيات CRM.'
             : 'Employees, departments, documents and leave. CRM access is unchanged.'
+        }}</small>
+      </label>
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'الذكاء الاصطناعي' : 'AI module' }}</span
+        ><select name="aiEnabled" [(ngModel)]="draft.aiEnabled">
+          <option [ngValue]="false">{{ lang() === 'ar' ? 'معطّلة' : 'Disabled' }}</option>
+          <option [ngValue]="true">{{ lang() === 'ar' ? 'مفعّلة' : 'Enabled' }}</option>
+        </select></label
+      >
+      <label class="field">
+        <span>{{ lang() === 'ar' ? 'وحدة المالية' : 'Finance module' }}</span>
+        <select name="financeEnabled" [(ngModel)]="draft.financeEnabled">
+          <option [ngValue]="false">{{ lang() === 'ar' ? 'معطّلة' : 'Disabled' }}</option>
+          <option [ngValue]="true">{{ lang() === 'ar' ? 'مفعّلة' : 'Enabled' }}</option>
+        </select>
+        <small>{{
+          lang() === 'ar'
+            ? 'الحسابات والخزينة والرواتب والتقارير المالية. عمولات CRM وحاسبتها تظل متاحة حسب الصلاحيات والخطة. التعطيل يحتفظ بالبيانات.'
+            : 'Accounting, treasury, payroll and financial reports. CRM commissions and their calculator remain available according to permissions and plan. Disabling preserves data.'
         }}</small>
       </label>
       <p class="muted">

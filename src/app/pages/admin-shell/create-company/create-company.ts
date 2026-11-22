@@ -1,4 +1,4 @@
-import { compactMoney, compactNumber } from '../../../compact-numbers';
+import { compactMoney, compactNumber, parseCompactAmount } from '../../../compact-numbers';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { CompaniesApi } from '../../../companies-api.service';
@@ -6,7 +6,7 @@ import { SubscriptionsApi } from '../../../subscriptions-api.service';
 import { AdminUiState } from '../admin-ui-state';
 
 type PlanKey = 'starter' | 'pro' | 'business' | 'enterprise';
-type Step = 0 | 1 | 2 | 3 | 4 | 5;
+type Step = 0 | 1 | 2 | 3 | 4;
 
 interface PlanInfo {
   key: PlanKey;
@@ -31,6 +31,8 @@ interface Form {
   website: string;
   plan: PlanKey;
   hrEnabled: boolean;
+  financeEnabled: boolean;
+  aiEnabled: boolean;
 }
 
 const PLAN_KEYS: PlanKey[] = ['starter', 'pro', 'business', 'enterprise'];
@@ -41,10 +43,12 @@ const PLAN_NAMES: Record<PlanKey, [string, string]> = {
   enterprise: ['Enterprise', 'مؤسسات'],
 };
 const TYPES: Array<[string, string, string]> = [
-  ['brokerage', 'Brokerage', 'وساطة عقارية'],
-  ['developer', 'Developer', 'مطوّر عقاري'],
-  ['property_mgmt', 'Property mgmt', 'إدارة عقارات'],
-  ['hybrid', 'Hybrid', 'مختلط'],
+  ['brokerage', 'Real estate brokerage', 'شركة وساطة عقارية'],
+  [
+    'real_estate_office',
+    'Real estate office — sales & rentals',
+    'مكتب عقاري — وساطة وإيجار ومفروش',
+  ],
 ];
 const CITIES: Array<[string, string]> = [
   ['New Cairo', 'القاهرة الجديدة'],
@@ -122,6 +126,8 @@ export class CreateCompany {
     website: '',
     plan: 'pro',
     hrEnabled: false,
+    financeEnabled: false,
+    aiEnabled: false,
   });
   /** Design-only fields: shown and kept in the form, never sent (see BACKEND_MISSING.md). */
   readonly x = signal({
@@ -140,6 +146,10 @@ export class CreateCompany {
     pay: 'card',
     disc: '0',
     cur: 'EGP',
+    amount: '',
+    durationMode: 'years',
+    years: '1',
+    endsOn: '',
   });
   readonly limits = signal<Record<string, number | null>>({});
   readonly feats = signal<Record<string, boolean>>({});
@@ -158,12 +168,40 @@ export class CreateCompany {
     })),
   );
 
+  readonly moduleChoices: {
+    key: 'aiEnabled' | 'financeEnabled' | 'hrEnabled';
+    en: string;
+    ar: string;
+    descriptionEn: string;
+    descriptionAr: string;
+  }[] = [
+    {
+      key: 'aiEnabled',
+      en: 'AI module',
+      ar: 'الذكاء الاصطناعي',
+      descriptionEn: 'Unit recommendations and team/company AI analytics.',
+      descriptionAr: 'ترشيح الوحدات وتحليلات الفرق والشركة.',
+    },
+    {
+      key: 'financeEnabled',
+      en: 'Finance module',
+      ar: 'وحدة المالية',
+      descriptionEn: 'Accounting, treasury, payroll and financial reports.',
+      descriptionAr: 'الحسابات والخزينة والرواتب والتقارير المالية.',
+    },
+    {
+      key: 'hrEnabled',
+      en: 'HR module',
+      ar: 'وحدة الموارد البشرية',
+      descriptionEn: 'Employees, documents, attendance, leave, advances and assets.',
+      descriptionAr: 'الموظفون والمستندات والحضور والإجازات والسلف والعهد.',
+    },
+  ];
   readonly types = TYPES;
   readonly cities = CITIES;
   readonly features = FEATURES;
 
   constructor() {
-    void this.loadPlans();
     void this.loadDrafts();
     const id = this.route.snapshot.queryParamMap.get('draft');
     if (id) void this.resumeDraft(id);
@@ -200,13 +238,45 @@ export class CreateCompany {
   }
 
   readonly steps = computed(() => [
-    [this.t('Company', 'الشركة'), this.t('Name, type, contact', 'الاسم والنوع والتواصل')],
-    [this.t('Administrator', 'المدير'), this.t('First admin & invite', 'أول مدير ودعوته')],
-    [this.t('Subscription', 'الاشتراك'), this.t('Plan, cycle, billing', 'الباقة والفوترة')],
-    [this.t('Limits', 'الحدود'), this.t('Resource limits', 'حدود الموارد')],
-    [this.t('Features', 'الميزات'), this.t('Modules & add-ons', 'الوحدات والإضافات')],
-    [this.t('Review', 'المراجعة'), this.t('Confirm & create', 'التأكيد والإنشاء')],
+    [
+      this.t('Company', 'الشركة'),
+      this.t('Name, business type and contact', 'الاسم والنشاط والتواصل'),
+    ],
+    [this.t('Owner', 'المالك'), this.t('Login and welcome email', 'الدخول وبريد الترحيب')],
+    [
+      this.t('Subscription', 'الاشتراك'),
+      this.t('Duration and total price', 'المدة والسعر الإجمالي'),
+    ],
+    [
+      this.t('Modules', 'الوحدات'),
+      this.t('AI, Finance and HR', 'الذكاء الاصطناعي والمالية والموارد البشرية'),
+    ],
+    [this.t('Review', 'المراجعة'), this.t('Confirm and create', 'التأكيد والإنشاء')],
   ]);
+  contractAmount() {
+    return parseCompactAmount(this.x().amount, 1000000000000n);
+  }
+  contractTerms() {
+    const x = this.x();
+    return {
+      amountMinor: this.contractAmount(),
+      ...(x.durationMode === 'years'
+        ? { durationMonths: Number(x.years) * 12 }
+        : { endsOn: x.endsOn }),
+    };
+  }
+  contractPrice() {
+    try {
+      return this.money(Number(this.contractAmount()));
+    } catch {
+      return '—';
+    }
+  }
+  contractDuration() {
+    return this.x().durationMode === 'years'
+      ? this.x().years + ' ' + this.t('year(s)', 'سنة')
+      : this.x().endsOn;
+  }
 
   set<K extends keyof Form>(k: K, v: Form[K]) {
     this.f.update((f) => {
@@ -255,8 +325,27 @@ export class CreateCompany {
           ? t('Enter a valid email', 'أدخل بريدًا صحيحًا')
           : '',
       },
-      {},
-      {},
+      {
+        amount: (() => {
+          try {
+            return BigInt(this.contractAmount()) > 0n ? '' : req;
+          } catch {
+            return t('Enter a valid total price', 'أدخل السعر الإجمالي');
+          }
+        })(),
+        duration:
+          this.x().durationMode === 'years'
+            ? !Number.isInteger(Number(this.x().years)) ||
+              Number(this.x().years) < 1 ||
+              Number(this.x().years) > 10
+              ? t('Choose 1 to 10 years', 'اختر من سنة إلى 10 سنوات')
+              : ''
+            : !this.x().endsOn ||
+                this.x().endsOn <
+                  new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' })
+              ? t('Choose a current or future end date', 'اختر تاريخ انتهاء اليوم أو بعده')
+              : '',
+      },
       {},
       {},
     ] as Array<Record<string, string>>;
@@ -288,7 +377,7 @@ export class CreateCompany {
       this.tried.update((t) => ({ ...t, [s]: true }));
       return;
     }
-    if (s < 5) {
+    if (s < 4) {
       this.step.set((s + 1) as Step);
       return;
     }
@@ -298,10 +387,11 @@ export class CreateCompany {
     void this.router.navigateByUrl('/admin/onboarding');
   }
   private payload() {
-    const f = this.f(),
+    const { plan, ...f } = this.f(),
       x = this.x();
     return {
       ...f,
+      ...(x.amount ? { customContract: this.contractTerms() } : {}),
       country: x.country,
       address: x.address,
       companyEmail: x.companyEmail || undefined,
@@ -333,9 +423,17 @@ export class CreateCompany {
             .map((k) => [k, p[k]]),
         ),
         hrEnabled: p.hrEnabled ?? false,
+        financeEnabled: p.financeEnabled ?? false,
+        aiEnabled: p.aiEnabled ?? false,
       }));
       this.x.update((x) => ({
         ...x,
+        amount: p.customContract?.amountMinor
+          ? String(Number(p.customContract.amountMinor) / 100)
+          : '',
+        durationMode: p.customContract?.endsOn ? 'date' : 'years',
+        years: String((p.customContract?.durationMonths ?? 12) / 12),
+        endsOn: p.customContract?.endsOn ?? '',
         country: p.country ?? x.country,
         address: p.address ?? '',
         companyEmail: p.companyEmail ?? '',
@@ -403,11 +501,10 @@ export class CreateCompany {
     this.error.set('');
     const f = this.f();
     try {
-      await this.refreshQuote();
-      if (!this.quote()) throw Error('Refresh the plan quote before creating the company');
+      this.contractTerms();
       const created = await this.api.create({
         ...this.payload(),
-        planVersionId: this.quote().planVersionId,
+
         ...(this.draftId() ? { draftId: this.draftId(), draftVersion: this.draftVersion() } : {}),
       });
       this.done.set(created);
@@ -430,6 +527,7 @@ export class CreateCompany {
     this.step.set(0);
     this.tried.set({});
     this.slugTouched.set(false);
+    this.x.update((x) => ({ ...x, amount: '', durationMode: 'years', years: '1', endsOn: '' }));
     this.f.set({
       ...this.f(),
       nameEn: '',
@@ -439,6 +537,8 @@ export class CreateCompany {
       phone: '',
       website: '',
       hrEnabled: false,
+      financeEnabled: false,
+      aiEnabled: false,
     });
   }
 

@@ -253,19 +253,30 @@
               </button>
             }
           }
-          <a
-            class="btn btn--sm"
-            [routerLink]="
-              auth.user()?.pool === 'company_admin'
-                ? '/company/finance/commissions'
-                : '/company/my-finance'
-            "
-            >{{
-              c.accountingManaged
-                ? t('View accounting settlements', 'عرض التسويات المحاسبية')
-                : t('Financial statements', 'الكشوف المالية')
-            }}</a
-          >
+          @if (financeModuleEnabled(auth.user())) {
+            <a
+              class="btn btn--sm"
+              [routerLink]="
+                auth.user()?.pool === 'company_admin'
+                  ? '/company/finance/commissions'
+                  : '/company/my-finance'
+              "
+              >{{
+                c.accountingManaged
+                  ? t('View accounting settlements', 'عرض التسويات المحاسبية')
+                  : t('Financial statements', 'الكشوف المالية')
+              }}</a
+            >
+          } @else if (c.accountingManaged) {
+            <p class="muted">
+              {{
+                t(
+                  'This historical commission is managed in Finance. Ask the platform administrator to enable Finance before adjusting it.',
+                  'هذه العمولة السابقة مسجلة محاسبيًا. اطلب تفعيل المالية من مسؤول المنصة قبل تعديلها.'
+                )
+              }}
+            </p>
+          }
           @if (
             canManage() &&
             !c.accountingManaged &&

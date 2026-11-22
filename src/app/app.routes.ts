@@ -448,7 +448,7 @@ export const routes: Routes = [
       },
       {
         path: 'ai-analytics',
-        data: { permission: 'reports.read', ownerOnly: true },
+        data: { permission: 'reports.read', ownerOnly: true, aiView: true },
         loadComponent: () =>
           import('./pages/company-shell/company-ai-analytics/company-ai-analytics').then(
             (m) => m.CompanyAiAnalytics,

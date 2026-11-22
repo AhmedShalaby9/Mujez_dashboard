@@ -19,6 +19,8 @@ export interface User {
     name: { en: string; ar: string };
     status: string;
     hrEnabled?: boolean;
+    financeEnabled?: boolean;
+    aiEnabled?: boolean;
   };
   /** Present only when this session is a platform admin inside a controlled workspace session. */
   workspace?: {
@@ -67,8 +69,14 @@ export function hasHrAccess(u: User | null | undefined) {
     (u.roles ?? [u.role]).some((r) => r === 'hr_manager' || r === 'hr_officer')
   );
 }
+export function aiModuleEnabled(u: User | null | undefined) {
+  return !!u && u.company?.aiEnabled !== false;
+}
+export function financeModuleEnabled(u: User | null | undefined) {
+  return !!u && u.company?.financeEnabled !== false;
+}
 export function hasAccountingAccess(u: User | null | undefined, permission = 'finance.read') {
-  if (!u || u.workspace) return false;
+  if (!u || u.workspace || !financeModuleEnabled(u)) return false;
   if (u.pool === 'company_admin' && u.role === 'company_owner')
     return u.permissions.includes('workspace.view');
   return (
@@ -78,6 +86,7 @@ export function hasAccountingAccess(u: User | null | undefined, permission = 'fi
   );
 }
 export function hasPayrollAccess(u: User | null | undefined) {
+  if (!financeModuleEnabled(u)) return false;
   return (
     hasAccountingAccess(u) ||
     (!!u &&
@@ -88,6 +97,7 @@ export function hasPayrollAccess(u: User | null | undefined) {
   );
 }
 export function hasAccountingSelf(u: User | null | undefined) {
+  if (!financeModuleEnabled(u)) return false;
   return (
     !!u &&
     !u.workspace &&
@@ -223,6 +233,7 @@ export const companyGuard: CanActivateFn = async (route) => {
   if (!(await auth.restore(true))) return router.createUrlTree(['/']);
   if (auth.user()?.mustChangePassword) return router.createUrlTree(['/change-password']);
   const u = auth.user();
+  if (route.data['aiView'] && !aiModuleEnabled(u)) return router.parseUrl(companyHomePath(u));
   if (u?.pool === 'platform' && !u?.workspace) return router.createUrlTree(['/admin/dashboard']);
   const isOwner =
     u?.pool === 'company_admin' &&

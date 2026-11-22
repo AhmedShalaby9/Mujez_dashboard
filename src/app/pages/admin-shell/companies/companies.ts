@@ -8,9 +8,9 @@ import { AuthService } from '../../../auth.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { AdminUiState, type Lang } from '../admin-ui-state';
 
-type CompanyType = 'brokerage' | 'developer' | 'property_mgmt' | 'hybrid';
+type CompanyType = 'real_estate_office' | 'brokerage' | 'developer' | 'property_mgmt' | 'hybrid';
 type CompanyStatus = 'pending' | 'trial' | 'active' | 'suspended' | 'expired' | 'archived';
-type Plan = 'starter' | 'pro' | 'business' | 'enterprise';
+type Plan = 'custom' | 'starter' | 'pro' | 'business' | 'enterprise';
 type SortKey =
   'name' | 'status' | 'plan' | 'type' | 'city' | 'users' | 'mrr' | 'activity' | 'created';
 type WsMode = 'read' | 'manage';
@@ -33,6 +33,8 @@ interface Usage {
 
 interface Company {
   hrEnabled?: boolean;
+  financeEnabled?: boolean;
+  aiEnabled?: boolean;
   slug: string;
   version: number;
   id: string;
@@ -46,7 +48,7 @@ interface Company {
   plan: Plan;
   status: CompanyStatus;
   statusReason?: string | null;
-  cycle?: 'monthly' | 'annual' | null;
+  cycle?: 'monthly' | 'annual' | 'custom' | null;
   users: number;
   mrr: number;
   createdAt: string;
@@ -76,12 +78,14 @@ const CITY_AR: Record<string, string> = {
 
 const TYPE_LABEL: Record<Lang, Record<CompanyType, string>> = {
   en: {
+    real_estate_office: 'Real estate office — sales & rentals',
     brokerage: 'Brokerage',
     developer: 'Developer',
     property_mgmt: 'Property Mgmt',
     hybrid: 'Hybrid',
   },
   ar: {
+    real_estate_office: 'مكتب عقاري — وساطة وإيجار ومفروش',
     brokerage: 'وساطة عقارية',
     developer: 'مطوّر عقاري',
     property_mgmt: 'إدارة عقارات',
@@ -90,11 +94,24 @@ const TYPE_LABEL: Record<Lang, Record<CompanyType, string>> = {
 };
 
 const PLAN_LABEL: Record<Lang, Record<Plan, string>> = {
-  en: { starter: 'Starter', pro: 'Pro', business: 'Business', enterprise: 'Enterprise' },
-  ar: { starter: 'أساسية', pro: 'احترافية', business: 'أعمال', enterprise: 'مؤسسات' },
+  en: {
+    custom: 'Custom',
+    starter: 'Starter',
+    pro: 'Pro',
+    business: 'Business',
+    enterprise: 'Enterprise',
+  },
+  ar: {
+    custom: 'مخصص',
+    starter: 'أساسية',
+    pro: 'احترافية',
+    business: 'أعمال',
+    enterprise: 'مؤسسات',
+  },
 };
 
 const PLAN_DOT: Record<Plan, string> = {
+  custom: '#111113',
   starter: '#a1a1a6',
   pro: '#111113',
   business: '#8BB33A',
@@ -204,7 +221,7 @@ interface Copy {
     cycle: string;
     owner: string;
   };
-  cycleNames: { monthly: string; annual: string };
+  cycleNames: { monthly: string; annual: string; custom: string };
   statusNote: (status: CompanyStatus, reason: string | null) => string | null;
   wsTitle: string;
   wsSub: string;
@@ -287,7 +304,7 @@ const COPY: Record<Lang, Copy> = {
       cycle: 'Billing cycle',
       owner: 'Account owner',
     },
-    cycleNames: { monthly: 'Monthly', annual: 'Annual' },
+    cycleNames: { monthly: 'Monthly', annual: 'Annual', custom: 'Custom term' },
     statusNote: (status, reason) =>
       status === 'suspended'
         ? `Suspended${reason ? ' — ' + reason : ''}. Users cannot sign in; data is kept.`
@@ -379,7 +396,7 @@ const COPY: Record<Lang, Copy> = {
       cycle: 'دورة الفوترة',
       owner: 'مالك الحساب',
     },
-    cycleNames: { monthly: 'شهري', annual: 'سنوي' },
+    cycleNames: { monthly: 'شهري', annual: 'سنوي', custom: 'مدة مخصصة' },
     statusNote: (status, reason) =>
       status === 'suspended'
         ? `موقوفة${reason ? ' — ' + reason : ''}. لا يمكن للمستخدمين الدخول والبيانات محفوظة.`
@@ -473,6 +490,8 @@ export class Companies {
     website: '',
     plan: 'starter',
     hrEnabled: false,
+    financeEnabled: false,
+    aiEnabled: false,
   };
   constructor() {
     void this.reload().then(() => this.openFromUrl());
@@ -516,6 +535,8 @@ export class Companies {
           website: company.website,
           plan: company.plan,
           hrEnabled: company.hrEnabled !== false,
+          financeEnabled: company.financeEnabled !== false,
+          aiEnabled: company.aiEnabled !== false,
         }
       : {
           nameEn: '',
@@ -528,6 +549,8 @@ export class Companies {
           website: '',
           plan: defaultPlan,
           hrEnabled: false,
+          financeEnabled: false,
+          aiEnabled: false,
         };
     this.error.set('');
     this.formOpen.set(true);
@@ -711,8 +734,14 @@ export class Companies {
     'expired',
     'archived',
   ];
-  readonly companyTypes: CompanyType[] = ['brokerage', 'developer', 'property_mgmt', 'hybrid'];
-  readonly planTypes: Plan[] = ['starter', 'pro', 'business', 'enterprise'];
+  readonly companyTypes: CompanyType[] = [
+    'brokerage',
+    'real_estate_office',
+    'developer',
+    'property_mgmt',
+    'hybrid',
+  ];
+  readonly planTypes: Plan[] = ['custom', 'starter', 'pro', 'business', 'enterprise'];
   readonly wsDurations: Array<30 | 60 | 120> = [30, 60, 120];
 
   readonly companies = signal<Company[]>([]);

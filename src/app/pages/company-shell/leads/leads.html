@@ -310,7 +310,9 @@
         </div>
 
         @if (auth.user()?.permissions?.includes('units.read') && !l.archivedAt) {
-          <app-lead-unit-recommendations [lead]="l" />
+          @if (aiModuleEnabled(auth.user())) {
+            <app-lead-unit-recommendations [lead]="l" />
+          }
         }
 
         @if (canReadTasks()) {

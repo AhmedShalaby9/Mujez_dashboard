@@ -1,3 +1,4 @@
+import { AuthService } from '../../../auth.service';
 import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { MyTeam } from './my-team';
@@ -100,7 +101,10 @@ async function setup(manage = true, assigned = true) {
   };
   await TestBed.configureTestingModule({
     imports: [MyTeam],
-    providers: [{ provide: TeamApi, useValue: api }],
+    providers: [
+      { provide: TeamApi, useValue: api },
+      { provide: AuthService, useValue: { user: () => ({ company: { aiEnabled: true } }) } },
+    ],
   }).compileComponents();
   const f = TestBed.createComponent(MyTeam);
   await f.whenStable();

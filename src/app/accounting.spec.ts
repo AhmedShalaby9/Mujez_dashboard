@@ -6,6 +6,7 @@ import { Accounting } from './pages/company-shell/accounting/accounting';
 import {
   AuthService,
   hasAccountingAccess,
+  hasAccountingSelf,
   hasPayrollAccess,
   companyHomePath,
   companyGuard,
@@ -97,6 +98,34 @@ describe('Company accounting', () => {
     expect(companyHomePath(u)).toBe('/company/finance');
     expect(hasAccountingAccess({ ...u, roles: ['agent', 'employee'] })).toBe(false);
     expect(hasAccountingAccess({ ...u, workspace: {} })).toBe(false);
+  });
+  it('hides accounting, payroll and personal finance when the module is disabled, preserving CRM navigation', () => {
+    const owner: any = {
+      pool: 'company_admin',
+      role: 'company_owner',
+      permissions: ['workspace.view', 'commissions.read'],
+      company: { financeEnabled: false, hrEnabled: true },
+    };
+    expect(hasAccountingAccess(owner)).toBe(false);
+    expect(companyHomePath(owner)).toBe('/company/dashboard');
+    const employee: any = {
+      ...owner,
+      pool: 'company_user',
+      role: 'payroll_officer',
+      roles: ['payroll_officer', 'employee'],
+      permissions: ['payroll.read', 'leave.self'],
+    };
+    expect(hasPayrollAccess(employee)).toBe(false);
+    expect(companyHomePath(employee)).toBe('/company/employee');
+    const sales: any = {
+      ...employee,
+      role: 'agent',
+      roles: ['agent', 'employee'],
+      permissions: ['leads.read', 'commissions.read'],
+    };
+    expect(hasAccountingSelf(sales)).toBe(false);
+    expect(companyHomePath(sales)).toBe('/company/dashboard');
+    expect(hasAccountingSelf({ ...sales, company: { financeEnabled: true } })).toBe(true);
   });
   it('saves compact balanced journal inputs as exact minor-unit strings and leaves posting separate', async () => {
     const { c, request } = await setup();

@@ -54,7 +54,7 @@
 
       <section class="card panel">
         <div class="panel__head">
-          <small>{{ t('STEP', 'الخطوة') }} {{ step() + 1 }} / 6</small>
+          <small>{{ t('STEP', 'الخطوة') }} {{ step() + 1 }} / 5</small>
           <span>{{ steps()[step()][0] }}</span>
         </div>
 
@@ -294,319 +294,128 @@
               </div>
             }
             @case (2) {
-              <div class="plans">
-                @for (p of plans(); track p.key) {
-                  <button
-                    type="button"
-                    class="plan"
-                    [class.on]="f().plan === p.key"
-                    (click)="set('plan', p.key)"
-                  >
-                    <span class="plan__top"
-                      ><b>{{ planName(p) }}</b
-                      ><span class="radio"></span
-                    ></span>
-                    <span class="plan__price"
-                      >{{ money(p.monthlyMinor) }}<small>{{ t(' / month', ' / شهر') }}</small></span
-                    >
-                    <span class="plan__desc">{{ planDesc(p) }}</span>
-                  </button>
-                }
-              </div>
+              <p class="note">
+                {{
+                  t(
+                    'A custom agreement for this company. CRM is included. No package selection or automatic payment.',
+                    'اشتراك مخصص لهذه الشركة، يشمل CRM. بدون اختيار باقة أو تحصيل تلقائي.'
+                  )
+                }}
+              </p>
               <div class="grid">
-                <div class="field">
-                  <span>{{ t('Billing cycle', 'دورة الفوترة') }}</span>
-                  <div class="segs">
-                    <button
-                      type="button"
-                      class="seg"
-                      [class.seg--on]="x().cycle === 'monthly'"
-                      (click)="setX('cycle', 'monthly')"
-                    >
-                      {{ t('Monthly', 'شهري') }}
-                    </button>
-                    <button
-                      type="button"
-                      class="seg"
-                      [class.seg--on]="x().cycle === 'annual'"
-                      (click)="setX('cycle', 'annual')"
-                    >
-                      {{ t('Annual', 'سنوي') }}
-                    </button>
-                  </div>
-                </div>
-                <div class="field">
-                  <span
-                    >{{ t('Start as', 'البدء كـ')
-                    }}<i class="soon">{{ t('Paid only', 'مدفوع فقط') }}</i></span
+                <label class="field"
+                  ><span>{{
+                    t('Total subscription price (EGP)', 'إجمالي سعر مدة الاشتراك (جنيه)')
+                  }}</span
+                  ><input
+                    type="text"
+                    inputmode="decimal"
+                    [value]="x().amount"
+                    (input)="setX('amount', $any($event.target).value)"
+                    placeholder="12k"
+                  /><small class="err">{{ err(2, 'amount') }}</small></label
+                >
+                <label class="field"
+                  ><span>{{ t('Set duration by', 'تحديد المدة حسب') }}</span
+                  ><select
+                    [value]="x().durationMode"
+                    (change)="setX('durationMode', $any($event.target).value)"
                   >
-                  <div class="segs">
-                    <button
-                      type="button"
-                      class="seg"
-                      [class.seg--on]="x().mode === 'paid'"
-                      (click)="setX('mode', 'paid')"
-                    >
-                      {{ t('Active subscription', 'اشتراك فعّال') }}
-                    </button>
-                  </div>
-                </div>
-                <label class="field">
-                  <span
-                    >{{ t('Start date', 'تاريخ البدء')
-                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
-                  >
-                  <input
-                    type="date"
-                    dir="ltr"
-                    [value]="x().start"
-                    (input)="setX('start', $any($event.target).value)"
-                  />
-                </label>
-                <label class="field">
-                  <span>{{ t('Payment method', 'طريقة الدفع') }}</span>
-                  <select [value]="x().pay" (change)="setX('pay', $any($event.target).value)">
-                    <option value="card">
-                      {{ t('Card (recorded method only)', 'بطاقة (تسجيل الطريقة فقط)') }}
-                    </option>
-                    <option value="bank">{{ t('Bank transfer', 'تحويل بنكي') }}</option>
-                    <option value="instapay">InstaPay</option>
-                  </select>
-                </label>
-                <label class="field">
-                  <span
-                    >{{ t('Discount', 'الخصم')
-                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
-                  >
-                  <select [value]="x().disc" (change)="setX('disc', $any($event.target).value)">
-                    <option value="0">{{ t('None', 'بدون') }}</option>
-                    <option value="10">10%</option>
-                    <option value="15">15%</option>
-                    <option value="20">20%</option>
-                  </select>
-                </label>
-                <label class="field">
-                  <span
-                    >{{ t('Billing currency', 'عملة الفوترة')
-                    }}<i class="soon">{{ t('Not saved yet', 'لا يُحفظ بعد') }}</i></span
-                  >
-                  <select [value]="x().cur" (change)="setX('cur', $any($event.target).value)">
-                    <option value="EGP">EGP — {{ t('Egyptian pound', 'جنيه مصري') }}</option>
-                    <option value="USD">USD — {{ t('US dollar', 'دولار أمريكي') }}</option>
-                    <option value="SAR">SAR — {{ t('Saudi riyal', 'ريال سعودي') }}</option>
-                  </select>
-                </label>
+                    <option value="years">{{ t('Number of years', 'عدد السنوات') }}</option>
+                    <option value="date">{{ t('End date', 'تاريخ الانتهاء') }}</option>
+                  </select></label
+                >
+                @if (x().durationMode === 'years') {
+                  <label class="field"
+                    ><span>{{ t('Years', 'عدد السنوات') }}</span
+                    ><input
+                      type="number"
+                      min="1"
+                      max="10"
+                      step="1"
+                      [value]="x().years"
+                      (input)="setX('years', $any($event.target).value)"
+                  /></label>
+                } @else {
+                  <label class="field"
+                    ><span>{{ t('Last day of access', 'آخر يوم للاشتراك') }}</span
+                    ><input
+                      type="date"
+                      [value]="x().endsOn"
+                      (input)="setX('endsOn', $any($event.target).value)"
+                  /></label>
+                }
+                <small class="err">{{ err(2, 'duration') }}</small>
               </div>
-              @if (summary(); as s) {
-                <div class="sum">
-                  <span class="sum__t"
-                    >{{ t('First invoice preview', 'معاينة أول فاتورة')
-                    }}<i class="soon">{{ t('Preview', 'معاينة') }}</i></span
-                  >
-                  <div>
-                    <span
-                      >{{ planName(plan()) }} ·
-                      {{
-                        x().cycle === 'annual' ? t('annual', 'سنوي') : t('monthly', 'شهري')
-                      }}</span
-                    ><b>{{ money(s.base) }}</b>
-                  </div>
-                  @if (s.disc) {
-                    <div>
-                      <span>{{ t('Discount', 'الخصم') }} {{ x().disc }}%</span
-                      ><b>−{{ money(s.disc) }}</b>
-                    </div>
-                  }
-                  @if (s.vat) {
-                    <div>
-                      <span>{{ t('Tax', 'الضريبة') }} {{ s.taxRate }}%</span
-                      ><b>{{ money(s.vat) }}</b>
-                    </div>
-                  }
-                  <div class="sum__total">
-                    <span>{{ t('Total', 'الإجمالي') }}</span
-                    ><b>{{ money(s.total) }}</b>
-                  </div>
-                  <small>{{
-                    t(
-                      'Server quote uses the selected billing cycle and configured tax rate. No invoice is issued and no payment is collected.',
-                      'عرض السعر من الخادم حسب دورة الفوترة والضريبة المحددة. لا يتم إصدار فاتورة أو تحصيل مبلغ.'
-                    )
-                  }}</small>
-                </div>
-              }
+              <div class="kv">
+                <span>{{
+                  t('Agreed total for the entire term', 'السعر المتفق عليه للمدة كاملة')
+                }}</span
+                ><b>{{ contractPrice() }}</b>
+              </div>
             }
             @case (3) {
-              <p class="note note--warn">
+              <p class="note">
                 {{
                   t(
-                    'Plan defaults are real. Custom limits at creation are not saved yet — use Usage & limits after the company exists.',
-                    'افتراضيات الباقة حقيقية. الحدود المخصصة عند الإنشاء لا تُحفظ بعد — استخدم صفحة الاستخدام والحدود بعد إنشاء الشركة.'
+                    'CRM, commissions and their calculator are included. Enable optional modules independently.',
+                    'CRM والعمولات وحاسبتها متاحة بشكل أساسي. فعّل الوحدات الإضافية بشكل مستقل.'
                   )
                 }}
               </p>
-              <div class="limits">
-                @for (l of limitRows(); track l.k) {
-                  <div class="limit">
-                    <span class="limit__text"
-                      ><b>{{ l.label }}</b
-                      ><small>{{ l.def }}</small></span
-                    >
-                    @if (l.v !== null) {
-                      <input
-                        type="number"
-                        min="0"
-                        class="mono"
-                        [value]="l.v"
-                        (input)="setLimit(l.k, $any($event.target).value)"
-                      />
-                    } @else {
-                      <span class="unl">{{ t('Unlimited', 'بلا حد') }}</span>
-                    }
-                    <span class="limit__unit">{{ l.unit }}</span>
-                    <button
-                      type="button"
-                      class="tog"
-                      [class.on]="l.v === null"
-                      (click)="toggleUnlimited(l.k, l.v, l.defVal)"
-                    >
-                      <span></span>{{ t('Unlimited', 'بلا حد') }}
-                    </button>
-                    @if (l.over) {
-                      <span class="pill pill--warn">{{ t('Override', 'استثناء') }}</span>
-                    }
-                  </div>
-                }
-              </div>
-              <button type="button" class="link" (click)="resetLimits()">
-                {{ t('Reset to plan defaults', 'استعادة افتراضيات الباقة') }}
-              </button>
+              @for (module of moduleChoices; track module.key) {
+                <button
+                  type="button"
+                  class="feat"
+                  role="switch"
+                  [attr.aria-label]="module.en"
+                  [attr.aria-checked]="f()[module.key]"
+                  (click)="set(module.key, !f()[module.key])"
+                >
+                  <span class="feat__text"
+                    ><b>{{ t(module.en, module.ar) }}</b
+                    ><small>{{ t(module.descriptionEn, module.descriptionAr) }}</small></span
+                  >
+                  <span class="tog" [class.on]="f()[module.key]"><span></span></span>
+                </button>
+              }
             }
             @case (4) {
-              <button
-                type="button"
-                class="feat"
-                role="switch"
-                [attr.aria-checked]="f().hrEnabled"
-                aria-label="HR module"
-                (click)="set('hrEnabled', !f().hrEnabled)"
-              >
-                <span class="feat__text"
-                  ><b>{{ t('HR module', 'وحدة الموارد البشرية') }}</b>
-                  <small>{{
-                    t(
-                      'Employees, departments, documents and leave. Optional for this company.',
-                      'الموظفون والأقسام والمستندات والإجازات. اختيارية لهذه الشركة.'
-                    )
-                  }}</small>
-                </span>
-                <span class="tog" [class.on]="f().hrEnabled"><span></span></span>
-              </button>
-
-              <p class="note note--warn">
+              <div class="kv">
+                <span>{{ t('Company', 'الشركة') }}</span
+                ><b>{{ f().nameEn }}</b>
+              </div>
+              <div class="kv">
+                <span>{{ t('Company type', 'نوع الشركة') }}</span
+                ><b>{{ typeName(f().type) }}</b>
+              </div>
+              <div class="kv">
+                <span>{{ t('Owner email', 'بريد المالك') }}</span
+                ><b dir="ltr">{{ f().adminEmail }}</b>
+              </div>
+              <div class="kv">
+                <span>{{ t('Subscription', 'الاشتراك') }}</span
+                ><b>{{ t('Custom — CRM included', 'مخصص — يشمل CRM') }}</b>
+              </div>
+              <div class="kv">
+                <span>{{ t('Duration', 'المدة') }}</span
+                ><b>{{ contractDuration() }}</b>
+              </div>
+              <div class="kv">
+                <span>{{ t('Total price', 'السعر الإجمالي') }}</span
+                ><b>{{ contractPrice() }}</b>
+              </div>
+              @for (module of moduleChoices; track module.key) {
+                <div class="kv">
+                  <span>{{ t(module.en, module.ar) }}</span
+                  ><b>{{ f()[module.key] ? t('Enabled', 'مفعّلة') : t('Disabled', 'معطّلة') }}</b>
+                </div>
+              }
+              <p class="note">
                 {{
                   t(
-                    'HR access is saved for this company. Other module toggles below are a plan preview; use Feature management for changes.',
-                    'يتم حفظ تفعيل الموارد البشرية لهذه الشركة. بقية الوحدات أدناه معاينة للباقة؛ استخدم إدارة الميزات لتغييرها.'
-                  )
-                }}
-              </p>
-              <div class="feats">
-                @for (ft of features; track ft[0]) {
-                  <button
-                    type="button"
-                    class="feat"
-                    [class.over]="featOn(ft[0], ft[3]) !== plans().indexOf(plan()) >= ft[3]"
-                    (click)="toggleFeat(ft[0], ft[3])"
-                  >
-                    <span class="feat__text"
-                      ><b>{{ ar() ? ft[2] : ft[1] }}</b
-                      ><small>{{ featSub(ft[3], featOn(ft[0], ft[3])) }}</small></span
-                    >
-                    <span class="tog" [class.on]="featOn(ft[0], ft[3])"><span></span></span>
-                  </button>
-                }
-              </div>
-            }
-            @case (5) {
-              <div class="review">
-                <div class="rv">
-                  <div class="rv__head">
-                    <b>{{ t('Company', 'الشركة') }}</b
-                    ><button type="button" class="link" (click)="go(0)">
-                      {{ t('Edit', 'تعديل') }}
-                    </button>
-                  </div>
-                  <div class="kv">
-                    <span>{{ t('Name', 'الاسم') }}</span
-                    ><b>{{ f().nameEn }} · {{ f().nameAr }}</b>
-                  </div>
-                  <div class="kv">
-                    <span>{{ t('Workspace', 'مساحة العمل') }}</span
-                    ><b class="mono" dir="ltr">{{ f().slug }}</b>
-                  </div>
-                  <div class="kv">
-                    <span>{{ t('Type', 'النوع') }}</span
-                    ><b>{{ typeName(f().type) }}</b>
-                  </div>
-                  <div class="kv">
-                    <span>{{ t('City', 'المدينة') }}</span
-                    ><b>{{ cityName(f().city) }}</b>
-                  </div>
-                  <div class="kv">
-                    <span>{{ t('Phone', 'الهاتف') }}</span
-                    ><b dir="ltr">{{ f().phone }}</b>
-                  </div>
-                  @if (f().website) {
-                    <div class="kv">
-                      <span>{{ t('Website', 'الموقع') }}</span
-                      ><b dir="ltr">{{ f().website }}</b>
-                    </div>
-                  }
-                </div>
-                <div class="rv">
-                  <div class="rv__head">
-                    <b>{{ t('Owner & plan', 'المالك والباقة') }}</b
-                    ><button type="button" class="link" (click)="go(1)">
-                      {{ t('Edit', 'تعديل') }}
-                    </button>
-                  </div>
-                  <div class="kv">
-                    <span>{{ t('Owner email', 'بريد المالك') }}</span
-                    ><b dir="ltr">{{ f().adminEmail }}</b>
-                  </div>
-                  <div class="kv">
-                    <span>{{ t('Plan', 'الباقة') }}</span
-                    ><b>{{ planName(plan()) }}</b>
-                  </div>
-                  <div class="kv">
-                    <span>{{ t('Price', 'السعر') }}</span
-                    ><b>{{ money(plan().monthlyMinor) }} {{ t('/ month', '/ شهر') }}</b>
-                  </div>
-                  <div class="kv">
-                    <span>{{ t('Modules on', 'الوحدات المفعلة') }}</span
-                    ><b>{{ featCount() }} / {{ features.length }}</b>
-                  </div>
-                </div>
-                <div class="rv full">
-                  <div class="rv__head">
-                    <b>{{ t('Not saved yet', 'لا يُحفظ بعد') }}</b>
-                  </div>
-                  <p class="muted">
-                    {{
-                      t(
-                        'Start dates, discounts, other currencies, custom limits and other module overrides are pending. Company details, administrator details, HR access, cycle and payment method are saved. No free trial is offered.',
-                        'يتم حفظ بيانات الشركة والمدير وتفعيل الموارد البشرية ودورة الفوترة وطريقة الدفع. تواريخ البدء والخصومات والعملات الأخرى والحدود وبقية الميزات المخصصة قيد التطوير. لا توجد تجربة مجانية.'
-                      )
-                    }}
-                  </p>
-                </div>
-              </div>
-              <p class="muted">
-                {{
-                  t(
-                    'Creating activates the company with a monthly subscription on the selected plan and emails the owner a temporary password.',
-                    'الإنشاء يفعّل الشركة باشتراك شهري على الباقة المختارة ويرسل للمالك كلمة مرور مؤقتة.'
+                    'Creates an active subscription starting now, provisions the owner and queues the welcome email. No payment is collected.',
+                    'يبدأ الاشتراك الآن، ويتم إنشاء حساب المالك وجدولة بريد الترحيب. لا يتم تحصيل أي أموال.'
                   )
                 }}
               </p>
@@ -632,7 +441,7 @@
             }
             <button type="button" class="btn btn--dark" [disabled]="saving()" (click)="next()">
               {{
-                step() < 5
+                step() < 4
                   ? t('Continue', 'متابعة')
                   : saving()
                     ? t('Creating…', 'جار الإنشاء…')
@@ -686,8 +495,8 @@
           ><b dir="ltr">{{ done().adminEmail }}</b>
         </div>
         <div class="kv">
-          <span>{{ t('Plan', 'الباقة') }}</span
-          ><b>{{ planName(plan()) }}</b>
+          <span>{{ t('Subscription', 'الاشتراك') }}</span
+          ><b>{{ t('Custom', 'مخصص') }}</b>
         </div>
         @if (done().emailDelivery?.status) {
           <div class="kv">

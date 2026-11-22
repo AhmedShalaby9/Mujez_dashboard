@@ -5,7 +5,7 @@
       <span>{{
         lang() === 'ar'
           ? 'الباقة والدورة وحالة الفوترة لكل شركة'
-          : 'Plan, cycle and billing state for every company'
+          : 'Custom duration, total price and modules for every company'
       }}</span>
     </div>
     <div class="head__actions">
@@ -13,7 +13,7 @@
         {{ lang() === 'ar' ? 'إرسال تذكيرات التجديد' : 'Send renewal reminders'
         }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
       </button>
-      <button type="button" class="btn btn--dark" (click)="creating.set(true)">
+      <button type="button" class="btn btn--dark" (click)="openNewCustom()">
         <svg
           width="14"
           height="14"
@@ -25,7 +25,15 @@
         >
           <path d="M12 5v14M5 12h14" />
         </svg>
-        {{ lang() === 'ar' ? 'اشتراك جديد' : 'New subscription' }}
+        {{
+          editingCustom()
+            ? lang() === 'ar'
+              ? 'تعديل الاشتراك المخصص'
+              : 'Edit custom subscription'
+            : lang() === 'ar'
+              ? 'اشتراك جديد'
+              : 'New subscription'
+        }}
       </button>
     </div>
   </div>
@@ -207,13 +215,17 @@
               <td class="end">
                 <span class="mono">{{ amount(s) }}</span>
                 <span class="sub">{{
-                  s.cycle === 'annual'
+                  s.cycle === 'custom'
                     ? lang() === 'ar'
-                      ? '/ سنة'
-                      : '/ year'
-                    : lang() === 'ar'
-                      ? '/ شهر'
-                      : '/ month'
+                      ? 'للمدة كاملة'
+                      : 'whole term'
+                    : s.cycle === 'annual'
+                      ? lang() === 'ar'
+                        ? '/ سنة'
+                        : '/ year'
+                      : lang() === 'ar'
+                        ? '/ شهر'
+                        : '/ month'
                 }}</span>
               </td>
               <td class="muted">{{ date(s.periodStart) }}</td>
@@ -255,19 +267,12 @@
                       {{ lang() === 'ar' ? 'عرض الاشتراك' : 'View subscription' }}
                     </button>
                     @if (!isEnded(s) && s.status !== 'suspended') {
-                      @if (neighbour(s, 1); as up) {
-                        <button type="button" (click)="openChangeTo(s, up)">
-                          {{ lang() === 'ar' ? 'ترقية…' : 'Upgrade…' }}
-                        </button>
-                      }
-                      @if (neighbour(s, -1); as down) {
-                        <button type="button" (click)="openChangeTo(s, down)">
-                          {{ lang() === 'ar' ? 'تخفيض…' : 'Downgrade…' }}
-                        </button>
-                      }
-                      <button type="button" (click)="openStatic('cycle', s)">
-                        {{ lang() === 'ar' ? 'تغيير دورة الفوترة…' : 'Change billing cycle…'
-                        }}<i class="soon">{{ lang() === 'ar' ? 'قريبًا' : 'Soon' }}</i>
+                      <button type="button" (click)="openCustom(s)">
+                        {{
+                          lang() === 'ar'
+                            ? 'تعديل المدة والسعر والوحدات…'
+                            : 'Edit duration, price & modules…'
+                        }}
                       </button>
                     }
                     @if (s.status === 'trialing') {
@@ -442,8 +447,8 @@
     </div>
     <div class="drawer__foot">
       @if (!isEnded(s) && s.status !== 'suspended') {
-        <button type="button" class="btn btn--dark" (click)="openChangePlan(s)">
-          {{ lang() === 'ar' ? 'تغيير الباقة…' : 'Change plan…' }}
+        <button type="button" class="btn btn--dark" (click)="openCustom(s)">
+          {{ lang() === 'ar' ? 'تعديل الاشتراك…' : 'Edit subscription…' }}
         </button>
       }
       @if (s.status === 'trialing') {
@@ -804,7 +809,13 @@
     <div class="drawer__head">
       <div class="drawer__title">
         <span class="drawer__name" id="overlay-admin-shell-subscriptions-5-title">{{
-          lang() === 'ar' ? 'اشتراك جديد' : 'New subscription'
+          editingCustom()
+            ? lang() === 'ar'
+              ? 'تعديل الاشتراك المخصص'
+              : 'Edit custom subscription'
+            : lang() === 'ar'
+              ? 'اشتراك جديد'
+              : 'New subscription'
         }}</span>
       </div>
       <button
@@ -823,7 +834,13 @@
     >
       <label class="field"
         ><span>{{ lang() === 'ar' ? 'الشركة' : 'Company' }}</span
-        ><select name="company" [(ngModel)]="draft.companyId" required>
+        ><select
+          name="company"
+          [(ngModel)]="draft.companyId"
+          (ngModelChange)="selectCompanyModules()"
+          [disabled]="!!editingCustom()"
+          required
+        >
           <option value="">—</option>
           @for (c of companies(); track c.id) {
             @if (c.status !== 'archived' && c.status !== 'suspended') {
@@ -833,40 +850,68 @@
         </select></label
       >
       <label class="field"
-        ><span>{{ lang() === 'ar' ? 'الباقة' : 'Plan' }}</span
-        ><select name="plan" [(ngModel)]="draft.plan">
-          @for (p of activePlans(); track p.key) {
-            <option [value]="p.key">{{ lang() === 'ar' ? p.nameAr : p.nameEn }}</option>
-          }
+        ><span>{{
+          lang() === 'ar' ? 'السعر الإجمالي للمدة (جنيه)' : 'Total term price (EGP)'
+        }}</span
+        ><input
+          name="amount"
+          type="text"
+          inputmode="decimal"
+          [(ngModel)]="draft.amount"
+          placeholder="12k"
+          required
+      /></label>
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'تحديد المدة' : 'Duration' }}</span
+        ><select name="durationMode" [(ngModel)]="draft.durationMode">
+          <option value="years">{{ lang() === 'ar' ? 'عدد السنوات' : 'Number of years' }}</option>
+          <option value="date">{{ lang() === 'ar' ? 'تاريخ الانتهاء' : 'End date' }}</option>
         </select></label
       >
-      <div class="field">
-        <span>{{ lang() === 'ar' ? 'الدورة' : 'Cycle' }}</span>
-        <div class="segs">
-          <button
-            type="button"
-            class="seg"
-            [class.seg--on]="draft.cycle === 'monthly'"
-            (click)="draft.cycle = 'monthly'"
-          >
-            {{ L().cycleLabel.monthly }}
-          </button>
-          <button
-            type="button"
-            class="seg"
-            [class.seg--on]="draft.cycle === 'annual'"
-            (click)="draft.cycle = 'annual'"
-          >
-            {{ L().cycleLabel.annual }}
-          </button>
-        </div>
-      </div>
+      @if (draft.durationMode === 'years') {
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'عدد السنوات' : 'Years' }}</span
+          ><input
+            name="years"
+            type="number"
+            min="1"
+            max="10"
+            step="1"
+            [(ngModel)]="draft.years"
+            required
+        /></label>
+      } @else {
+        <label class="field"
+          ><span>{{ lang() === 'ar' ? 'آخر يوم للاشتراك' : 'Last day of access' }}</span
+          ><input name="endsOn" type="date" [(ngModel)]="draft.endsOn" required
+        /></label>
+      }
+      <p class="muted">
+        {{
+          lang() === 'ar'
+            ? 'CRM والعمولات وحاسبتها أساسية. الوحدات التالية اختيارية:'
+            : 'CRM, commissions and their calculator are included. Optional modules:'
+        }}
+      </p>
       <label class="field"
-        ><span>{{ lang() === 'ar' ? 'طريقة الدفع المسجلة' : 'Recorded payment method' }}</span
-        ><select name="payment" [(ngModel)]="draft.payment">
-          @for (method of paymentTypes; track method) {
-            <option [value]="method">{{ paymentLabel(method) }}</option>
-          }
+        ><span>AI</span
+        ><select name="ai" [(ngModel)]="draft.aiEnabled">
+          <option [ngValue]="false">{{ lang() === 'ar' ? 'معطّلة' : 'Disabled' }}</option>
+          <option [ngValue]="true">{{ lang() === 'ar' ? 'مفعّلة' : 'Enabled' }}</option>
+        </select></label
+      >
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'المالية' : 'Finance' }}</span
+        ><select name="finance" [(ngModel)]="draft.financeEnabled">
+          <option [ngValue]="false">{{ lang() === 'ar' ? 'معطّلة' : 'Disabled' }}</option>
+          <option [ngValue]="true">{{ lang() === 'ar' ? 'مفعّلة' : 'Enabled' }}</option>
+        </select></label
+      >
+      <label class="field"
+        ><span>{{ lang() === 'ar' ? 'الموارد البشرية' : 'HR' }}</span
+        ><select name="hr" [(ngModel)]="draft.hrEnabled">
+          <option [ngValue]="false">{{ lang() === 'ar' ? 'معطّلة' : 'Disabled' }}</option>
+          <option [ngValue]="true">{{ lang() === 'ar' ? 'مفعّلة' : 'Enabled' }}</option>
         </select></label
       >
       <p class="muted">

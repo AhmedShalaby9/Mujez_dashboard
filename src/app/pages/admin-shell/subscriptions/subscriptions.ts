@@ -293,7 +293,12 @@ export class Subscriptions {
     'suspended',
   ];
   get planTypes(): Plan[] {
-    return this.availablePlans().map((p) => p.key);
+    return [
+      'custom',
+      ...this.availablePlans()
+        .map((p) => p.key)
+        .filter((key) => key !== 'custom'),
+    ];
   }
   readonly paymentTypes: PaymentMethod[] = ['card', 'bank', 'instapay'];
 

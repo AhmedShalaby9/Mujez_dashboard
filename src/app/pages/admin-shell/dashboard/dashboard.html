@@ -402,7 +402,11 @@
               </div>
               <div class="planMix__legend">
                 @for (p of donut(); track p.key) {
-                  <a class="planMix__item" routerLink="/admin/subscription-plans">
+                  <a
+                    class="planMix__item"
+                    routerLink="/admin/subscriptions"
+                    [queryParams]="{ plan: p.key }"
+                  >
                     <span class="planMix__dot" [style.background]="p.color"></span>
                     <span class="planMix__label">{{ p.label }}</span>
                     <span class="planMix__n">{{ p.count }}</span>

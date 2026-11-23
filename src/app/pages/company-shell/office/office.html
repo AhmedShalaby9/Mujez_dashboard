@@ -662,6 +662,16 @@
               (change)="uploadFiles($event, 'contract')"
           /></label>
         }
+        @if (mode() === 'property' && !cityOptions().length) {
+          <p class="note">
+            {{
+              t('Add your office cities before saving a property.', 'أضف مدن مكتبك قبل حفظ العقار.')
+            }}
+            @if (auth.user()?.pool === 'company_admin' && !auth.user()?.workspace) {
+              <a routerLink="/company/office/cities">{{ t('Manage cities', 'إدارة المدن') }}</a>
+            }
+          </p>
+        }
         <div class="office-form-grid">
           @for (field of fields(); track field.key) {
             <label class="field" [class.office-wide]="field.type === 'textarea'"

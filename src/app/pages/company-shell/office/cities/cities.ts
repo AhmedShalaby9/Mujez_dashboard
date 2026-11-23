@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AuthService } from '../../../auth.service';
-import { AdminUiState } from '../admin-ui-state';
+import { AuthService } from '../../../../auth.service';
+import { CompanyUiState } from '../../company-ui-state';
 interface City {
   id: string;
   nameEn: string;
@@ -13,13 +13,22 @@ interface City {
   selector: 'app-cities',
   imports: [FormsModule],
   templateUrl: './cities.html',
-  styleUrls: ['../admin-ui.scss', '../admin-table.scss', './cities.scss'],
+  styleUrls: [
+    '../../../admin-shell/admin-ui.scss',
+    '../../../admin-shell/admin-table.scss',
+    './cities.scss',
+  ],
 })
 export class Cities {
-  readonly ui = inject(AdminUiState);
+  readonly ui = inject(CompanyUiState);
   private readonly auth = inject(AuthService);
   readonly ar = computed(() => this.ui.lang() === 'ar');
-  readonly canManage = computed(() => this.auth.user()?.permissions.includes('co.create') ?? false);
+  readonly canManage = computed(
+    () =>
+      this.auth.user()?.pool === 'company_admin' &&
+      this.auth.user()?.role === 'company_owner' &&
+      !this.auth.user()?.workspace,
+  );
   readonly rows = signal<City[]>([]);
   readonly loading = signal(false);
   readonly saving = signal(false);
@@ -32,6 +41,19 @@ export class Cities {
   nameEn = '';
   nameAr = '';
   private generation = 0;
+  private writeId = '';
+  private writeSignature = '';
+  private async write(path: string, payload: any) {
+    const signature = JSON.stringify({ path, payload });
+    if (signature !== this.writeSignature) {
+      this.writeSignature = signature;
+      this.writeId = crypto.randomUUID();
+    }
+    const result = await this.auth.request(path, { ...payload, requestId: this.writeId });
+    this.writeSignature = '';
+    this.writeId = '';
+    return result;
+  }
   constructor() {
     void this.load();
   }
@@ -44,7 +66,7 @@ export class Cities {
     this.error.set('');
     try {
       const q = new URLSearchParams({ q: this.search.trim(), archived: this.archived });
-      const r = await this.auth.request('/admin/api/v1/cities?' + q);
+      const r = await this.auth.request('/api/v1/office/cities?' + q);
       if (g === this.generation) this.rows.set(r.items);
     } catch (e) {
       if (g === this.generation) this.error.set((e as Error).message);
@@ -68,9 +90,8 @@ export class Cities {
     this.error.set('');
     try {
       const row = this.selected();
-      await this.auth.request('/admin/api/v1/cities' + (row ? '/' + row.id : ''), {
-        nameEn: this.nameEn.trim(),
-        nameAr: this.nameAr.trim(),
+      await this.write('/api/v1/office/cities' + (row ? '/' + row.id : ''), {
+        data: { nameEn: this.nameEn.trim(), nameAr: this.nameAr.trim() },
         ...(row ? { version: row.version } : {}),
       });
       this.open.set(false);
@@ -87,9 +108,9 @@ export class Cities {
     this.saving.set(true);
     this.error.set('');
     try {
-      await this.auth.request('/admin/api/v1/cities/' + row.id + '/archive', {
+      await this.write('/api/v1/office/cities/' + row.id + '/archive', {
         version: row.version,
-        archived: !row.archived,
+        data: { archived: !row.archived },
       });
       await this.load();
       this.notice.set(

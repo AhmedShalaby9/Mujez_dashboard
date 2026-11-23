@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { vi, afterEach, describe, it, expect } from 'vitest';
-import { AuthService } from '../../../auth.service';
+import { AuthService } from '../../../../auth.service';
 import { Cities } from './cities';
 const row = { id: 'city', nameEn: 'Cairo', nameAr: 'القاهرة', version: 3, archived: false };
 afterEach(() => TestBed.resetTestingModule());
@@ -15,7 +15,11 @@ async function setup(manage = true) {
       {
         provide: AuthService,
         useValue: {
-          user: signal({ permissions: manage ? ['co.view', 'co.create'] : ['co.view'] }),
+          user: signal({
+            pool: manage ? 'company_admin' : 'company_user',
+            role: manage ? 'company_owner' : 'agent',
+            permissions: ['leads.read', 'leads.manage'],
+          }),
           request,
         },
       },
@@ -26,22 +30,23 @@ async function setup(manage = true) {
   f.detectChanges();
   return { f, c: f.componentInstance, request };
 }
-describe('Platform cities', () => {
+describe('Office cities', () => {
   it('shows real bilingual cities and submits versioned edits and reversible deletion', async () => {
     const { c, f, request } = await setup();
     expect(f.nativeElement.textContent).toContain('Cairo');
     c.edit(row);
     c.nameEn = 'New name';
     await c.save();
-    expect(request).toHaveBeenCalledWith('/admin/api/v1/cities/city', {
-      nameEn: 'New name',
-      nameAr: 'القاهرة',
+    expect(request).toHaveBeenCalledWith('/api/v1/office/cities/city', {
+      requestId: expect.any(String),
+      data: { nameEn: 'New name', nameAr: 'القاهرة' },
       version: 3,
     });
     await c.archive(row);
-    expect(request).toHaveBeenCalledWith('/admin/api/v1/cities/city/archive', {
+    expect(request).toHaveBeenCalledWith('/api/v1/office/cities/city/archive', {
+      requestId: expect.any(String),
       version: 3,
-      archived: true,
+      data: { archived: true },
     });
   });
   it('preserves a city draft on failure and hides editing from read-only staff', async () => {

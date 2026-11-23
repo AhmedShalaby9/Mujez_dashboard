@@ -57,6 +57,7 @@ const NAV_PERMISSION: Record<string, string> = {
   'catalog/compounds': 'projects.read',
   'catalog/units': 'units.read',
   projects: 'projects.read',
+  'office/cities': 'leads.read',
   'office/dashboard': 'leads.read',
   'office/clients': 'leads.read',
   'office/properties': 'units.read',
@@ -128,6 +129,7 @@ const COMPANY_ICONS: Record<string, string> = {
   'ai-analytics': 'M5 20V11M12 20V5M19 20v-6M3 3l2 2M18 3l2 2',
   'lead-routing': 'M4 4h5v5H4zM15 15h5v5h-5zM15 4h5v5h-5zM9 6.5h6M6.5 9v8.5H15',
   'audit-log': 'M5 3h10l4 4v14H5zM9 12h6M9 16h6M9 8h3',
+  'office/cities': 'M3 21h18M5 21V5h6v16M11 9h8v12',
   team: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 0 0 0-6M22 21a6 6 0 0 0-4-5.6',
 };
 interface NavHead {
@@ -395,6 +397,7 @@ export class CompanyShell {
 
   readonly leaveContext = signal<any>(null);
   readonly visibleNav = computed<NavEntry[]>(() => {
+    const u = this.auth.user();
     const perms = this.auth.user()?.permissions ?? [];
     const all = this.L().nav.map((e) => ({ ...e }));
     const kept: NavEntry[] = [];
@@ -487,6 +490,17 @@ export class CompanyShell {
         }
       }
     }
+    if (
+      officeWorkspace(u) &&
+      u?.pool === 'company_admin' &&
+      u.role === 'company_owner' &&
+      !u.workspace
+    )
+      all.push({
+        kind: 'item',
+        path: 'office/cities',
+        label: this.lang() === 'ar' ? 'المدن' : 'Cities',
+      });
     for (let i = 0; i < all.length; i++) {
       const entry = all[i];
       if (entry.kind === 'item') {

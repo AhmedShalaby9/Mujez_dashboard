@@ -1,11 +1,11 @@
-<div class="pg" [attr.dir]="ui.dir()">
+<div class="pg" [attr.dir]="ar() ? 'rtl' : 'ltr'">
   <div class="head">
     <div class="head__text">
       <h1>{{ t('Cities', 'المدن') }}</h1>
       <span>{{
         t(
-          'Manage cities available to real estate offices',
-          'إدارة المدن المتاحة لاختيار موقع عقارات المكاتب'
+          'Manage the cities your office operates in',
+          'أضف المدن التي يعمل بها مكتبك لتظهر في عقارات شركتك فقط'
         )
       }}</span>
     </div>
@@ -99,7 +99,7 @@
     role="dialog"
     aria-modal="true"
     [attr.aria-label]="t('City details', 'بيانات المدينة')"
-    [attr.dir]="ui.dir()"
+    [attr.dir]="ar() ? 'rtl' : 'ltr'"
   >
     <form (ngSubmit)="save()">
       <header class="dialog__head">

@@ -73,11 +73,6 @@ export const routes: Routes = [
           import('./pages/admin-shell/companies/companies').then((m) => m.Companies),
       },
       {
-        path: 'cities',
-        data: { permission: 'co.view' },
-        loadComponent: () => import('./pages/admin-shell/cities/cities').then((m) => m.Cities),
-      },
-      {
         path: 'demo-requests',
         data: { permission: 'co.view' },
         loadComponent: () =>
@@ -199,6 +194,12 @@ export const routes: Routes = [
     canActivateChild: [companyGuard],
     loadComponent: () => import('./pages/company-shell/company-shell').then((m) => m.CompanyShell),
     children: [
+      {
+        path: 'office/cities',
+        data: { officeView: 'cities', ownerOnly: true, permission: 'leads.read' },
+        loadComponent: () =>
+          import('./pages/company-shell/office/cities/cities').then((m) => m.Cities),
+      },
       {
         path: 'office/dashboard',
         data: { officeView: 'dashboard', permission: 'leads.read' },

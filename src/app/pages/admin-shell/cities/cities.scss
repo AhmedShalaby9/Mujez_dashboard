@@ -1,0 +1,43 @@
+:host {
+  display: block;
+}
+.city-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.filters select {
+  border: 1px solid #deded9;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: #fff;
+  font: inherit;
+}
+.dialog {
+  width: min(560px, calc(100vw - 32px));
+}
+.dialog__body {
+  display: grid;
+  gap: 18px;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 19, 0.4);
+  z-index: 80;
+}
+.dialog__head {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.dialog__body {
+  padding: 22px;
+}

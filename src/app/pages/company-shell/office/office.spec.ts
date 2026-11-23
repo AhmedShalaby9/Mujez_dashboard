@@ -68,7 +68,11 @@ async function setup(view = 'clients', manage = true) {
   });
   const request = vi.fn(async (path: string, body?: any): Promise<any> => {
     if (path.endsWith('/options'))
-      return { staff: [{ id: 'self', name: 'Saved Sales' }], scope: 'own' };
+      return {
+        staff: [{ id: 'self', name: 'Saved Sales' }],
+        scope: 'own',
+        cities: [{ id: 'city', nameEn: 'Cairo', nameAr: 'القاهرة', archived: false }],
+      };
     if (path.includes('/recommendations?'))
       return {
         items: [
@@ -235,4 +239,32 @@ describe('Real estate office workflow', () => {
     expect(f.nativeElement.textContent).toContain('No matching records');
     expect(f.nativeElement.textContent).not.toContain('Saved buyer');
   });
+});
+
+it('uses a fixed Egyptian prefix and one owner number with a managed city selection', async () => {
+  const { c, f, request } = await setup('properties');
+  c.begin('property');
+  f.detectChanges();
+  await f.whenStable();
+  f.detectChanges();
+  const phone = f.nativeElement.querySelector('input[name="ownerPhone"]');
+  expect(phone.type).toBe('tel');
+  expect(phone.maxLength).toBe(10);
+  expect(f.nativeElement.querySelector('textarea[name="ownerPhones"]')).toBeNull();
+  expect(f.nativeElement.querySelector('select[name="cityId"]')).not.toBeNull();
+  c.form = {
+    ...c.form,
+    title: 'Real apartment',
+    ownerName: 'Real owner',
+    ownerPhone: '1001234567',
+    cityId: 'city',
+    areaName: 'Maadi',
+    address: 'Street 1',
+    area: 100,
+    rentPrice: '10k',
+  };
+  await c.save();
+  expect(
+    request.mock.calls.find(([p, b]) => p.endsWith('/properties') && b)?.[1].data,
+  ).toMatchObject({ ownerPhones: ['+201001234567'], cityId: 'city' });
 });

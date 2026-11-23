@@ -674,6 +674,7 @@
               @if (field.options) {
                 <select
                   [name]="field.key"
+                  [attr.name]="field.key"
                   [(ngModel)]="form[field.key]"
                   [required]="!!field.required"
                   [disabled]="saving()"
@@ -683,9 +684,27 @@
                     <option [value]="o[0]">{{ t(o[1], o[2]) }}</option>
                   }
                 </select>
+              } @else if (field.type === 'egypt-phone') {
+                <span class="office-phone" dir="ltr"
+                  ><span aria-hidden="true">+20</span
+                  ><input
+                    type="tel"
+                    inputmode="numeric"
+                    autocomplete="tel-national"
+                    name="ownerPhone"
+                    [(ngModel)]="form.ownerPhone"
+                    required
+                    pattern="[1-9][0-9]{8,9}"
+                    minlength="9"
+                    maxlength="10"
+                    [attr.aria-label]="t('Owner phone after +20', 'رقم المالك بعد +20')"
+                    placeholder="1001234567"
+                    [disabled]="saving()"
+                /></span>
               } @else if (field.type === 'textarea') {
                 <textarea
                   [name]="field.key"
+                  [attr.name]="field.key"
                   [(ngModel)]="form[field.key]"
                   [required]="!!field.required"
                   rows="3"
@@ -695,6 +714,7 @@
               } @else if (field.type === 'money') {
                 <input
                   [name]="field.key"
+                  [attr.name]="field.key"
                   [(ngModel)]="form[field.key]"
                   compactAmount
                   [required]="!!field.required"
@@ -705,12 +725,14 @@
                 <input
                   type="checkbox"
                   [name]="field.key"
+                  [attr.name]="field.key"
                   [(ngModel)]="form[field.key]"
                   [disabled]="saving()"
                 />
               } @else {
                 <input
                   [name]="field.key"
+                  [attr.name]="field.key"
                   [(ngModel)]="form[field.key]"
                   [type]="field.type || 'text'"
                   [required]="!!field.required"

@@ -352,14 +352,16 @@
               >
             }
           </fieldset>
-          <p class="muted">
-            {{
-              t(
-                'HR Officer and HR Manager can manage the current HR modules. Payroll Officer is reserved for upcoming payroll features. Employee grants access to My leave when linked to an HR profile.',
-                'يُدير مسؤول ومدير الموارد البشرية الوحدات الحالية. دور مسؤول الرواتب مخصص لوحدة الرواتب القادمة، ودور الموظف يتيح إجازاتي عند ربط الحساب بملف الموارد البشرية.'
-              )
-            }}
-          </p>
+          @if (!office) {
+            <p class="muted">
+              {{
+                t(
+                  'HR Officer and HR Manager can manage the current HR modules. Payroll Officer is reserved for upcoming payroll features. Employee grants access to My leave when linked to an HR profile.',
+                  'يُدير مسؤول ومدير الموارد البشرية الوحدات الحالية. دور مسؤول الرواتب مخصص لوحدة الرواتب القادمة، ودور الموظف يتيح إجازاتي عند ربط الحساب بملف الموارد البشرية.'
+                )
+              }}
+            </p>
+          }
         </div>
         <div class="dialog__foot">
           <button type="button" class="btn" (click)="closeInvite()" [disabled]="inviting()">
@@ -505,14 +507,16 @@
             >
           }
         </fieldset>
-        <p class="muted">
-          {{
-            t(
-              'HR roles grant company HR access without expanding sales access. Payroll Officer and Employee alone do not grant CRM or HR management access.',
-              'أدوار الموارد البشرية تمنح إدارة سجلات الشركة دون توسيع صلاحيات المبيعات. دورا الموظف ومسؤول الرواتب وحدهما لا يمنحان إدارة الموارد البشرية أو صلاحيات النظام.'
-            )
-          }}
-        </p>
+        @if (!office) {
+          <p class="muted">
+            {{
+              t(
+                'HR roles grant company HR access without expanding sales access. Payroll Officer and Employee alone do not grant CRM or HR management access.',
+                'أدوار الموارد البشرية تمنح إدارة سجلات الشركة دون توسيع صلاحيات المبيعات. دورا الموظف ومسؤول الرواتب وحدهما لا يمنحان إدارة الموارد البشرية أو صلاحيات النظام.'
+              )
+            }}
+          </p>
+        }
       </div>
       <footer class="dialog__foot">
         <button class="btn" type="button" [disabled]="!!busy()" (click)="roleMember.set(null)">

@@ -2,7 +2,7 @@ import { visibleCompanyRoles } from '../../../company-role-labels';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
-import { AuthService } from '../../../auth.service';
+import { AuthService, officeWorkspace } from '../../../auth.service';
 import { CompanyUiState } from '../company-ui-state';
 import {
   TeamApi,
@@ -32,7 +32,12 @@ export class Team {
     return this.ar() ? ar : en;
   }
 
-  readonly roles = TEAM_ROLES;
+  get office() {
+    return officeWorkspace(this.auth.user());
+  }
+  get roles(): readonly TeamRole[] {
+    return this.office ? TEAM_ROLES.filter((r) => r === 'agent' || r === 'team_lead') : TEAM_ROLES;
+  }
   readonly roleNames: Record<TeamRole, { en: string; ar: string }> = {
     agent: { en: 'Sales Agent', ar: 'وكيل المبيعات' },
     employee: { en: 'Employee', ar: 'موظف' },
@@ -149,7 +154,7 @@ export class Team {
   }
   editRoles(m: TeamMember) {
     this.roleMember.set(m);
-    this.selectedRoles.set([...this.assignedRoles(m)]);
+    this.selectedRoles.set(this.assignedRoles(m).filter((r) => this.roles.includes(r)));
     this.rolesError.set('');
   }
   toggleRole(r: TeamRole, checked: boolean, invite = false) {

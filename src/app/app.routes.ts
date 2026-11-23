@@ -73,6 +73,11 @@ export const routes: Routes = [
           import('./pages/admin-shell/companies/companies').then((m) => m.Companies),
       },
       {
+        path: 'cities',
+        data: { permission: 'co.view' },
+        loadComponent: () => import('./pages/admin-shell/cities/cities').then((m) => m.Cities),
+      },
+      {
         path: 'demo-requests',
         data: { permission: 'co.view' },
         loadComponent: () =>

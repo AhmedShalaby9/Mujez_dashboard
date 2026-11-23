@@ -215,3 +215,30 @@
     grid-column: auto;
   }
 }
+
+.office-phone {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border, #deded9);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+.office-phone > span {
+  padding: 0 12px;
+  font-weight: 600;
+  color: #555;
+  border-right: 1px solid #deded9;
+}
+.office-phone input {
+  border: 0 !important;
+  border-radius: 0 !important;
+  min-width: 0;
+  flex: 1;
+  direction: ltr;
+  text-align: left;
+}
+.office-phone:focus-within {
+  outline: 2px solid #bedf6a;
+  outline-offset: 1px;
+}

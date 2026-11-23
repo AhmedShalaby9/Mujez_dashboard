@@ -1,0 +1,152 @@
+<div class="pg" [attr.dir]="ui.dir()">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ t('Cities', 'المدن') }}</h1>
+      <span>{{
+        t(
+          'Manage cities available to real estate offices',
+          'إدارة المدن المتاحة لاختيار موقع عقارات المكاتب'
+        )
+      }}</span>
+    </div>
+    <div class="head__actions">
+      @if (canManage()) {
+        <button class="btn btn--dark" (click)="edit()">
+          {{ t('+ Add city', '+ إضافة مدينة') }}
+        </button>
+      }
+    </div>
+  </div>
+  @if (error() && !open()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="note note--ok" role="status">{{ notice() }}</p>
+  }
+  <form class="filters" (ngSubmit)="load()">
+    <div class="search">
+      <input
+        name="search"
+        [(ngModel)]="search"
+        maxlength="100"
+        [placeholder]="t('Search cities…', 'بحث عن مدينة…')"
+        [attr.aria-label]="t('Search cities', 'البحث عن المدن')"
+      />
+    </div>
+    <select
+      name="status"
+      [(ngModel)]="archived"
+      [attr.aria-label]="t('City status', 'حالة المدينة')"
+    >
+      <option value="false">{{ t('Available cities', 'المدن المتاحة') }}</option>
+      <option value="true">{{ t('Deleted cities', 'المدن المحذوفة') }}</option>
+      <option value="all">{{ t('All cities', 'كل المدن') }}</option></select
+    ><button class="btn" [disabled]="loading()">{{ t('Search', 'بحث') }}</button>
+  </form>
+  <section class="card" [attr.aria-busy]="loading()">
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('English name', 'الاسم بالإنجليزية') }}</th>
+            <th>{{ t('Arabic name', 'الاسم بالعربية') }}</th>
+            <th>{{ t('Status', 'الحالة') }}</th>
+            <th>{{ t('Actions', 'الإجراءات') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr>
+              <td class="strong" dir="ltr">{{ row.nameEn }}</td>
+              <td>{{ row.nameAr }}</td>
+              <td>
+                <span class="chip">{{
+                  row.archived ? t('Deleted', 'محذوفة') : t('Available', 'متاحة')
+                }}</span>
+              </td>
+              <td>
+                @if (canManage()) {
+                  <div class="city-actions">
+                    <button class="btn btn--sm" [disabled]="saving()" (click)="edit(row)">
+                      {{ t('Edit', 'تعديل') }}</button
+                    ><button class="btn btn--sm" [disabled]="saving()" (click)="archive(row)">
+                      {{ row.archived ? t('Restore', 'استعادة') : t('Delete', 'حذف') }}
+                    </button>
+                  </div>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="muted">
+                {{
+                  loading()
+                    ? t('Loading cities…', 'جارٍ تحميل المدن…')
+                    : t('No cities match this search.', 'لا توجد مدن مطابقة للبحث.')
+                }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+@if (open()) {
+  <div class="backdrop" (click)="close()"></div>
+  <section
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="t('City details', 'بيانات المدينة')"
+    [attr.dir]="ui.dir()"
+  >
+    <form (ngSubmit)="save()">
+      <header class="dialog__head">
+        <h2>{{ selected() ? t('Edit city', 'تعديل مدينة') : t('Add city', 'إضافة مدينة') }}</h2>
+        <button
+          type="button"
+          class="btn btn--sm"
+          (click)="close()"
+          [disabled]="saving()"
+          [attr.aria-label]="t('Close', 'إغلاق')"
+        >
+          {{ t('Close', 'إغلاق') }}
+        </button>
+      </header>
+      <div class="dialog__body">
+        @if (error()) {
+          <p class="note note--bad" role="alert">{{ error() }}</p>
+        }
+        <label class="field"
+          ><span>{{ t('English name', 'الاسم بالإنجليزية') }} *</span
+          ><input
+            name="nameEn"
+            [(ngModel)]="nameEn"
+            required
+            minlength="2"
+            maxlength="100"
+            dir="ltr"
+            [disabled]="saving()" /></label
+        ><label class="field"
+          ><span>{{ t('Arabic name', 'الاسم بالعربية') }} *</span
+          ><input
+            name="nameAr"
+            [(ngModel)]="nameAr"
+            required
+            minlength="2"
+            maxlength="100"
+            dir="rtl"
+            [disabled]="saving()"
+        /></label>
+      </div>
+      <footer class="dialog__foot">
+        <button type="button" class="btn" (click)="close()" [disabled]="saving()">
+          {{ t('Cancel', 'إلغاء') }}</button
+        ><button class="btn btn--dark" [disabled]="saving()">
+          {{ saving() ? t('Saving…', 'جارٍ الحفظ…') : t('Save city', 'حفظ المدينة') }}
+        </button>
+      </footer>
+    </form>
+  </section>
+}

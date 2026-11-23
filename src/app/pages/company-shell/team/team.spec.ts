@@ -207,3 +207,20 @@ describe('Team lead workspace', () => {
     expect(paths()).not.toContain('team');
   });
 });
+
+it('shows only sales and team lead roles for real estate office invitations', async () => {
+  const { c, f } = await setup();
+  const auth = TestBed.inject(AuthService);
+  (auth.user as any).set({
+    pool: 'company_admin',
+    role: 'company_owner',
+    company: { type: 'real_estate_office' },
+    permissions: ['team.read', 'team.manage'],
+  });
+  expect(c.roles).toEqual(['agent', 'team_lead']);
+  c.openInvite();
+  f.detectChanges();
+  expect(f.nativeElement.textContent).not.toContain('HR Officer');
+  c.editRoles({ ...members[1], roles: ['agent', 'employee'] });
+  expect(c.selectedRoles()).toEqual(['agent']);
+});

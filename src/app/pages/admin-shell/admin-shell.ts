@@ -24,6 +24,7 @@ import { AdminUiState, type Lang } from './admin-ui-state';
 const ICONS: Record<string, string> = {
   dashboard: 'M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z',
   companies: 'M3 21h18M5 21V5l7-2v18M12 9h7v12M8 8h1M8 12h1M8 16h1M15 13h1M15 17h1',
+  cities: 'M3 21h18M5 21V5h6v16M11 9h8v12',
   'demo-requests': 'M4 5h16v14H4zM4 6l8 6 8-6',
   developers: 'M3 21h18M5 21V5l7-2v18M12 9h7v12',
   compounds: 'M3 21h18M5 21V5l7-2v18M12 9h7v12',
@@ -112,6 +113,7 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Platform users', path: 'platform-users', enabled: true },
   { kind: 'item', label: 'Roles & permissions', path: 'roles-permissions', enabled: true },
   { kind: 'item', label: 'Audit logs', path: 'audit-logs', enabled: true },
+  { kind: 'item', label: 'Cities', path: 'cities', enabled: true },
   { kind: 'item', label: 'Settings', path: 'settings', enabled: true },
 ];
 
@@ -141,6 +143,7 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'مستخدمو المنصة', path: 'platform-users', enabled: true },
   { kind: 'item', label: 'الأدوار والصلاحيات', path: 'roles-permissions', enabled: true },
   { kind: 'item', label: 'سجل التدقيق', path: 'audit-logs', enabled: true },
+  { kind: 'item', label: 'المدن', path: 'cities', enabled: true },
   { kind: 'item', label: 'الإعدادات', path: 'settings', enabled: true },
 ];
 
@@ -316,6 +319,7 @@ export class AdminShell {
       compounds: 'co.view',
       units: 'co.view',
       companies: 'co.view',
+      cities: 'co.view',
       'demo-requests': 'co.view',
       onboarding: 'co.create',
       'subscription-plans': 'plans',

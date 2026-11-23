@@ -78,6 +78,18 @@ export class Office {
   readonly clientStatuses = clientStatuses;
   readonly propertyStatuses = propertyStatuses;
   readonly dealStatuses = dealStatuses;
+  cityOptions(includeArchived = false): [string, string, string][] {
+    return (this.options().cities ?? [])
+      .filter((c: any) => includeArchived || !c.archived || c.id === this.form.cityId)
+      .map((c: any) => [
+        c.id,
+        c.nameEn + (c.archived ? ' (deleted)' : ''),
+        c.nameAr + (c.archived ? ' (محذوفة)' : ''),
+      ]);
+  }
+  ownerPhoneLocal(value: string) {
+    return String(value ?? '').replace(/^\+20/, '');
+  }
   now() {
     return new Date().toISOString();
   }
@@ -297,7 +309,7 @@ export class Office {
         ...commonFilters,
         ...extra,
         { key: 'createdBy', en: 'Added by', ar: 'أضيف بواسطة', options: staff },
-        { key: 'city', en: 'City', ar: 'المدينة' },
+        { key: 'city', en: 'City', ar: 'المدينة', options: this.cityOptions(true) },
         { key: 'finish', en: 'Finishing', ar: 'التشطيب' },
         { key: 'minFloor', en: 'Minimum floor', ar: 'أقل دور', type: 'number' },
         { key: 'maxFloor', en: 'Maximum floor', ar: 'أعلى دور', type: 'number' },
@@ -439,8 +451,8 @@ export class Office {
       this.form = {
         title: '',
         ownerName: '',
-        ownerPhones: '',
-        city: '',
+        ownerPhone: '',
+        cityId: '',
         areaName: '',
         address: '',
         type: 'apartment',
@@ -464,7 +476,13 @@ export class Office {
           ? {
               ...row.data,
               title: row.title,
-              ownerPhones: row.data.ownerPhones.join('\n'),
+              ownerPhone: this.ownerPhoneLocal(row.data.ownerPhones[0]),
+              cityId:
+                row.data.cityId ??
+                (this.options().cities ?? []).find((c: any) =>
+                  [c.nameEn, c.nameAr].includes(row.data.city),
+                )?.id ??
+                '',
               photos: (row.data.photos ?? []).join('\n'),
               salePrice: row.data.saleMinor ? majorAmount(row.data.saleMinor) : '',
               rentPrice: row.data.rentMinor ? majorAmount(row.data.rentMinor) : '',
@@ -475,7 +493,9 @@ export class Office {
           : {}),
       };
       this.fields.set([
-        ...propertyFields,
+        ...propertyFields.map((f) =>
+          f.key === 'cityId' ? { ...f, options: this.cityOptions() } : f,
+        ),
         ...(row && ['available', 'withdrawn'].includes(row.status)
           ? [
               {
@@ -734,7 +754,7 @@ export class Office {
       for (const key of [
         'title',
         'ownerName',
-        'city',
+        'cityId',
         'areaName',
         'address',
         'type',
@@ -747,7 +767,7 @@ export class Office {
       for (const key of ['bedrooms', 'bathrooms', 'area', 'floor'])
         d[key] = f[key] === '' || f[key] == null ? null : Number(f[key]);
       Object.assign(d, {
-        ownerPhones: this.lines(f.ownerPhones),
+        ownerPhones: ['+20' + String(f.ownerPhone ?? '').trim()],
         photos: String(f.photos ?? '')
           .split('\n')
           .map((x) => x.trim())

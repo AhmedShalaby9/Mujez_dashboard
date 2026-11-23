@@ -4,6 +4,19 @@ import { vi } from 'vitest';
 import { MyTeam } from './my-team';
 import { TeamApi } from '../../../team-api.service';
 import { CompanyUiState } from '../company-ui-state';
+const coldMetrics = {
+  calls: 12,
+  convertedToLeads: 3,
+  overdueCallbacks: 2,
+  outcomes: {
+    no_answer: 4,
+    busy: 1,
+    wrong_number: 1,
+    not_interested: 1,
+    interested: 3,
+    callback: 2,
+  },
+};
 const metrics = {
   leads: 2,
   openLeads: 1,
@@ -48,6 +61,7 @@ async function setup(manage = true, assigned = true) {
       team: group,
       items: [member],
       summary: metrics,
+      coldCalls: { summary: coldMetrics, items: [{ ...member, ...coldMetrics }] },
       days: 30,
       from: '2026-10-16',
       to: '2026-11-14',
@@ -317,5 +331,68 @@ describe('My team work and performance', () => {
     c.taskAssignee = 'member';
     await c.saveTask();
     expect(api.createTask).not.toHaveBeenCalled();
+  });
+});
+
+describe('My team cold call performance', () => {
+  it('renders saved per-member calls, all outcomes, overdue callbacks and lead conversions in both languages', async () => {
+    const { f, c, api } = await setup();
+    const section = f.nativeElement.querySelector('.cold-performance');
+    expect(section.textContent).toContain('Cold calls performance');
+    expect([...section.querySelectorAll('tbody td')].map((x: any) => x.textContent.trim())).toEqual(
+      [
+        expect.stringContaining('Actual member'),
+        '12',
+        expect.stringContaining('Callback requested'),
+        '2',
+        '3',
+      ],
+    );
+    for (const outcome of [
+      'No answer',
+      'Busy',
+      'Wrong number',
+      'Not interested',
+      'Interested',
+      'Callback requested',
+    ])
+      expect(section.textContent).toContain(outcome);
+    c.changeDays('7');
+    await f.whenStable();
+    f.detectChanges();
+    expect(api.performance).toHaveBeenLastCalledWith(7);
+    TestBed.inject(CompanyUiState).lang.set('ar');
+    f.detectChanges();
+    expect(section.textContent).toContain('أداء المكالمات الباردة');
+    expect(section.textContent).toContain('المتابعات المتأخرة');
+  });
+  it('shows zero activity truthfully and clears performance on permission failure', async () => {
+    const { f, c, api } = await setup();
+    const zero = {
+      calls: 0,
+      convertedToLeads: 0,
+      overdueCallbacks: 0,
+      outcomes: {
+        no_answer: 0,
+        busy: 0,
+        wrong_number: 0,
+        not_interested: 0,
+        interested: 0,
+        callback: 0,
+      },
+    };
+    api.performance.mockImplementationOnce(async () => ({
+      ...(await api.performance(30)),
+      coldCalls: { summary: zero, items: [{ ...member, ...zero }] },
+    }));
+    await c.reload();
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('.cold-performance').textContent).toContain(
+      'No calls logged in this period',
+    );
+    api.performance.mockRejectedValueOnce(Object.assign(new Error('Forbidden'), { status: 403 }));
+    await c.reload();
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('.cold-performance')).toBeNull();
   });
 });

@@ -132,3 +132,47 @@
 .card table a:hover {
   color: var(--ink);
 }
+
+.cold-performance {
+  display: grid;
+  gap: 16px;
+}
+.cold-performance__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+  p {
+    margin: 6px 0 0;
+    font-size: 12.5px;
+  }
+}
+.cold-kpis {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.cold-outcomes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 220px;
+  max-width: 430px;
+  .pill {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+  }
+  [data-outcome='interested'] {
+    background: var(--lime-tint, #eff8d9);
+  }
+}
+@media (max-width: 600px) {
+  .cold-kpis {
+    grid-template-columns: 1fr;
+  }
+}

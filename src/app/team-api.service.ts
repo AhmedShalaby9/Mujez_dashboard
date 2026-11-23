@@ -71,7 +71,19 @@ export interface TeamMetrics {
   overdueTasks: number;
   completedTasks: number;
 }
+export type ColdCallOutcome =
+  'no_answer' | 'busy' | 'wrong_number' | 'not_interested' | 'interested' | 'callback';
+export interface ColdCallMetrics {
+  calls: number;
+  convertedToLeads: number;
+  overdueCallbacks: number;
+  outcomes: Record<ColdCallOutcome, number>;
+}
 export interface TeamPerformance {
+  coldCalls?: {
+    summary: ColdCallMetrics;
+    items: (ColdCallMetrics & { id: string; name: string; role: string; status: string })[];
+  };
   team: { id: string; name: string };
   items: (TeamMetrics & {
     id: string;

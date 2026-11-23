@@ -162,6 +162,113 @@
           )
         }}
       </p>
+      @if (p.coldCalls; as cold) {
+        <section class="cold-performance" aria-labelledby="cold-performance-title">
+          <div class="cold-performance__head">
+            <div>
+              <h2 id="cold-performance-title">
+                {{ t('Cold calls performance', 'أداء المكالمات الباردة') }}
+              </h2>
+              <p class="muted">
+                {{
+                  t(
+                    'Recorded outreach, outcomes and callback workload for your current team.',
+                    'المكالمات المسجلة ونتائجها وعبء المتابعة لأعضاء فريقك الحاليين.'
+                  )
+                }}
+              </p>
+            </div>
+            <span class="pill">{{ days() }} {{ t('days', 'يومًا') }}</span>
+          </div>
+          <div class="kpis cold-kpis">
+            <div class="kpi">
+              <span class="kpi__label">{{
+                t('Calls logged · period', 'مكالمات مسجلة · الفترة')
+              }}</span
+              ><strong class="kpi__value mono">{{ cold.summary.calls }}</strong>
+            </div>
+            <div class="kpi">
+              <span class="kpi__label">{{
+                t('Overdue callbacks · now', 'متابعات متأخرة · الآن')
+              }}</span
+              ><strong class="kpi__value mono" [class.late]="cold.summary.overdueCallbacks > 0">{{
+                cold.summary.overdueCallbacks
+              }}</strong>
+            </div>
+            <div class="kpi">
+              <span class="kpi__label">{{
+                t('Converted to leads · period', 'تحويلات لعملاء · الفترة')
+              }}</span
+              ><strong class="kpi__value mono">{{ cold.summary.convertedToLeads }}</strong>
+            </div>
+          </div>
+          <div class="card">
+            <div class="scroll">
+              <table aria-labelledby="cold-performance-title">
+                <thead>
+                  <tr>
+                    <th>{{ t('Member', 'العضو') }}</th>
+                    <th>{{ t('Calls logged', 'المكالمات المسجلة') }}</th>
+                    <th>{{ t('Call outcomes', 'نتائج المكالمات') }}</th>
+                    <th>{{ t('Overdue callbacks', 'المتابعات المتأخرة') }}</th>
+                    <th>{{ t('Converted to leads', 'تحويلات لعملاء') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of cold.items; track m.id) {
+                    <tr>
+                      <td>
+                        <b>{{ m.name }}</b
+                        ><span class="sub"
+                          >{{
+                            m.role === 'team_lead'
+                              ? t('Team Lead', 'قائد الفريق')
+                              : t('Sales Agent', 'مسؤول مبيعات')
+                          }}
+                          · {{ status(m.status) }}</span
+                        >
+                      </td>
+                      <td class="mono">{{ m.calls }}</td>
+                      <td>
+                        <div class="cold-outcomes">
+                          @for (o of coldOutcomes; track o.key) {
+                            @if (m.outcomes[o.key]) {
+                              <span class="pill" [attr.data-outcome]="o.key"
+                                >{{ t(o.en, o.ar) }}
+                                <b class="mono">{{ m.outcomes[o.key] }}</b></span
+                              >
+                            }
+                          }
+                          @if (!m.calls) {
+                            <span class="muted">{{
+                              t(
+                                'No calls logged in this period',
+                                'لا توجد مكالمات مسجلة خلال الفترة'
+                              )
+                            }}</span>
+                          }
+                        </div>
+                      </td>
+                      <td class="mono" [class.late]="m.overdueCallbacks > 0">
+                        {{ m.overdueCallbacks }}
+                      </td>
+                      <td class="mono">{{ m.convertedToLeads }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <p class="muted metric-note">
+            {{
+              t(
+                'Calls and conversions are credited to the person who recorded them in the selected period, even after reassignment. Each logged call counts once; notes and assignments do not count as calls. Overdue callbacks are current, unconverted appointments assigned to each member, regardless of the selected period. All dates use Cairo time.',
+                'المكالمات والتحويلات تُحسب لمن نفّذها خلال الفترة المختارة حتى بعد إعادة الإسناد. كل مكالمة مسجلة تُحسب مرة واحدة؛ الملاحظات والإسناد لا يُحسبان مكالمات. المتابعات المتأخرة هي المواعيد الحالية المسندة لكل عضو للسجلات غير المحوّلة، بغض النظر عن الفترة. جميع المواعيد بتوقيت القاهرة.'
+              )
+            }}
+          </p>
+        </section>
+      }
     } @else if (tab() === 'leads' || tab() === 'tasks') {
       <form class="tools" (ngSubmit)="filter()">
         <select

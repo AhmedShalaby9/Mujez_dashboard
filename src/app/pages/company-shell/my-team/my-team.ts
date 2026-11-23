@@ -8,6 +8,7 @@ import {
   type TeamWorkLead,
   type TeamWorkTask,
   type TeamPerformance,
+  type ColdCallOutcome,
 } from '../../../team-api.service';
 import { salesMoney, STAGE_NAMES } from '../../../sales-api.service';
 import { CompanyUiState } from '../company-ui-state';
@@ -29,6 +30,14 @@ export class MyTeam {
   readonly ui = inject(CompanyUiState);
   readonly ar = computed(() => this.ui.lang() === 'ar');
   private readonly api = inject(TeamApi);
+  readonly coldOutcomes: { key: ColdCallOutcome; en: string; ar: string }[] = [
+    { key: 'no_answer', en: 'No answer', ar: 'لا يرد' },
+    { key: 'busy', en: 'Busy', ar: 'مشغول' },
+    { key: 'wrong_number', en: 'Wrong number', ar: 'رقم غير صحيح' },
+    { key: 'not_interested', en: 'Not interested', ar: 'غير مهتم' },
+    { key: 'interested', en: 'Interested', ar: 'مهتم' },
+    { key: 'callback', en: 'Callback requested', ar: 'طلب إعادة الاتصال' },
+  ];
   readonly teams = signal<SalesTeam[]>([]);
   readonly performance = signal<TeamPerformance | null>(null);
   readonly loading = signal(false);

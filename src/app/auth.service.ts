@@ -21,6 +21,7 @@ export interface User {
     hrEnabled?: boolean;
     financeEnabled?: boolean;
     aiEnabled?: boolean;
+    type?: string;
   };
   /** Present only when this session is a platform admin inside a controlled workspace session. */
   workspace?: {
@@ -34,11 +35,15 @@ export interface User {
     company: {
       id: string;
       uuid: string;
+      type?: string;
       slug: string;
       name: { en: string; ar: string };
       status: string;
     };
   };
+}
+export function officeWorkspace(u: User | null | undefined) {
+  return (u?.company?.type ?? u?.workspace?.company?.type) === 'real_estate_office';
 }
 export function hrModuleEnabled(u: User | null | undefined) {
   return !!u && u.company?.hrEnabled !== false;
@@ -46,6 +51,7 @@ export function hrModuleEnabled(u: User | null | undefined) {
 /** Sales agents keep edit/conversion access while manual-new-lead entry is hidden. */
 export function canCreateLead(u: User | null | undefined) {
   if (!u?.permissions.includes('leads.manage')) return false;
+  if (officeWorkspace(u)) return true;
   const roles = u.roles ?? [u.role];
   return !(u.pool === 'company_user' && roles.includes('agent') && !roles.includes('team_lead'));
 }
@@ -56,6 +62,7 @@ export function employeeArea(u: User | null | undefined) {
   return !!u && u.pool === 'company_user' && (u.roles ?? [u.role]).includes('employee');
 }
 export function companyHomePath(u: User | null | undefined) {
+  if (officeWorkspace(u) && hasCrmWorkspace(u)) return '/company/office/dashboard';
   if (u?.pool === 'company_user' && !u.permissions.includes('leads.read')) {
     if (hasAccountingAccess(u)) return '/company/finance';
     if (hasPayrollAccess(u)) return '/company/payroll';
@@ -239,6 +246,27 @@ export const companyGuard: CanActivateFn = async (route) => {
   if (!(await auth.restore(true))) return router.createUrlTree(['/']);
   if (auth.user()?.mustChangePassword) return router.createUrlTree(['/change-password']);
   const u = auth.user();
+  if (officeWorkspace(u) && hasCrmWorkspace(u) && !route.data['officeView']) {
+    const segment = route.routeConfig?.path ?? '';
+    const targets: Record<string, string> = {
+      dashboard: 'dashboard',
+      leads: 'clients',
+      contacts: 'clients',
+      pipeline: 'deals',
+      projects: 'properties',
+      units: 'properties',
+      reservations: 'bookings',
+      contracts: 'deals',
+      commissions: 'dashboard',
+      documents: 'deals',
+      reports: 'dashboard',
+      'ai-analytics': 'clients',
+      'lead-routing': 'clients',
+    };
+    if (targets[segment]) return router.parseUrl('/company/office/' + targets[segment]);
+    if (segment === 'finance' || segment.startsWith('finance/'))
+      return router.parseUrl('/company/office/dashboard');
+  }
   if (route.data['aiView'] && !aiModuleEnabled(u)) return router.parseUrl(companyHomePath(u));
   if (u?.pool === 'platform' && !u?.workspace) return router.createUrlTree(['/admin/dashboard']);
   const isOwner =
@@ -257,6 +285,8 @@ export const companyGuard: CanActivateFn = async (route) => {
   )
     return router.parseUrl(companyHomePath(u));
   if (route.data['employeeView'] && !employeeArea(u)) return router.parseUrl(companyHomePath(u));
+  if (route.data['officeView'] && (!officeWorkspace(u) || !hasCrmWorkspace(u)))
+    return router.parseUrl(companyHomePath(u));
   if (route.data['crmView'] && !hasCrmWorkspace(u)) return router.parseUrl(companyHomePath(u));
   if (
     (route.data['hrAccess'] ||

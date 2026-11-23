@@ -1,3 +1,4 @@
+import { officeWorkspace } from '../../auth.service';
 import { canCreateLead } from '../../auth.service';
 import {
   aiModuleEnabled,
@@ -56,6 +57,11 @@ const NAV_PERMISSION: Record<string, string> = {
   'catalog/compounds': 'projects.read',
   'catalog/units': 'units.read',
   projects: 'projects.read',
+  'office/dashboard': 'leads.read',
+  'office/clients': 'leads.read',
+  'office/properties': 'units.read',
+  'office/bookings': 'reservations.read',
+  'office/deals': 'reservations.read',
   developers: 'projects.read',
   compounds: 'projects.read',
   units: 'units.read',
@@ -390,7 +396,7 @@ export class CompanyShell {
   readonly leaveContext = signal<any>(null);
   readonly visibleNav = computed<NavEntry[]>(() => {
     const perms = this.auth.user()?.permissions ?? [];
-    const all = this.L().nav;
+    const all = this.L().nav.map((e) => ({ ...e }));
     const kept: NavEntry[] = [];
     const canSee = (item: NavItem) => {
       const u = this.auth.user();
@@ -432,6 +438,55 @@ export class CompanyShell {
       const permission = NAV_PERMISSION[item.path];
       return !permission || perms.includes(permission);
     };
+    if (officeWorkspace(this.auth.user())) {
+      const map: Record<string, [string, string, string] | null> = {
+        dashboard: ['office/dashboard', 'Office overview', 'ملخص المكتب'],
+        leads: ['office/clients', 'Clients', 'العملاء'],
+        projects: ['office/properties', 'Office properties', 'عقارات المكتب'],
+        reservations: ['office/bookings', 'Bookings', 'الحجوزات'],
+        pipeline: null,
+        calendar: null,
+        tasks: null,
+        'cold-calls': null,
+        'my-team': null,
+        units: null,
+        contacts: null,
+        contracts: null,
+        commissions: null,
+        documents: null,
+        marketing: null,
+        reports: null,
+        'ai-analytics': null,
+        'lead-routing': null,
+      };
+      for (let i = all.length - 1; i >= 0; i--) {
+        const entry = all[i];
+        if (entry.kind !== 'item') continue;
+        if (
+          entry.path === 'finance' ||
+          entry.path.startsWith('finance/') ||
+          entry.path === 'my-finance' ||
+          entry.path === 'payroll'
+        ) {
+          all.splice(i, 1);
+          continue;
+        }
+        if (Object.prototype.hasOwnProperty.call(map, entry.path)) {
+          const next = map[entry.path];
+          if (!next) {
+            all.splice(i, 1);
+            continue;
+          }
+          all[i] = { ...entry, path: next[0], label: this.lang() === 'ar' ? next[2] : next[1] };
+          if (entry.path === 'reservations')
+            all.splice(i + 1, 0, {
+              kind: 'item',
+              path: 'office/deals',
+              label: this.lang() === 'ar' ? 'الصفقات' : 'Deals',
+            });
+        }
+      }
+    }
     for (let i = 0; i < all.length; i++) {
       const entry = all[i];
       if (entry.kind === 'item') {
@@ -658,6 +713,7 @@ export class CompanyShell {
           ['leads.read', 'contacts.read', 'units.read', 'contracts.read'].includes(p),
         ) ?? false,
   );
+  readonly isOffice = computed(() => officeWorkspace(this.auth.user()));
   readonly canNewLead = computed(() => canCreateLead(this.auth.user()));
   /** Top-bar search goes to Leads (there is no global search endpoint yet). */
   readonly searchResults = signal<Array<{ id: string; name: string; type: string; route: string }>>(
@@ -706,7 +762,9 @@ export class CompanyShell {
   }
   newLead() {
     if (!this.canNewLead()) return;
-    void this.router.navigate(['/company/leads'], { queryParams: { new: Date.now() } });
+    void this.router.navigate([this.isOffice() ? '/company/office/clients' : '/company/leads'], {
+      queryParams: { new: Date.now() },
+    });
   }
   setLang(l: Lang) {
     this.ui.lang.set(l);

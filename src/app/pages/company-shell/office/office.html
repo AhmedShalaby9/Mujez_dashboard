@@ -1,0 +1,736 @@
+<div class="pg office-page" [attr.dir]="ar() ? 'rtl' : 'ltr'">
+  <div class="head">
+    <div class="head__text">
+      <span>{{
+        t('Office workspace · EGP · Cairo time', 'مساحة المكتب · جنيه مصري · توقيت القاهرة')
+      }}</span>
+      <h1>{{ title() }}</h1>
+    </div>
+    <div class="head__actions">
+      @if (canManage() && (view === 'clients' || view === 'properties')) {
+        <button
+          class="btn btn--dark"
+          [disabled]="saving()"
+          (click)="begin(view === 'clients' ? 'client' : 'property')"
+        >
+          {{
+            view === 'clients'
+              ? t('+ New client', '+ عميل جديد')
+              : t('+ New property', '+ عقار جديد')
+          }}
+        </button>
+      }
+      <button class="btn" [disabled]="loading() || saving()" (click)="load()">
+        {{ t('Refresh', 'تحديث') }}
+      </button>
+    </div>
+  </div>
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="note note--ok" role="status">{{ notice() }}</p>
+  }
+  @if (view === 'dashboard') {
+    <div class="kpis office-kpis">
+      <a class="kpi" routerLink="/company/office/clients"
+        ><span class="kpi__label">{{ t('Clients in your scope', 'العملاء في نطاقك') }}</span
+        ><strong class="kpi__value">{{ summary().clients ?? '—' }}</strong></a
+      >
+      <a class="kpi" routerLink="/company/office/properties"
+        ><span class="kpi__label">{{
+          t('Available office properties', 'عقارات المكتب المتاحة')
+        }}</span
+        ><strong class="kpi__value">{{ summary().properties ?? '—' }}</strong></a
+      >
+      <a class="kpi" routerLink="/company/office/bookings"
+        ><span class="kpi__label">{{ t('Open bookings', 'الحجوزات المفتوحة') }}</span
+        ><strong class="kpi__value">{{ summary().bookings ?? '—' }}</strong></a
+      >
+      <a class="kpi" routerLink="/company/office/deals"
+        ><span class="kpi__label">{{
+          t('Closed sales / rentals', 'صفقات البيع والإيجار المكتملة')
+        }}</span
+        ><strong class="kpi__value">{{ summary().closed ?? '—' }}</strong></a
+      >
+    </div>
+    <section class="card office-intro">
+      <h2>
+        {{ t('Client → Property → Booking → Closed deal', 'عميل ← عقار ← حجز ← صفقة مكتملة') }}
+      </h2>
+      <p class="muted">
+        {{
+          t(
+            'Bookings stay open until cancelled or closed. Monthly leases notify your office 15 days before ending and make the property available again on the lease end date.',
+            'الحجز يظل مفتوحًا حتى إلغائه أو إغلاقه. يصلكم تنبيه قبل نهاية الإيجار الشهري بـ١٥ يومًا، ويعود العقار متاحًا في تاريخ نهاية العقد.'
+          )
+        }}
+      </p>
+    </section>
+  } @else {
+    <section class="card office-filter-panel">
+      <form (ngSubmit)="apply()">
+        <div class="office-filters">
+          @for (field of filterFields(); track field.key; let index = $index) {
+            @if (advanced || index < 3 || ['status', 'ownerId', 'sort'].includes(field.key)) {
+              <label class="field"
+                ><span>{{ t(field.en, field.ar) }}</span>
+                @if (field.options) {
+                  <select [name]="'filter-' + field.key" [(ngModel)]="filters[field.key]">
+                    <option value="">{{ t('All', 'الكل') }}</option>
+                    @for (o of field.options; track o[0]) {
+                      <option [value]="o[0]">{{ t(o[1], o[2]) }}</option>
+                    }
+                  </select>
+                } @else if (field.type === 'money') {
+                  <input
+                    [name]="'filter-' + field.key"
+                    [(ngModel)]="filters[field.key]"
+                    compactAmount
+                    placeholder="10k / 2m"
+                  />
+                } @else {
+                  <input
+                    [name]="'filter-' + field.key"
+                    [(ngModel)]="filters[field.key]"
+                    [type]="field.type || 'text'"
+                  />
+                }
+              </label>
+            }
+          }
+        </div>
+        <div class="office-actions">
+          <button class="btn btn--dark" [disabled]="loading()">
+            {{ t('Apply filters', 'تطبيق الفلاتر') }}</button
+          ><button type="button" class="btn" (click)="advanced = !advanced">
+            {{
+              advanced ? t('Fewer filters', 'فلاتر أقل') : t('More filters', 'فلاتر إضافية')
+            }}</button
+          ><button type="button" class="btn" (click)="reset()">
+            {{ t('Clear all', 'مسح الكل') }}</button
+          ><span class="muted">{{ total() }} {{ t('results', 'نتيجة') }}</span>
+        </div>
+      </form>
+      @if (activeFilters().length) {
+        <div class="office-actions filter-chips">
+          @for (f of activeFilters(); track f[0]) {
+            <button type="button" class="pill" (click)="removeFilter(f[0])">
+              {{ filterLabel(f[0]) }}: {{ label('' + f[1]) }} ×
+            </button>
+          }
+        </div>
+      }
+      @if (view === 'clients' || view === 'properties') {
+        <div class="office-saved">
+          <label class="field"
+            ><span>{{ t('Saved filters', 'الفلاتر المحفوظة') }}</span
+            ><select [(ngModel)]="savedId" (ngModelChange)="useSaved()">
+              <option value="">{{ t('Choose saved view', 'اختر فلاتر محفوظة') }}</option>
+              @for (f of savedFilters(); track f.id) {
+                <option [value]="f.id">{{ f.name }}</option>
+              }
+            </select></label
+          ><label class="field"
+            ><span>{{ t('Save current filters as', 'حفظ الفلاتر باسم') }}</span
+            ><input [(ngModel)]="filterName" maxlength="80" /></label
+          ><button class="btn" [disabled]="filterName.trim().length < 2" (click)="saveFilters()">
+            {{ t('Save view', 'حفظ') }}
+          </button>
+        </div>
+      }
+    </section>
+    @if (loading()) {
+      <p class="muted" role="status">{{ t('Loading…', 'جارٍ التحميل…') }}</p>
+    }
+    @if (view === 'properties') {
+      <div class="office-property-grid">
+        @for (p of rows(); track p.id) {
+          <article class="card office-property">
+            <button type="button" class="office-property__cover" (click)="openDetail(p.id)">
+              @if (p.data.photos?.length) {
+                <img [src]="p.data.photos[0]" [alt]="p.title" loading="lazy" />
+              } @else {
+                <span>{{ t('No photo', 'بدون صورة') }}</span>
+              }
+              <span class="pill office-property__status">{{ label(p.status) }}</span>
+            </button>
+            <div class="office-property__body">
+              <span class="muted mono">{{ p.code }}</span>
+              <h2>
+                <button type="button" class="office-text-button" (click)="openDetail(p.id)">
+                  {{ p.title }}
+                </button>
+              </h2>
+              <p class="muted">
+                {{ p.data.areaName }} · {{ p.data.city }} · {{ label(p.data.type) }}
+              </p>
+              <p>
+                {{ label(p.data.furnishing) }} · {{ p.data.area }} m² · {{ p.data.bedrooms ?? '—' }}
+                {{ t('bedrooms', 'غرف') }}
+              </p>
+              @if (p.data.purpose !== 'rent') {
+                <p class="office-price">{{ t('Sale', 'بيع') }} {{ money(p.data.saleMinor) }}</p>
+              }
+              @if (p.data.purpose !== 'sale') {
+                <p class="office-price">
+                  {{ t('Rent / month', 'إيجار / شهر') }} {{ money(p.data.rentMinor) }}
+                </p>
+              }
+              @if (p.booking) {
+                <p class="note">
+                  {{ label(p.booking.status) }} · {{ p.booking.salesperson }}
+                  @if (p.booking.leaseEnd) {
+                    · {{ t('Ends', 'ينتهي') }} {{ p.booking.leaseEnd }}
+                  }
+                </p>
+              }
+              <div class="office-actions">
+                <button class="btn btn--sm" (click)="openDetail(p.id)">
+                  {{ t('Details', 'التفاصيل') }}
+                </button>
+                @if (p.canEdit) {
+                  <button class="btn btn--sm" (click)="begin('property', p)">
+                    {{ t('Edit', 'تعديل') }}
+                  </button>
+                }
+                @if (canBook() && p.status === 'available') {
+                  <button class="btn btn--sm btn--dark" (click)="begin('book', p)">
+                    {{ t('Book', 'حجز') }}
+                  </button>
+                }
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+      <section class="card">
+        <div class="scroll">
+          <table>
+            <thead>
+              @if (view === 'clients') {
+                <tr>
+                  <th>{{ t('Client', 'العميل') }}</th>
+                  <th>{{ t('Requirements / budget', 'المتطلبات / الميزانية') }}</th>
+                  <th>{{ t('Salesperson', 'السيلز') }}</th>
+                  <th>{{ t('Stage', 'المرحلة') }}</th>
+                  <th>{{ t('Next follow-up', 'المتابعة القادمة') }}</th>
+                  <th>{{ t('Actions', 'الإجراءات') }}</th>
+                </tr>
+              } @else {
+                <tr>
+                  <th>{{ t('Property / reference', 'العقار / الكود') }}</th>
+                  <th>{{ t('Client', 'العميل') }}</th>
+                  <th>{{ t('Salesperson', 'السيلز') }}</th>
+                  <th>{{ t('Status', 'الحالة') }}</th>
+                  <th>{{ t('Agreed price', 'السعر المتفق عليه') }}</th>
+                  <th>{{ t('Actions', 'الإجراءات') }}</th>
+                </tr>
+              }
+            </thead>
+            <tbody>
+              @for (r of rows(); track r.id) {
+                @if (view === 'clients') {
+                  <tr>
+                    <td>
+                      <b>{{ r.name }}</b
+                      ><span class="sub" dir="ltr">{{ r.phone }}</span
+                      ><span class="sub mono">{{ r.code }}</span>
+                    </td>
+                    <td>
+                      {{ label(r.needs.purpose) }} · {{ (r.needs.areas || []).join('، ')
+                      }}<span class="sub">{{
+                        r.needs.purpose === 'rent'
+                          ? money(r.needs.rentBudgetMinor)
+                          : money(r.needs.saleBudgetMinor)
+                      }}</span>
+                    </td>
+                    <td>{{ r.owner.name }}</td>
+                    <td>
+                      <span class="pill">{{ label(r.status) }}</span>
+                    </td>
+                    <td [class.office-late]="r.followUpAt && r.followUpAt < now()">
+                      {{ date(r.followUpAt) }}
+                    </td>
+                    <td>
+                      <div class="office-actions">
+                        <button class="btn btn--sm" (click)="openDetail(r.id)">
+                          {{ t('Details / matches', 'التفاصيل / الترشيحات') }}
+                        </button>
+                        @if (canManage()) {
+                          <button class="btn btn--sm" (click)="begin('client', r)">
+                            {{ t('Edit', 'تعديل') }}</button
+                          ><button class="btn btn--sm" (click)="begin('activity', r)">
+                            {{ t('Log activity', 'تسجيل تواصل') }}
+                          </button>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                } @else {
+                  <tr>
+                    <td>
+                      <b>{{ r.property.title }}</b
+                      ><span class="sub mono">{{ r.code }}</span
+                      ><span class="sub">{{ label(r.purpose) }}</span>
+                    </td>
+                    <td>
+                      {{ r.client.name }}<span class="sub" dir="ltr">{{ r.client.phone }}</span>
+                    </td>
+                    <td>{{ r.owner.name }}</td>
+                    <td>
+                      <span class="pill">{{ label(r.status) }}</span>
+                      @if (r.leaseEnd) {
+                        <span class="sub">{{ r.leaseStart }} → {{ r.leaseEnd }}</span>
+                      }
+                    </td>
+                    <td>
+                      {{ money(r.priceMinor) }}
+                      @if (r.purpose === 'rent') {
+                        <span class="sub">{{ t('per month', 'شهريًا') }}</span>
+                      }
+                    </td>
+                    <td>
+                      <div class="office-actions">
+                        @if (canAct(r) && r.status === 'booked') {
+                          <button class="btn btn--sm btn--dark" (click)="begin('close', r)">
+                            {{ t('Close deal', 'إغلاق الصفقة') }}</button
+                          ><button class="btn btn--sm" (click)="begin('cancel', r)">
+                            {{ t('Cancel', 'إلغاء') }}
+                          </button>
+                        }
+                        @if (canAct(r) && r.status === 'rented') {
+                          <button class="btn btn--sm" (click)="begin('renew', r)">
+                            {{ t('Renew lease', 'تجديد الإيجار') }}
+                          </button>
+                        }
+                        @if (r.contractUrl) {
+                          <a
+                            class="btn btn--sm"
+                            [href]="r.contractUrl"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            >{{ t('Contract', 'العقد') }}</a
+                          >
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+    @if (!loading() && !rows().length) {
+      <section class="card office-empty">
+        {{
+          t(
+            'No matching records. Add a record or adjust your filters.',
+            'لا توجد سجلات مطابقة. أضف سجلًا أو عدّل الفلاتر.'
+          )
+        }}
+      </section>
+    }
+    <div class="office-pagination">
+      <span>{{ total() }} · {{ t('Page', 'صفحة') }} {{ page() }}</span>
+      <div class="office-actions">
+        <button class="btn" [disabled]="loading() || page() === 1" (click)="paginate(-1)">
+          {{ t('Previous', 'السابق') }}</button
+        ><button class="btn" [disabled]="loading() || page() * 24 >= total()" (click)="paginate(1)">
+          {{ t('Next', 'التالي') }}
+        </button>
+      </div>
+    </div>
+  }
+</div>
+@if (detail(); as d) {
+  <div class="scrim" (click)="closeDetail()"></div>
+  <section
+    class="drawer office-drawer"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="
+      view === 'clients'
+        ? t('Client details', 'تفاصيل العميل')
+        : t('Property details', 'تفاصيل العقار')
+    "
+    [attr.dir]="ar() ? 'rtl' : 'ltr'"
+  >
+    <div class="drawer__head">
+      <div>
+        <h2>{{ d.name || d.title }}</h2>
+        <span class="muted mono">{{ d.code }}</span>
+      </div>
+      <button class="btn" [disabled]="saving()" (click)="closeDetail()">
+        {{ t('Close', 'إغلاق') }}
+      </button>
+    </div>
+    <div class="drawer__main office-detail">
+      @if (view === 'properties') {
+        <span class="pill">{{ label(d.status) }}</span>
+        <p>{{ d.data.address }} · {{ d.data.areaName }} · {{ d.data.city }}</p>
+        <p>{{ label(d.data.type) }} · {{ label(d.data.furnishing) }} · {{ d.data.area }} m²</p>
+        <p>
+          {{ t('Bedrooms', 'غرف النوم') }}: {{ d.data.bedrooms ?? '—' }} ·
+          {{ t('Bathrooms', 'الحمامات') }}: {{ d.data.bathrooms ?? '—' }} ·
+          {{ t('Floor', 'الدور') }}: {{ d.data.floor ?? '—' }}
+        </p>
+        <p>{{ t('Finishing', 'التشطيب') }}: {{ d.data.finish || '—' }}</p>
+        <p>{{ d.data.description }}</p>
+        <div class="office-gallery">
+          @for (photo of d.data.photos; track photo) {
+            <a [href]="photo" target="_blank" rel="noopener noreferrer"
+              ><img [src]="photo" [alt]="d.title" loading="lazy"
+            /></a>
+          }
+        </div>
+        <section class="card office-intro">
+          <h3>{{ t('Owner contact', 'بيانات المالك') }}</h3>
+          <b>{{ d.data.ownerName }}</b>
+          @for (phone of d.data.ownerPhones; track phone) {
+            <p>
+              <a [href]="'tel:' + phone" dir="ltr">{{ phone }}</a>
+            </p>
+          }
+        </section>
+        <p>{{ t('Responsible salesperson', 'السيلز المسؤول') }}: {{ d.responsible.name }}</p>
+        <p>{{ t('Added by', 'أضيف بواسطة') }}: {{ d.createdBy.name }} · {{ date(d.createdAt) }}</p>
+        <p>{{ t('Last confirmation', 'آخر تأكيد') }}: {{ d.data.verifiedOn || '—' }}</p>
+        @if (d.data.purpose !== 'rent') {
+          <p>{{ t('Sale price', 'سعر البيع') }}: {{ money(d.data.saleMinor) }}</p>
+        }
+        @if (d.data.purpose !== 'sale') {
+          <p>{{ t('Monthly rent', 'الإيجار الشهري') }}: {{ money(d.data.rentMinor) }}</p>
+          <p>{{ t('Security deposit', 'التأمين') }}: {{ money(d.data.depositMinor) }}</p>
+          <p>
+            {{ t('Minimum lease · months', 'أقل مدة إيجار · شهور') }}: {{ d.data.minLeaseMonths }}
+          </p>
+        }
+        <p>
+          {{ t('Available from', 'متاح من') }}:
+          {{ d.booking?.leaseEnd || d.data.availableOn || '—' }}
+        </p>
+        <div class="office-actions">
+          @if (d.canEdit) {
+            <button class="btn" (click)="begin('property', d)">
+              {{ t('Edit property', 'تعديل العقار') }}
+            </button>
+          }
+          @if (canBook() && d.status === 'available') {
+            <button class="btn btn--dark" (click)="begin('book', d)">
+              {{ t('Book for your client', 'حجز لعميلك') }}
+            </button>
+          }
+        </div>
+      } @else {
+        <p>
+          <a [href]="'tel:' + d.phone" dir="ltr">{{ d.phone }}</a> · {{ d.owner.name }}
+        </p>
+        <p>{{ label(d.status) }} · {{ d.source }}</p>
+        <p>
+          {{ label(d.needs.purpose) }} · {{ (d.needs.areas || []).join('، ') }} ·
+          {{ label(d.needs.type) }} · {{ label(d.needs.furnishing) }}
+        </p>
+        <p>{{ t('Purchase budget', 'ميزانية الشراء') }}: {{ money(d.needs.saleBudgetMinor) }}</p>
+        <p>
+          {{ t('Monthly rent budget', 'ميزانية الإيجار الشهري') }}:
+          {{ money(d.needs.rentBudgetMinor) }}
+        </p>
+        <p>{{ t('Next follow-up', 'المتابعة القادمة') }}: {{ date(d.followUpAt) }}</p>
+        <div class="office-actions">
+          @if (canManage()) {
+            <button class="btn" (click)="begin('client', d)">
+              {{ t('Edit client', 'تعديل العميل') }}</button
+            ><button class="btn" (click)="begin('activity', d)">
+              {{ t('Call / note / viewing', 'مكالمة / ملاحظة / معاينة') }}
+            </button>
+          }
+        </div>
+        <section class="card office-intro">
+          <h3>{{ t('Properties matching this client', 'عقارات مناسبة للعميل') }}</h3>
+          <p class="muted">
+            {{
+              t(
+                'Uses saved requirements and your office stock, with up to 10% above budget clearly marked.',
+                'حسب المتطلبات المحفوظة وعقارات مكتبك، مع توضيح الزيادة حتى ١٠٪ فوق الميزانية.'
+              )
+            }}
+          </p>
+          <label class="field"
+            ><span>{{ t('Search purpose', 'غرض البحث') }}</span
+            ><select [(ngModel)]="matchPurpose">
+              <option value="sale">{{ t('Purchase', 'شراء') }}</option>
+              <option value="rent">{{ t('Monthly rent', 'إيجار شهري') }}</option>
+            </select></label
+          ><button class="btn btn--dark" [disabled]="matching()" (click)="recommend()">
+            {{
+              matching()
+                ? t('Matching…', 'جارٍ البحث…')
+                : t('Recommend properties', 'عرض العقارات المناسبة')
+            }}
+          </button>
+        </section>
+        @if (matches(); as result) {
+          <p class="muted">
+            {{ result.total }}
+            {{
+              t(
+                'matching properties · sorted within budget first',
+                'عقار مطابق · ضمن الميزانية أولًا'
+              )
+            }}
+          </p>
+          @for (m of result.items; track m.property.id) {
+            <article class="card office-match">
+              <h3>{{ m.property.title }}</h3>
+              <p>
+                {{ money(m.priceMinor) }}
+                @if (result.purpose === 'rent') {
+                  / {{ t('month', 'شهر') }}
+                }
+              </p>
+              @if (m.aboveBudgetPercent > 0) {
+                <p class="note note--bad">
+                  {{ t('Above budget', 'أعلى من الميزانية') }} {{ money(m.aboveBudgetMinor) }} ·
+                  {{ m.aboveBudgetPercent }}%
+                </p>
+              }
+              <ul>
+                @for (reason of ar() ? m.reasons.ar : m.reasons.en; track reason) {
+                  <li>{{ reason }}</li>
+                }
+              </ul>
+              <p>{{ m.property.data.address }} · {{ m.property.data.areaName }}</p>
+              <p>
+                {{ m.property.data.ownerName }} ·
+                <span dir="ltr">{{ m.property.data.ownerPhones.join(' / ') }}</span>
+              </p>
+              @if (m.availableSoon) {
+                <p class="note">
+                  {{ t('Available after lease ends', 'متاح بعد نهاية الإيجار') }}
+                  {{ m.property.booking?.leaseEnd }}
+                </p>
+              }
+              @if (
+                canBook() &&
+                m.property.status === 'available' &&
+                (options().scope === 'company' || d.owner.id === auth.user()?.id)
+              ) {
+                <button class="btn btn--dark" (click)="bookMatch(m)">
+                  {{ t('Book for this client', 'حجز لهذا العميل') }}
+                </button>
+              }
+              <a
+                class="btn"
+                [routerLink]="['/company/office/properties']"
+                [queryParams]="{ propertyId: m.property.id }"
+                >{{ t('Property details', 'تفاصيل العقار') }}</a
+              >
+            </article>
+          }
+          @if (!result.items.length) {
+            <p class="note">
+              {{
+                t(
+                  'No property matches these saved requirements within the 10% ceiling. Update the client needs to search again.',
+                  'لا يوجد عقار مطابق للمتطلبات ضمن حد ١٠٪. عدّل احتياجات العميل لإعادة البحث.'
+                )
+              }}
+            </p>
+          }
+        }
+        <h3>{{ t('Communication and viewings', 'التواصل والمعاينات') }}</h3>
+        @for (a of d.activities; track a.id) {
+          <article class="office-history">
+            <b>{{ a.actor }} · {{ label(a.kind) }}</b
+            ><span class="sub">{{ date(a.createdAt) }}</span>
+            <p>{{ a.notes }}</p>
+            @if (a.property) {
+              <p>{{ a.property }}</p>
+            }
+            @if (a.scheduledAt) {
+              <p>{{ date(a.scheduledAt) }}</p>
+            }
+            @if (a.outcome) {
+              <p>{{ a.outcome }}</p>
+            }
+          </article>
+        }
+        @if (!d.activities?.length) {
+          <p class="muted">{{ t('No activity recorded yet.', 'لم يتم تسجيل تواصل بعد.') }}</p>
+        }
+      }
+    </div>
+  </section>
+}
+@if (mode()) {
+  <div class="scrim scrim--top" (click)="closeForm()"></div>
+  <section
+    class="dialog dialog--wide office-dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="formTitle()"
+    [attr.dir]="ar() ? 'rtl' : 'ltr'"
+  >
+    <form (ngSubmit)="save()">
+      <div class="dialog__head">
+        <span class="dialog__title">{{ formTitle() }}</span>
+        @if (target()) {
+          <p class="muted">{{ target().title || target().name || target().property?.title }}</p>
+        }
+      </div>
+      <div class="dialog__main">
+        @if (error()) {
+          <p class="note note--bad" role="alert">{{ error() }}</p>
+        }
+        @if (mode() === 'book') {
+          <p class="note">
+            {{
+              t(
+                'This booking stays open until you cancel it or close the deal. One active booking per property.',
+                'الحجز يظل مفتوحًا حتى إلغائه أو إغلاق الصفقة. حجز نشط واحد لكل عقار.'
+              )
+            }}
+          </p>
+        }
+        @if (mode() === 'book' || mode() === 'activity') {
+          <div class="office-lookup">
+            <label class="field"
+              ><span>{{
+                mode() === 'book'
+                  ? t('Search your clients', 'بحث في عملائك')
+                  : t('Search office properties for a viewing', 'بحث عقارات المكتب للمعاينة')
+              }}</span
+              ><input name="lookup" [(ngModel)]="lookup" /></label
+            ><button type="button" class="btn" [disabled]="saving()" (click)="searchChoices()">
+              {{ t('Search', 'بحث') }}
+            </button>
+          </div>
+          <label class="field"
+            ><span>{{
+              mode() === 'book'
+                ? t('Client', 'العميل')
+                : t('Property · required for a viewing', 'العقار · مطلوب للمعاينة')
+            }}</span
+            ><select
+              name="choice"
+              [ngModel]="mode() === 'book' ? form.clientId : form.propertyId"
+              (ngModelChange)="
+                mode() === 'book' ? (form.clientId = $event) : (form.propertyId = $event)
+              "
+              [required]="mode() === 'book'"
+              [disabled]="saving()"
+            >
+              <option value="">{{ t('Choose', 'اختر') }}</option>
+              @for (c of choices(); track c.id) {
+                <option [value]="c.id">{{ c.name || c.title }} · {{ c.phone || c.code }}</option>
+              }
+            </select></label
+          >
+        }
+        @if (mode() === 'property') {
+          <label class="field"
+            ><span>{{
+              t(
+                'Upload property photos · JPEG, PNG, WebP · up to 5 MB each',
+                'رفع صور العقار · JPEG، PNG، WebP · حتى ٥ ميجا للصورة'
+              )
+            }}</span
+            ><input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              [disabled]="saving()"
+              (change)="uploadFiles($event, 'photo')"
+          /></label>
+        }
+        @if (mode() === 'close') {
+          <label class="field"
+            ><span>{{
+              t(
+                'Upload contract · optional PDF · up to 5 MB',
+                'رفع العقد · PDF اختياري · حتى ٥ ميجا'
+              )
+            }}</span
+            ><input
+              type="file"
+              accept="application/pdf"
+              [disabled]="saving()"
+              (change)="uploadFiles($event, 'contract')"
+          /></label>
+        }
+        <div class="office-form-grid">
+          @for (field of fields(); track field.key) {
+            <label class="field" [class.office-wide]="field.type === 'textarea'"
+              ><span
+                >{{ t(field.en, field.ar) }}
+                @if (field.required) {
+                  *
+                }
+              </span>
+              @if (field.options) {
+                <select
+                  [name]="field.key"
+                  [(ngModel)]="form[field.key]"
+                  [required]="!!field.required"
+                  [disabled]="saving()"
+                >
+                  <option value="">{{ t('Not set', 'غير محدد') }}</option>
+                  @for (o of field.options; track o[0]) {
+                    <option [value]="o[0]">{{ t(o[1], o[2]) }}</option>
+                  }
+                </select>
+              } @else if (field.type === 'textarea') {
+                <textarea
+                  [name]="field.key"
+                  [(ngModel)]="form[field.key]"
+                  [required]="!!field.required"
+                  rows="3"
+                  maxlength="4000"
+                  [disabled]="saving()"
+                ></textarea>
+              } @else if (field.type === 'money') {
+                <input
+                  [name]="field.key"
+                  [(ngModel)]="form[field.key]"
+                  compactAmount
+                  [required]="!!field.required"
+                  placeholder="10k / 2m"
+                  [disabled]="saving()"
+                />
+              } @else if (field.type === 'checkbox') {
+                <input
+                  type="checkbox"
+                  [name]="field.key"
+                  [(ngModel)]="form[field.key]"
+                  [disabled]="saving()"
+                />
+              } @else {
+                <input
+                  [name]="field.key"
+                  [(ngModel)]="form[field.key]"
+                  [type]="field.type || 'text'"
+                  [required]="!!field.required"
+                  [min]="field.min ?? null"
+                  [max]="field.max ?? null"
+                  [step]="field.type === 'number' ? 'any' : null"
+                  [disabled]="saving()"
+                />
+              }
+            </label>
+          }
+        </div>
+      </div>
+      <div class="dialog__foot">
+        <button class="btn" type="button" [disabled]="saving()" (click)="closeForm()">
+          {{ t('Cancel', 'إلغاء') }}</button
+        ><button class="btn btn--dark" [disabled]="saving()" type="submit">
+          {{ saving() ? t('Saving…', 'جارٍ الحفظ…') : t('Save', 'حفظ') }}
+        </button>
+      </div>
+    </form>
+  </section>
+}

@@ -437,3 +437,63 @@ describe('Manual lead creation controls', () => {
     expect(canCreateLead({ ...sales, permissions: [] })).toBe(false);
   });
 });
+describe('Real estate office navigation', () => {
+  it('uses the simple office workflow for office companies, keeps Finance out and does not mutate brokerage navigation', async () => {
+    const user = signal<any>({
+      ...owner,
+      pool: 'company_user',
+      role: 'agent',
+      company: { ...owner.company, type: 'real_estate_office' },
+      permissions: [
+        'workspace.view',
+        'leads.read',
+        'leads.manage',
+        'units.read',
+        'projects.read',
+        'reservations.read',
+        'reservations.manage',
+        'commissions.read',
+        'contracts.read',
+        'finance.read',
+        'tasks.read',
+      ],
+    });
+    TestBed.configureTestingModule({
+      imports: [CompanyShell],
+      providers: [
+        provideRouter([]),
+        {
+          provide: AuthService,
+          useValue: {
+            user,
+            logout: vi.fn(),
+            watched: signal(0),
+            request: vi.fn(async (path: string) =>
+              path.includes('/announcements') ? [] : { items: [], alerts: [] },
+            ),
+          },
+        },
+      ],
+    });
+    const f = TestBed.createComponent(CompanyShell);
+    await f.whenStable();
+    f.detectChanges();
+    let paths = [...f.nativeElement.querySelectorAll('.sidebar__item')].map((x: any) =>
+      x.getAttribute('href'),
+    );
+    for (const p of ['dashboard', 'clients', 'properties', 'bookings', 'deals'])
+      expect(paths).toContain('/company/office/' + p);
+    expect(paths).not.toContain('/company/commissions');
+    expect(paths).not.toContain('/company/contracts');
+    expect(paths).not.toContain('/company/tasks');
+    expect(f.nativeElement.textContent).toContain('+ New client');
+    user.set({ ...user(), company: { ...owner.company, type: 'brokerage' } });
+    f.detectChanges();
+    paths = [...f.nativeElement.querySelectorAll('.sidebar__item')].map((x: any) =>
+      x.getAttribute('href'),
+    );
+    expect(paths).toContain('/company/units');
+    expect(paths).toContain('/company/catalog/units');
+    expect(paths).not.toContain('/company/office/clients');
+  });
+});

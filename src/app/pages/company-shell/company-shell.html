@@ -341,7 +341,9 @@
             [placeholder]="
               lang() === 'ar'
                 ? 'ابحث في العملاء وجهات الاتصال والوحدات والعقود…'
-                : 'Search leads, contacts, units and contracts…'
+                : isOffice()
+                  ? 'Search clients and office properties…'
+                  : 'Search leads, contacts, units and contracts…'
             "
             [attr.aria-label]="lang() === 'ar' ? 'بحث العملاء' : 'Search leads'"
           />
@@ -430,7 +432,7 @@
 
         @if (canNewLead()) {
           <button type="button" class="topbar__new" (click)="$event.stopPropagation(); newLead()">
-            {{ lang() === 'ar' ? '+ عميل جديد' : '+ New lead' }}
+            {{ lang() === 'ar' ? '+ عميل جديد' : isOffice() ? '+ New client' : '+ New lead' }}
           </button>
         }
 

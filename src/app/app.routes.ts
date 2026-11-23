@@ -194,6 +194,32 @@ export const routes: Routes = [
     canActivateChild: [companyGuard],
     loadComponent: () => import('./pages/company-shell/company-shell').then((m) => m.CompanyShell),
     children: [
+      {
+        path: 'office/dashboard',
+        data: { officeView: 'dashboard', permission: 'leads.read' },
+        loadComponent: () => import('./pages/company-shell/office/office').then((m) => m.Office),
+      },
+      {
+        path: 'office/clients',
+        data: { officeView: 'clients', permission: 'leads.read' },
+        loadComponent: () => import('./pages/company-shell/office/office').then((m) => m.Office),
+      },
+      {
+        path: 'office/properties',
+        data: { officeView: 'properties', permission: 'units.read' },
+        loadComponent: () => import('./pages/company-shell/office/office').then((m) => m.Office),
+      },
+      {
+        path: 'office/bookings',
+        data: { officeView: 'bookings', permission: 'reservations.read' },
+        loadComponent: () => import('./pages/company-shell/office/office').then((m) => m.Office),
+      },
+      {
+        path: 'office/deals',
+        data: { officeView: 'deals', permission: 'reservations.read' },
+        loadComponent: () => import('./pages/company-shell/office/office').then((m) => m.Office),
+      },
+
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
         path: 'employee',

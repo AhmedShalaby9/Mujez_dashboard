@@ -349,7 +349,7 @@
           </select></label
         >
         <label class="field"
-          ><span>{{ t('Lead', 'العميل') }}</span
+          ><span>{{ t(isOffice() ? 'Client' : 'Lead', 'العميل') }}</span
           ><select name="leadId" [(ngModel)]="draft.leadId">
             <option value="">—</option>
             @for (l of leadOptions(); track l.id) {

@@ -2,7 +2,7 @@ import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CompanyUiState } from '../company-ui-state';
-import { AuthService } from '../../../auth.service';
+import { AuthService, officeWorkspace } from '../../../auth.service';
 import {
   CalendarApi,
   EVENT_TYPES,
@@ -328,9 +328,12 @@ export class Calendar {
         queryParams: { contactId: e.contact.id },
       });
   }
+  readonly isOffice = computed(() => officeWorkspace(this.auth.user()));
   openLead(e: CalendarEvent) {
     if (e.lead)
-      void this.router.navigate(['/company/leads'], { queryParams: { leadId: e.lead.id } });
+      void this.router.navigate([this.isOffice() ? '/company/office/clients' : '/company/leads'], {
+        queryParams: this.isOffice() ? { clientId: e.lead.id } : { leadId: e.lead.id },
+      });
   }
   readonly weekCount = computed(() => this.events().length);
 

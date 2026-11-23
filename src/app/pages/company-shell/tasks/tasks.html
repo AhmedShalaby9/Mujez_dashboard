@@ -185,8 +185,8 @@
               @if (task.lead) {
                 <a
                   class="rel"
-                  [routerLink]="['/company/leads']"
-                  [queryParams]="{ leadId: task.lead.id }"
+                  [routerLink]="[clientPath()]"
+                  [queryParams]="clientQuery(task.lead.id)"
                   (click)="$event.stopPropagation()"
                   >{{ task.lead.name[lang()] }}</a
                 >
@@ -247,8 +247,8 @@
                   @if (task.lead) {
                     <a
                       class="rel"
-                      [routerLink]="['/company/leads']"
-                      [queryParams]="{ leadId: task.lead.id }"
+                      [routerLink]="[clientPath()]"
+                      [queryParams]="clientQuery(task.lead.id)"
                       (click)="$event.stopPropagation()"
                       >{{ task.lead.name[lang()] }}</a
                     >
@@ -369,13 +369,10 @@
           >
           <span>{{ t('Assignee', 'المسؤول') }}</span
           ><b>{{ task.assignee?.name || t('Unassigned', 'دون مسؤول') }}</b>
-          <span>{{ t('Lead', 'العميل') }}</span>
+          <span>{{ t(isOffice() ? 'Client' : 'Lead', 'العميل') }}</span>
           <b>
             @if (task.lead) {
-              <a
-                class="rel"
-                [routerLink]="['/company/leads']"
-                [queryParams]="{ leadId: task.lead.id }"
+              <a class="rel" [routerLink]="[clientPath()]" [queryParams]="clientQuery(task.lead.id)"
                 >{{ task.lead.name[lang()] }} · {{ task.lead.reference }}</a
               >
             } @else {
@@ -527,7 +524,9 @@
         }
         @if (canReadLeads()) {
           <label class="field"
-            ><span>{{ t('Lead (optional)', 'العميل (اختياري)') }}</span
+            ><span>{{
+              t(isOffice() ? 'Client (optional)' : 'Lead (optional)', 'العميل (اختياري)')
+            }}</span
             ><select name="leadId" [(ngModel)]="draft.leadId">
               <option value="">—</option>
               @for (l of leadOptions(); track l.id) {

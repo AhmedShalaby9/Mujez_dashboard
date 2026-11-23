@@ -224,3 +224,35 @@ it('shows only sales and team lead roles for real estate office invitations', as
   c.editRoles({ ...members[1], roles: ['agent', 'employee'] });
   expect(c.selectedRoles()).toEqual(['agent']);
 });
+
+it('keeps tasks, calendar and contacts in office navigation for sales, team leads and owners', async () => {
+  const user = signal<any>({
+    pool: 'company_user',
+    role: 'agent',
+    company: { type: 'real_estate_office' },
+    permissions: ['leads.read', 'tasks.read', 'calendar.read', 'contacts.read'],
+  });
+  await TestBed.configureTestingModule({
+    imports: [CompanyShell],
+    providers: [
+      provideRouter([]),
+      { provide: AuthService, useValue: { user, watched: signal(0) } },
+    ],
+  }).compileComponents();
+  const f = TestBed.createComponent(CompanyShell);
+  for (const role of ['agent', 'team_lead', 'company_owner']) {
+    user.set({
+      ...user(),
+      role,
+      pool: role === 'company_owner' ? 'company_admin' : 'company_user',
+    });
+    const paths = f.componentInstance
+      .visibleNav()
+      .filter((x) => x.kind === 'item')
+      .map((x) => (x as any).path);
+    expect(paths).toContain('tasks');
+    expect(paths).toContain('calendar');
+    expect(paths).toContain('contacts');
+    expect(paths).toContain('office/clients');
+  }
+});

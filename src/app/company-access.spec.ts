@@ -456,6 +456,8 @@ describe('Real estate office navigation', () => {
         'contracts.read',
         'finance.read',
         'tasks.read',
+        'calendar.read',
+        'contacts.read',
       ],
     });
     TestBed.configureTestingModule({
@@ -485,7 +487,7 @@ describe('Real estate office navigation', () => {
       expect(paths).toContain('/company/office/' + p);
     expect(paths).not.toContain('/company/commissions');
     expect(paths).not.toContain('/company/contracts');
-    expect(paths).not.toContain('/company/tasks');
+    for (const p of ['tasks', 'calendar', 'contacts']) expect(paths).toContain('/company/' + p);
     expect(f.nativeElement.textContent).toContain('+ New client');
     user.set({ ...user(), company: { ...owner.company, type: 'brokerage' } });
     f.detectChanges();

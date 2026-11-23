@@ -251,7 +251,6 @@ export const companyGuard: CanActivateFn = async (route) => {
     const targets: Record<string, string> = {
       dashboard: 'dashboard',
       leads: 'clients',
-      contacts: 'clients',
       pipeline: 'deals',
       projects: 'properties',
       units: 'properties',

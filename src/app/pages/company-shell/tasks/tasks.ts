@@ -2,7 +2,7 @@ import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CompanyUiState } from '../company-ui-state';
-import { AuthService } from '../../../auth.service';
+import { AuthService, officeWorkspace } from '../../../auth.service';
 import { TasksApi, TASK_GROUPS, type CompanyTask } from '../../../tasks-api.service';
 @Component({
   selector: 'app-tasks',
@@ -39,7 +39,9 @@ export class Tasks {
   readonly today = signal('');
   readonly asOf = signal('');
   readonly summary = signal<Record<string, number>>({});
-  readonly workloadRows=signal<Array<{id:string|null;name:string|null;open:number}>>([]);
+  readonly workloadRows = signal<Array<{ id: string | null; name: string | null; open: number }>>(
+    [],
+  );
   readonly groups = TASK_GROUPS;
   readonly groupFilter = signal('all');
   readonly statusFilter = signal('open');
@@ -61,6 +63,13 @@ export class Tasks {
   readonly assignees = signal<Array<{ id: string; name: string }>>([]);
   /** Sales (own-scope) users can only keep tasks on themselves. */
   readonly canAssign = signal(true);
+  readonly isOffice = computed(() => officeWorkspace(this.auth.user()));
+  clientPath() {
+    return this.isOffice() ? '/company/office/clients' : '/company/leads';
+  }
+  clientQuery(id: string) {
+    return this.isOffice() ? { clientId: id } : { leadId: id };
+  }
   readonly leadOptions = signal<
     Array<{ id: string; name: { en: string; ar: string }; reference: string }>
   >([]);
@@ -105,9 +114,13 @@ export class Tasks {
       this.contextLead.set(null);
       if (id && this.canReadLeads()) {
         try {
-          const l = await this.api.sales.get('leads/' + id);
+          const l = await this.api.sales.get((this.isOffice() ? 'office/clients/' : 'leads/') + id);
           if (serial === this.routeSerial)
-            this.contextLead.set({ id: l.id, name: l.name, reference: l.reference });
+            this.contextLead.set({
+              id: l.id,
+              name: this.isOffice() ? { en: l.name, ar: l.name } : l.name,
+              reference: l.reference ?? l.code,
+            });
         } catch (e) {
           if (serial === this.routeSerial) this.error.set((e as Error).message);
         }
@@ -196,7 +209,7 @@ export class Tasks {
         this.tasks.set(r.items);
         this.total.set(r.total);
         this.summary.set(r.summary);
-        this.workloadRows.set(r.summary.byAssignee??[]);
+        this.workloadRows.set(r.summary.byAssignee ?? []);
         this.today.set(r.today);
         this.asOf.set(r.asOf);
         this.page.set(page);
@@ -430,7 +443,13 @@ export class Tasks {
   }
   /** Assignee load among the loaded tasks (shown when the user can see others' tasks). */
   readonly byAssignee = computed(() => {
-    const rows=this.workloadRows(),max=Math.max(1,...rows.map(r=>r.open));return rows.map(r=>({name:r.name??this.t('Unassigned','دون مسؤول'),n:r.open,pct:(r.open/max)*100+'%'}));
+    const rows = this.workloadRows(),
+      max = Math.max(1, ...rows.map((r) => r.open));
+    return rows.map((r) => ({
+      name: r.name ?? this.t('Unassigned', 'دون مسؤول'),
+      n: r.open,
+      pct: (r.open / max) * 100 + '%',
+    }));
   });
 
   async toggle(t: CompanyTask) {

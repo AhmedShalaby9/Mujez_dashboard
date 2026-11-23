@@ -178,3 +178,28 @@ describe('Connected company tasks', () => {
     expect(f.nativeElement.textContent).not.toContain('+ New task');
   });
 });
+
+it('links office task clients to their office drawer and retains office client IDs in saved tasks', async () => {
+  const api = mockApi();
+  const u = signal<any>({
+    id: 'owner',
+    company: { type: 'real_estate_office' },
+    permissions: ['tasks.read', 'tasks.manage', 'leads.read'],
+  });
+  TestBed.configureTestingModule({
+    imports: [Tasks],
+    providers: [
+      provideRouter([]),
+      { provide: ActivatedRoute, useValue: route },
+      { provide: AuthService, useValue: { user: u } },
+      { provide: TasksApi, useValue: api },
+    ],
+  });
+  const f = TestBed.createComponent(Tasks);
+  await f.whenStable();
+  f.detectChanges();
+  const c = f.componentInstance;
+  expect(c.clientPath()).toBe('/company/office/clients');
+  expect(c.clientQuery('client-id')).toEqual({ clientId: 'client-id' });
+  expect(f.nativeElement.querySelector('a[href*="/company/office/clients"]')).not.toBeNull();
+});

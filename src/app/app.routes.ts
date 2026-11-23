@@ -385,43 +385,59 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/company-shell/tasks/tasks').then((m) => m.Tasks),
       },
       {
-        path: 'developers',
+        path: 'catalog/developers',
         data: { permission: 'projects.read', view: 'devs' },
         loadComponent: () =>
           import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
       },
       {
-        path: 'developers/:id',
+        path: 'catalog/developers/:id',
         data: { permission: 'projects.read', view: 'dev' },
         loadComponent: () =>
           import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
       },
       {
-        path: 'compounds',
+        path: 'catalog/compounds',
         data: { permission: 'projects.read', view: 'cos' },
         loadComponent: () =>
           import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
       },
       {
-        path: 'compounds/:id',
+        path: 'catalog/compounds/:id',
         data: { permission: 'projects.read', view: 'co' },
         loadComponent: () =>
           import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
       },
       {
-        path: 'units',
+        path: 'catalog/units',
         data: { permission: 'units.read', view: 'units' },
         loadComponent: () =>
           import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
       },
       {
-        path: 'units/:id',
+        path: 'catalog/units/:id',
         data: { permission: 'units.read', view: 'unit' },
         loadComponent: () =>
           import('./pages/company-shell/inventory/inventory').then((m) => m.Inventory),
       },
-      // Legacy inventory URL (the API-backed Projects page was replaced by the static Compounds tab)
-      { path: 'projects', redirectTo: 'compounds', pathMatch: 'full' },
+      { path: 'catalog', redirectTo: 'catalog/developers', pathMatch: 'full' },
+      { path: 'developers', redirectTo: 'catalog/developers', pathMatch: 'full' },
+      { path: 'developers/:id', redirectTo: 'catalog/developers/:id', pathMatch: 'full' },
+      { path: 'compounds', redirectTo: 'catalog/compounds', pathMatch: 'full' },
+      { path: 'compounds/:id', redirectTo: 'catalog/compounds/:id', pathMatch: 'full' },
+      { path: 'units/:id', redirectTo: 'catalog/units/:id', pathMatch: 'full' },
+      { path: 'inventory', redirectTo: 'projects', pathMatch: 'full' },
+      {
+        path: 'projects',
+        data: { permission: 'projects.read' },
+        loadComponent: () =>
+          import('./pages/company-shell/projects/projects').then((m) => m.Projects),
+      },
+      {
+        path: 'units',
+        data: { permission: 'units.read' },
+        loadComponent: () => import('./pages/company-shell/units/units').then((m) => m.Units),
+      },
       {
         path: 'reservations',
         data: { permission: 'reservations.read' },

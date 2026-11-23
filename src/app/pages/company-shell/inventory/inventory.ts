@@ -4,7 +4,6 @@ import { Component, computed, inject, signal, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription, combineLatest } from 'rxjs';
-import { InventoryApi, type InventoryUnit } from '../../../inventory-api.service';
 import {
   CatalogApi,
   type CatalogItem,
@@ -56,8 +55,6 @@ interface Draft {
 })
 export class Inventory implements OnDestroy {
   readonly api = inject(CatalogApi);
-  private readonly inventory = inject(InventoryApi);
-  readonly legacy = signal<InventoryUnit | null>(null);
   readonly archiveConfirm = signal(false);
   readonly auth = inject(AuthService);
   readonly route = inject(ActivatedRoute);
@@ -81,7 +78,7 @@ export class Inventory implements OnDestroy {
       ? 'compounds'
       : 'units';
   readonly detail = ['dev', 'co', 'unit'].includes(this.view);
-  readonly base = computed(() => (this.admin() ? '/admin' : '/company'));
+  readonly base = computed(() => (this.admin() ? '/admin' : '/company/catalog'));
   readonly items = signal<CatalogItem[]>([]);
   readonly item = signal<CatalogItem | null>(null);
   readonly related = signal<CatalogItem[]>([]);
@@ -221,14 +218,7 @@ export class Inventory implements OnDestroy {
     this.items.set([]);
     this.item.set(null);
     this.related.set([]);
-    this.legacy.set(null);
     try {
-      const legacyId = this.route.snapshot.queryParamMap?.get('unitId');
-      if (!this.admin() && this.kind === 'units' && !this.detail && legacyId) {
-        const u = await this.inventory.get<InventoryUnit>('units/' + legacyId);
-        if (seq === this.seq) this.legacy.set(u);
-        return;
-      }
       if (this.detail) {
         const id = this.route.snapshot.paramMap.get('id')!;
         const row = await this.api.detail(this.kind, id);

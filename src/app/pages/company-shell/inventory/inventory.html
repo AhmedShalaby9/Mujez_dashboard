@@ -24,46 +24,6 @@
   }
   @if (loading()) {
     <div class="iv-empty" role="status">{{ X('Loading catalog…', 'جارٍ تحميل الكتالوج…') }}</div>
-  } @else if (legacy(); as u) {
-    <div class="iv-head">
-      <div>
-        <h1 class="iv-h1">{{ u.code }}</h1>
-        <p class="iv-meta">
-          {{ X('Company inventory · reservation record', 'مخزون الشركة · سجل الحجز') }}
-        </p>
-      </div>
-      <a class="iv-btn" [routerLink]="[base(), 'units']">{{
-        X('Shared catalog', 'الكتالوج المشترك')
-      }}</a>
-    </div>
-    <section class="iv-card iv-sec">
-      <div class="iv-prow">
-        <span>{{ X('Project', 'المشروع') }}</span
-        ><b>{{ label(u.project) }}</b>
-      </div>
-      <div class="iv-prow">
-        <span>{{ X('Status', 'الحالة') }}</span
-        ><b>{{ statusLabel(u.status) }}</b>
-      </div>
-      <div class="iv-prow">
-        <span>{{ X('Price', 'السعر') }}</span
-        ><b>{{ money(u.priceMinor) }}</b>
-      </div>
-      <div class="iv-prow">
-        <span>{{ X('Area', 'المساحة') }}</span
-        ><b>{{ u.area }} m²</b>
-      </div>
-      <div class="iv-prow">
-        <span>{{ X('Location', 'الموقع') }}</span
-        ><b>{{ label(u.location) }}</b>
-      </div>
-      <a
-        class="iv-btn dark"
-        [routerLink]="[base(), 'reservations']"
-        [queryParams]="{ unitId: u.id }"
-        >{{ X('Reservations', 'الحجوزات') }}</a
-      >
-    </section>
   } @else if (!detail) {
     <div class="iv-head">
       <div>

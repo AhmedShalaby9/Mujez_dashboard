@@ -146,6 +146,8 @@ describe('Company navigation redesign', () => {
       }).compileComponents();
       const f = TestBed.createComponent(CompanyShell);
       f.detectChanges();
+      expect(f.nativeElement.textContent).toContain('Catalog');
+      expect(f.nativeElement.textContent).toContain('Inventory');
       const paths = [...f.nativeElement.querySelectorAll('.sidebar__item')].map((a: any) =>
         a.getAttribute('href'),
       );
@@ -155,8 +157,10 @@ describe('Company navigation redesign', () => {
           ...pages,
           'cold-calls',
           'my-finance',
-          'developers',
-          'compounds',
+          'catalog/developers',
+          'catalog/compounds',
+          'catalog/units',
+          'projects',
           'units',
           ...(role === 'team_lead' ? ['my-team'] : []),
         ]

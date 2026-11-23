@@ -81,7 +81,9 @@ describe('Shared inventory catalog', () => {
       expect.objectContaining({ page: '1', limit: '24' }),
     );
     expect(f.nativeElement.textContent).toContain('Real inventory');
-    expect(f.nativeElement.querySelector('a.iv-record-link').getAttribute('href')).toContain(id);
+    expect(f.nativeElement.querySelector('a.iv-record-link').getAttribute('href')).toContain(
+      '/company/catalog/units/' + id,
+    );
     expect(f.nativeElement.querySelectorAll('.iv-ccard')).toHaveLength(1);
     expect(f.nativeElement.textContent).toContain('Not set');
   });

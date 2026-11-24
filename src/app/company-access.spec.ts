@@ -447,6 +447,7 @@ describe('Real estate office navigation', () => {
       permissions: [
         'workspace.view',
         'leads.read',
+        'pipeline.read',
         'leads.manage',
         'units.read',
         'projects.read',
@@ -483,7 +484,7 @@ describe('Real estate office navigation', () => {
     let paths = [...f.nativeElement.querySelectorAll('.sidebar__item')].map((x: any) =>
       x.getAttribute('href'),
     );
-    for (const p of ['dashboard', 'clients', 'properties', 'bookings', 'deals'])
+    for (const p of ['dashboard', 'clients', 'pipeline', 'properties', 'bookings', 'deals'])
       expect(paths).toContain('/company/office/' + p);
     expect(paths).not.toContain('/company/commissions');
     expect(paths).not.toContain('/company/contracts');
@@ -497,5 +498,14 @@ describe('Real estate office navigation', () => {
     expect(paths).toContain('/company/units');
     expect(paths).toContain('/company/catalog/units');
     expect(paths).not.toContain('/company/office/clients');
+    for (const type of ['brokerage', 'developer', 'property_mgmt', 'hybrid']) {
+      user.set({ ...user(), company: { ...owner.company, type } });
+      f.detectChanges();
+      const links = [...f.nativeElement.querySelectorAll('.sidebar__item')].map((x: any) =>
+        x.getAttribute('href'),
+      );
+      expect(links).toContain('/company/pipeline');
+      expect(links).not.toContain('/company/office/pipeline');
+    }
   });
 });

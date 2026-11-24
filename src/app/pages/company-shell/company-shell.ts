@@ -447,7 +447,7 @@ export class CompanyShell {
         leads: ['office/clients', 'Clients', 'العملاء'],
         projects: ['office/properties', 'Office properties', 'عقارات المكتب'],
         reservations: ['office/bookings', 'Bookings', 'الحجوزات'],
-        pipeline: null,
+        pipeline: ['office/pipeline', 'Pipeline', 'مراحل العملاء'],
         'cold-calls': null,
         'my-team': null,
         units: null,

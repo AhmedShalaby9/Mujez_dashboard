@@ -1,0 +1,121 @@
+<div class="pg" [attr.dir]="ar() ? 'rtl' : 'ltr'">
+  <div class="head">
+    <div class="head__text">
+      <span>{{ total() }} {{ t('clients in your scope', 'عميل في نطاقك') }}</span>
+      <h1>{{ t('Pipeline', 'مراحل العملاء') }}</h1>
+    </div>
+    <div class="head__actions">
+      <button class="btn" [disabled]="loading() || saving()" (click)="load()">
+        {{ t('Refresh', 'تحديث') }}</button
+      ><a class="btn btn--dark" routerLink="/company/office/clients">{{
+        t('Open clients', 'فتح العملاء')
+      }}</a>
+    </div>
+  </div>
+  <form class="pipeline-filters" (ngSubmit)="load()">
+    <input
+      name="search"
+      [(ngModel)]="q"
+      [placeholder]="t('Search name, phone or code', 'بحث بالاسم أو الهاتف أو الكود')"
+      [attr.aria-label]="t('Search clients', 'بحث العملاء')"
+    />
+    <select name="purpose" [(ngModel)]="purpose" [attr.aria-label]="t('Purpose', 'الغرض')">
+      <option value="">{{ t('All purposes', 'كل الأغراض') }}</option>
+      <option value="sale">{{ t('Buy / sale', 'شراء / بيع') }}</option>
+      <option value="rent">{{ t('Monthly rent', 'إيجار شهري') }}</option>
+    </select>
+    <select name="owner" [(ngModel)]="ownerId" [attr.aria-label]="t('Salesperson', 'السيلز')">
+      <option value="">{{ t('Everyone in my scope', 'الكل في نطاقي') }}</option>
+      @for (s of staff(); track s.id) {
+        <option [value]="s.id">{{ s.name }}</option>
+      }
+    </select>
+    <button class="btn" [disabled]="loading() || saving()">
+      {{ t('Apply filters', 'تطبيق الفلاتر') }}
+    </button>
+  </form>
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+  @if (loading()) {
+    <p role="status">{{ t('Loading…', 'جاري التحميل…') }}</p>
+  }
+  <div class="office-board" [attr.aria-busy]="loading() || saving()">
+    @for (stage of stages; track stage[0]) {
+      <section
+        class="office-column"
+        (dragover)="over($event, stage[0])"
+        (drop)="drop($event, stage[0])"
+      >
+        <header>
+          <h2>{{ t(stage[1], stage[2]) }}</h2>
+          <span>{{ count(stage[0]) }}</span>
+        </header>
+        @for (client of items(stage[0]); track client.id) {
+          <article
+            class="office-client"
+            [draggable]="canManage() && !saving() && client.status !== 'closed'"
+            (dragstart)="start($event, client)"
+            (dragend)="end()"
+          >
+            <span class="muted">{{ client.code }}</span>
+            <a routerLink="/company/office/clients" [queryParams]="{ clientId: client.id }">{{
+              client.name
+            }}</a>
+            <span dir="ltr">{{ client.phone }}</span
+            ><span class="muted">{{ client.owner.name }}</span>
+            @if (client.needs.purpose !== 'rent') {
+              <span
+                >{{ t('Purchase budget', 'ميزانية الشراء') }}:
+                {{ money(client.needs.saleBudgetMinor) }}</span
+              >
+            }
+            @if (client.needs.purpose !== 'sale') {
+              <span
+                >{{ t('Monthly budget', 'الميزانية الشهرية') }}:
+                {{ money(client.needs.rentBudgetMinor) }}</span
+              >
+            }
+            @if (canManage() && client.status !== 'closed') {
+              <select
+                [attr.aria-label]="t('Move client', 'نقل العميل') + ' ' + client.name"
+                [disabled]="saving() || loading()"
+                [value]="client.status"
+                (change)="
+                  move(client, $any($event.target).value); $any($event.target).value = client.status
+                "
+              >
+                @for (next of stages; track next[0]) {
+                  @if (next[0] !== 'closed') {
+                    <option [value]="next[0]">{{ t(next[1], next[2]) }}</option>
+                  }
+                }
+              </select>
+            }
+          </article>
+        } @empty {
+          <p class="muted">
+            {{
+              loading()
+                ? t('Loading…', 'جاري التحميل…')
+                : t('No clients loaded in this stage', 'لا يوجد عملاء محملون في هذه المرحلة')
+            }}
+          </p>
+        }
+      </section>
+    }
+  </div>
+  @if (rows().length < total()) {
+    <button class="btn" [disabled]="loading() || saving()" (click)="load(page() + 1)">
+      {{ t('Load more clients', 'تحميل المزيد من العملاء') }} · {{ rows().length }} / {{ total() }}
+    </button>
+  }
+  <p class="muted pipeline-help">
+    {{
+      t(
+        'Stage totals include all matching clients. Close a deal from Bookings; the client then moves to Deal closed automatically.',
+        'إجماليات المراحل تشمل كل العملاء المطابقين للفلاتر. أقفل الصفقة من الحجوزات لينتقل العميل تلقائيًا إلى صفقة مقفولة.'
+      )
+    }}
+  </p>
+</div>

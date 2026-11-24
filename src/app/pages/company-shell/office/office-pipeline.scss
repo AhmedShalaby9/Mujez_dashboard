@@ -1,0 +1,95 @@
+:host {
+  display: block;
+}
+.pipeline-filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+input,
+select {
+  background: #fff;
+  border: 1px solid #e2e2dc;
+  border-radius: 12px;
+  padding: 12px;
+  color: #111113;
+  font: inherit;
+  min-width: 160px;
+}
+input {
+  flex: 1;
+  min-width: 240px;
+}
+.office-board {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(270px, 1fr));
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 20px;
+}
+.office-column {
+  background: #eeeee8;
+  border-radius: 20px;
+  padding: 16px;
+  min-height: 400px;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+h2 {
+  font-size: 17px;
+  margin: 0;
+}
+header span {
+  background: white;
+  border-radius: 20px;
+  padding: 4px 10px;
+}
+.office-client {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  background: white;
+  border: 1px solid #deded8;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.office-client a {
+  font-size: 17px;
+  font-weight: 600;
+  color: #111113;
+  text-decoration: none;
+}
+.office-client a:hover {
+  text-decoration: underline;
+}
+.office-client select {
+  width: 100%;
+  font-size: 13px;
+  margin-top: 8px;
+}
+.office-client[draggable='true'] {
+  cursor: grab;
+}
+.office-client:focus-within {
+  outline: 2px solid #b9e951;
+}
+.pipeline-help {
+  margin-top: 20px;
+  line-height: 1.6;
+}
+@media (max-width: 640px) {
+  .pipeline-filters > * {
+    width: 100%;
+  }
+  .office-column {
+    min-height: 300px;
+  }
+}

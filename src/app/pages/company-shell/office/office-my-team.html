@@ -1,0 +1,249 @@
+<div class="pg" [attr.dir]="ar() ? 'rtl' : 'ltr'">
+  <div class="head">
+    <div class="head__text">
+      <span>{{
+        t('Your office team’s clients, tasks and performance', 'عملاء ومهام وأداء فريق المكتب')
+      }}</span>
+      <h1>{{ t('My team', 'فريقي') }}</h1>
+    </div>
+    <div class="head__actions">
+      <a class="btn" routerLink="/company/tasks">{{ t('Manage tasks', 'إدارة المهام') }}</a
+      ><button class="btn" [disabled]="loading() || listLoading()" (click)="reload()">
+        {{ t('Refresh', 'تحديث') }}
+      </button>
+    </div>
+  </div>
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+  @if (loading()) {
+    <p role="status" class="muted">{{ t('Loading your team…', 'جاري تحميل فريقك…') }}</p>
+  }
+  @if (performance(); as p) {
+    <div class="team-heading">
+      <h2>{{ p.team.name }}</h2>
+      <p class="muted">
+        {{ p.items.length }}
+        {{ t('members, including the team lead', 'عضو، بما فيهم قائد الفريق') }}
+      </p>
+    </div>
+    <div class="kpis office-team-kpis">
+      <div class="kpi">
+        <span class="kpi__label">{{ t('Open clients', 'العملاء المفتوحون') }}</span
+        ><strong class="kpi__value">{{ p.summary.openClients }}</strong>
+      </div>
+      <div class="kpi">
+        <span class="kpi__label">{{ t('Overdue callbacks', 'متابعات متأخرة') }}</span
+        ><strong class="kpi__value">{{ p.summary.overdueCallbacks }}</strong>
+      </div>
+      <div class="kpi">
+        <span class="kpi__label">{{ t('Open / overdue tasks', 'مهام مفتوحة / متأخرة') }}</span
+        ><strong class="kpi__value"
+          >{{ p.summary.openTasks }} / {{ p.summary.overdueTasks }}</strong
+        >
+      </div>
+      <div class="kpi">
+        <span class="kpi__label">{{
+          t('Closed sales / rentals · period', 'بيع / إيجار مقفول · الفترة')
+        }}</span
+        ><strong class="kpi__value"
+          >{{ p.summary.closedSales }} / {{ p.summary.closedRentals }}</strong
+        >
+      </div>
+    </div>
+    <div class="tools">
+      <div class="tabs" role="tablist" [attr.aria-label]="t('Team work', 'عمل الفريق')">
+        @for (item of ['performance', 'clients', 'tasks']; track item) {
+          <button
+            class="tab"
+            role="tab"
+            [class.tab--on]="tab() === item"
+            [attr.aria-selected]="tab() === item"
+            [disabled]="loading()"
+            (click)="changeTab($any(item))"
+          >
+            {{
+              item === 'performance'
+                ? t('Performance', 'الأداء')
+                : item === 'clients'
+                  ? t('Clients', 'العملاء')
+                  : t('Tasks', 'المهام')
+            }}
+          </button>
+        }
+      </div>
+    </div>
+    @if (tab() === 'performance') {
+      <div class="tools">
+        <label class="field"
+          ><span>{{ t('Performance period', 'فترة الأداء') }}</span
+          ><select [(ngModel)]="days" (ngModelChange)="reload()" [disabled]="loading()">
+            <option [ngValue]="7">{{ t('Last 7 days', 'آخر ٧ أيام') }}</option>
+            <option [ngValue]="30">{{ t('Last 30 days', 'آخر ٣٠ يومًا') }}</option>
+            <option [ngValue]="90">{{ t('Last 90 days', 'آخر ٩٠ يومًا') }}</option>
+          </select></label
+        ><span class="muted" dir="ltr">{{ p.from }} — {{ p.to }} · {{ p.timeZone }}</span>
+      </div>
+      <section class="card">
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('Member', 'العضو') }}</th>
+                <th>{{ t('Open / new clients', 'عملاء مفتوحون / جدد') }}</th>
+                <th>{{ t('Calls / logged viewings', 'مكالمات / معاينات مسجلة') }}</th>
+                <th>{{ t('Overdue callbacks', 'متابعات متأخرة') }}</th>
+                <th>{{ t('Tasks done', 'مهام مكتملة') }}</th>
+                <th>{{ t('Open / overdue tasks', 'مهام مفتوحة / متأخرة') }}</th>
+                <th>{{ t('Closed sales / rentals', 'بيع / إيجار مقفول') }}</th>
+                <th>{{ t('Agreed sale values', 'قيم البيع المتفق عليها') }}</th>
+                <th>{{ t('Agreed monthly rents', 'قيم الإيجار الشهري المتفق عليها') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (m of p.items; track m.id) {
+                <tr>
+                  <td>
+                    <b>{{ m.name }}</b
+                    ><span class="sub">{{
+                      m.status === 'active' ? t('Active', 'نشط') : t('Inactive', 'غير نشط')
+                    }}</span>
+                  </td>
+                  <td>{{ m.openClients }} / {{ m.newClients }}</td>
+                  <td>{{ m.calls }} / {{ m.viewings }}</td>
+                  <td>{{ m.overdueCallbacks }}</td>
+                  <td>{{ m.completedTasks }}</td>
+                  <td>{{ m.openTasks }} / {{ m.overdueTasks }}</td>
+                  <td>{{ m.closedSales }} / {{ m.closedRentals }}</td>
+                  <td>{{ money(m.saleMinor) }}</td>
+                  <td>{{ money(m.monthlyRentMinor) }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <th>{{ t('Total', 'الإجمالي') }}</th>
+                <td>{{ p.summary.openClients }} / {{ p.summary.newClients }}</td>
+                <td>{{ p.summary.calls }} / {{ p.summary.viewings }}</td>
+                <td>{{ p.summary.overdueCallbacks }}</td>
+                <td>{{ p.summary.completedTasks }}</td>
+                <td>{{ p.summary.openTasks }} / {{ p.summary.overdueTasks }}</td>
+                <td>{{ p.summary.closedSales }} / {{ p.summary.closedRentals }}</td>
+                <td>{{ money(p.summary.saleMinor) }}</td>
+                <td>{{ money(p.summary.monthlyRentMinor) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+      <p class="muted office-team-note">
+        {{
+          t(
+            'Workload is current. New clients, logged calls/viewings, completed tasks and closed deals use the selected period. Calls/viewings are credited to their recorded actor; other figures follow current responsibility and roster. Sale values and monthly rents are contract figures, not company income or collected rent.',
+            'الأحمال الحالية تشمل العملاء والمهام المفتوحة والمتأخرة. العملاء الجدد والمكالمات والمعاينات المسجلة والمهام المكتملة والصفقات المقفولة تخص الفترة المختارة. المكالمات والمعاينات تُنسب لمن سجلها، وبقية الأرقام تتبع المسؤول الحالي والفريق الحالي. قيم البيع والإيجار الشهري هي قيم التعاقد وليست دخل المكتب أو إيجارات محصلة.'
+          )
+        }}
+      </p>
+    } @else {
+      <form class="office-team-filters" (ngSubmit)="apply()">
+        <input
+          name="q"
+          [(ngModel)]="q"
+          [placeholder]="t('Search', 'بحث')"
+          [attr.aria-label]="t('Search team records', 'بحث سجلات الفريق')"
+        /><select name="member" [(ngModel)]="memberId" [attr.aria-label]="t('Member', 'العضو')">
+          <option value="">{{ t('All team members', 'كل أعضاء الفريق') }}</option>
+          @for (m of p.items; track m.id) {
+            <option [value]="m.id">{{ m.name }}</option>
+          }</select
+        ><select
+          name="status"
+          [(ngModel)]="status"
+          [attr.aria-label]="t('Stage / status', 'المرحلة / الحالة')"
+        >
+          <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
+          @if (tab() === 'clients') {
+            @for (s of stages; track s[0]) {
+              <option [value]="s[0]">{{ t(s[1], s[2]) }}</option>
+            }
+          } @else {
+            @for (s of ['open', 'done', 'cancelled']; track s) {
+              <option [value]="s">{{ taskStatus(s) }}</option>
+            }
+          }</select
+        ><button class="btn" [disabled]="listLoading()">
+          {{ t('Apply filters', 'تطبيق الفلاتر') }}
+        </button>
+      </form>
+      @if (listLoading()) {
+        <p role="status">{{ t('Loading…', 'جاري التحميل…') }}</p>
+      }
+      <section class="card">
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ tab() === 'clients' ? t('Client', 'العميل') : t('Task', 'المهمة') }}</th>
+                <th>{{ t('Responsible', 'المسؤول') }}</th>
+                <th>{{ t('Stage / status', 'المرحلة / الحالة') }}</th>
+                <th>
+                  {{
+                    tab() === 'clients'
+                      ? t('Phone', 'الهاتف')
+                      : t('Due date · Cairo', 'تاريخ الاستحقاق · القاهرة')
+                  }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.id) {
+                <tr>
+                  <td>
+                    @if (tab() === 'clients') {
+                      <a routerLink="/company/office/clients" [queryParams]="{ clientId: row.id }"
+                        ><b>{{ row.name }}</b></a
+                      ><span class="sub">{{ row.code }}</span>
+                    } @else {
+                      <b>{{ local(row.title) }}</b
+                      ><span class="sub">{{ row.reference }}</span>
+                    }
+                  </td>
+                  <td>{{ tab() === 'clients' ? row.owner.name : row.assignee.name }}</td>
+                  <td>{{ tab() === 'clients' ? stage(row.status) : taskStatus(row.status) }}</td>
+                  <td>
+                    @if (tab() === 'clients') {
+                      <span dir="ltr">{{ row.phone }}</span>
+                    } @else {
+                      <span>{{ row.dueDate ?? t('Not set', 'غير محدد') }}</span>
+                      @if (row.overdue) {
+                        <span class="sub office-overdue">{{ t('Overdue', 'متأخرة') }}</span>
+                      }
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4" class="muted">
+                    {{ t('No matching team records', 'لا توجد سجلات مطابقة للفريق') }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="office-team-paging">
+          <span>{{ total() }} · {{ page() }} / {{ pages() }}</span
+          ><button class="btn" [disabled]="listLoading() || page() <= 1" (click)="load(page() - 1)">
+            {{ t('Previous', 'السابق') }}</button
+          ><button
+            class="btn"
+            [disabled]="listLoading() || page() >= pages()"
+            (click)="load(page() + 1)"
+          >
+            {{ t('Next', 'التالي') }}
+          </button>
+        </div>
+      </section>
+    }
+  }
+</div>

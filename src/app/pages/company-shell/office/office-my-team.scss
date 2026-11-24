@@ -1,0 +1,65 @@
+:host {
+  display: block;
+}
+.office-team-kpis {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.office-team-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 20px 0;
+}
+.office-team-filters input,
+.office-team-filters select {
+  border: 1px solid #deded8;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  font: inherit;
+  color: #111113;
+}
+.office-team-filters input {
+  flex: 1;
+  min-width: 220px;
+}
+.office-team-note {
+  line-height: 1.7;
+  margin-top: 20px;
+}
+.office-team-paging {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px;
+}
+.office-overdue {
+  color: #ad3726;
+}
+table {
+  min-width: 720px;
+}
+tfoot {
+  background: #f5f5f0;
+  font-weight: 600;
+}
+a {
+  color: inherit;
+}
+@media (max-width: 850px) {
+  .office-team-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 500px) {
+  .office-team-filters > * {
+    width: 100%;
+  }
+  .office-team-kpis {
+    grid-template-columns: 1fr;
+  }
+  .office-team-paging {
+    flex-wrap: wrap;
+  }
+}

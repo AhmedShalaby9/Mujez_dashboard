@@ -201,6 +201,12 @@ export const routes: Routes = [
           import('./pages/company-shell/office/cities/cities').then((m) => m.Cities),
       },
       {
+        path: 'office/my-team',
+        data: { officeView: 'my-team', permission: 'team.self.read' },
+        loadComponent: () =>
+          import('./pages/company-shell/office/office-my-team').then((m) => m.OfficeMyTeam),
+      },
+      {
         path: 'office/pipeline',
         data: { officeView: 'pipeline', permission: 'leads.read' },
         loadComponent: () =>

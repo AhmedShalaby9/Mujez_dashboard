@@ -230,7 +230,7 @@ it('keeps tasks, calendar and contacts in office navigation for sales, team lead
     pool: 'company_user',
     role: 'agent',
     company: { type: 'real_estate_office' },
-    permissions: ['leads.read', 'tasks.read', 'calendar.read', 'contacts.read'],
+    permissions: ['leads.read', 'tasks.read', 'calendar.read', 'contacts.read', 'team.self.read'],
   });
   await TestBed.configureTestingModule({
     imports: [CompanyShell],
@@ -254,5 +254,7 @@ it('keeps tasks, calendar and contacts in office navigation for sales, team lead
     expect(paths).toContain('calendar');
     expect(paths).toContain('contacts');
     expect(paths).toContain('office/clients');
+    if (role === 'team_lead') expect(paths).toContain('office/my-team');
+    else expect(paths).not.toContain('office/my-team');
   }
 });

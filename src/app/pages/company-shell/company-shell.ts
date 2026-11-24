@@ -403,6 +403,12 @@ export class CompanyShell {
     const kept: NavEntry[] = [];
     const canSee = (item: NavItem) => {
       const u = this.auth.user();
+      if (item.path === 'office/my-team')
+        return (
+          u?.pool === 'company_user' &&
+          (u.roles ?? [u.role]).includes('team_lead') &&
+          perms.includes('team.self.read')
+        );
       if (item.path === 'finance' || item.path.startsWith('finance/'))
         return hasAccountingAccess(u);
       if (item.path === 'payroll') return hasPayrollAccess(u);
@@ -449,7 +455,7 @@ export class CompanyShell {
         reservations: ['office/bookings', 'Bookings', 'الحجوزات'],
         pipeline: ['office/pipeline', 'Pipeline', 'مراحل العملاء'],
         'cold-calls': null,
-        'my-team': null,
+        'my-team': ['office/my-team', 'My team', 'فريقي'],
         units: null,
         contracts: null,
         commissions: null,

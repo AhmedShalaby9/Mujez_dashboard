@@ -80,17 +80,79 @@
         (input)="searchChanged($any($event.target).value)"
       />
     </div>
-    <select
-      class="sel"
-      [attr.aria-label]="t('Filter by owner', 'التصفية حسب المسؤول')"
-      [value]="ownerFilter()"
-      (change)="ownerFilter.set($any($event.target).value); reload()"
-    >
-      <option value="">{{ t('All owners', 'كل المسؤولين') }}</option>
-      @for (o of owners(); track o.id) {
-        <option [value]="o.id">{{ o.name }}</option>
-      }
-    </select>
+    @if (!ownScope()) {
+      <div class="person-filter">
+        <button
+          type="button"
+          class="btn"
+          [attr.aria-label]="t('Filter by salesperson', 'التصفية حسب السيلز')"
+          (click)="togglePersonFilter()"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" />
+          </svg>
+          {{ selectedOwnerName() }}
+        </button>
+        @if (personOpen()) {
+          <div class="pf-backdrop" (click)="closePersonFilter()"></div>
+          <div class="pf-panel">
+            <div class="pf-search">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#8A8A90"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              >
+                <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" />
+              </svg>
+              <input
+                type="text"
+                [attr.aria-label]="t('Search person', 'البحث عن شخص')"
+                [placeholder]="t('Search person…', 'ابحث عن شخص…')"
+                [value]="personQuery()"
+                (input)="personQuery.set($any($event.target).value)"
+              />
+            </div>
+            <div class="pf-list">
+              <button type="button" class="pf-item" (click)="choosePerson('')">
+                <span>{{ t('Any person', 'أي شخص') }}</span>
+                @if (!ownerFilter()) {
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 13l4 4L19 7" />
+                  </svg>
+                }
+              </button>
+              @for (o of filteredOwners(); track o.id) {
+                <button type="button" class="pf-item" (click)="choosePerson(o.id)">
+                  <span>{{ o.name }}</span>
+                  <span class="pf-item__end">
+                    <span class="pf-count">{{ o.leadCount }} {{ t('leads', 'عميل') }}</span>
+                    @if (ownerFilter() === o.id) {
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                    }
+                  </span>
+                </button>
+              }
+              @if (!filteredOwners().length) {
+                <p class="pf-empty">{{ t('No matches', 'لا توجد نتائج') }}</p>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
     <div class="chips status-tabs">
       <button
         type="button"

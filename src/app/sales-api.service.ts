@@ -16,6 +16,25 @@ export const SALES_STAGES = [
   'unqualified',
 ] as const;
 export type SalesStage = (typeof SALES_STAGES)[number];
+export const BROKERAGE_LEAD_STATUSES = [
+  'new_lead',
+  'call_back',
+  'hot_case',
+  'low_budget',
+  'no_answer',
+  'non_potential',
+  'potential',
+  'resale',
+  'wrong_number',
+  'switched_off',
+  'whatsapp',
+  'closed_deal',
+  'closed_outside',
+  'eoi',
+  'meeting_scheduled',
+  'meeting_done',
+] as const;
+export type BrokerageLeadStatus = (typeof BROKERAGE_LEAD_STATUSES)[number];
 /** Stages that take a lead out of the active pipeline. */
 export const CLOSED_STAGES: readonly SalesStage[] = ['won', 'lost', 'unqualified'];
 export const isClosedStage = (s: string) => (CLOSED_STAGES as readonly string[]).includes(s);
@@ -39,6 +58,7 @@ export interface SalesLead {
   routingRule?: { id: string; name: { en: string; ar: string } } | null;
   owner: { id: string; name: string } | null;
   stage: SalesStage;
+  brokerageStatus?: BrokerageLeadStatus | null;
   score: number | null;
   version: number;
   archivedAt: string | null;
@@ -99,6 +119,22 @@ export const STAGE_NAMES = {
     won: 'Won',
     lost: 'Lost',
     unqualified: 'Unqualified',
+    new_lead: 'New Lead',
+    call_back: 'Call Back',
+    hot_case: 'Hot Case',
+    low_budget: 'Low Budget',
+    no_answer: 'No Answer',
+    non_potential: 'Non Potential',
+    potential: 'Potential',
+    resale: 'Resale',
+    wrong_number: 'Wrong Number',
+    switched_off: 'Switched Off',
+    whatsapp: 'WhatsApp',
+    closed_deal: 'Closed Deal',
+    closed_outside: 'Closed Outside',
+    eoi: 'EOI',
+    meeting_scheduled: 'Meeting Scheduled',
+    meeting_done: 'Meeting Done',
   },
   ar: {
     new: 'جديد',
@@ -113,6 +149,22 @@ export const STAGE_NAMES = {
     won: 'مغلق',
     lost: 'فاقد',
     unqualified: 'غير مؤهّل',
+    new_lead: 'عميل جديد',
+    call_back: 'إعادة اتصال',
+    hot_case: 'حالة مهمة',
+    low_budget: 'ميزانية منخفضة',
+    no_answer: 'لا يرد',
+    non_potential: 'غير محتمل',
+    potential: 'محتمل',
+    resale: 'إعادة بيع',
+    wrong_number: 'رقم خاطئ',
+    switched_off: 'الهاتف مغلق',
+    whatsapp: 'واتساب',
+    closed_deal: 'صفقة مغلقة',
+    closed_outside: 'أُغلقت خارج المكتب',
+    eoi: 'إبداء اهتمام',
+    meeting_scheduled: 'اجتماع مجدول',
+    meeting_done: 'تم الاجتماع',
   },
 };
 export const SOURCE_NAMES: Record<string, [string, string]> = {

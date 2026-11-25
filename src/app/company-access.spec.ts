@@ -424,7 +424,7 @@ describe('Workspace navigation identity refresh', () => {
 });
 
 describe('Manual lead creation controls', () => {
-  it('hides new lead for sales including employee multi-role, and preserves team lead and owner access', () => {
+  it('allows brokerage sales to create leads while preserving other workspace access rules', () => {
     const sales: any = {
       pool: 'company_user',
       role: 'agent',
@@ -432,6 +432,7 @@ describe('Manual lead creation controls', () => {
       roles: ['agent', 'employee'],
     };
     expect(canCreateLead(sales)).toBe(false);
+    expect(canCreateLead({ ...sales, company: { type: 'brokerage' } })).toBe(true);
     expect(canCreateLead({ ...sales, roles: ['agent', 'team_lead', 'employee'] })).toBe(true);
     expect(canCreateLead({ ...sales, pool: 'company_admin' })).toBe(true);
     expect(canCreateLead({ ...sales, permissions: [] })).toBe(false);

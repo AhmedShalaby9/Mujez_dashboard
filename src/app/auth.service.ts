@@ -48,10 +48,11 @@ export function officeWorkspace(u: User | null | undefined) {
 export function hrModuleEnabled(u: User | null | undefined) {
   return !!u && u.company?.hrEnabled !== false;
 }
-/** Sales agents keep edit/conversion access while manual-new-lead entry is hidden. */
+/** Brokerage and office sales users can create leads; other workspaces retain their existing rule. */
 export function canCreateLead(u: User | null | undefined) {
   if (!u?.permissions.includes('leads.manage')) return false;
-  if (officeWorkspace(u)) return true;
+  const companyType = u.company?.type ?? u.workspace?.company?.type;
+  if (officeWorkspace(u) || companyType === 'brokerage') return true;
   const roles = u.roles ?? [u.role];
   return !(u.pool === 'company_user' && roles.includes('agent') && !roles.includes('team_lead'));
 }

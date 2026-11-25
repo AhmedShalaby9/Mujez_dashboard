@@ -9,6 +9,7 @@ import { AuthService, ApiError, aiModuleEnabled, canCreateLead } from '../../../
 import {
   SalesApi,
   SALES_STAGES,
+  BROKERAGE_LEAD_STATUSES,
   STAGE_NAMES,
   SOURCE_NAMES,
   salesMoney,
@@ -70,7 +71,13 @@ export class Leads {
   readonly loading = signal(false);
   readonly error = signal('');
   readonly saving = signal(false);
-  readonly stages = SALES_STAGES;
+  readonly isBrokerage = computed(() => {
+    const user = this.auth.user();
+    return (user?.company?.type ?? user?.workspace?.company?.type) === 'brokerage';
+  });
+  readonly stages = computed(() =>
+    this.isBrokerage() ? BROKERAGE_LEAD_STATUSES : SALES_STAGES,
+  );
   readonly stageNames = computed(() => STAGE_NAMES[this.lang()]);
   readonly sources = Object.keys(SOURCE_NAMES);
   readonly money = salesMoney;
@@ -102,7 +109,8 @@ export class Leads {
       if (this.search().trim()) filters['q'] = this.search().trim();
       if (this.segmentFilter() !== 'all') filters['segment'] = this.segmentFilter();
       if (this.ownerFilter()) filters['ownerId'] = this.ownerFilter();
-      if (this.stageFilter() !== 'all') filters['stage'] = this.stageFilter();
+      if (this.stageFilter() !== 'all')
+        filters[this.isBrokerage() ? 'leadStatus' : 'stage'] = this.stageFilter();
       if (this.budgetMinFilter()) filters['budgetMinMinor'] = this.budgetMinFilter();
       if (this.budgetMaxFilter()) filters['budgetMaxMinor'] = this.budgetMaxFilter();
       await this.api.write('saved-views', { name: this.savedName().trim(), filters });
@@ -151,8 +159,10 @@ export class Leads {
       this.budgetMinFilter.set(p.get('budgetMinMinor') ?? '');
       this.budgetMaxFilter.set(p.get('budgetMaxMinor') ?? '');
       const stage = p.get('stage');
-      if (stage && this.stages.includes(stage as SalesStage))
-        this.stageFilter.set(stage as SalesStage);
+      const brokerageStatus = p.get('leadStatus');
+      const activeStage = brokerageStatus || stage;
+      if (activeStage && this.stages().includes(activeStage as never))
+        this.stageFilter.set(activeStage);
       void this.reload();
       const q = p.get('q');
       if (q !== null && q !== this.search()) {
@@ -197,7 +207,8 @@ export class Leads {
       if (this.budgetMaxFilter()) q['budgetMaxMinor'] = this.budgetMaxFilter();
       if (this.campaignFilter()) q['campaignId'] = this.campaignFilter();
       if (this.search().trim()) q['q'] = this.search().trim();
-      if (this.stageFilter() !== 'all') q['stage'] = this.stageFilter();
+      if (this.stageFilter() !== 'all')
+        q[this.isBrokerage() ? 'leadStatus' : 'stage'] = this.stageFilter();
       const r = await this.api.get('leads', q);
       if (serial === this.serial) {
         this.leads.set(r.items);
@@ -364,6 +375,7 @@ export class Leads {
       'lead.seeded': ['Initial sample lead', 'عميل تجريبي أولي'],
       'lead.updated': ['Lead details updated', 'تم تعديل البيانات'],
       'lead.stage_changed': ['Stage changed', 'تم تغيير المرحلة'],
+      'lead.status_changed': ['Lead status changed', 'تم تغيير حالة العميل'],
       'lead.note_added': ['Note', 'ملاحظة'],
       'lead.archived': ['Lead archived', 'تمت الأرشفة'],
       'lead.restored': ['Lead restored', 'تمت الاستعادة'],
@@ -575,6 +587,22 @@ export class Leads {
     won: '#2FA35F',
     lost: '#E2553B',
     unqualified: '#B8564A',
+    new_lead: '#C4C4BE',
+    call_back: '#E0A24B',
+    hot_case: '#E2553B',
+    low_budget: '#9A9A94',
+    no_answer: '#4FB0C6',
+    non_potential: '#9A9A94',
+    potential: '#5B78E5',
+    resale: '#9B7BD4',
+    wrong_number: '#B8564A',
+    switched_off: '#4FB0C6',
+    whatsapp: '#2FA35F',
+    closed_deal: '#2FA35F',
+    closed_outside: '#8A8A90',
+    eoi: '#8BB33A',
+    meeting_scheduled: '#D99A28',
+    meeting_done: '#2FA35F',
   };
   initials(l: SalesLead) {
     return this.name(l)
@@ -631,8 +659,11 @@ export class Leads {
     if (this.detailError()) this.note.set(text);
     else this.note.set('');
   }
-  stageIndex(s: SalesStage) {
-    return this.stages.indexOf(s);
+  leadStage(l: SalesLead) {
+    return this.isBrokerage() ? (l.brokerageStatus ?? 'new_lead') : l.stage;
+  }
+  stageIndex(s: string) {
+    return this.stages().indexOf(s as never);
   }
   setSegment(s: 'all' | 'res' | 'com') {
     this.segmentFilter.set(s);
@@ -644,9 +675,27 @@ export class Leads {
   }
 
   /** One click sets any status; no stepping or reason required. */
-  async setStage(s: SalesStage) {
+  async setStage(s: string) {
     const l = this.selected();
-    if (!l || this.saving() || l.stage === s) return;
+    if (!l || this.saving() || this.leadStage(l) === s) return;
+    if (this.isBrokerage()) {
+      this.saving.set(true);
+      this.detailError.set('');
+      try {
+        await this.api.write('leads/' + l.id + '/status', {
+          requestId: crypto.randomUUID(),
+          version: l.version,
+          status: s,
+        });
+        await this.reload(this.page());
+        await this.open(l.id);
+      } catch (e) {
+        this.detailError.set((e as Error).message);
+      } finally {
+        this.saving.set(false);
+      }
+      return;
+    }
     this.actionStage.set(s);
     await this.mutate('stage');
   }

@@ -98,9 +98,9 @@
         [class.on]="stageFilter() === 'all'"
         (click)="stageFilter.set('all'); reload()"
       >
-        {{ t('All stages', 'كل المراحل') }}
+        {{ isBrokerage() ? t('All statuses', 'كل الحالات') : t('All stages', 'كل المراحل') }}
       </button>
-      @for (s of stages; track s) {
+      @for (s of stages(); track s) {
         <button
           type="button"
           class="chip"
@@ -128,7 +128,7 @@
             <th>{{ t('Contact', 'العميل') }}</th>
             <th>{{ t('Wants', 'يبحث عن') }}</th>
             <th>{{ t('Budget', 'الميزانية') }}</th>
-            <th>{{ t('Stage', 'المرحلة') }}</th>
+            <th>{{ isBrokerage() ? t('Status', 'الحالة') : t('Stage', 'المرحلة') }}</th>
             <th>{{ t('Source', 'المصدر') }}</th>
             <th>{{ t('Owner', 'المسؤول') }}</th>
             <th>{{ t('Last activity', 'آخر نشاط') }}</th>
@@ -166,8 +166,8 @@
                   <span class="muted">{{ t('Archived', 'مؤرشف') }}</span>
                 } @else {
                   <span class="stage"
-                    ><span class="stage-dot" [style.background]="stageColor[l.stage]"></span
-                    >{{ stageNames()[l.stage] }}</span
+                    ><span class="stage-dot" [style.background]="stageColor[leadStage(l)]"></span
+                    >{{ stageNames()[leadStage(l)] }}</span
                   >
                 }
               </td>
@@ -233,7 +233,7 @@
         <div class="drawer__title">
           <span class="drawer__name" id="overlay-company-shell-leads-1-title">{{ name(l) }}</span>
           <span class="muted"
-            >{{ stageNames()[l.stage] }} · {{ t('score', 'التقييم') }} {{ l.score ?? '—' }} ·
+            >{{ stageNames()[leadStage(l)] }} · {{ t('score', 'التقييم') }} {{ l.score ?? '—' }} ·
             <span class="mono">{{ l.reference }}</span></span
           >
         </div>
@@ -265,14 +265,14 @@
 
         <div class="sect">
           <div class="sect__row">
-            <span class="sect__label">{{ t('STAGE', 'المرحلة') }}</span>
+            <span class="sect__label">{{ isBrokerage() ? t('LEAD STATUS', 'حالة العميل') : t('STAGE', 'المرحلة') }}</span>
           </div>
           <div class="steps">
-            @for (s of stages; track s) {
+            @for (s of stages(); track s) {
               <button
                 type="button"
                 class="step"
-                [class.cur]="s === l.stage"
+                [class.cur]="s === leadStage(l)"
                 [disabled]="!canManage() || !!l.archivedAt || saving()"
                 (click)="setStage(s)"
               >

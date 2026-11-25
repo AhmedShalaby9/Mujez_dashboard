@@ -96,7 +96,7 @@ export class Cities {
       });
       this.open.set(false);
       await this.load();
-      this.notice.set(this.t('City saved.', 'تم حفظ المدينة.'));
+      this.notice.set(this.t('Project saved.', 'تم حفظ المشروع.'));
     } catch (e) {
       this.error.set((e as Error).message);
     } finally {
@@ -116,11 +116,11 @@ export class Cities {
       this.notice.set(
         this.t(
           row.archived
-            ? 'City restored.'
-            : 'City removed from new selections. Existing properties are retained.',
+            ? 'Project restored.'
+            : 'Project removed from new selections. Existing properties are retained.',
           row.archived
-            ? 'تمت استعادة المدينة.'
-            : 'حُذفت المدينة من الاختيارات الجديدة مع الاحتفاظ بالعقارات الحالية.',
+            ? 'تمت استعادة المشروع.'
+            : 'حُذف المشروع من الاختيارات الجديدة مع الاحتفاظ بالعقارات الحالية.',
         ),
       );
     } catch (e) {

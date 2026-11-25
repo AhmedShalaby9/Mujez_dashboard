@@ -102,7 +102,7 @@ export const propertyFields: OfficeField[] = [
     type: 'egypt-phone',
     required: true,
   },
-  { key: 'cityId', en: 'City', ar: 'المدينة', required: true, options: [] },
+  { key: 'cityId', en: 'Project', ar: 'مشروع', required: true, options: [] },
   { key: 'areaName', en: 'Area / district', ar: 'المنطقة / الحي', required: true },
   { key: 'address', en: 'Full address', ar: 'العنوان الكامل', required: true },
   { key: 'type', en: 'Property type', ar: 'نوع العقار', options: propertyTypes, required: true },

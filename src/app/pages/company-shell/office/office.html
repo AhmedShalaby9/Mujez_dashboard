@@ -669,10 +669,13 @@
         @if (mode() === 'property' && !cityOptions().length) {
           <p class="note">
             {{
-              t('Add your office cities before saving a property.', 'أضف مدن مكتبك قبل حفظ العقار.')
+              t(
+                'Add your office projects before saving a property.',
+                'أضف مشاريع مكتبك قبل حفظ العقار.'
+              )
             }}
             @if (auth.user()?.pool === 'company_admin' && !auth.user()?.workspace) {
-              <a routerLink="/company/office/cities">{{ t('Manage cities', 'إدارة المدن') }}</a>
+              <a routerLink="/company/office/cities">{{ t('Manage projects', 'إدارة المشاريع') }}</a>
             }
           </p>
         }

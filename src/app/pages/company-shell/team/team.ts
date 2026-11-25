@@ -10,6 +10,8 @@ import {
   type TeamMember,
   type TeamRole,
   type SalesTeam,
+  type AgentPermissions,
+  type OfficeCity,
 } from '../../../team-api.service';
 
 @Component({
@@ -177,6 +179,87 @@ export class Team {
       this.busy.set(null);
     }
   }
+  readonly permMember = signal<TeamMember | null>(null);
+  readonly permOpen = signal(false);
+  readonly permSaving = signal(false);
+  readonly permError = signal('');
+  readonly officeCities = signal<OfficeCity[]>([]);
+  perm: Omit<AgentPermissions, 'version'> = {
+    viewSale: true,
+    viewRent: true,
+    viewPhones: true,
+    addClient: true,
+    addProperty: true,
+    editData: true,
+    deleteProperties: false,
+    allCities: true,
+    cityIds: [],
+  };
+  private permVersion = 0;
+  cityName(c: OfficeCity) {
+    return this.ar() ? c.nameAr : c.nameEn;
+  }
+  toggleCity(id: string, checked: boolean) {
+    this.perm.cityIds = checked
+      ? [...this.perm.cityIds.filter((x) => x !== id), id]
+      : this.perm.cityIds.filter((x) => x !== id);
+  }
+  private async loadOfficeCities() {
+    if (!this.office || this.officeCities().length) return;
+    try {
+      const r = await this.api.officeCities();
+      this.officeCities.set(r.items);
+    } catch {
+      /* the cities list is optional context in the permissions modal; a save still works without it */
+    }
+  }
+  async editPermissions(m: TeamMember) {
+    if (!this.office || !this.canAssignRoles()) return;
+    this.permMember.set(m);
+    this.permError.set('');
+    this.permOpen.set(true);
+    void this.loadOfficeCities();
+    try {
+      const r = await this.api.agentPermissions(m.userId);
+      this.permVersion = r.version;
+      this.perm = {
+        viewSale: r.viewSale,
+        viewRent: r.viewRent,
+        viewPhones: r.viewPhones,
+        addClient: r.addClient,
+        addProperty: r.addProperty,
+        editData: r.editData,
+        deleteProperties: r.deleteProperties,
+        allCities: r.allCities,
+        cityIds: [...r.cityIds],
+      };
+    } catch (e) {
+      this.permError.set((e as Error).message);
+    }
+  }
+  closePermissions() {
+    if (!this.permSaving()) this.permOpen.set(false);
+  }
+  async savePermissions() {
+    const m = this.permMember();
+    if (!m || this.permSaving()) return;
+    this.permSaving.set(true);
+    this.permError.set('');
+    try {
+      const r = await this.api.saveAgentPermissions(m.userId, {
+        requestId: crypto.randomUUID(),
+        version: this.permVersion,
+        data: { ...this.perm, allCities: this.perm.cityIds.length === 0 },
+      });
+      this.permVersion = r.version;
+      this.permOpen.set(false);
+      this.toast.set(this.t('Permissions saved', 'تم حفظ الصلاحيات'));
+    } catch (e) {
+      this.permError.set((e as Error).message);
+    } finally {
+      this.permSaving.set(false);
+    }
+  }
   readonly items = signal<TeamMember[]>([]);
   /** The API returns the whole team (no paging), so search / status filter on the client. */
   readonly search = signal('');
@@ -228,6 +311,7 @@ export class Team {
   readonly inviteError = signal('');
   readonly inviting = signal(false);
   readonly inviteLink = signal('');
+  readonly createdMember = signal<TeamMember | null>(null);
 
   constructor() {
     void this.reload();
@@ -254,6 +338,7 @@ export class Team {
     this.inviteRoles.set(['agent']);
     this.inviteError.set('');
     this.inviteLink.set('');
+    this.createdMember.set(null);
   }
   closeInvite() {
     if (this.inviting()) return;
@@ -272,11 +357,16 @@ export class Team {
       });
       this.inviteLink.set(location.origin + '/activate/team#token=' + r.token);
       await this.reload();
+      this.createdMember.set(this.items().find((m) => m.userId === r.userId) ?? null);
     } catch (e) {
       this.inviteError.set((e as Error).message);
     } finally {
       this.inviting.set(false);
     }
+  }
+  setPermissionsForCreated() {
+    const m = this.createdMember();
+    if (m) void this.editPermissions(m);
   }
 
   async resend(m: TeamMember) {

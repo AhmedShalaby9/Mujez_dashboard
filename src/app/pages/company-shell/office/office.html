@@ -392,7 +392,11 @@
           <b>{{ d.data.ownerName }}</b>
           @for (phone of d.data.ownerPhones; track phone) {
             <p>
-              <a [href]="'tel:' + phone" dir="ltr">{{ phone }}</a>
+              @if (phone.startsWith('+')) {
+                <a [href]="'tel:' + phone" dir="ltr">{{ phone }}</a>
+              } @else {
+                <span dir="ltr">{{ phone }}</span>
+              }
             </p>
           }
         </section>

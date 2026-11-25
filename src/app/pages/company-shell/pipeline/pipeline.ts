@@ -6,6 +6,7 @@ import { AuthService } from '../../../auth.service';
 import {
   SalesApi,
   SALES_STAGES,
+  BROKERAGE_LEAD_STATUSES,
   isClosedStage,
   STAGE_NAMES,
   salesMoney,
@@ -35,7 +36,11 @@ export class Pipeline {
   t(en: string, ar: string) {
     return this.ar() ? ar : en;
   }
-  readonly stages = SALES_STAGES;
+  readonly isBrokerage = computed(() => {
+    const user = this.auth.user();
+    return (user?.company?.type ?? user?.workspace?.company?.type) === 'brokerage';
+  });
+  readonly stages = computed(() => this.isBrokerage() ? BROKERAGE_LEAD_STATUSES : SALES_STAGES);
   readonly stageNames = computed(() => STAGE_NAMES[this.lang()]);
   readonly money = salesMoney;
   readonly deals = signal<SalesDeal[]>([]);
@@ -52,10 +57,21 @@ export class Pipeline {
   readonly canManage = computed(
     () => this.auth.user()?.permissions.includes('pipeline.manage') ?? false,
   );
+  readonly canMove = computed(() =>
+    this.auth.user()?.permissions.includes(this.isBrokerage() ? 'leads.manage' : 'pipeline.manage') ?? false,
+  );
+  boardStatus(d: SalesDeal) {
+    return this.isBrokerage() ? (d.brokerageStatus ?? 'new_lead') : d.stage;
+  }
+  isClosed(status: string) {
+    return this.isBrokerage()
+      ? ['closed_deal', 'closed_outside', 'non_potential'].includes(status)
+      : isClosedStage(status);
+  }
   readonly columns = computed(() =>
-    this.stages.map((stage) => ({
+    this.stages().map((stage) => ({
       stage,
-      items: this.deals().filter((d) => d.stage === stage),
+      items: this.deals().filter((d) => this.boardStatus(d) === stage),
       count: this.stats().find((s) => s.stage === stage)?.count ?? 0,
       total: this.stats().find((s) => s.stage === stage)?.saleMinor ?? '0',
       unsetCount: this.stats().find((s) => s.stage === stage)?.unsetCount ?? 0,
@@ -128,6 +144,12 @@ export class Pipeline {
     won: '#2FA35F',
     lost: '#E2553B',
     unqualified: '#B8564A',
+    new_lead: '#C4C4BE', call_back: '#E0A24B', hot_case: '#E2553B',
+    low_budget: '#9A9A94', no_answer: '#4FB0C6', non_potential: '#9A9A94',
+    potential: '#5B78E5', resale: '#9B7BD4', wrong_number: '#B8564A',
+    switched_off: '#4FB0C6', whatsapp: '#2FA35F', closed_deal: '#2FA35F',
+    closed_outside: '#8A8A90', eoi: '#8BB33A',
+    meeting_scheduled: '#D99A28', meeting_done: '#2FA35F',
   };
   readonly toast = signal('');
   private say(msg: string) {
@@ -136,13 +158,13 @@ export class Pipeline {
   }
   readonly openValue = computed(() =>
     this.stats()
-      .filter((x) => !isClosedStage(x.stage))
+      .filter((x) => !this.isClosed(x.stage))
       .reduce((n, x) => n + BigInt(x.saleMinor), 0n)
       .toString(),
   );
   readonly openUnsetCount = computed(() =>
     this.stats()
-      .filter((x) => !isClosedStage(x.stage))
+      .filter((x) => !this.isClosed(x.stage))
       .reduce((n, x) => n + (x.unsetCount ?? 0), 0),
   );
   notSet() {
@@ -156,7 +178,7 @@ export class Pipeline {
   }
   readonly openCount = computed(() =>
     this.stats()
-      .filter((x) => !isClosedStage(x.stage))
+      .filter((x) => !this.isClosed(x.stage))
       .reduce((n, x) => n + x.count, 0),
   );
   initials(name: string | undefined) {
@@ -170,8 +192,8 @@ export class Pipeline {
   // ---- drag & drop (any stage to any other) ----
   readonly dragging = signal<SalesDeal | null>(null);
   readonly overStage = signal<string | null>(null);
-  canDrop(d: SalesDeal | null, stage: SalesStage) {
-    return !!d && this.canManage() && d.stage !== stage;
+  canDrop(d: SalesDeal | null, stage: string) {
+    return !!d && this.canMove() && this.boardStatus(d) !== stage;
   }
   dragStart(e: DragEvent, d: SalesDeal) {
     this.dragging.set(d);
@@ -181,17 +203,17 @@ export class Pipeline {
     this.dragging.set(null);
     this.overStage.set(null);
   }
-  dragOver(e: DragEvent, stage: SalesStage) {
+  dragOver(e: DragEvent, stage: string) {
     if (this.canDrop(this.dragging(), stage)) {
       e.preventDefault();
       this.overStage.set(stage);
     }
   }
-  drop(e: DragEvent, stage: SalesStage) {
+  drop(e: DragEvent, stage: string) {
     e.preventDefault();
     const d = this.dragging();
     this.dragEnd();
-    if (!d || d.stage === stage) return;
+    if (!d || this.boardStatus(d) === stage) return;
     void this.move(d, stage);
   }
 
@@ -201,10 +223,10 @@ export class Pipeline {
     this.error.set('');
     this.formError.set('');
     try {
-      await this.api.write('pipeline/' + d.id + '/stage', {
+      await this.api.write(this.isBrokerage() ? 'leads/' + d.leadId + '/status' : 'pipeline/' + d.id + '/stage', {
         requestId,
         version: d.leadVersion,
-        stage,
+        [this.isBrokerage() ? 'status' : 'stage']: stage,
       });
       await this.reload();
     } catch (e) {

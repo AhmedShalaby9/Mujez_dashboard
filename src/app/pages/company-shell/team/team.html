@@ -123,6 +123,17 @@
                     >
                       {{ t('Edit roles', 'تعديل الأدوار') }}
                     </button>
+                    @if (office) {
+                      <button
+                        type="button"
+                        class="btn btn--sm"
+                        [attr.aria-label]="t('Permissions for ', 'صلاحيات ') + m.name"
+                        [disabled]="!!busy() || loading()"
+                        (click)="editPermissions(m)"
+                      >
+                        {{ t('Permissions', 'الصلاحيات') }}
+                      </button>
+                    }
                   }
                 </td>
                 <td>
@@ -299,6 +310,11 @@
         </div>
       </div>
       <div class="dialog__foot">
+        @if (office && createdMember()) {
+          <button type="button" class="btn" (click)="setPermissionsForCreated()">
+            {{ t('Set permissions', 'تحديد الصلاحيات') }}
+          </button>
+        }
         <button type="button" class="btn btn--dark" (click)="closeInvite()">
           {{ t('Done', 'تم') }}
         </button>
@@ -527,6 +543,97 @@
           [disabled]="!!busy() || !selectedRoles().length"
         >
           {{ busy() ? t('Saving…', 'جارٍ الحفظ…') : t('Save roles', 'حفظ الأدوار') }}
+        </button>
+      </footer>
+    </form>
+  </section>
+}
+
+@if (permMember(); as m) {
+  <div class="scrim scrim--top" (click)="closePermissions()"></div>
+  <section
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.dir]="ar() ? 'rtl' : 'ltr'"
+    [attr.aria-label]="t('Office permissions', 'صلاحيات المكتب')"
+  >
+    <form (ngSubmit)="savePermissions()">
+      <header class="dialog__head">
+        <span class="dialog__title">{{ t('Permissions for ', 'صلاحيات ') + m.name }}</span>
+      </header>
+      <div class="dialog__main">
+        @if (permError()) {
+          <p class="note note--bad" role="alert">{{ permError() }}</p>
+        }
+        <fieldset class="role-options" [disabled]="permSaving()">
+          <legend>{{ t('Permissions', 'الصلاحيات') }}</legend>
+          <label class="role-option"
+            ><input type="checkbox" [(ngModel)]="perm.viewSale" name="viewSale" />{{
+              t('View sale properties', 'مشاهدة عقارات البيع')
+            }}</label
+          >
+          <label class="role-option"
+            ><input type="checkbox" [(ngModel)]="perm.viewRent" name="viewRent" />{{
+              t('View rental properties', 'مشاهدة عقارات الإيجار')
+            }}</label
+          >
+          <label class="role-option"
+            ><input type="checkbox" [(ngModel)]="perm.viewPhones" name="viewPhones" />{{
+              t('See phone numbers', 'رؤية أرقام التليفون')
+            }}</label
+          >
+          <label class="role-option"
+            ><input type="checkbox" [(ngModel)]="perm.addClient" name="addClient" />{{
+              t('Add client', 'إضافة عميل')
+            }}</label
+          >
+          <label class="role-option"
+            ><input type="checkbox" [(ngModel)]="perm.addProperty" name="addProperty" />{{
+              t('Add property / unit', 'إضافة عقار / وحدة')
+            }}</label
+          >
+          <label class="role-option"
+            ><input type="checkbox" [(ngModel)]="perm.editData" name="editData" />{{
+              t('Edit data', 'تعديل البيانات')
+            }}</label
+          >
+          <label class="role-option"
+            ><input
+              type="checkbox"
+              [(ngModel)]="perm.deleteProperties"
+              name="deleteProperties"
+            />{{ t('Delete properties', 'حذف العقارات') }}</label
+          >
+        </fieldset>
+        <fieldset class="role-options" [disabled]="permSaving()">
+          <legend>
+            {{
+              t(
+                'Projects allowed to view (no selection = all projects)',
+                'المشاريع المسموح بمشاهدتها (بدون اختيار = كل المشاريع)'
+              )
+            }}
+          </legend>
+          @for (c of officeCities(); track c.id) {
+            <label class="role-option"
+              ><input
+                type="checkbox"
+                [checked]="perm.cityIds.includes(c.id)"
+                (change)="toggleCity(c.id, $any($event.target).checked)"
+              />{{ cityName(c) }}</label
+            >
+          }
+          @if (!officeCities().length) {
+            <p class="muted">{{ t('No projects yet.', 'لا توجد مشاريع بعد.') }}</p>
+          }
+        </fieldset>
+      </div>
+      <footer class="dialog__foot">
+        <button class="btn" type="button" [disabled]="permSaving()" (click)="closePermissions()">
+          {{ t('Cancel', 'إلغاء') }}</button
+        ><button class="btn btn--dark" type="submit" [disabled]="permSaving()">
+          {{ permSaving() ? t('Saving…', 'جارٍ الحفظ…') : t('Save permissions', 'حفظ الصلاحيات') }}
         </button>
       </footer>
     </form>

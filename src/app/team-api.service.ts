@@ -123,6 +123,23 @@ export interface TeamTaskResult {
   version: number;
   status: string;
 }
+export interface AgentPermissions {
+  viewSale: boolean;
+  viewRent: boolean;
+  viewPhones: boolean;
+  addClient: boolean;
+  addProperty: boolean;
+  editData: boolean;
+  deleteProperties: boolean;
+  allCities: boolean;
+  cityIds: string[];
+  version: number;
+}
+export interface OfficeCity {
+  id: string;
+  nameEn: string;
+  nameAr: string;
+}
 @Injectable({ providedIn: 'root' })
 export class TeamApi {
   private readonly auth = inject(AuthService);
@@ -193,10 +210,30 @@ export class TeamApi {
     return this.auth.request('/api/v1/team/invite', body) as Promise<{
       status: string;
       accountId: string;
+      userId: string;
       token: string;
       expiresAt: string;
       email: string;
     }>;
+  }
+  officeCities() {
+    return this.auth.request('/api/v1/office/cities?archived=false') as Promise<{
+      items: OfficeCity[];
+    }>;
+  }
+  agentPermissions(userId: string) {
+    return this.auth.request(
+      '/api/v1/office/agents/' + encodeURIComponent(userId) + '/permissions',
+    ) as Promise<AgentPermissions>;
+  }
+  saveAgentPermissions(
+    userId: string,
+    body: { requestId: string; version: number; data: Omit<AgentPermissions, 'version'> },
+  ) {
+    return this.auth.request(
+      '/api/v1/office/agents/' + encodeURIComponent(userId) + '/permissions',
+      body,
+    ) as Promise<{ version: number }>;
   }
   resend(id: string) {
     return this.auth.request('/api/v1/team/' + id + '/resend', {}) as Promise<{

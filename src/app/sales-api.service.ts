@@ -94,6 +94,7 @@ export interface SalesDeal {
   type: 'sale' | 'lease' | null;
   owner: { id: string; name: string } | null;
   stage: SalesStage;
+  brokerageStatus?: BrokerageLeadStatus | null;
   version: number;
   leadVersion: number;
   sample: boolean;

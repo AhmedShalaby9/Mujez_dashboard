@@ -85,7 +85,7 @@
           <article
             class="cardx"
             [class.cardx--drag]="dragging()?.id === d.id"
-            [attr.draggable]="canManage()"
+            [attr.draggable]="canMove()"
             (dragstart)="dragStart($event, d)"
             (dragend)="dragEnd()"
           >
@@ -102,7 +102,7 @@
               }
             </div>
             <span class="sub"
-              >{{ daysInStage(d) ?? '—' }} {{ t('days in stage', 'أيام في المرحلة') }} ·
+              >@if (!isBrokerage()) { {{ daysInStage(d) ?? '—' }} {{ t('days in stage', 'أيام في المرحلة') }} · }
               {{ d.segment === 'com' ? t('Commercial', 'تجاري') : t('Residential', 'سكني') }}</span
             >
             <span class="cardx__title">{{ d.title?.[lang()] || d.contact[lang()] }}</span>
@@ -117,14 +117,14 @@
                 >{{ initials(d.owner?.name) }}</span
               >
             </div>
-            @if (canManage()) {
+            @if (canManage() || canMove()) {
               <div class="cardx__acts">
-                <button type="button" class="link" [disabled]="saving()" (click)="openForm(d)">
+                @if (canManage()) { <button type="button" class="link" [disabled]="saving()" (click)="openForm(d)">
                   {{
                     pending(d) ? t('Add deal details', 'إضافة تفاصيل الفرصة') : t('Edit', 'تعديل')
                   }}
-                </button>
-                @if (canManage()) {
+                </button> }
+                @if (canMove()) {
                   <select
                     class="moveSel"
                     [attr.aria-label]="t('Move to…', 'نقل إلى…')"
@@ -132,8 +132,8 @@
                     (change)="move(d, $any($event.target).value); $any($event.target).value = ''"
                   >
                     <option value="">{{ t('Move to…', 'نقل إلى…') }}</option>
-                    @for (s of stages; track s) {
-                      @if (s !== d.stage) {
+                    @for (s of stages(); track s) {
+                      @if (s !== boardStatus(d)) {
                         <option [value]="s">{{ stageNames()[s] }}</option>
                       }
                     }

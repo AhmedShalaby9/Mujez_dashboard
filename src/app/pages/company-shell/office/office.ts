@@ -56,6 +56,7 @@ export class Office {
   readonly fields = signal<OfficeField[]>([]);
   readonly target = signal<any>(null);
   readonly choices = signal<any[]>([]);
+  readonly bookStep = signal<'property' | 'client'>('client');
   readonly choiceTotal = signal(0);
   readonly choicePage = signal(1);
   readonly choiceLoading = signal(false);
@@ -570,8 +571,11 @@ export class Office {
       void this.searchChoices();
     }
     if (mode === 'book') {
+      const selectedProperty = !!row;
+      this.bookStep.set(selectedProperty ? 'client' : 'property');
       this.form = {
-        purpose: row.data.purpose === 'sale' ? 'sale' : 'rent',
+        propertyId: row?.id ?? '',
+        purpose: row?.data.purpose === 'sale' ? 'sale' : 'rent',
         clientId: '',
         notes: '',
       };
@@ -581,7 +585,9 @@ export class Office {
           en: 'Purpose',
           ar: 'الغرض',
           options: purposes.filter(
-            (p) => p[0] !== 'both' && (row.data.purpose === 'both' || p[0] === row.data.purpose),
+            (p) =>
+              p[0] !== 'both' &&
+              (!row || row.data.purpose === 'both' || p[0] === row.data.purpose),
           ),
         },
         { key: 'notes', en: 'Agreement notes', ar: 'ملاحظات الاتفاق', type: 'textarea' },
@@ -663,6 +669,8 @@ export class Office {
   }
   formTitle() {
     const key = this.mode()!;
+    if (key === 'book' && this.bookStep() === 'property')
+      return this.t('Choose a property to book', 'اختر العقار المراد حجزه');
     return this.t(
       {
         client: 'Client',
@@ -713,18 +721,26 @@ export class Office {
     const page = loadMore ? this.choicePage() + 1 : 1;
     this.choiceLoading.set(true);
     try {
-      const path = mode === 'book' ? 'clients' : 'properties';
+      const bookingPropertySearch = mode === 'book' && this.bookStep() === 'property';
+      const path = mode === 'book' && !bookingPropertySearch ? 'clients' : 'properties';
       const q = new URLSearchParams({
         q: this.lookup.trim(),
         page: String(page),
         limit: String(this.choicePageSize),
       });
-      if (mode === 'book' && this.options().scope !== 'company')
+      if (bookingPropertySearch) q.set('status', 'available');
+      if (mode === 'book' && !bookingPropertySearch && this.options().scope !== 'company')
         q.set('ownerId', this.auth.user()!.id);
       const r = await this.api(path + '?' + q);
       if (this.mode() !== mode || generation !== this.choiceGeneration) return;
       const selected = this.choices().find(
-        (x) => x.id === (mode === 'book' ? this.form.clientId : this.form.propertyId),
+        (x) =>
+          x.id ===
+          (mode === 'book'
+            ? this.bookStep() === 'property'
+              ? this.form.propertyId
+              : this.form.clientId
+            : this.form.propertyId),
       );
       const items = loadMore
         ? [
@@ -742,6 +758,45 @@ export class Office {
     } finally {
       if (generation === this.choiceGeneration) this.choiceLoading.set(false);
     }
+  }
+  chooseBookingProperty(id: string) {
+    const property = this.choices().find((x) => x.id === id);
+    if (!property) return;
+    this.target.set(property);
+    this.form.propertyId = property.id;
+    this.form.purpose = property.data.purpose === 'sale' ? 'sale' : 'rent';
+    this.form.clientId = '';
+    this.bookStep.set('client');
+    this.choices.set([]);
+    this.choicePage.set(1);
+    this.choiceTotal.set(0);
+    this.lookup = '';
+    this.fields.set([
+      {
+        key: 'purpose',
+        en: 'Purpose',
+        ar: 'الغرض',
+        options: purposes.filter(
+          (p) =>
+            p[0] !== 'both' &&
+            (property.data.purpose === 'both' || p[0] === property.data.purpose),
+        ),
+      },
+      { key: 'notes', en: 'Agreement notes', ar: 'ملاحظات الاتفاق', type: 'textarea' },
+    ]);
+    void this.searchChoices();
+  }
+  changeBookingProperty() {
+    if (this.saving()) return;
+    this.target.set(null);
+    this.form.propertyId = '';
+    this.form.clientId = '';
+    this.bookStep.set('property');
+    this.choices.set([]);
+    this.choicePage.set(1);
+    this.choiceTotal.set(0);
+    this.lookup = '';
+    void this.searchChoices();
   }
   async recommend() {
     const row = this.detail();

@@ -20,6 +20,11 @@
           }}
         </button>
       }
+      @if (view === 'bookings' && canBook()) {
+        <button class="btn btn--dark" [disabled]="saving()" (click)="begin('book')">
+          {{ t('+ New booking', '+ حجز جديد') }}
+        </button>
+      }
       <button class="btn" [disabled]="loading() || saving()" (click)="load()">
         {{ t('Refresh', 'تحديث') }}
       </button>
@@ -599,13 +604,28 @@
               )
             }}
           </p>
+          @if (target()) {
+            <div class="office-intro">
+              <div>
+                <b>{{ t('Property', 'العقار') }}: {{ target().title }}</b>
+                <p class="muted">
+                  {{ target().data.areaName }} · {{ target().data.city }} · {{ target().code }}
+                </p>
+              </div>
+              <button type="button" class="btn btn--sm" [disabled]="saving()" (click)="changeBookingProperty()">
+                {{ t('Change property', 'تغيير العقار') }}
+              </button>
+            </div>
+          }
         }
         @if (mode() === 'book' || mode() === 'activity') {
           <div class="office-lookup">
             <label class="field"
               ><span>{{
                 mode() === 'book'
-                  ? t('Search your clients by name or phone', 'ابحث في عملائك بالاسم أو رقم الهاتف')
+                  ? bookStep() === 'property'
+                    ? t('Search available properties', 'ابحث عن العقارات المتاحة')
+                    : t('Search your clients by name or phone', 'ابحث في عملائك بالاسم أو رقم الهاتف')
                   : t('Search office properties for a viewing', 'بحث عقارات المكتب للمعاينة')
               }}</span
               ><input
@@ -614,7 +634,9 @@
                 (ngModelChange)="scheduleChoiceSearch()"
                 [attr.placeholder]="
                   mode() === 'book'
-                    ? t('Type a client name or phone', 'اكتب اسم العميل أو رقم هاتفه')
+                    ? bookStep() === 'property'
+                      ? t('Type a property name or area', 'اكتب اسم العقار أو المنطقة')
+                      : t('Type a client name or phone', 'اكتب اسم العميل أو رقم هاتفه')
                     : t('Search properties', 'ابحث عن العقارات')
                 "
               /></label
@@ -630,31 +652,54 @@
           <label class="field"
             ><span>{{
               mode() === 'book'
-                ? t('Client', 'العميل')
+                ? bookStep() === 'property'
+                  ? t('Available property', 'العقار المتاح')
+                  : t('Client', 'العميل')
                 : t('Property · required for a viewing', 'العقار · مطلوب للمعاينة')
             }}</span
             ><select
               name="choice"
-              [ngModel]="mode() === 'book' ? form.clientId : form.propertyId"
+              [ngModel]="
+                mode() === 'book'
+                  ? bookStep() === 'property'
+                    ? form.propertyId
+                    : form.clientId
+                  : form.propertyId
+              "
               (ngModelChange)="
-                mode() === 'book' ? (form.clientId = $event) : (form.propertyId = $event)
+                mode() === 'book'
+                  ? bookStep() === 'property'
+                    ? chooseBookingProperty($event)
+                    : (form.clientId = $event)
+                  : (form.propertyId = $event)
               "
               [required]="mode() === 'book'"
               [disabled]="saving()"
             >
               <option value="">{{ t('Choose', 'اختر') }}</option>
               @for (c of choices(); track c.id) {
-                <option [value]="c.id">{{ c.name || c.title }} · {{ c.phone || c.code }}</option>
+                <option [value]="c.id">
+                  {{
+                    mode() === 'book' && bookStep() === 'client'
+                      ? c.name + ' · ' + c.phone
+                      : c.title + ' · ' + (c.data?.areaName || c.data?.city || c.code)
+                  }}
+                </option>
               }
             </select></label
           >
           @if (mode() === 'book' && choiceTotal() > 0) {
             <p class="muted">
               {{
-                t(
-                  'Showing ' + choiceResultCount() + ' of your ' + choiceTotal() + ' clients',
-                  'عرض ' + choiceResultCount() + ' من إجمالي ' + choiceTotal() + ' عميل من عملائك'
-                )
+                mode() === 'book' && bookStep() === 'property'
+                  ? t(
+                      'Showing ' + choiceResultCount() + ' of ' + choiceTotal() + ' available properties',
+                      'عرض ' + choiceResultCount() + ' من ' + choiceTotal() + ' عقار متاح'
+                    )
+                  : t(
+                      'Showing ' + choiceResultCount() + ' of your ' + choiceTotal() + ' clients',
+                      'عرض ' + choiceResultCount() + ' من إجمالي ' + choiceTotal() + ' عميل من عملائك'
+                    )
               }}
             </p>
           }
@@ -668,7 +713,7 @@
               {{
                 choiceLoading()
                   ? t('Loading…', 'جارٍ التحميل…')
-                  : mode() === 'book'
+                  : mode() === 'book' && bookStep() === 'client'
                     ? t('Load more clients', 'تحميل عملاء إضافيين')
                     : t('Load more properties', 'تحميل عقارات إضافية')
               }}
@@ -806,7 +851,11 @@
       <div class="dialog__foot">
         <button class="btn" type="button" [disabled]="saving()" (click)="closeForm()">
           {{ t('Cancel', 'إلغاء') }}</button
-        ><button class="btn btn--dark" [disabled]="saving()" type="submit">
+        ><button
+          class="btn btn--dark"
+          [disabled]="saving() || (mode() === 'book' && (!target() || !form.clientId))"
+          type="submit"
+        >
           {{ saving() ? t('Saving…', 'جارٍ الحفظ…') : t('Save', 'حفظ') }}
         </button>
       </div>

@@ -309,7 +309,7 @@ export class Office {
         ...commonFilters,
         ...extra,
         { key: 'createdBy', en: 'Added by', ar: 'أضيف بواسطة', options: staff },
-        { key: 'city', en: 'City', ar: 'المدينة', options: this.cityOptions(true) },
+        { key: 'city', en: 'Project', ar: 'مشروع', options: this.cityOptions(true) },
         { key: 'finish', en: 'Finishing', ar: 'التشطيب' },
         { key: 'minFloor', en: 'Minimum floor', ar: 'أقل دور', type: 'number' },
         { key: 'maxFloor', en: 'Maximum floor', ar: 'أعلى دور', type: 'number' },

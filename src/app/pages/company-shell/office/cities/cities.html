@@ -1,18 +1,18 @@
 <div class="pg" [attr.dir]="ar() ? 'rtl' : 'ltr'">
   <div class="head">
     <div class="head__text">
-      <h1>{{ t('Cities', 'المدن') }}</h1>
+      <h1>{{ t('Projects', 'المشاريع') }}</h1>
       <span>{{
         t(
-          'Manage the cities your office operates in',
-          'أضف المدن التي يعمل بها مكتبك لتظهر في عقارات شركتك فقط'
+          'Manage the projects your office operates in',
+          'أضف المشاريع التي يعمل بها مكتبك لتظهر في عقارات شركتك فقط'
         )
       }}</span>
     </div>
     <div class="head__actions">
       @if (canManage()) {
         <button class="btn btn--dark" (click)="edit()">
-          {{ t('+ Add city', '+ إضافة مدينة') }}
+          {{ t('+ Add project', '+ إضافة مشروع') }}
         </button>
       }
     </div>
@@ -29,18 +29,18 @@
         name="search"
         [(ngModel)]="search"
         maxlength="100"
-        [placeholder]="t('Search cities…', 'بحث عن مدينة…')"
-        [attr.aria-label]="t('Search cities', 'البحث عن المدن')"
+        [placeholder]="t('Search projects…', 'بحث عن مشروع…')"
+        [attr.aria-label]="t('Search projects', 'البحث عن المشاريع')"
       />
     </div>
     <select
       name="status"
       [(ngModel)]="archived"
-      [attr.aria-label]="t('City status', 'حالة المدينة')"
+      [attr.aria-label]="t('Project status', 'حالة المشروع')"
     >
-      <option value="false">{{ t('Available cities', 'المدن المتاحة') }}</option>
-      <option value="true">{{ t('Deleted cities', 'المدن المحذوفة') }}</option>
-      <option value="all">{{ t('All cities', 'كل المدن') }}</option></select
+      <option value="false">{{ t('Available projects', 'المشاريع المتاحة') }}</option>
+      <option value="true">{{ t('Deleted projects', 'المشاريع المحذوفة') }}</option>
+      <option value="all">{{ t('All projects', 'كل المشاريع') }}</option></select
     ><button class="btn" [disabled]="loading()">{{ t('Search', 'بحث') }}</button>
   </form>
   <section class="card" [attr.aria-busy]="loading()">
@@ -81,8 +81,8 @@
               <td colspan="4" class="muted">
                 {{
                   loading()
-                    ? t('Loading cities…', 'جارٍ تحميل المدن…')
-                    : t('No cities match this search.', 'لا توجد مدن مطابقة للبحث.')
+                    ? t('Loading projects…', 'جارٍ تحميل المشاريع…')
+                    : t('No projects match this search.', 'لا توجد مشاريع مطابقة للبحث.')
                 }}
               </td>
             </tr>
@@ -98,12 +98,14 @@
     class="dialog"
     role="dialog"
     aria-modal="true"
-    [attr.aria-label]="t('City details', 'بيانات المدينة')"
+    [attr.aria-label]="t('Project details', 'بيانات المشروع')"
     [attr.dir]="ar() ? 'rtl' : 'ltr'"
   >
     <form (ngSubmit)="save()">
       <header class="dialog__head">
-        <h2>{{ selected() ? t('Edit city', 'تعديل مدينة') : t('Add city', 'إضافة مدينة') }}</h2>
+        <h2>
+          {{ selected() ? t('Edit project', 'تعديل مشروع') : t('Add project', 'إضافة مشروع') }}
+        </h2>
         <button
           type="button"
           class="btn btn--sm"
@@ -144,7 +146,7 @@
         <button type="button" class="btn" (click)="close()" [disabled]="saving()">
           {{ t('Cancel', 'إلغاء') }}</button
         ><button class="btn btn--dark" [disabled]="saving()">
-          {{ saving() ? t('Saving…', 'جارٍ الحفظ…') : t('Save city', 'حفظ المدينة') }}
+          {{ saving() ? t('Saving…', 'جارٍ الحفظ…') : t('Save project', 'حفظ مشروع') }}
         </button>
       </footer>
     </form>

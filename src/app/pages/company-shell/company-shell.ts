@@ -502,7 +502,7 @@ export class CompanyShell {
       all.push({
         kind: 'item',
         path: 'office/cities',
-        label: this.lang() === 'ar' ? 'المدن' : 'Cities',
+        label: this.lang() === 'ar' ? 'المشاريع' : 'Projects',
       });
     for (let i = 0; i < all.length; i++) {
       const entry = all[i];

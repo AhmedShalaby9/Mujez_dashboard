@@ -549,7 +549,7 @@
   </section>
 }
 
-@if (permMember(); as m) {
+@if (permOpen() && permMember(); as m) {
   <div class="scrim scrim--top" (click)="closePermissions()"></div>
   <section
     class="dialog"

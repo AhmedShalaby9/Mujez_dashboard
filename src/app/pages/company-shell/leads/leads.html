@@ -80,7 +80,7 @@
         (input)="searchChanged($any($event.target).value)"
       />
     </div>
-    @if (!ownScope()) {
+    @if (isBrokerage() && !ownScope()) {
       <div class="person-filter">
         <button
           type="button"
@@ -152,6 +152,18 @@
           </div>
         }
       </div>
+    } @else if (!isBrokerage()) {
+      <select
+        class="sel"
+        [attr.aria-label]="t('Filter by owner', 'التصفية حسب المسؤول')"
+        [value]="ownerFilter()"
+        (change)="ownerFilter.set($any($event.target).value); reload()"
+      >
+        <option value="">{{ t('All owners', 'كل المسؤولين') }}</option>
+        @for (o of owners(); track o.id) {
+          <option [value]="o.id">{{ o.name }}</option>
+        }
+      </select>
     }
     <div class="chips status-tabs">
       <button

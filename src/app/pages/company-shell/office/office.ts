@@ -56,6 +56,9 @@ export class Office {
   readonly fields = signal<OfficeField[]>([]);
   readonly target = signal<any>(null);
   readonly choices = signal<any[]>([]);
+  readonly choiceTotal = signal(0);
+  readonly choicePage = signal(1);
+  readonly choiceLoading = signal(false);
   readonly ar = computed(() => this.ui.lang() === 'ar');
   readonly canManage = computed(
     () => this.auth.user()?.permissions.includes('leads.manage') ?? false,
@@ -74,6 +77,9 @@ export class Office {
   private signature = '';
   private generation = 0;
   private detailGeneration = 0;
+  private choiceGeneration = 0;
+  private choiceSearchTimer?: ReturnType<typeof setTimeout>;
+  private readonly choicePageSize = 100;
   readonly purposes = purposes;
   readonly clientStatuses = clientStatuses;
   readonly propertyStatuses = propertyStatuses;
@@ -159,6 +165,8 @@ export class Office {
     this.querySub.unsubscribe();
     this.generation++;
     this.detailGeneration++;
+    this.choiceGeneration++;
+    if (this.choiceSearchTimer) clearTimeout(this.choiceSearchTimer);
   }
   constructor() {
     if (this.view === 'bookings') this.filters['status'] = 'booked';
@@ -389,6 +397,8 @@ export class Office {
   }
   closeForm() {
     if (this.saving()) return;
+    this.choiceGeneration++;
+    if (this.choiceSearchTimer) clearTimeout(this.choiceSearchTimer);
     this.mode.set(null);
     this.choices.set([]);
   }
@@ -399,6 +409,10 @@ export class Office {
     this.error.set('');
     this.requestId = crypto.randomUUID();
     this.signature = '';
+    this.choiceGeneration++;
+    if (this.choiceSearchTimer) clearTimeout(this.choiceSearchTimer);
+    this.choicePage.set(1);
+    this.choiceTotal.set(0);
     this.lookup = '';
     this.choices.set([]);
     this.form = {};
@@ -670,25 +684,63 @@ export class Office {
       }[key],
     );
   }
-  async searchChoices() {
+  scheduleChoiceSearch() {
+    if (this.choiceSearchTimer) clearTimeout(this.choiceSearchTimer);
+    this.choiceGeneration++;
+    this.choiceLoading.set(false);
+    this.choicePage.set(1);
+    this.choiceTotal.set(0);
+    this.choiceSearchTimer = setTimeout(() => {
+      this.choiceSearchTimer = undefined;
+      void this.searchChoices();
+    }, 250);
+  }
+  choiceHasMore() {
+    return this.choicePage() * this.choicePageSize < this.choiceTotal();
+  }
+  choiceResultCount() {
+    return Math.min(this.choicePage() * this.choicePageSize, this.choiceTotal());
+  }
+  async searchChoices(loadMore = false) {
     const mode = this.mode();
+    if (mode !== 'book' && mode !== 'activity') return;
+    if (this.choiceSearchTimer) {
+      clearTimeout(this.choiceSearchTimer);
+      this.choiceSearchTimer = undefined;
+      loadMore = false;
+    }
+    const generation = ++this.choiceGeneration;
+    const page = loadMore ? this.choicePage() + 1 : 1;
+    this.choiceLoading.set(true);
     try {
       const path = mode === 'book' ? 'clients' : 'properties';
-      const q = new URLSearchParams({ q: this.lookup, limit: '24' });
+      const q = new URLSearchParams({
+        q: this.lookup.trim(),
+        page: String(page),
+        limit: String(this.choicePageSize),
+      });
       if (mode === 'book' && this.options().scope !== 'company')
         q.set('ownerId', this.auth.user()!.id);
       const r = await this.api(path + '?' + q);
-      if (this.mode() !== mode) return;
+      if (this.mode() !== mode || generation !== this.choiceGeneration) return;
       const selected = this.choices().find(
         (x) => x.id === (mode === 'book' ? this.form.clientId : this.form.propertyId),
       );
+      const items = loadMore
+        ? [
+            ...this.choices(),
+            ...r.items.filter((x: any) => !this.choices().some((c) => c.id === x.id)),
+          ]
+        : r.items;
       this.choices.set(
-        selected && !r.items.some((x: any) => x.id === selected.id)
-          ? [selected, ...r.items]
-          : r.items,
+        selected && !items.some((x: any) => x.id === selected.id) ? [selected, ...items] : items,
       );
+      this.choicePage.set(page);
+      this.choiceTotal.set(r.total);
     } catch (e) {
-      this.error.set((e as Error).message);
+      if (generation === this.choiceGeneration) this.error.set((e as Error).message);
+    } finally {
+      if (generation === this.choiceGeneration) this.choiceLoading.set(false);
     }
   }
   async recommend() {

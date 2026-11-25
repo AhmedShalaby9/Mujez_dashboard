@@ -605,11 +605,25 @@
             <label class="field"
               ><span>{{
                 mode() === 'book'
-                  ? t('Search your clients', 'بحث في عملائك')
+                  ? t('Search your clients by name or phone', 'ابحث في عملائك بالاسم أو رقم الهاتف')
                   : t('Search office properties for a viewing', 'بحث عقارات المكتب للمعاينة')
               }}</span
-              ><input name="lookup" [(ngModel)]="lookup" /></label
-            ><button type="button" class="btn" [disabled]="saving()" (click)="searchChoices()">
+              ><input
+                name="lookup"
+                [(ngModel)]="lookup"
+                (ngModelChange)="scheduleChoiceSearch()"
+                [attr.placeholder]="
+                  mode() === 'book'
+                    ? t('Type a client name or phone', 'اكتب اسم العميل أو رقم هاتفه')
+                    : t('Search properties', 'ابحث عن العقارات')
+                "
+              /></label
+            ><button
+              type="button"
+              class="btn"
+              [disabled]="saving() || choiceLoading()"
+              (click)="searchChoices()"
+            >
               {{ t('Search', 'بحث') }}
             </button>
           </div>
@@ -634,6 +648,32 @@
               }
             </select></label
           >
+          @if (mode() === 'book' && choiceTotal() > 0) {
+            <p class="muted">
+              {{
+                t(
+                  'Showing ' + choiceResultCount() + ' of your ' + choiceTotal() + ' clients',
+                  'عرض ' + choiceResultCount() + ' من إجمالي ' + choiceTotal() + ' عميل من عملائك'
+                )
+              }}
+            </p>
+          }
+          @if (choiceHasMore()) {
+            <button
+              type="button"
+              class="btn"
+              [disabled]="saving() || choiceLoading()"
+              (click)="searchChoices(true)"
+            >
+              {{
+                choiceLoading()
+                  ? t('Loading…', 'جارٍ التحميل…')
+                  : mode() === 'book'
+                    ? t('Load more clients', 'تحميل عملاء إضافيين')
+                    : t('Load more properties', 'تحميل عقارات إضافية')
+              }}
+            </button>
+          }
         }
         @if (mode() === 'property') {
           <label class="field"

@@ -179,6 +179,12 @@
   box-shadow: 0 16px 36px rgba(17, 17, 19, 0.14);
   overflow: hidden;
 }
+/* For a picker near the bottom of its container (e.g. the last field in a
+   form): opens above the toggle button instead of below it. */
+.pf-panel--up {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
 .pf-search {
   position: relative;
   padding: 8px;

@@ -447,6 +447,11 @@ button {
   justify-content: flex-start;
   text-align: start;
   color: var(--ink);
+  &:disabled {
+    color: var(--ink-muted);
+    background: var(--surface-alt-2);
+    cursor: not-allowed;
+  }
 }
 .text-button,
 .inline-actions button {

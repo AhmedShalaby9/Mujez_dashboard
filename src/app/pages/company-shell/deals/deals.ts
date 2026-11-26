@@ -78,6 +78,13 @@ export class Deals {
   leadOpen = signal(false);
   private leadSerial = 0;
   private leadTimer?: ReturnType<typeof setTimeout>;
+  agentOpen = signal(false);
+  agentQuery = signal('');
+  readonly filteredAgents = computed(() => {
+    const q = this.agentQuery().trim().toLowerCase();
+    const list = this.options()?.agents ?? [];
+    return q ? list.filter((a) => a.name.toLowerCase().includes(q)) : list;
+  });
   selected = signal<Deal | null>(null);
   loading = signal(false);
   saving = signal(false);
@@ -267,6 +274,29 @@ export class Deals {
     this.form.leadId = id;
     this.chooseLead();
     this.leadOpen.set(false);
+  }
+  readonly agentPickerEl = viewChild<ElementRef<HTMLElement>>('agentPicker');
+  toggleAgentPicker() {
+    if (this.isSales()) return;
+    this.agentOpen.update((v) => !v);
+    if (this.agentOpen()) this.agentQuery.set('');
+  }
+  closeAgentPicker() {
+    this.agentOpen.set(false);
+  }
+  @HostListener('document:click', ['$event'])
+  onDocumentClickForAgentPicker(e: MouseEvent) {
+    if (!this.agentOpen()) return;
+    const el = this.agentPickerEl()?.nativeElement;
+    if (el && !el.contains(e.target as Node)) this.closeAgentPicker();
+  }
+  @HostListener('document:keydown.escape')
+  onEscapeForAgentPicker() {
+    if (this.agentOpen()) this.closeAgentPicker();
+  }
+  pickAgent(id: string) {
+    this.form.agentId = id;
+    this.agentOpen.set(false);
   }
   copyLead() {
     const l = this.leadOptions().find((x) => x.id === this.form.leadId);

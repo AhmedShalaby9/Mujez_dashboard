@@ -158,16 +158,13 @@
 }
 /* Reusable searchable-list picker: a toggle button that opens a panel with a
    search box and a scrollable list of choices (e.g. filter by person, pick a
-   lead). Markup: .search-pick > button.btn + (.pf-backdrop + .pf-panel
-   > .pf-search > input, .pf-list > button.pf-item*). */
+   lead). Markup: .search-pick#ref > button + @if(open) .pf-panel
+   > .pf-search > input, .pf-list > button.pf-item*. Close it with a
+   document:click HostListener scoped to #ref (checking .contains(target)),
+   not a full-screen backdrop div — a fixed, inset:0 backdrop sits on top of
+   the page and blocks scrolling everywhere except over the panel itself. */
 .search-pick {
   position: relative;
-}
-.pf-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 25;
-  background: transparent;
 }
 .pf-panel {
   position: absolute;
@@ -181,6 +178,12 @@
   background: var(--surface);
   box-shadow: 0 16px 36px rgba(17, 17, 19, 0.14);
   overflow: hidden;
+}
+/* For a picker near the bottom of its container (e.g. the last field in a
+   form): opens above the toggle button instead of below it. */
+.pf-panel--up {
+  top: auto;
+  bottom: calc(100% + 6px);
 }
 .pf-search {
   position: relative;

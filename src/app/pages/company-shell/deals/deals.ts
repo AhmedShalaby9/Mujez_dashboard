@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, computed, inject, signal, viewChild } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RUNTIME_CONFIG } from '../../../runtime-config';
 import { FormsModule } from '@angular/forms';
@@ -78,6 +78,13 @@ export class Deals {
   leadOpen = signal(false);
   private leadSerial = 0;
   private leadTimer?: ReturnType<typeof setTimeout>;
+  agentOpen = signal(false);
+  agentQuery = signal('');
+  readonly filteredAgents = computed(() => {
+    const q = this.agentQuery().trim().toLowerCase();
+    const list = this.options()?.agents ?? [];
+    return q ? list.filter((a) => a.name.toLowerCase().includes(q)) : list;
+  });
   selected = signal<Deal | null>(null);
   loading = signal(false);
   saving = signal(false);
@@ -245,16 +252,51 @@ export class Deals {
     const l = this.leadOptions().find((x) => x.id === this.form.leadId);
     if (l && this.isSales()) this.form.agentId = this.auth.user()?.id ?? '';
   }
+  readonly leadPickerEl = viewChild<ElementRef<HTMLElement>>('leadPicker');
   toggleLeadPicker() {
     this.leadOpen.update((v) => !v);
   }
   closeLeadPicker() {
     this.leadOpen.set(false);
   }
+  /** No backdrop: that would block scrolling the rest of the wizard while the panel is open. */
+  @HostListener('document:click', ['$event'])
+  onDocumentClickForLeadPicker(e: MouseEvent) {
+    if (!this.leadOpen()) return;
+    const el = this.leadPickerEl()?.nativeElement;
+    if (el && !el.contains(e.target as Node)) this.closeLeadPicker();
+  }
+  @HostListener('document:keydown.escape')
+  onEscapeForLeadPicker() {
+    if (this.leadOpen()) this.closeLeadPicker();
+  }
   pickLead(id: string) {
     this.form.leadId = id;
     this.chooseLead();
     this.leadOpen.set(false);
+  }
+  readonly agentPickerEl = viewChild<ElementRef<HTMLElement>>('agentPicker');
+  toggleAgentPicker() {
+    if (this.isSales()) return;
+    this.agentOpen.update((v) => !v);
+    if (this.agentOpen()) this.agentQuery.set('');
+  }
+  closeAgentPicker() {
+    this.agentOpen.set(false);
+  }
+  @HostListener('document:click', ['$event'])
+  onDocumentClickForAgentPicker(e: MouseEvent) {
+    if (!this.agentOpen()) return;
+    const el = this.agentPickerEl()?.nativeElement;
+    if (el && !el.contains(e.target as Node)) this.closeAgentPicker();
+  }
+  @HostListener('document:keydown.escape')
+  onEscapeForAgentPicker() {
+    if (this.agentOpen()) this.closeAgentPicker();
+  }
+  pickAgent(id: string) {
+    this.form.agentId = id;
+    this.agentOpen.set(false);
   }
   copyLead() {
     const l = this.leadOptions().find((x) => x.id === this.form.leadId);

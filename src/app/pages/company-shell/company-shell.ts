@@ -57,6 +57,7 @@ const NAV_PERMISSION: Record<string, string> = {
   'catalog/compounds': 'projects.read',
   'catalog/units': 'units.read',
   projects: 'projects.read',
+  'inventory/developers': 'projects.read',
   'office/cities': 'leads.read',
   'office/dashboard': 'leads.read',
   'office/clients': 'leads.read',
@@ -67,6 +68,7 @@ const NAV_PERMISSION: Record<string, string> = {
   compounds: 'projects.read',
   units: 'units.read',
   reservations: 'reservations.read',
+  deals: 'leads.read',
   contracts: 'contracts.read',
   commissions: 'commissions.read',
   documents: 'documents.read',
@@ -105,6 +107,7 @@ const COMPANY_ICONS: Record<string, string> = {
   'my-team':
     'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 0 0 0-6M22 21a6 6 0 0 0-4-5.6',
   'catalog/developers': 'M3 21h18M5 21V5l7-2v18M12 9h7v12',
+  'inventory/developers': 'M3 21h18M5 21V5l7-2v18M12 9h7v12',
   'catalog/compounds': 'M3 10l9-7 9 7M5 9v12h14V9',
   'catalog/units': 'M3 10l9-7 9 7M5 9v12h14V9M9 21v-7h6v7',
   projects: 'M3 21h18M5 21V5h6v16M11 9h8v12M8 8v1M8 12v1M15 12v1',
@@ -112,6 +115,7 @@ const COMPANY_ICONS: Record<string, string> = {
   compounds: 'M3 10l9-7 9 7M5 9v12h14V9M9 21v-7h6v7',
   units: 'M3 10l9-7 9 7M5 9v12h14V9M9 21v-7h6v7',
   reservations: 'M5 3h14v18l-7-4-7 4zM9 8h6M9 12h6',
+  deals: 'M3 8l5-4 4 4 4-4 5 4 4-4 5-5-5',
   finance: 'M3 5h18v16H3zM7 9h3M7 13h10M7 17h10',
   'finance/settings': 'M3 5h18v16H3zM7 9h3M7 13h10M7 17h10',
   'finance/journals': 'M3 5h18v16H3zM7 9h3M7 13h10M7 17h10',
@@ -179,6 +183,7 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Dashboard', path: 'dashboard' },
   { kind: 'item', label: 'Pipeline', path: 'pipeline' },
   { kind: 'item', label: 'Leads', path: 'leads' },
+  { kind: 'item', label: 'Deals', path: 'deals' },
   { kind: 'item', label: 'Cold calls', path: 'cold-calls' },
   { kind: 'item', label: 'Contacts', path: 'contacts' },
   { kind: 'item', label: 'Calendar', path: 'calendar' },
@@ -189,6 +194,7 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Compounds', path: 'catalog/compounds' },
   { kind: 'item', label: 'Units', path: 'catalog/units' },
   { kind: 'head', label: 'Inventory' },
+  { kind: 'item', label: 'Developers', path: 'inventory/developers' },
   { kind: 'item', label: 'Projects', path: 'projects' },
   { kind: 'item', label: 'Units', path: 'units' },
   { kind: 'item', label: 'Reservations', path: 'reservations' },
@@ -237,6 +243,7 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'لوحة التحكم', path: 'dashboard' },
   { kind: 'item', label: 'مراحل الصفقات', path: 'pipeline' },
   { kind: 'item', label: 'العملاء المحتملون', path: 'leads' },
+  { kind: 'item', label: 'الصفقات', path: 'deals' },
   { kind: 'item', label: 'المكالمات الباردة', path: 'cold-calls' },
   { kind: 'item', label: 'جهات الاتصال', path: 'contacts' },
   { kind: 'item', label: 'التقويم', path: 'calendar' },
@@ -247,6 +254,7 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'الكمباوندات', path: 'catalog/compounds' },
   { kind: 'item', label: 'الوحدات', path: 'catalog/units' },
   { kind: 'head', label: 'المخزون' },
+  { kind: 'item', label: 'المطوّرون', path: 'inventory/developers' },
   { kind: 'item', label: 'المشروعات', path: 'projects' },
   { kind: 'item', label: 'الوحدات', path: 'units' },
   { kind: 'item', label: 'الحجوزات', path: 'reservations' },
@@ -409,6 +417,13 @@ export class CompanyShell {
           (u.roles ?? [u.role]).includes('team_lead') &&
           perms.includes('team.self.read')
         );
+      if (item.path === 'deals')
+        return (u?.company?.type ?? u?.workspace?.company?.type) === 'brokerage';
+      if (item.path === 'inventory/developers')
+        return (
+          (u?.company?.type ?? u?.workspace?.company?.type) === 'brokerage' &&
+          perms.includes('projects.read')
+        );
       if (item.path === 'finance' || item.path.startsWith('finance/'))
         return hasAccountingAccess(u);
       if (item.path === 'payroll') return hasPayrollAccess(u);
@@ -452,7 +467,9 @@ export class CompanyShell {
         dashboard: ['office/dashboard', 'Office overview', 'ملخص المكتب'],
         leads: ['office/clients', 'Clients', 'العملاء'],
         projects: ['office/properties', 'Office properties', 'عقارات المكتب'],
+        'inventory/developers': null,
         reservations: ['office/bookings', 'Bookings', 'الحجوزات'],
+        deals: null,
         pipeline: ['office/pipeline', 'Pipeline', 'مراحل العملاء'],
         'cold-calls': null,
         'my-team': ['office/my-team', 'My team', 'فريقي'],
@@ -491,6 +508,17 @@ export class CompanyShell {
               label: this.lang() === 'ar' ? 'الصفقات' : 'Deals',
             });
         }
+      }
+    }
+    if (!officeWorkspace(this.auth.user())) {
+      for (let i = all.length - 1; i >= 0; i--) {
+        const entry = all[i];
+        if (
+          entry.kind === 'item' &&
+          entry.path === 'reservations' &&
+          (u?.company?.type ?? u?.workspace?.company?.type) === 'brokerage'
+        )
+          all.splice(i, 1);
       }
     }
     if (

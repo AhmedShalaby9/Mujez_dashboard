@@ -1,0 +1,54 @@
+<div class="dev-page">
+  <header>
+    <span class="eyebrow">{{ t('COMPANY INVENTORY', 'مخزون الشركة') }}</span>
+    <h1>{{ t('Developers', 'المطوّرون') }}</h1>
+    <p>
+      {{
+        t(
+          'Developers used by your company projects and deals.',
+          'المطوّرون المرتبطون بمشروعات وصفقات شركتك.'
+        )
+      }}
+    </p>
+  </header>
+  @if (!brokerage()) {
+    <section class="card">{{ t('Brokerage only.', 'متاح لشركات الوساطة فقط.') }}</section>
+  } @else {
+    @if (owner()) {
+      <section class="card add">
+        <label
+          >{{ t('Developer name', 'اسم المطوّر')
+          }}<input [(ngModel)]="name" (keydown.enter)="create()" /></label
+        ><button [disabled]="busy() || !name.trim()" (click)="create()">
+          ＋ {{ t('Add developer', 'إضافة مطوّر') }}
+        </button>
+      </section>
+    }
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+    <section class="card list">
+      @for (d of items(); track d.id) {
+        <div class="item">
+          @if (editId === d.id) {
+            <input [(ngModel)]="editName" /><button
+              [disabled]="busy() || !editName.trim()"
+              (click)="save(d)"
+            >
+              {{ t('Save', 'حفظ') }}</button
+            ><button (click)="editId = ''">{{ t('Cancel', 'إلغاء') }}</button>
+          } @else {
+            <strong>{{ d.name }}</strong>
+            @if (owner()) {
+              <button (click)="edit(d)">{{ t('Edit', 'تعديل') }}</button
+              ><button [disabled]="busy()" (click)="archive(d)">{{ t('Archive', 'أرشفة') }}</button>
+            }
+          }
+        </div>
+      }
+      @if (!items().length) {
+        <p class="empty">{{ t('No developers yet.', 'لا يوجد مطوّرون بعد.') }}</p>
+      }
+    </section>
+  }
+</div>

@@ -1,4 +1,9 @@
-import { adminGuard, companyGuard, passwordChangeGuard } from './auth.service';
+import {
+  adminGuard,
+  companyGuard,
+  passwordChangeGuard,
+  brokerageReservationsRedirect,
+} from './auth.service';
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
@@ -472,6 +477,14 @@ export const routes: Routes = [
       { path: 'units/:id', redirectTo: 'catalog/units/:id', pathMatch: 'full' },
       { path: 'inventory', redirectTo: 'projects', pathMatch: 'full' },
       {
+        path: 'inventory/developers',
+        data: { permission: 'projects.read' },
+        loadComponent: () =>
+          import('./pages/company-shell/brokerage-developers/brokerage-developers').then(
+            (m) => m.BrokerageDevelopers,
+          ),
+      },
+      {
         path: 'projects',
         data: { permission: 'projects.read' },
         loadComponent: () =>
@@ -484,9 +497,15 @@ export const routes: Routes = [
       },
       {
         path: 'reservations',
+        canActivate: [brokerageReservationsRedirect],
         data: { permission: 'reservations.read' },
         loadComponent: () =>
           import('./pages/company-shell/reservations/reservations').then((m) => m.Reservations),
+      },
+      {
+        path: 'deals',
+        data: { permission: 'leads.read' },
+        loadComponent: () => import('./pages/company-shell/deals/deals').then((m) => m.Deals),
       },
       {
         path: 'contracts',

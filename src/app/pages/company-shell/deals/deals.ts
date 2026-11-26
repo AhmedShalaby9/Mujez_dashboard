@@ -42,8 +42,6 @@ const empty = () => ({
     jobTitle: '',
     nationality: '',
     email: '',
-    country: 'Egypt',
-    city: '',
     livingAddress: '',
     correspondenceAddress: '',
     nationalIdAddress: '',
@@ -116,19 +114,29 @@ export class Deals {
       ...this.fields,
     ];
   }
-  readonly fields = [
-    ['nationalId', 'National ID', 'الرقم القومي'],
-    ['birthDate', 'Birth date', 'تاريخ الميلاد'],
-    ['socialStatus', 'Social status', 'الحالة الاجتماعية'],
-    ['jobTitle', 'Job title', 'الوظيفة'],
-    ['nationality', 'Nationality', 'الجنسية'],
-    ['email', 'Email', 'البريد الإلكتروني'],
-    ['country', 'Country', 'البلد'],
-    ['city', 'City', 'المدينة'],
-    ['livingAddress', 'Living address', 'عنوان السكن'],
-    ['correspondenceAddress', 'Correspondence address', 'عنوان المراسلة'],
-    ['nationalIdAddress', 'Address on national ID', 'عنوان البطاقة'],
-    ['comment', 'Comment', 'ملاحظة'],
+  readonly fields: [string, string, string, string, string][] = [
+    ['nationalId', 'National ID', 'الرقم القومي', '14-digit national ID', 'رقم قومي من 14 رقمًا'],
+    ['birthDate', 'Birth date', 'تاريخ الميلاد', 'YYYY-MM-DD', 'سنة-شهر-يوم'],
+    ['socialStatus', 'Social status', 'الحالة الاجتماعية', 'e.g. Married', 'مثال: متزوج'],
+    ['jobTitle', 'Job title', 'الوظيفة', 'e.g. Engineer', 'مثال: مهندس'],
+    ['nationality', 'Nationality', 'الجنسية', 'e.g. Egyptian', 'مثال: مصري'],
+    ['email', 'Email', 'البريد الإلكتروني', 'name@example.com', 'name@example.com'],
+    ['livingAddress', 'Living address', 'عنوان السكن', 'Street, building, area', 'الشارع، المبنى، المنطقة'],
+    [
+      'correspondenceAddress',
+      'Correspondence address',
+      'عنوان المراسلة',
+      'Street, building, area',
+      'الشارع، المبنى، المنطقة',
+    ],
+    [
+      'nationalIdAddress',
+      'Address on national ID',
+      'عنوان البطاقة',
+      'As printed on the ID',
+      'كما هو مكتوب بالبطاقة',
+    ],
+    ['comment', 'Comment', 'ملاحظة', 'Optional notes', 'ملاحظات اختيارية'],
   ];
   constructor() {
     if (this.isBrokerage()) void this.refreshAll();

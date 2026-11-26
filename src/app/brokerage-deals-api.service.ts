@@ -37,6 +37,7 @@ export interface DealOptions {
   agents: { id: string; name: string }[];
   developers: { id: string; name: string; version: number }[];
   projects: { id: string; code: string; name: string; developerId: string }[];
+  unitTypes: string[];
   canApprove: boolean;
   canManageInventory: boolean;
 }

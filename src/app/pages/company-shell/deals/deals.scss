@@ -60,7 +60,7 @@ button {
 .page-head button,
 .toolbar button,
 .detail-actions button,
-.wizard button,
+.wizard button:not(.pf-item),
 .inventory-modal button,
 .pagination button {
   border: 1px solid var(--border-input);
@@ -434,6 +434,19 @@ button {
   border-radius: var(--r-card);
   background: var(--surface);
   color: inherit;
+}
+.choice-row button.dim {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.search-pick {
+  width: 100%;
+}
+.search-pick > button {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: start;
+  color: var(--ink);
 }
 .text-button,
 .inline-actions button {

@@ -205,7 +205,10 @@
               <div class="grid two">
                 <label
                   >{{ t('Client name *', 'اسم المشتري *')
-                  }}<input [(ngModel)]="form.clientName" /><button
+                  }}<input
+                    [(ngModel)]="form.clientName"
+                    [placeholder]="t('Full name as on ID', 'الاسم كما في البطاقة')"
+                  /><button
                     class="text-button"
                     (click)="copyLead()"
                   >
@@ -349,13 +352,24 @@
               <div class="grid two">
                 <label
                   >{{ t('Unit number', 'رقم الوحدة')
-                  }}<input [(ngModel)]="form.details['unitNumber']" /></label
+                  }}<input
+                    [(ngModel)]="form.details['unitNumber']"
+                    [placeholder]="t('e.g. B2-304', 'مثال: B2-304')"
+                /></label
                 ><label
                   >{{ t('Unit type', 'نوع الوحدة')
-                  }}<input [(ngModel)]="form.details['unitType']" /></label
+                  }}<select [(ngModel)]="form.details['unitType']">
+                    <option value="">{{ t('Not set', 'غير محدد') }}</option>
+                    @for (u of options()?.unitTypes ?? []; track u) {
+                      <option [value]="u">{{ u }}</option>
+                    }
+                  </select></label
                 ><label
                   >{{ t('Developer salesperson *', 'مندوب المطوّر *')
-                  }}<input [(ngModel)]="form.details['developerSalesperson']" /></label
+                  }}<input
+                    [(ngModel)]="form.details['developerSalesperson']"
+                    [placeholder]="t('Full name', 'الاسم الكامل')"
+                /></label
                 ><label
                   >{{ t('Salesperson mobile *', 'هاتف مندوب المطوّر *') }}
                   <span class="phone20" dir="ltr"
@@ -374,29 +388,42 @@
               <div class="grid three">
                 <label
                   >{{ t('Area (m²) *', 'المساحة (م²) *')
-                  }}<input type="number" min="0" [(ngModel)]="form.details['area']" /></label
-                ><label
+                  }}<input
+                    type="number"
+                    min="0"
+                    [(ngModel)]="form.details['area']"
+                    [placeholder]="t('e.g. 120', 'مثال: 120')"
+                /></label>
+                <label
                   >{{ t('Finishing *', 'التشطيب *')
-                  }}<input [(ngModel)]="form.details['finishing']" /></label
-                ><label
+                  }}<input
+                    [(ngModel)]="form.details['finishing']"
+                    [placeholder]="t('e.g. Fully finished', 'مثال: تشطيب كامل')"
+                /></label>
+                <label
                   >{{ t('Delivery in (years) *', 'التسليم خلال (سنوات) *')
                   }}<input
                     type="number"
                     min="0"
-                    [(ngModel)]="form.details['deliveryYears']" /></label
-                ><label
+                    [(ngModel)]="form.details['deliveryYears']"
+                    [placeholder]="t('e.g. 3', 'مثال: 3')"
+                /></label>
+                <label
                   >{{ t('Payment plan (years) *', 'خطة السداد (سنوات) *')
                   }}<input
                     type="number"
                     min="0"
-                    [(ngModel)]="form.details['paymentPlanYears']" /></label
-                ><label
+                    [(ngModel)]="form.details['paymentPlanYears']"
+                    [placeholder]="t('e.g. 5', 'مثال: 5')"
+                /></label>
+                <label
                   >{{ t('Down payment (%) *', 'المقدم (%) *')
                   }}<input
                     type="number"
                     min="0"
                     max="100"
                     [(ngModel)]="form.details['downPaymentPercent']"
+                    [placeholder]="t('e.g. 10', 'مثال: 10')"
                 /></label>
               </div>
               <h3>{{ t('Reservation', 'الحجز') }}</h3>
@@ -409,8 +436,10 @@
                   }}<input
                     type="number"
                     min="0"
-                    [(ngModel)]="form.details['reservationPrice']" /></label
-                ><label
+                    [(ngModel)]="form.details['reservationPrice']"
+                    [placeholder]="t('e.g. 500000', 'مثال: 500000')"
+                /></label>
+                <label
                   >{{ t('Reservation date *', 'تاريخ الحجز *')
                   }}<input type="date" [(ngModel)]="form.details['reservationDate']" /></label
                 ><label
@@ -422,13 +451,18 @@
                 <h3>{{ t('Resale', 'إعادة البيع') }}</h3>
                 <label
                   >{{ t('Seller / owner *', 'البائع / المالك *')
-                  }}<input [(ngModel)]="form.details['sellerOwner']"
+                  }}<input
+                    [(ngModel)]="form.details['sellerOwner']"
+                    [placeholder]="t('Full name', 'الاسم الكامل')"
                 /></label>
               }
               <h3>{{ t('Client details · optional', 'بيانات المشتري · اختيارية') }}</h3>
               <div class="grid three">
                 @for (f of fields; track f[0]) {
-                  <label>{{ t(f[1], f[2]) }}<input [(ngModel)]="form.details[f[0]]" /></label>
+                  <label
+                    >{{ t(f[1], f[2])
+                    }}<input [(ngModel)]="form.details[f[0]]" [placeholder]="t(f[3], f[4])"
+                  /></label>
                 }
               </div>
             }
@@ -543,7 +577,12 @@
             <button (click)="inventoryOpen.set(null)">✕</button>
           </header>
           @if (inventoryOpen() === 'developer') {
-            <label>{{ t('Name', 'الاسم') }}<input [(ngModel)]="inventoryForm.name" /></label>
+            <label
+              >{{ t('Name', 'الاسم')
+              }}<input
+                [(ngModel)]="inventoryForm.name"
+                [placeholder]="t('e.g. Palm Hills Developments', 'مثال: بالم هيلز')"
+            /></label>
           } @else {
             <label
               >{{ t('Developer', 'المطوّر')
@@ -553,10 +592,22 @@
                   <option [value]="d.id">{{ d.name }}</option>
                 }
               </select></label
-            ><label>{{ t('Code', 'الكود') }}<input [(ngModel)]="inventoryForm.code" /></label
-            ><label>{{ t('Name', 'الاسم') }}<input [(ngModel)]="inventoryForm.name" /></label
             ><label
-              >{{ t('Location', 'الموقع') }}<input [(ngModel)]="inventoryForm.location" /></label
+              >{{ t('Code', 'الكود')
+              }}<input [(ngModel)]="inventoryForm.code" [placeholder]="t('e.g. PH-01', 'مثال: PH-01')"
+            /></label
+            ><label
+              >{{ t('Name', 'الاسم')
+              }}<input
+                [(ngModel)]="inventoryForm.name"
+                [placeholder]="t('e.g. Badya', 'مثال: بادية')"
+            /></label
+            ><label
+              >{{ t('Location', 'الموقع')
+              }}<input
+                [(ngModel)]="inventoryForm.location"
+                [placeholder]="t('e.g. 6th of October City', 'مثال: مدينة 6 أكتوبر')"
+            /></label
             ><label
               >{{ t('Segment', 'الفئة')
               }}<select [(ngModel)]="inventoryForm.segment">

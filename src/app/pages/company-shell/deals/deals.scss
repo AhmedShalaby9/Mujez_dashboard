@@ -372,11 +372,14 @@ button {
   border-bottom: 1px solid var(--border-card-alt);
 }
 .steps span {
+  display: inline-flex;
+  align-items: center;
   white-space: nowrap;
   padding: 7px 11px;
   border-radius: var(--r-control);
   color: var(--ink-muted);
   font-size: 13px;
+  line-height: 1.2;
 }
 .steps span.active {
   background: var(--primary);

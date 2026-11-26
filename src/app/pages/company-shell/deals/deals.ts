@@ -77,6 +77,7 @@ export class Deals {
   options = signal<DealOptions | null>(null);
   leadOptions = signal<DealOptions['leads']>([]);
   leadSearch = '';
+  leadOpen = signal(false);
   private leadSerial = 0;
   private leadTimer?: ReturnType<typeof setTimeout>;
   selected = signal<Deal | null>(null);
@@ -210,10 +211,7 @@ export class Deals {
     void this.reload();
   }
   availableStatuses() {
-    const statuses =
-      this.form.sellingType === 'resale'
-        ? ['reservation', 'contracted']
-        : ['eoi', 'reservation', 'contracted'];
+    const statuses = ['eoi', 'reservation', 'contracted'];
     return this.editing() ? [...statuses, 'cancelled'] : statuses;
   }
   projectName(id: string) {
@@ -221,6 +219,13 @@ export class Deals {
   }
   leadName(id: string) {
     return this.leadOptions().find((p) => p.id === id)?.name ?? '—';
+  }
+  leadPhone(id: string) {
+    return this.leadOptions().find((p) => p.id === id)?.phone ?? '';
+  }
+  /** Phone fields store the full "+20…" value; this strips it for the boxed +20 input. */
+  phoneLocal(value: string) {
+    return String(value ?? '').replace(/^\+20/, '');
   }
   agentName(id: string) {
     return this.options()?.agents.find((p) => p.id === id)?.name ?? '—';
@@ -231,6 +236,17 @@ export class Deals {
   chooseLead() {
     const l = this.leadOptions().find((x) => x.id === this.form.leadId);
     if (l && this.isSales()) this.form.agentId = this.auth.user()?.id ?? '';
+  }
+  toggleLeadPicker() {
+    this.leadOpen.update((v) => !v);
+  }
+  closeLeadPicker() {
+    this.leadOpen.set(false);
+  }
+  pickLead(id: string) {
+    this.form.leadId = id;
+    this.chooseLead();
+    this.leadOpen.set(false);
   }
   copyLead() {
     const l = this.leadOptions().find((x) => x.id === this.form.leadId);

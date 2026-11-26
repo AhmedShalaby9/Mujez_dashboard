@@ -204,30 +204,6 @@
               </p>
               <div class="grid two">
                 <label
-                  >{{ t('Lead *', 'العميل المحتمل *')
-                  }}<input
-                    type="search"
-                    [(ngModel)]="leadSearch"
-                    (ngModelChange)="searchLeads($event)"
-                    [placeholder]="t('Search lead by name or phone', 'ابحث بالاسم أو الهاتف')"
-                  /><select [(ngModel)]="form.leadId" (ngModelChange)="chooseLead()">
-                    <option value="">{{ t('Select a lead', 'اختر عميلًا محتملًا') }}</option>
-                    @for (l of leadOptions(); track l.id) {
-                      <option [value]="l.id">{{ l.name }} · {{ l.phone }}</option>
-                    }
-                  </select></label
-                ><label
-                  >{{ t('Agent *', 'المندوب *')
-                  }}<select [(ngModel)]="form.agentId" [disabled]="isSales()">
-                    <option value="">{{ t('Select an agent', 'اختر مندوبًا') }}</option>
-                    @for (a of options()?.agents ?? []; track a.id) {
-                      <option [value]="a.id">{{ a.name }}</option>
-                    }
-                  </select></label
-                >
-              </div>
-              <div class="grid two">
-                <label
                   >{{ t('Client name *', 'اسم المشتري *')
                   }}<input [(ngModel)]="form.clientName" /><button
                     class="text-button"
@@ -236,9 +212,19 @@
                     {{ t('Copy name and phone from lead', 'نسخ الاسم والهاتف من العميل المحتمل') }}
                   </button></label
                 ><label
-                  >{{ t('Mobile *', 'الهاتف *')
-                  }}<input type="tel" [(ngModel)]="form.clientPhone" placeholder="+201xxxxxxxxx"
-                /></label>
+                  >{{ t('Mobile *', 'الهاتف *') }}
+                  <span class="phone20" dir="ltr"
+                    ><span aria-hidden="true">+20</span
+                    ><input
+                      type="tel"
+                      inputmode="numeric"
+                      autocomplete="tel-national"
+                      [ngModel]="phoneLocal(form.clientPhone)"
+                      [ngModelOptions]="{ standalone: true }"
+                      (ngModelChange)="form.clientPhone = '+20' + $event"
+                      placeholder="xxx xxx xxxx"
+                      maxlength="10"
+                  /></span></label>
               </div>
               <h3>{{ t('The deal', 'الصفقة') }}</h3>
               <div class="choice-row">
@@ -256,10 +242,78 @@
               </div>
               <div class="choice-row status-choice">
                 @for (s of availableStatuses(); track s) {
-                  <button [class.active]="form.status === s" (click)="form.status = $any(s)">
+                  <button
+                    [class.active]="form.status === s"
+                    [class.dim]="s === 'eoi' && form.sellingType === 'resale'"
+                    [disabled]="s === 'eoi' && form.sellingType === 'resale'"
+                    (click)="form.status = $any(s)"
+                  >
                     {{ label(s) }}
                   </button>
                 }
+              </div>
+              <h3>{{ t('Lead & assignment', 'العميل المحتمل والإسناد') }}</h3>
+              <div class="grid two">
+                <label
+                  >{{ t('Lead *', 'العميل المحتمل *') }}
+                  <div class="search-pick">
+                    <button type="button" (click)="toggleLeadPicker()">
+                      {{
+                        form.leadId
+                          ? leadName(form.leadId) + ' · ' + leadPhone(form.leadId)
+                          : t('Select a lead', 'اختر عميلًا محتملًا')
+                      }}
+                    </button>
+                    @if (leadOpen()) {
+                      <div class="pf-backdrop" (click)="closeLeadPicker()"></div>
+                      <div class="pf-panel">
+                        <div class="pf-search">
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#8A8A90"
+                            stroke-width="1.8"
+                            stroke-linecap="round"
+                          >
+                            <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" />
+                          </svg>
+                          <input
+                            type="search"
+                            [(ngModel)]="leadSearch"
+                            [ngModelOptions]="{ standalone: true }"
+                            (ngModelChange)="searchLeads($event)"
+                            [placeholder]="t('Search select a lead…', 'ابحث عن عميل محتمل…')"
+                          />
+                        </div>
+                        <div class="pf-list">
+                          @for (l of leadOptions(); track l.id) {
+                            <button type="button" class="pf-item" (click)="pickLead(l.id)">
+                              <span>{{ l.name }}</span>
+                              @if (l.phone) {
+                                <span class="pf-item__end"
+                                  ><span class="pf-count">{{ l.phone }}</span></span
+                                >
+                              }
+                            </button>
+                          }
+                          @if (!leadOptions().length) {
+                            <p class="pf-empty">{{ t('No matches', 'لا توجد نتائج') }}</p>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div></label
+                ><label
+                  >{{ t('Agent *', 'المندوب *')
+                  }}<select [(ngModel)]="form.agentId" [disabled]="isSales()">
+                    <option value="">{{ t('Select an agent', 'اختر مندوبًا') }}</option>
+                    @for (a of options()?.agents ?? []; track a.id) {
+                      <option [value]="a.id">{{ a.name }}</option>
+                    }
+                  </select></label
+                >
               </div>
             }
             @if (step() === 2) {
@@ -303,9 +357,18 @@
                   >{{ t('Developer salesperson *', 'مندوب المطوّر *')
                   }}<input [(ngModel)]="form.details['developerSalesperson']" /></label
                 ><label
-                  >{{ t('Salesperson mobile *', 'هاتف مندوب المطوّر *')
-                  }}<input [(ngModel)]="form.details['developerSalespersonMobile']"
-                /></label>
+                  >{{ t('Salesperson mobile *', 'هاتف مندوب المطوّر *') }}
+                  <span class="phone20" dir="ltr"
+                    ><span aria-hidden="true">+20</span
+                    ><input
+                      type="tel"
+                      inputmode="numeric"
+                      [ngModel]="phoneLocal(form.details['developerSalespersonMobile'])"
+                      [ngModelOptions]="{ standalone: true }"
+                      (ngModelChange)="form.details['developerSalespersonMobile'] = '+20' + $event"
+                      placeholder="xxx xxx xxxx"
+                      maxlength="10"
+                  /></span></label>
               </div>
               <h3>{{ t('Unit & money', 'الوحدة والبيانات المالية') }}</h3>
               <div class="grid three">

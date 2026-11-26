@@ -1,0 +1,115 @@
+<div class="pg">
+  @if (!isBrokerage()) {
+    <section class="card" style="padding: 20px">
+      {{ t('The commission scheme is available for brokerage companies.', 'مخطط العمولة متاح لشركات الوساطة العقارية.') }}
+    </section>
+  } @else {
+    <div class="head">
+      <div class="head__text">
+        <span>{{ t('Administration', 'الإدارة') }}</span>
+        <h1>{{ t('Commission Scheme', 'مخطط العمولة') }}</h1>
+      </div>
+    </div>
+    <p class="muted">
+      {{
+        t(
+          'Monthly and quarterly sales targets per rank, and the commission-rate tiers each one earns. Only the company owner can edit; everyone on the sales ladder can view their own rank.',
+          'التارجت الشهري والربع سنوي لكل درجة، وجداول العمولة الخاصة بكل درجة. التعديل للمالك فقط؛ كل فرد في سلم المبيعات يقدر يشوف درجته.'
+        )
+      }}
+    </p>
+    @if (error()) {
+      <p class="note note--bad" role="alert">{{ error() }}</p>
+    }
+    @if (notice()) {
+      <p class="note">{{ notice() }}</p>
+    }
+    @if (loading()) {
+      <p class="muted">{{ t('Loading…', 'جارٍ التحميل…') }}</p>
+    } @else {
+      @for (role of roles(); track role.roleKey) {
+        <section class="card scheme-role">
+          <div class="scheme-role__head">
+            <h2>{{ roleName(role.roleKey) }}</h2>
+          </div>
+          <div class="grid two">
+            <label
+              >{{ t('Monthly target (EGP)', 'التارجت الشهري (جنيه)') }}
+              <input
+                type="number"
+                min="0"
+                [(ngModel)]="role.monthlyTarget"
+                [disabled]="!canEdit()"
+            /></label>
+            <label
+              >{{ t('Quarterly target (EGP)', 'التارجت الربع سنوي (جنيه)') }}
+              <input
+                type="number"
+                min="0"
+                [(ngModel)]="role.quarterlyTarget"
+                [disabled]="!canEdit()"
+            /></label>
+          </div>
+          <table class="scheme-tiers">
+            <thead>
+              <tr>
+                <th>{{ t('Tier based on', 'النوع') }}</th>
+                <th>{{ t('Threshold', 'الحد') }}</th>
+                <th>{{ t('Rate per million (EGP)', 'العمولة لكل مليون (جنيه)') }}</th>
+                @if (canEdit()) {
+                  <th></th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (tier of role.tiers; track $index) {
+                <tr>
+                  <td>
+                    <select [(ngModel)]="tier.kind" [disabled]="!canEdit()" (ngModelChange)="touch()">
+                      <option value="volume">{{ t('Quarterly volume', 'الحجم الربعي') }}</option>
+                      <option value="percent">{{ t('% of target', '% من التارجت') }}</option>
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      min="0"
+                      [(ngModel)]="tier.threshold"
+                      [disabled]="!canEdit()"
+                      [attr.aria-label]="tierKindLabel(tier.kind)"
+                    />
+                  </td>
+                  <td>
+                    <input type="number" min="0" [(ngModel)]="tier.ratePerMillion" [disabled]="!canEdit()" />
+                  </td>
+                  @if (canEdit()) {
+                    <td>
+                      <button type="button" class="btn btn--sm" (click)="removeTier(role, tier)">
+                        {{ t('Remove', 'حذف') }}
+                      </button>
+                    </td>
+                  }
+                </tr>
+              }
+              @if (!role.tiers.length) {
+                <tr>
+                  <td colspan="4" class="muted">{{ t('No tiers yet.', 'لا توجد شرائح بعد.') }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (canEdit()) {
+            <button type="button" class="btn btn--sm" (click)="addTier(role)">
+              + {{ t('Add tier', 'إضافة شريحة') }}
+            </button>
+          }
+        </section>
+      }
+      @if (canEdit()) {
+        <button class="btn btn--dark" [disabled]="saving()" (click)="save()">
+          {{ saving() ? t('Saving…', 'جارٍ الحفظ…') : t('Save scheme', 'حفظ المخطط') }}
+        </button>
+      }
+    }
+  }
+</div>

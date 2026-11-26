@@ -1,0 +1,515 @@
+<div class="deals-page">
+  @if (!isBrokerage()) {
+    <section class="panel">
+      {{
+        t('Deals are available for brokerage companies.', 'الصفقات متاحة لشركات الوساطة العقارية.')
+      }}
+    </section>
+  } @else {
+    <header class="page-head">
+      <div>
+        <span class="eyebrow">{{ t('BROKERAGE CRM', 'الوساطة العقارية') }}</span>
+        <h1>{{ t('Deals', 'الصفقات') }}</h1>
+        <p>
+          {{ total() }} {{ t('deals', 'صفقة') }} ·
+          {{
+            t('From EOI to contract, in one place', 'من إبداء الاهتمام حتى التعاقد في مكان واحد')
+          }}
+        </p>
+      </div>
+      <button class="primary" (click)="newDeal()">＋ {{ t('New deal', 'صفقة جديدة') }}</button>
+    </header>
+    <section class="panel toolbar">
+      <div class="view-switch">
+        <button [class.active]="view() === 'list'" (click)="view.set('list')">
+          {{ t('List', 'قائمة') }}</button
+        ><button [class.active]="view() === 'board'" (click)="view.set('board')">
+          {{ t('Board', 'لوحة') }}
+        </button>
+      </div>
+      <input
+        type="search"
+        [(ngModel)]="search"
+        (keydown.enter)="reload()"
+        [placeholder]="t('Search clients or projects', 'بحث باسم المشتري أو المشروع')"
+      /><button (click)="reload()">{{ t('Search', 'بحث') }}</button>
+      <select [ngModel]="approval()" (ngModelChange)="approvalFilter($event)">
+        <option value="">{{ t('All approvals', 'كل الموافقات') }}</option>
+        <option value="pending">{{ label('pending') }}</option>
+        <option value="approved">{{ label('approved') }}</option>
+        <option value="rejected">{{ label('rejected') }}</option>
+      </select>
+    </section>
+    <nav class="status-tabs">
+      <button [class.active]="status() === ''" (click)="filter('')">{{ t('All', 'الكل') }}</button>
+      @for (s of statuses; track s) {
+        <button [class.active]="status() === s" (click)="filter(s)">
+          <i [class]="s"></i>{{ label(s) }} <small>{{ count(s) }}</small>
+        </button>
+      }
+    </nav>
+    @if (error() && step() === 0) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+    @if (view() === 'list') {
+      <section class="panel list">
+        <div class="row header">
+          <span>{{ t('Client / project', 'المشتري / المشروع') }}</span
+          ><span>{{ t('Lead / agent', 'العميل المحتمل / المندوب') }}</span
+          ><span>{{ t('Status', 'الحالة') }}</span
+          ><span>{{ t('Approval', 'الموافقة') }}</span
+          ><span>{{ t('Price', 'السعر') }}</span
+          ><span>{{ t('Updated', 'آخر تعديل') }}</span>
+        </div>
+        @for (d of rows(); track d.id) {
+          <button class="row deal-row" (click)="open(d.id)">
+            <span
+              ><b>{{ d.clientName }}</b
+              ><small>{{ d.project }} · {{ d.details['unitNumber'] || '—' }}</small></span
+            ><span
+              >{{ d.lead }}<small>{{ d.agent }}</small></span
+            ><span
+              ><em [class]="d.status">{{ label(d.status) }}</em></span
+            ><span
+              ><em [class]="d.approvalStatus">{{ label(d.approvalStatus) }}</em></span
+            ><span>{{ d.details['reservationPrice'] || '—' }} EGP</span
+            ><span>{{ d.updatedAt | date: 'mediumDate' }}</span>
+          </button>
+        }
+        @if (!loading() && !rows().length) {
+          <div class="empty">{{ t('No deals match these filters.', 'لا توجد صفقات مطابقة.') }}</div>
+        }
+      </section>
+    } @else {
+      <section class="board">
+        @for (s of statuses; track s) {
+          <div class="board-column">
+            <h3>
+              <i [class]="s"></i>{{ label(s) }} <small>{{ count(s) }}</small>
+            </h3>
+            @for (d of rows(); track d.id) {
+              @if (d.status === s) {
+                <button class="board-card" (click)="open(d.id)">
+                  <b>{{ d.clientName }}</b
+                  ><small>{{ d.project }} · {{ d.details['unitNumber'] || '—' }}</small
+                  ><span>{{ label(d.approvalStatus) }}</span>
+                </button>
+              }
+            }
+          </div>
+        }
+      </section>
+    }
+    @if (total() > rows().length) {
+      <div class="pagination">
+        <button [disabled]="page() <= 1" (click)="page.set(page() - 1); reload()">
+          {{ t('Previous', 'السابق') }}</button
+        ><span>{{ page() }}</span
+        ><button [disabled]="page() * 30 >= total()" (click)="page.set(page() + 1); reload()">
+          {{ t('Next', 'التالي') }}
+        </button>
+      </div>
+    }
+    @if (selected() && step() === 0) {
+      <div class="overlay" (click)="selected.set(null)">
+        <aside class="detail panel" (click)="$event.stopPropagation()">
+          <div class="detail-head">
+            <div>
+              <span class="eyebrow"
+                >{{ label(selected()!.sellingType) }} · {{ label(selected()!.status) }}</span
+              >
+              <h2>{{ selected()!.clientName }}</h2>
+              <p>{{ selected()!.project }} · {{ selected()!.developer }}</p>
+            </div>
+            <button (click)="selected.set(null)">✕</button>
+          </div>
+          <div class="badges">
+            <em [class]="selected()!.approvalStatus">{{ label(selected()!.approvalStatus) }}</em>
+            @if (selected()!.rejectionReason) {
+              <span>{{ selected()!.rejectionReason }}</span>
+            }
+          </div>
+          @if (error()) {
+            <p class="error" role="alert">{{ error() }}</p>
+          }
+          <dl>
+            <dt>{{ t('Lead', 'العميل المحتمل') }}</dt>
+            <dd>{{ selected()!.lead }}</dd>
+            <dt>{{ t('Buyer phone', 'هاتف المشتري') }}</dt>
+            <dd>{{ selected()!.clientPhone }}</dd>
+            <dt>{{ t('Agent', 'المندوب') }}</dt>
+            <dd>{{ selected()!.agent }}</dd>
+            @for (f of detailFields; track f[0]) {
+              @if (selected()!.details[f[0]]) {
+                <dt>{{ t(f[1], f[2]) }}</dt>
+                <dd>{{ selected()!.details[f[0]] }}</dd>
+              }
+            }
+          </dl>
+          <h3>{{ t('Documents', 'المستندات') }}</h3>
+          @for (doc of selected()!.documents ?? []; track doc.id) {
+            <button class="doc-link" (click)="downloadDocument(selected()!.id, doc)">
+              {{ doc.fileName }} · {{ doc.kind }}
+            </button>
+          }
+          <h3>{{ t('History', 'السجل') }}</h3>
+          @for (ev of selected()!.events ?? []; track ev.createdAt) {
+            <p class="event">{{ ev.action }} · {{ ev.createdAt | date: 'medium' }}</p>
+          }
+          <div class="detail-actions">
+            <button (click)="editDeal()">{{ t('Edit deal', 'تعديل الصفقة') }}</button>
+            @if (options()?.canApprove && selected()!.approvalStatus === 'pending') {
+              <button class="primary" [disabled]="saving()" (click)="decide('approved')">
+                {{ t('Approve', 'موافقة') }}</button
+              ><input
+                [(ngModel)]="rejectReason"
+                [placeholder]="t('Rejection reason', 'سبب الرفض')"
+              /><button [disabled]="saving()" (click)="decide('rejected')">
+                {{ t('Reject', 'رفض') }}
+              </button>
+            }
+          </div>
+        </aside>
+      </div>
+    }
+    @if (step() > 0) {
+      <div class="overlay wizard-overlay">
+        <section class="wizard panel">
+          <header>
+            <div>
+              <span class="eyebrow">{{
+                editing() ? t('EDIT DEAL', 'تعديل الصفقة') : t('NEW DEAL', 'صفقة جديدة')
+              }}</span>
+              <h2>{{ t('Client, unit and documents', 'المشتري والوحدة والمستندات') }}</h2>
+            </div>
+            <button (click)="closeWizard()">✕</button>
+          </header>
+          <nav class="steps">
+            <span [class.active]="step() === 1">1 {{ t('Client & deal', 'المشتري والصفقة') }}</span
+            ><span [class.active]="step() === 2"
+              >2 {{ t('Unit & details', 'الوحدة والتفاصيل') }}</span
+            ><span [class.active]="step() === 3">3 {{ t('Documents', 'المستندات') }}</span
+            ><span [class.active]="step() === 4">4 {{ t('Review', 'مراجعة') }}</span>
+          </nav>
+          <div class="wizard-body">
+            @if (step() === 1) {
+              <h3>{{ t('Client', 'المشتري') }}</h3>
+              <p class="hint">
+                {{
+                  t(
+                    'The buyer can be different from the lead.',
+                    'قد يكون المشتري شخصًا مختلفًا عن العميل المحتمل.'
+                  )
+                }}
+              </p>
+              <div class="grid two">
+                <label
+                  >{{ t('Lead *', 'العميل المحتمل *')
+                  }}<input
+                    type="search"
+                    [(ngModel)]="leadSearch"
+                    (ngModelChange)="searchLeads($event)"
+                    [placeholder]="t('Search lead by name or phone', 'ابحث بالاسم أو الهاتف')"
+                  /><select [(ngModel)]="form.leadId" (ngModelChange)="chooseLead()">
+                    <option value="">{{ t('Select a lead', 'اختر عميلًا محتملًا') }}</option>
+                    @for (l of leadOptions(); track l.id) {
+                      <option [value]="l.id">{{ l.name }} · {{ l.phone }}</option>
+                    }
+                  </select></label
+                ><label
+                  >{{ t('Agent *', 'المندوب *')
+                  }}<select [(ngModel)]="form.agentId" [disabled]="isSales()">
+                    <option value="">{{ t('Select an agent', 'اختر مندوبًا') }}</option>
+                    @for (a of options()?.agents ?? []; track a.id) {
+                      <option [value]="a.id">{{ a.name }}</option>
+                    }
+                  </select></label
+                >
+              </div>
+              <div class="grid two">
+                <label
+                  >{{ t('Client name *', 'اسم المشتري *')
+                  }}<input [(ngModel)]="form.clientName" /><button
+                    class="text-button"
+                    (click)="copyLead()"
+                  >
+                    {{ t('Copy name and phone from lead', 'نسخ الاسم والهاتف من العميل المحتمل') }}
+                  </button></label
+                ><label
+                  >{{ t('Mobile *', 'الهاتف *')
+                  }}<input type="tel" [(ngModel)]="form.clientPhone" placeholder="+201xxxxxxxxx"
+                /></label>
+              </div>
+              <h3>{{ t('The deal', 'الصفقة') }}</h3>
+              <div class="choice-row">
+                <button
+                  [class.active]="form.sellingType === 'primary'"
+                  (click)="form.sellingType = 'primary'"
+                >
+                  {{ label('primary') }}</button
+                ><button
+                  [class.active]="form.sellingType === 'resale'"
+                  (click)="form.sellingType = 'resale'; form.status = 'reservation'"
+                >
+                  {{ label('resale') }}
+                </button>
+              </div>
+              <div class="choice-row status-choice">
+                @for (s of availableStatuses(); track s) {
+                  <button [class.active]="form.status === s" (click)="form.status = $any(s)">
+                    {{ label(s) }}
+                  </button>
+                }
+              </div>
+            }
+            @if (step() === 2) {
+              <h3>{{ t('Project', 'المشروع') }}</h3>
+              <div class="grid two">
+                <label
+                  >{{ t('Developer *', 'المطوّر *')
+                  }}<select [(ngModel)]="form.developerId" (ngModelChange)="form.projectId = ''">
+                    <option value="">{{ t('Select developer', 'اختر مطوّرًا') }}</option>
+                    @for (d of options()?.developers ?? []; track d.id) {
+                      <option [value]="d.id">{{ d.name }}</option>
+                    }
+                  </select></label
+                ><label
+                  >{{ t('Project *', 'المشروع *')
+                  }}<select [(ngModel)]="form.projectId">
+                    <option value="">{{ t('Select project', 'اختر مشروعًا') }}</option>
+                    @for (p of projects(); track p.id) {
+                      <option [value]="p.id">{{ p.name }}</option>
+                    }
+                  </select></label
+                >
+              </div>
+              @if (options()?.canManageInventory) {
+                <div class="inline-actions">
+                  <button (click)="inventoryOpen.set('developer')">
+                    ＋ {{ t('Developer', 'مطوّر') }}</button
+                  ><button (click)="inventoryOpen.set('project')">
+                    ＋ {{ t('Project', 'مشروع') }}
+                  </button>
+                </div>
+              }
+              <div class="grid two">
+                <label
+                  >{{ t('Unit number', 'رقم الوحدة')
+                  }}<input [(ngModel)]="form.details['unitNumber']" /></label
+                ><label
+                  >{{ t('Unit type', 'نوع الوحدة')
+                  }}<input [(ngModel)]="form.details['unitType']" /></label
+                ><label
+                  >{{ t('Developer salesperson *', 'مندوب المطوّر *')
+                  }}<input [(ngModel)]="form.details['developerSalesperson']" /></label
+                ><label
+                  >{{ t('Salesperson mobile *', 'هاتف مندوب المطوّر *')
+                  }}<input [(ngModel)]="form.details['developerSalespersonMobile']"
+                /></label>
+              </div>
+              <h3>{{ t('Unit & money', 'الوحدة والبيانات المالية') }}</h3>
+              <div class="grid three">
+                <label
+                  >{{ t('Area (m²) *', 'المساحة (م²) *')
+                  }}<input type="number" min="0" [(ngModel)]="form.details['area']" /></label
+                ><label
+                  >{{ t('Finishing *', 'التشطيب *')
+                  }}<input [(ngModel)]="form.details['finishing']" /></label
+                ><label
+                  >{{ t('Delivery in (years) *', 'التسليم خلال (سنوات) *')
+                  }}<input
+                    type="number"
+                    min="0"
+                    [(ngModel)]="form.details['deliveryYears']" /></label
+                ><label
+                  >{{ t('Payment plan (years) *', 'خطة السداد (سنوات) *')
+                  }}<input
+                    type="number"
+                    min="0"
+                    [(ngModel)]="form.details['paymentPlanYears']" /></label
+                ><label
+                  >{{ t('Down payment (%) *', 'المقدم (%) *')
+                  }}<input
+                    type="number"
+                    min="0"
+                    max="100"
+                    [(ngModel)]="form.details['downPaymentPercent']"
+                /></label>
+              </div>
+              <h3>{{ t('Reservation', 'الحجز') }}</h3>
+              <div class="grid two">
+                <label
+                  >{{ t('Expected contract date *', 'تاريخ التعاقد المتوقع *')
+                  }}<input type="date" [(ngModel)]="form.details['expectedContractDate']" /></label
+                ><label
+                  >{{ t('Reservation price (EGP) *', 'سعر الحجز (جنيه) *')
+                  }}<input
+                    type="number"
+                    min="0"
+                    [(ngModel)]="form.details['reservationPrice']" /></label
+                ><label
+                  >{{ t('Reservation date *', 'تاريخ الحجز *')
+                  }}<input type="date" [(ngModel)]="form.details['reservationDate']" /></label
+                ><label
+                  >{{ t('10% date', 'تاريخ 10%')
+                  }}<input type="date" [(ngModel)]="form.details['tenPercentDate']"
+                /></label>
+              </div>
+              @if (form.sellingType === 'resale') {
+                <h3>{{ t('Resale', 'إعادة البيع') }}</h3>
+                <label
+                  >{{ t('Seller / owner *', 'البائع / المالك *')
+                  }}<input [(ngModel)]="form.details['sellerOwner']"
+                /></label>
+              }
+              <h3>{{ t('Client details · optional', 'بيانات المشتري · اختيارية') }}</h3>
+              <div class="grid three">
+                @for (f of fields; track f[0]) {
+                  <label>{{ t(f[1], f[2]) }}<input [(ngModel)]="form.details[f[0]]" /></label>
+                }
+              </div>
+            }
+            @if (step() === 3) {
+              <h3>{{ t('Documents', 'المستندات') }}</h3>
+              <p class="hint">
+                {{
+                  t(
+                    'At least one document is required. PDF, Word, PNG or JPG, up to 5 MB each.',
+                    'مطلوب مستند واحد على الأقل. PDF أو Word أو PNG أو JPG بحد أقصى 5 ميجابايت لكل ملف.'
+                  )
+                }}
+              </p>
+              <div class="upload-grid">
+                @for (k of kinds; track k) {
+                  <label class="upload-card"
+                    ><strong>{{ k === 'id_copy' ? t('ID Copy', 'صورة البطاقة') : label(k) }}</strong
+                    ><span>＋ {{ t('Browse files', 'اختيار ملفات') }}</span
+                    ><input
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                      (change)="addFiles($event, k)"
+                  /></label>
+                }
+              </div>
+              @for (f of form.documents; track $index) {
+                <div class="file-row">
+                  <span>{{ f.fileName }} · {{ f.kind }}</span
+                  ><button (click)="removeFile($index)">✕</button>
+                </div>
+              }
+              @for (f of selected()?.documents ?? []; track f.id) {
+                <div class="file-row">{{ f.fileName }} · {{ f.kind }}</div>
+              }
+            }
+            @if (step() === 4) {
+              <h3>{{ t('Review deal', 'مراجعة الصفقة') }}</h3>
+              <div class="review">
+                <div>
+                  <h4>
+                    {{ t('Client & deal', 'المشتري والصفقة') }}
+                    <button (click)="step.set(1)">{{ t('Change', 'تعديل') }}</button>
+                  </h4>
+                  <p>{{ form.clientName }} · {{ form.clientPhone }}</p>
+                  <p>{{ leadName(form.leadId) }} · {{ agentName(form.agentId) }}</p>
+                  <p>{{ label(form.sellingType) }} · {{ label(form.status) }}</p>
+                </div>
+                <div>
+                  <h4>
+                    {{ t('Unit & details', 'الوحدة والتفاصيل') }}
+                    <button (click)="step.set(2)">{{ t('Change', 'تعديل') }}</button>
+                  </h4>
+                  <p>{{ projectName(form.projectId) }} · {{ form.details['unitNumber'] || '—' }}</p>
+                  <p>{{ form.details['reservationPrice'] }} EGP · {{ form.details['area'] }} m²</p>
+                  <p>
+                    {{ t('Expected contract', 'التعاقد المتوقع') }}:
+                    {{ form.details['expectedContractDate'] }}
+                  </p>
+                </div>
+                <div>
+                  <h4>
+                    {{ t('Documents', 'المستندات') }}
+                    <button (click)="step.set(3)">{{ t('Change', 'تعديل') }}</button>
+                  </h4>
+                  <p>
+                    {{ form.documents.length + (selected()?.documents?.length ?? 0) }}
+                    {{ t('files', 'ملفات') }}
+                  </p>
+                </div>
+              </div>
+              <p class="hint">
+                {{
+                  options()?.canApprove
+                    ? t('Your deal will be approved automatically.', 'ستُعتمد الصفقة تلقائيًا.')
+                    : t('An admin will review this deal.', 'سيراجع المسؤول هذه الصفقة.')
+                }}
+              </p>
+            }
+            @if (error()) {
+              <p class="error" role="alert">{{ error() }}</p>
+            }
+          </div>
+          <footer>
+            <button (click)="step() === 1 ? closeWizard() : back()">
+              {{ step() === 1 ? t('Cancel', 'إلغاء') : t('Back', 'رجوع') }}</button
+            ><span>{{ t('Step', 'خطوة') }} {{ step() }} / 4</span>
+            @if (step() < 4) {
+              <button class="primary" (click)="next()">{{ t('Next', 'التالي') }} →</button>
+            } @else {
+              <button class="primary" [disabled]="saving()" (click)="save()">
+                {{
+                  editing() ? t('Save changes', 'حفظ التغييرات') : t('Create deal', 'إنشاء الصفقة')
+                }}
+              </button>
+            }
+          </footer>
+        </section>
+      </div>
+    }
+    @if (inventoryOpen()) {
+      <div class="overlay top-overlay">
+        <section class="inventory-modal panel">
+          <header>
+            <h2>
+              {{
+                inventoryOpen() === 'developer'
+                  ? t('New developer', 'مطوّر جديد')
+                  : t('New project', 'مشروع جديد')
+              }}
+            </h2>
+            <button (click)="inventoryOpen.set(null)">✕</button>
+          </header>
+          @if (inventoryOpen() === 'developer') {
+            <label>{{ t('Name', 'الاسم') }}<input [(ngModel)]="inventoryForm.name" /></label>
+          } @else {
+            <label
+              >{{ t('Developer', 'المطوّر')
+              }}<select [(ngModel)]="inventoryForm.developerId">
+                <option value="">{{ t('Select', 'اختر') }}</option>
+                @for (d of options()?.developers ?? []; track d.id) {
+                  <option [value]="d.id">{{ d.name }}</option>
+                }
+              </select></label
+            ><label>{{ t('Code', 'الكود') }}<input [(ngModel)]="inventoryForm.code" /></label
+            ><label>{{ t('Name', 'الاسم') }}<input [(ngModel)]="inventoryForm.name" /></label
+            ><label
+              >{{ t('Location', 'الموقع') }}<input [(ngModel)]="inventoryForm.location" /></label
+            ><label
+              >{{ t('Segment', 'الفئة')
+              }}<select [(ngModel)]="inventoryForm.segment">
+                <option value="res">{{ t('Residential', 'سكني') }}</option>
+                <option value="com">{{ t('Commercial', 'تجاري') }}</option>
+              </select></label
+            >
+          }
+          <button class="primary" [disabled]="saving()" (click)="createInventory()">
+            {{ t('Save', 'حفظ') }}
+          </button>
+          @if (error()) {
+            <p class="error">{{ error() }}</p>
+          }
+        </section>
+      </div>
+    }
+  }
+</div>

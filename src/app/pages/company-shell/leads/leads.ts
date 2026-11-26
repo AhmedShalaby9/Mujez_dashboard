@@ -85,7 +85,31 @@ export class Leads {
   readonly canManage = computed(
     () => this.auth.user()?.permissions.includes('leads.manage') ?? false,
   );
-  readonly owners = signal<Array<{ id: string; name: string }>>([]);
+  readonly owners = signal<Array<{ id: string; name: string; leadCount: number }>>([]);
+  /** A plain sales agent only ever sees their own leads, so the person filter is moot for them. */
+  readonly ownScope = computed(() => this.auth.user()?.scope === 'own');
+  readonly personOpen = signal(false);
+  readonly personQuery = signal('');
+  readonly filteredOwners = computed(() => {
+    const q = this.personQuery().trim().toLowerCase();
+    const list = this.owners();
+    return q ? list.filter((o) => o.name.toLowerCase().includes(q)) : list;
+  });
+  readonly selectedOwnerName = computed(
+    () => this.owners().find((o) => o.id === this.ownerFilter())?.name ?? this.t('Any person', 'أي شخص'),
+  );
+  togglePersonFilter() {
+    this.personOpen.update((v) => !v);
+    if (this.personOpen()) this.personQuery.set('');
+  }
+  closePersonFilter() {
+    this.personOpen.set(false);
+  }
+  choosePerson(id: string) {
+    this.ownerFilter.set(id);
+    this.personOpen.set(false);
+    void this.reload();
+  }
   readonly selected = signal<SalesLead | null>(null);
   readonly timeline = signal<SalesActivity[]>([]);
   readonly activityTotal = signal(0);

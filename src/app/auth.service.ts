@@ -11,6 +11,8 @@ export interface User {
   roleName?: { en: string; ar: string };
   permissions: string[];
   pool: string;
+  /** Company-user read scope: 'own' (e.g. a plain sales agent) sees only their own records. */
+  scope?: 'own' | 'team' | 'company' | 'platform';
   mustChangePassword?: boolean;
   companyId?: string;
   company?: {

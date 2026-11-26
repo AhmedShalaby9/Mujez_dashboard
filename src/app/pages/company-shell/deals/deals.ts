@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, computed, inject, signal, viewChild } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RUNTIME_CONFIG } from '../../../runtime-config';
 import { FormsModule } from '@angular/forms';
@@ -245,11 +245,23 @@ export class Deals {
     const l = this.leadOptions().find((x) => x.id === this.form.leadId);
     if (l && this.isSales()) this.form.agentId = this.auth.user()?.id ?? '';
   }
+  readonly leadPickerEl = viewChild<ElementRef<HTMLElement>>('leadPicker');
   toggleLeadPicker() {
     this.leadOpen.update((v) => !v);
   }
   closeLeadPicker() {
     this.leadOpen.set(false);
+  }
+  /** No backdrop: that would block scrolling the rest of the wizard while the panel is open. */
+  @HostListener('document:click', ['$event'])
+  onDocumentClickForLeadPicker(e: MouseEvent) {
+    if (!this.leadOpen()) return;
+    const el = this.leadPickerEl()?.nativeElement;
+    if (el && !el.contains(e.target as Node)) this.closeLeadPicker();
+  }
+  @HostListener('document:keydown.escape')
+  onEscapeForLeadPicker() {
+    if (this.leadOpen()) this.closeLeadPicker();
   }
   pickLead(id: string) {
     this.form.leadId = id;

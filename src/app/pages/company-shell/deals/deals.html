@@ -259,7 +259,7 @@
               <div class="grid two">
                 <label
                   >{{ t('Lead *', 'العميل المحتمل *') }}
-                  <div class="search-pick">
+                  <div class="search-pick" #leadPicker>
                     <button type="button" (click)="toggleLeadPicker()">
                       {{
                         form.leadId
@@ -268,7 +268,6 @@
                       }}
                     </button>
                     @if (leadOpen()) {
-                      <div class="pf-backdrop" (click)="closeLeadPicker()"></div>
                       <div class="pf-panel">
                         <div class="pf-search">
                           <svg

@@ -7,6 +7,8 @@ import { CompanyUiState } from '../company-ui-state';
 import {
   TeamApi,
   TEAM_ROLES,
+  OFFICE_SALES_ROLES,
+  TEAM_MEMBER_ROLES,
   type TeamMember,
   type TeamRole,
   type SalesTeam,
@@ -37,8 +39,17 @@ export class Team {
   get office() {
     return officeWorkspace(this.auth.user());
   }
+  /** 'brokerage' is this platform's default company_type, so check it
+   * explicitly rather than assuming "not office" means brokerage. */
+  get isBrokerage() {
+    const u = this.auth.user();
+    return (u?.company?.type ?? u?.workspace?.company?.type) === 'brokerage';
+  }
   get roles(): readonly TeamRole[] {
-    return this.office ? TEAM_ROLES.filter((r) => r === 'agent' || r === 'team_lead') : TEAM_ROLES;
+    if (this.office) return TEAM_ROLES.filter((r) => r === 'agent' || r === 'team_lead');
+    if (this.isBrokerage)
+      return TEAM_ROLES.filter((r) => !(OFFICE_SALES_ROLES as readonly string[]).includes(r));
+    return TEAM_ROLES;
   }
   readonly roleNames: Record<TeamRole, { en: string; ar: string }> = {
     agent: { en: 'Sales Agent', ar: 'وكيل المبيعات' },
@@ -49,6 +60,15 @@ export class Team {
     finance_manager: { en: 'Finance Manager', ar: 'مدير مالي' },
     payroll_officer: { en: 'Payroll Officer', ar: 'مسؤول الرواتب' },
     team_lead: { en: 'Team Lead', ar: 'قائد الفريق' },
+    property_advisor: { en: 'Property Advisor', ar: 'مستشار عقاري' },
+    property_consultant: { en: 'Property Consultant', ar: 'استشاري عقاري' },
+    senior: { en: 'Senior', ar: 'سينيور' },
+    expert: { en: 'Expert', ar: 'إكسبرت' },
+    team_leader: { en: 'Team Leader', ar: 'قائد الفريق' },
+    sales_manager: { en: 'Sales Manager', ar: 'مدير مبيعات' },
+    sales_director: { en: 'Sales Director', ar: 'مدير إدارة المبيعات' },
+    head_of_sales: { en: 'Head of Sales', ar: 'رئيس قطاع المبيعات' },
+    sales_admin: { en: 'Sales Admin', ar: 'مسؤول إداري للمبيعات' },
   };
   readonly statusNames: Record<TeamMember['status'], { en: string; ar: string }> = {
     invited: { en: 'Invited', ar: 'تمت الدعوة' },
@@ -81,7 +101,7 @@ export class Team {
   readonly eligible = computed(() =>
     this.items().filter(
       (m) =>
-        (m.roles ?? [m.role]).some((r) => r === 'agent' || r === 'team_lead') &&
+        (m.roles ?? [m.role]).some((r) => (TEAM_MEMBER_ROLES as readonly string[]).includes(r)) &&
         ((['active', 'invited'].includes(m.status) && !m.teamId) ||
           (!!this.editing() && m.teamId === this.editing()?.id)),
     ),
@@ -335,7 +355,7 @@ export class Team {
     this.inviteOpen.set(true);
     this.inviteName.set('');
     this.inviteEmail.set('');
-    this.inviteRoles.set(['agent']);
+    this.inviteRoles.set([this.isBrokerage ? 'property_advisor' : 'agent']);
     this.inviteError.set('');
     this.inviteLink.set('');
     this.createdMember.set(null);

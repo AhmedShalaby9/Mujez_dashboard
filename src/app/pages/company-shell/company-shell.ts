@@ -414,7 +414,7 @@ export class CompanyShell {
       if (item.path === 'office/my-team')
         return (
           u?.pool === 'company_user' &&
-          (u.roles ?? [u.role]).includes('team_lead') &&
+          (u.roles ?? [u.role]).some((r) => r === 'team_lead' || r === 'team_leader') &&
           perms.includes('team.self.read')
         );
       if (item.path === 'deals')

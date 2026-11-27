@@ -370,7 +370,7 @@ input {
 // ---- page content slot ----
 
 .page {
-  padding: 18px clamp(12px, 2.5vw, 20px) 28px;
+  padding: 0 clamp(12px, 2.5vw, 20px) 28px;
   display: flex;
   flex-direction: column;
   gap: 14px;

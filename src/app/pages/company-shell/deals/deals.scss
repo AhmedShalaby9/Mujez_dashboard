@@ -111,7 +111,6 @@ button {
   color: var(--ink);
   box-shadow: 0 1px 2px rgba(17, 17, 19, 0.1);
 }
-.status-tabs button.active,
 .choice-row button.active {
   border-color: var(--primary);
   background: var(--primary);
@@ -125,13 +124,20 @@ button {
 .status-tabs button {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   border: 1px solid var(--border-card-alt);
   background: var(--surface);
   color: inherit;
-  padding: 7px 12px;
+  padding: 5px 12px;
   border-radius: var(--r-pill);
   white-space: nowrap;
+  font-size: 12.5px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.status-tabs button.active {
+  background: var(--accent-wash, #eef5d6);
+  border-color: var(--accent, #c8f169);
+  color: var(--accent-wash-ink, #3f5a0e);
 }
 .status-tabs i,
 .board-column i {

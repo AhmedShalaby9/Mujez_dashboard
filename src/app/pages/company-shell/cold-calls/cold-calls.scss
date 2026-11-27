@@ -130,32 +130,38 @@ details {
 }
 
 .callback-cards {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin: 0;
 }
 .callback-cards button {
-  border: 1px solid var(--line, #deded8);
-  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-card-alt, #deded8);
+  border-radius: 999px;
   background: #fff;
   text-align: start;
-  padding: 18px;
+  padding: 8px 14px;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 .callback-cards span {
-  display: block;
-  color: var(--muted, #6b6b73);
+  color: var(--ink-muted, #6b6b73);
   font-size: 13px;
 }
 .callback-cards b {
-  display: block;
-  font-size: 30px;
-  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 600;
 }
 .callback-cards button.active {
-  background: #eff9d2;
-  border-color: #b2d76e;
+  background: var(--accent, #c8f169);
+  border-color: var(--accent, #c8f169);
+}
+.callback-cards button.active span,
+.callback-cards button.active b {
+  color: var(--ink, #111113);
 }
 .bulk-actions,
 .detail-head {
@@ -211,9 +217,4 @@ details {
 }
 .tbl td {
   vertical-align: top;
-}
-@media (max-width: 900px) {
-  .callback-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }

@@ -193,12 +193,188 @@
   </div>
 
   @if (checkedIds().length) {
-    <div class="bulk-actions">
-      <b>{{ checkedIds().length }} {{ t('selected', 'محدد') }}</b
-      ><button type="button" class="btn" (click)="checkedIds.set([])">
-        {{ t('Cancel', 'إلغاء') }}</button
-      ><button type="button" class="btn btn--dark" (click)="bulkAssign()">
-        {{ t('Assign', 'إسناد') }}
+    @if (bulkPanel(); as panel) {
+      <div class="bulk-panel">
+        @if (panel === 'stage') {
+          <label class="field"
+            ><span>{{ isBrokerage() ? t('Status', 'الحالة') : t('Stage', 'المرحلة') }}</span
+            ><select [(ngModel)]="bulkStageValue">
+              <option value="">{{ t('Choose…', 'اختر…') }}</option>
+              @for (s of stages(); track s) {
+                <option [value]="s">{{ stageNames()[s] }}</option>
+              }
+            </select></label
+          ><button
+            type="button"
+            class="btn btn--dark"
+            [disabled]="bulkBusy() || !bulkStageValue()"
+            (click)="bulkApplyStage()"
+          >
+            {{ t('Apply', 'تطبيق') }}
+          </button>
+        }
+        @if (panel === 'assign') {
+          <label class="field"
+            ><span>{{ t('Salesperson', 'مسؤول المبيعات') }}</span
+            ><select [(ngModel)]="bulkAssignOwner">
+              <option value="">{{ t('Choose…', 'اختر…') }}</option>
+              @for (o of owners(); track o.id) {
+                <option [value]="o.id">{{ o.name }}</option>
+              }
+            </select></label
+          ><button
+            type="button"
+            class="btn btn--dark"
+            [disabled]="bulkBusy() || !bulkAssignOwner()"
+            (click)="bulkApplyAssign()"
+          >
+            {{ t('Apply', 'تطبيق') }}
+          </button>
+        }
+        @if (panel === 'distribute') {
+          <div class="bulk-distribute">
+            <span class="muted">{{
+              t('Choose two or more agents to split these leads between', 'اختر سيلزين أو أكثر لتوزيع العملاء بينهم')
+            }}</span>
+            <div class="bulk-distribute__list">
+              @for (o of owners(); track o.id) {
+                <label class="check"
+                  ><input
+                    type="checkbox"
+                    [checked]="bulkDistributeIds().includes(o.id)"
+                    (change)="toggleDistributeAgent(o.id, $any($event.target).checked)"
+                  />{{ o.name }}</label
+                >
+              }
+            </div>
+          </div>
+          <button
+            type="button"
+            class="btn btn--dark"
+            [disabled]="bulkBusy() || bulkDistributeIds().length < 2"
+            (click)="bulkApplyDistribute()"
+          >
+            {{ t('Apply', 'تطبيق') }}
+          </button>
+        }
+        @if (panel === 'tags') {
+          <label class="field"
+            ><span>{{ t('Tag text', 'نص الوسم') }}</span
+            ><input
+              type="text"
+              maxlength="40"
+              [(ngModel)]="bulkTagText"
+              (keydown.enter)="bulkApplyTags()"
+              [placeholder]="t('e.g. VIP', 'مثال: VIP')"
+          /></label>
+          <button
+            type="button"
+            class="btn btn--dark"
+            [disabled]="bulkBusy() || !bulkTagText().trim()"
+            (click)="bulkApplyTags()"
+          >
+            {{ t('Add to selected', 'إضافة للمحدد') }}
+          </button>
+        }
+        @if (panel === 'whatsapp') {
+          <div class="bulk-whatsapp">
+            <label class="field"
+              ><span>{{ t('Message', 'الرسالة') }}</span
+              ><textarea
+                rows="2"
+                maxlength="500"
+                [(ngModel)]="bulkWhatsappMessage"
+                [placeholder]="t('Optional message to prefill', 'رسالة اختيارية مسبقة')"
+              ></textarea
+            ></label>
+            <div class="bulk-whatsapp__list">
+              @for (l of bulkSelectedLeads; track l.id) {
+                <a
+                  class="btn btn--sm"
+                  [href]="whatsappLink(l)"
+                  target="_blank"
+                  rel="noopener"
+                  >{{ name(l) }} · <span dir="ltr">{{ l.phone }}</span></a
+                >
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+    <div class="bulk-bar">
+      <b>{{ checkedIds().length }} {{ t('selected', 'محدد') }}</b>
+      <button
+        type="button"
+        class="bulk-bar__item"
+        [class.on]="bulkPanel() === 'stage'"
+        (click)="toggleBulkPanel('stage')"
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3 3 8l9 5 9-5-9-5Z" /><path d="m3 13 9 5 9-5" />
+        </svg>
+        {{ t('Set stage', 'تغيير الحالة') }}
+      </button>
+      <button
+        type="button"
+        class="bulk-bar__item"
+        [class.on]="bulkPanel() === 'assign'"
+        (click)="toggleBulkPanel('assign')"
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="9" cy="8" r="3.5" /><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6" /><path d="M17 8h4M19 6v4" />
+        </svg>
+        {{ t('Assign agent', 'إسناد لمندوب') }}
+      </button>
+      <button
+        type="button"
+        class="bulk-bar__item"
+        [class.on]="bulkPanel() === 'distribute'"
+        (click)="toggleBulkPanel('distribute')"
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 12h9M13 12l-3-3M13 12l-3 3" /><circle cx="18" cy="6" r="2" /><circle cx="18" cy="18" r="2" />
+        </svg>
+        {{ t('Distribute', 'توزيع') }}
+      </button>
+      <button
+        type="button"
+        class="bulk-bar__item"
+        [class.on]="bulkPanel() === 'tags'"
+        (click)="toggleBulkPanel('tags')"
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 3H5a2 2 0 0 0-2 2v6l9.5 9.5a2 2 0 0 0 2.8 0l5.2-5.2a2 2 0 0 0 0-2.8L11 3Z" /><circle cx="7.5" cy="7.5" r="1.2" />
+        </svg>
+        {{ t('Set tags', 'إضافة وسوم') }}
+      </button>
+      <button
+        type="button"
+        class="bulk-bar__item"
+        [class.on]="bulkPanel() === 'whatsapp'"
+        (click)="toggleBulkPanel('whatsapp')"
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 11.5a8.5 8.5 0 1 1-3.8-7.1L21 3l-1.2 3.6a8.5 8.5 0 0 1 1.2 4.9Z" />
+        </svg>
+        {{ t('Send WhatsApp', 'إرسال واتساب') }}
+      </button>
+      <button type="button" class="bulk-bar__item" (click)="copyRows()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" />
+        </svg>
+        {{ t('Copy rows', 'نسخ الصفوف') }}
+      </button>
+      @if (bulkNotice()) {
+        <span class="bulk-notice">{{ bulkNotice() }}</span>
+      }
+      <button
+        type="button"
+        class="bulk-bar__close"
+        [attr.aria-label]="t('Clear selection', 'إلغاء التحديد')"
+        (click)="cancelBulk()"
+      >
+        ×
       </button>
     </div>
   }
@@ -223,6 +399,7 @@
             <th>{{ t('Source', 'المصدر') }}</th>
             <th>{{ t('Owner', 'المسؤول') }}</th>
             <th>{{ t('Last activity', 'آخر نشاط') }}</th>
+            <th>{{ t('Tags', 'الوسوم') }}</th>
             <th class="end">{{ t('Score', 'التقييم') }}</th>
           </tr>
         </thead>
@@ -273,6 +450,34 @@
               <td class="muted">{{ source(l.source) }}</td>
               <td class="soft">{{ l.owner?.name || t('Unassigned', 'دون مسؤول') }}</td>
               <td class="muted">{{ ago(l.lastActivityAt || l.createdAt) }}</td>
+              <td class="tags-cell" (click)="$event.stopPropagation()">
+                <div class="tag-list">
+                  @for (tag of l.tags; track tag) {
+                    <span class="tag-chip"
+                      >{{ tag }}
+                      <button
+                        type="button"
+                        class="tag-chip__x"
+                        [attr.aria-label]="t('Remove tag ', 'إزالة الوسم ') + tag"
+                        (click)="removeTag(l, tag)"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  }
+                  @if (canManage()) {
+                    <input
+                      #tagInput
+                      type="text"
+                      class="tag-add"
+                      maxlength="40"
+                      [placeholder]="t('+ tag', '+ وسم')"
+                      (keydown.enter)="addTag(l, tagInput.value); tagInput.value = ''"
+                      (click)="$event.stopPropagation()"
+                    />
+                  }
+                </div>
+              </td>
               <td class="end mono strong" [style.color]="scoreColor(l.score)">
                 {{ l.score ?? '—' }}
               </td>

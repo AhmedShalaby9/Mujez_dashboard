@@ -90,8 +90,123 @@ export class Leads {
   selectAllOnPage(checked: boolean) {
     this.checkedIds.set(checked ? this.leads().map((l) => l.id) : []);
   }
-  /** Placeholder for the bulk "Assign" action; behavior and permissions to be defined later. */
-  bulkAssign() {}
+  readonly bulkPanel = signal<'stage' | 'assign' | 'distribute' | 'tags' | 'whatsapp' | null>(
+    null,
+  );
+  readonly bulkBusy = signal(false);
+  readonly bulkNotice = signal('');
+  readonly bulkStageValue = signal('');
+  readonly bulkAssignOwner = signal('');
+  readonly bulkDistributeIds = signal<string[]>([]);
+  readonly bulkTagText = signal('');
+  readonly bulkWhatsappMessage = signal('');
+  get bulkSelectedLeads() {
+    const ids = new Set(this.checkedIds());
+    return this.leads().filter((l) => ids.has(l.id));
+  }
+  private bulkItems() {
+    return this.bulkSelectedLeads.map((l) => ({ id: l.id, version: l.version }));
+  }
+  toggleBulkPanel(panel: 'stage' | 'assign' | 'distribute' | 'tags' | 'whatsapp') {
+    this.bulkPanel.set(this.bulkPanel() === panel ? null : panel);
+  }
+  closeBulkPanel() {
+    this.bulkPanel.set(null);
+  }
+  cancelBulk() {
+    this.checkedIds.set([]);
+    this.bulkPanel.set(null);
+    this.bulkDistributeIds.set([]);
+  }
+  toggleDistributeAgent(id: string, checked: boolean) {
+    this.bulkDistributeIds.update((ids) =>
+      checked ? [...new Set([...ids, id])] : ids.filter((x) => x !== id),
+    );
+  }
+  private async runBulk(path: string, body: Record<string, unknown>, closePanel = true) {
+    this.bulkBusy.set(true);
+    this.error.set('');
+    try {
+      await this.api.write(path, { items: this.bulkItems(), ...body });
+      if (closePanel) {
+        this.checkedIds.set([]);
+        this.bulkPanel.set(null);
+      }
+      await this.reload(this.page());
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.bulkBusy.set(false);
+    }
+  }
+  async bulkApplyStage() {
+    if (!this.bulkStageValue()) return;
+    await (this.isBrokerage()
+      ? this.runBulk('leads/bulk/status', { status: this.bulkStageValue() })
+      : this.runBulk('leads/bulk/stage', { stage: this.bulkStageValue() }));
+    this.bulkStageValue.set('');
+  }
+  async bulkApplyAssign() {
+    if (!this.bulkAssignOwner()) return;
+    await this.runBulk('leads/bulk/assign', { ownerId: this.bulkAssignOwner() });
+    this.bulkAssignOwner.set('');
+  }
+  async bulkApplyDistribute() {
+    if (this.bulkDistributeIds().length < 2) return;
+    await this.runBulk('leads/bulk/distribute', { agentIds: this.bulkDistributeIds() });
+    this.bulkDistributeIds.set([]);
+  }
+  async bulkApplyTags() {
+    const tag = this.bulkTagText().trim();
+    if (!tag) return;
+    await this.runBulk('leads/bulk/tags', { tags: [tag] }, false);
+    this.bulkTagText.set('');
+  }
+  whatsappLink(l: SalesLead) {
+    const phone = l.phone.replace(/[^\d]/g, '');
+    const text = this.bulkWhatsappMessage().trim();
+    return 'https://wa.me/' + phone + (text ? '?text=' + encodeURIComponent(text) : '');
+  }
+  async copyRows() {
+    const rows = this.bulkSelectedLeads
+      .map((l) =>
+        [this.name(l), l.phone, this.stageNames()[this.leadStage(l)] ?? l.stage, l.owner?.name ?? '']
+          .join('\t'),
+      )
+      .join('\n');
+    try {
+      await navigator.clipboard.writeText(rows);
+      this.bulkNotice.set(
+        this.bulkSelectedLeads.length + ' ' + this.t('rows copied', 'صف تم نسخه'),
+      );
+      setTimeout(() => this.bulkNotice.set(''), 2500);
+    } catch {
+      this.error.set(this.t('Could not copy to clipboard', 'تعذر النسخ إلى الحافظة'));
+    }
+  }
+  async addTag(l: SalesLead, raw: string) {
+    const tag = raw.trim();
+    if (!tag || l.tags.some((t) => t.toLowerCase() === tag.toLowerCase())) return;
+    await this.saveTags(l, [...l.tags, tag]);
+  }
+  async removeTag(l: SalesLead, tag: string) {
+    await this.saveTags(l, l.tags.filter((t) => t !== tag));
+  }
+  private async saveTags(l: SalesLead, tags: string[]) {
+    try {
+      const updated = await this.api.write('leads/' + l.id + '/tags', {
+        version: l.version,
+        tags,
+      });
+      this.leads.update((rows) =>
+        rows.map((r) => (r.id === l.id ? { ...r, tags: updated.tags, version: updated.version } : r)),
+      );
+      if (this.selected()?.id === l.id)
+        this.selected.set({ ...this.selected()!, tags: updated.tags, version: updated.version });
+    } catch (e) {
+      this.error.set((e as Error).message);
+    }
+  }
   readonly isBrokerage = computed(() => {
     const user = this.auth.user();
     return (user?.company?.type ?? user?.workspace?.company?.type) === 'brokerage';

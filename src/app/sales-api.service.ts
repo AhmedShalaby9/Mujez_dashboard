@@ -60,6 +60,7 @@ export interface SalesLead {
   stage: SalesStage;
   brokerageStatus?: BrokerageLeadStatus | null;
   score: number | null;
+  tags: string[];
   version: number;
   archivedAt: string | null;
   createdAt: string;

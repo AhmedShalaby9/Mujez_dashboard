@@ -134,9 +134,18 @@ export class TeamAiInsights {
     'overdueTasks',
     'completedTasks',
   ];
+  private readonly teamMemberRoles = [
+    'agent',
+    'team_lead',
+    'property_advisor',
+    'property_consultant',
+    'senior',
+    'expert',
+    'team_leader',
+  ];
   readonly salespeople = computed(() =>
     this.sorted(
-      (this.data()?.members ?? []).filter((m) => ['agent', 'team_lead'].includes(m.role)),
+      (this.data()?.members ?? []).filter((m) => this.teamMemberRoles.includes(m.role)),
     ),
   );
   readonly companyTeams = computed(() => this.sorted(this.data()?.teams ?? []));

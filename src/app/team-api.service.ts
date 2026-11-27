@@ -1,8 +1,25 @@
 import { Injectable, inject } from '@angular/core';
 import { AuthService } from './auth.service';
+/** Real-estate offices use these two; every other company type uses the
+ * brokerage ladder below instead (see BROKERAGE_SALES_ROLES). */
+export const OFFICE_SALES_ROLES = ['agent', 'team_lead'] as const;
+/** The brokerage sales ladder, most junior first, plus Sales Admin. */
+export const BROKERAGE_LADDER_ROLES = [
+  'property_advisor',
+  'property_consultant',
+  'senior',
+  'expert',
+  'team_leader',
+  'sales_manager',
+  'sales_director',
+  'head_of_sales',
+] as const;
+export const BROKERAGE_SALES_ROLES = [...BROKERAGE_LADDER_ROLES, 'sales_admin'] as const;
+/** Any role that can be a "my team" member/lead, across both company types. */
+export const TEAM_MEMBER_ROLES = [...OFFICE_SALES_ROLES, ...BROKERAGE_LADDER_ROLES] as const;
 export const TEAM_ROLES = [
-  'agent',
-  'team_lead',
+  ...OFFICE_SALES_ROLES,
+  ...BROKERAGE_SALES_ROLES,
   'employee',
   'hr_officer',
   'hr_manager',

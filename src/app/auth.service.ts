@@ -125,7 +125,21 @@ export function hasAccountingSelf(u: User | null | undefined) {
     !!u &&
     !u.workspace &&
     u.pool === 'company_user' &&
-    (u.roles ?? [u.role]).some((r) => r === 'agent' || r === 'team_lead') &&
+    (u.roles ?? [u.role]).some((r) =>
+      [
+        'agent',
+        'team_lead',
+        'property_advisor',
+        'property_consultant',
+        'senior',
+        'expert',
+        'team_leader',
+        'sales_manager',
+        'sales_director',
+        'head_of_sales',
+        'sales_admin',
+      ].includes(r),
+    ) &&
     u.permissions.includes('commissions.read')
   );
 }

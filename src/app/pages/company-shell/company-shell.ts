@@ -236,6 +236,7 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Lead Routing', path: 'lead-routing' },
   { kind: 'item', label: 'Audit Log', path: 'audit-log' },
   { kind: 'item', label: 'Team', path: 'team' },
+  { kind: 'item', label: 'Commission Scheme', path: 'commission-scheme' },
 ];
 
 const AR_NAV: NavEntry[] = [
@@ -296,6 +297,7 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'توزيع العملاء', path: 'lead-routing' },
   { kind: 'item', label: 'سجل التدقيق', path: 'audit-log' },
   { kind: 'item', label: 'الفريق', path: 'team' },
+  { kind: 'item', label: 'مخطط العمولة', path: 'commission-scheme' },
 ];
 
 const COPY: Record<Lang, Copy> = {
@@ -414,8 +416,13 @@ export class CompanyShell {
       if (item.path === 'office/my-team')
         return (
           u?.pool === 'company_user' &&
-          (u.roles ?? [u.role]).includes('team_lead') &&
+          (u.roles ?? [u.role]).some((r) => r === 'team_lead' || r === 'team_leader') &&
           perms.includes('team.self.read')
+        );
+      if (item.path === 'commission-scheme')
+        return (
+          (u?.company?.type ?? u?.workspace?.company?.type) === 'brokerage' &&
+          perms.includes('commissions.read')
         );
       if (item.path === 'deals')
         return (u?.company?.type ?? u?.workspace?.company?.type) === 'brokerage';

@@ -1,7 +1,6 @@
 <div class="pg">
   <div class="head">
     <div class="head__text">
-      <span>{{ total() }} {{ t('records', 'سجل') }}</span>
       <h1>{{ t('Cold calls', 'المكالمات الباردة') }}</h1>
     </div>
     @if (canManage()) {
@@ -14,14 +13,6 @@
       </div>
     }
   </div>
-  <p class="muted">
-    {{
-      t(
-        'Old contacts for initial outreach. Imported records stay outside Leads and the pipeline until you explicitly convert an interested contact.',
-        'جهات اتصال قديمة للتواصل الأولي. تظل منفصلة عن العملاء والـPipeline حتى تحويل العميل المهتم بشكل صريح.'
-      )
-    }}
-  </p>
   @if (error()) {
     <p class="note note--bad" role="alert">{{ error() }}</p>
   }
@@ -570,7 +561,11 @@
 
     <label class="field"
       ><span>{{ t('Search name or phone', 'البحث بالاسم أو الهاتف') }}</span
-      ><input [(ngModel)]="search" (keydown.enter)="apply()" /></label
+      ><input
+        [(ngModel)]="search"
+        (keydown.enter)="apply()"
+        [placeholder]="t('e.g. Ahmed or 010…', 'مثال: أحمد أو 010...')"
+      /></label
     ><label class="field"
       ><span>{{ t('Status', 'الحالة') }}</span
       ><select [(ngModel)]="status" (ngModelChange)="apply()">

@@ -8,6 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { PhoneInput } from '../../../phone-input';
 import { RUNTIME_CONFIG } from '../../../runtime-config';
 import { FormsModule } from '@angular/forms';
 import { AuthService, officeWorkspace, type User } from '../../../auth.service';
@@ -60,7 +61,7 @@ const empty = () => ({
 });
 @Component({
   selector: 'app-brokerage-deals',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, PhoneInput],
   templateUrl: './deals.html',
   styleUrls: ['../company-ui.scss', './deals.scss'],
 })
@@ -259,10 +260,6 @@ export class Deals {
   }
   leadPhone(id: string) {
     return this.leadOptions().find((p) => p.id === id)?.phone ?? '';
-  }
-  /** Phone fields store the full "+20…" value; this strips it for the boxed +20 input. */
-  phoneLocal(value: string) {
-    return String(value ?? '').replace(/^\+20/, '');
   }
   /** unitValueMinor is EGP minor units (×100); the input shows plain EGP. */
   get unitValueEgp() {

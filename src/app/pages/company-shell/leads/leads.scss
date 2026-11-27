@@ -18,6 +18,16 @@
   flex: 1;
   min-height: 0;
 }
+.grid--divided > .field {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f1ed;
+}
+.field--full {
+  grid-column: 1 / -1;
+}
+.field--full textarea {
+  resize: vertical;
+}
 .bulk-bar {
   position: fixed;
   left: 50%;

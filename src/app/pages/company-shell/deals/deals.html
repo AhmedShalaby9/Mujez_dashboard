@@ -224,17 +224,11 @@
                   </button></label
                 ><label
                   >{{ t('Mobile *', 'الهاتف *') }}
-                  <span class="phone20" dir="ltr"
-                    ><span aria-hidden="true">+20</span
-                    ><input
-                      type="tel"
-                      inputmode="numeric"
-                      autocomplete="tel-national"
-                      [ngModel]="phoneLocal(form.clientPhone)"
-                      [ngModelOptions]="{ standalone: true }"
-                      (ngModelChange)="form.clientPhone = '+20' + $event"
-                      placeholder="xxx xxx xxxx"
-                      maxlength="10" /></span
+                  <app-phone-input
+                    [(ngModel)]="form.clientPhone"
+                    [ngModelOptions]="{ standalone: true }"
+                    [ariaLabel]="t('Mobile', 'الهاتف')"
+                  ></app-phone-input
                 ></label>
               </div>
               <h3>{{ t('The deal', 'الصفقة') }}</h3>
@@ -413,16 +407,11 @@
                     [placeholder]="t('Full name', 'الاسم الكامل')" /></label
                 ><label
                   >{{ t('Salesperson mobile *', 'هاتف مندوب المطوّر *') }}
-                  <span class="phone20" dir="ltr"
-                    ><span aria-hidden="true">+20</span
-                    ><input
-                      type="tel"
-                      inputmode="numeric"
-                      [ngModel]="phoneLocal(form.details['developerSalespersonMobile'])"
-                      [ngModelOptions]="{ standalone: true }"
-                      (ngModelChange)="form.details['developerSalespersonMobile'] = '+20' + $event"
-                      placeholder="xxx xxx xxxx"
-                      maxlength="10" /></span
+                  <app-phone-input
+                    [(ngModel)]="form.details['developerSalespersonMobile']"
+                    [ngModelOptions]="{ standalone: true }"
+                    [ariaLabel]="t('Salesperson mobile', 'هاتف مندوب المطوّر')"
+                  ></app-phone-input
                 ></label>
               </div>
             }

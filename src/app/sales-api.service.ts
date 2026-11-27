@@ -46,7 +46,7 @@ export interface SalesLead {
   email?: string | null;
   lastActivityAt?: string | null;
   stageChangedAt?: string | null;
-  segment: 'res' | 'com';
+  segment: 'res' | 'com' | null;
   want: { en: string; ar: string };
   budgetMinor: string | null;
   currency: string;
@@ -62,6 +62,7 @@ export interface SalesLead {
   score: number | null;
   tags: string[];
   lastComment?: string | null;
+  project?: { id: string; name: { en: string; ar: string } } | null;
   version: number;
   archivedAt: string | null;
   createdAt: string;

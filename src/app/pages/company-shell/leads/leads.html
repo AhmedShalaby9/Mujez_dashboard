@@ -193,9 +193,9 @@
   </div>
 
   @if (checkedIds().length) {
-    @if (bulkPanel(); as panel) {
+    @if (bulkPanel() === 'stage' || bulkPanel() === 'whatsapp') {
       <div class="bulk-panel">
-        @if (panel === 'stage') {
+        @if (bulkPanel() === 'stage') {
           <label class="field"
             ><span>{{ isBrokerage() ? t('Status', 'الحالة') : t('Stage', 'المرحلة') }}</span
             ><select [(ngModel)]="bulkStageValue">
@@ -213,70 +213,7 @@
             {{ t('Apply', 'تطبيق') }}
           </button>
         }
-        @if (panel === 'assign') {
-          <label class="field"
-            ><span>{{ t('Salesperson', 'مسؤول المبيعات') }}</span
-            ><select [(ngModel)]="bulkAssignOwner">
-              <option value="">{{ t('Choose…', 'اختر…') }}</option>
-              @for (o of owners(); track o.id) {
-                <option [value]="o.id">{{ o.name }}</option>
-              }
-            </select></label
-          ><button
-            type="button"
-            class="btn btn--dark"
-            [disabled]="bulkBusy() || !bulkAssignOwner()"
-            (click)="bulkApplyAssign()"
-          >
-            {{ t('Apply', 'تطبيق') }}
-          </button>
-        }
-        @if (panel === 'distribute') {
-          <div class="bulk-distribute">
-            <span class="muted">{{
-              t('Choose two or more agents to split these leads between', 'اختر سيلزين أو أكثر لتوزيع العملاء بينهم')
-            }}</span>
-            <div class="bulk-distribute__list">
-              @for (o of owners(); track o.id) {
-                <label class="check"
-                  ><input
-                    type="checkbox"
-                    [checked]="bulkDistributeIds().includes(o.id)"
-                    (change)="toggleDistributeAgent(o.id, $any($event.target).checked)"
-                  />{{ o.name }}</label
-                >
-              }
-            </div>
-          </div>
-          <button
-            type="button"
-            class="btn btn--dark"
-            [disabled]="bulkBusy() || bulkDistributeIds().length < 2"
-            (click)="bulkApplyDistribute()"
-          >
-            {{ t('Apply', 'تطبيق') }}
-          </button>
-        }
-        @if (panel === 'tags') {
-          <label class="field"
-            ><span>{{ t('Tag text', 'نص الوسم') }}</span
-            ><input
-              type="text"
-              maxlength="40"
-              [(ngModel)]="bulkTagText"
-              (keydown.enter)="bulkApplyTags()"
-              [placeholder]="t('e.g. VIP', 'مثال: VIP')"
-          /></label>
-          <button
-            type="button"
-            class="btn btn--dark"
-            [disabled]="bulkBusy() || !bulkTagText().trim()"
-            (click)="bulkApplyTags()"
-          >
-            {{ t('Add to selected', 'إضافة للمحدد') }}
-          </button>
-        }
-        @if (panel === 'whatsapp') {
+        @if (bulkPanel() === 'whatsapp') {
           <div class="bulk-whatsapp">
             <label class="field"
               ><span>{{ t('Message', 'الرسالة') }}</span
@@ -302,6 +239,188 @@
         }
       </div>
     }
+    @if (bulkPanel() === 'assign') {
+      <div class="scrim" (click)="closeBulkPanel()"></div>
+      <div
+        class="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bulk-assign-title"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="dialog__head">
+          <div class="dialog__head-row">
+            <span class="dialog__icon">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="9" cy="8" r="3.5" /><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6" /><path
+                  d="M17 8h4M19 6v4"
+                />
+              </svg>
+            </span>
+            <div class="dialog__head-text">
+              <span class="dialog__title" id="bulk-assign-title">{{
+                t('Assign agent', 'إسناد لمندوب')
+              }}</span>
+              <span class="dialog__body"
+                >{{ checkedIds().length }} {{ t('leads', 'عميل') }}</span
+              >
+            </div>
+            <button
+              type="button"
+              class="x"
+              [attr.aria-label]="t('Close', 'إغلاق')"
+              (click)="closeBulkPanel()"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+        <div class="dialog__main">
+          <label class="field"><span>{{ t('Agent', 'المندوب') }}</span></label>
+          <div class="search-pick bulk-pick" #bulkAssignPicker>
+            <button type="button" class="btn" (click)="toggleBulkAssignPicker()">
+              {{ bulkAssignOwnerName() }}
+            </button>
+            @if (bulkAssignPickerOpen()) {
+              <div class="pf-panel">
+                <div class="pf-search">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#8A8A90"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                  >
+                    <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" />
+                  </svg>
+                  <input
+                    type="search"
+                    [value]="bulkAssignQuery()"
+                    (input)="bulkAssignQuery.set($any($event.target).value)"
+                    [placeholder]="t('Search pick an agent…', 'ابحث عن مندوب…')"
+                  />
+                </div>
+                <div class="pf-list">
+                  @for (o of bulkAssignFiltered(); track o.id) {
+                    <button
+                      type="button"
+                      class="pf-item"
+                      (click)="chooseBulkAssignOwner(o.id)"
+                    >
+                      <span>{{ o.name }}</span>
+                    </button>
+                  }
+                  @if (!bulkAssignFiltered().length) {
+                    <p class="pf-empty">{{ t('No matches', 'لا توجد نتائج') }}</p>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+        <div class="dialog__foot">
+          <button type="button" class="btn" (click)="closeBulkPanel()">
+            {{ t('Cancel', 'إلغاء') }}
+          </button>
+          <button
+            type="button"
+            class="btn btn--dark"
+            [disabled]="bulkBusy() || !bulkAssignOwner()"
+            (click)="bulkApplyAssign()"
+          >
+            {{ t('Assign agent', 'إسناد لمندوب') }}
+          </button>
+        </div>
+      </div>
+    }
+    @if (bulkPanel() === 'tags') {
+      <div class="scrim" (click)="closeBulkPanel()"></div>
+      <div
+        class="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bulk-tags-title"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="dialog__head">
+          <div class="dialog__head-row">
+            <span class="dialog__icon">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M11 3H5a2 2 0 0 0-2 2v6l9.5 9.5a2 2 0 0 0 2.8 0l5.2-5.2a2 2 0 0 0 0-2.8L11 3Z"
+                /><circle cx="7.5" cy="7.5" r="1.2" />
+              </svg>
+            </span>
+            <div class="dialog__head-text">
+              <span class="dialog__title" id="bulk-tags-title">{{
+                t('Set tags', 'إضافة وسوم')
+              }}</span>
+              <span class="dialog__body"
+                >{{ checkedIds().length }} {{ t('leads', 'عميل') }}</span
+              >
+            </div>
+            <button
+              type="button"
+              class="x"
+              [attr.aria-label]="t('Close', 'إغلاق')"
+              (click)="closeBulkPanel()"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+        <div class="dialog__main">
+          <label class="field"
+            ><span>{{ t('Tags', 'الوسوم') }}</span
+            ><input
+              type="text"
+              maxlength="40"
+              [(ngModel)]="bulkTagText"
+              (keydown.enter)="bulkApplyTags()"
+              [placeholder]="t('Type a tag, then Enter', 'اكتب وسمًا ثم Enter')"
+          /></label>
+          <span class="muted">{{
+            t(
+              'Added to what each lead has; nothing is removed. A new tag is created when it is applied.',
+              'يُضاف لما لدى كل عميل من وسوم دون حذف أي شيء. يُنشأ وسم جديد عند تطبيقه.'
+            )
+          }}</span>
+        </div>
+        <div class="dialog__foot">
+          <button type="button" class="btn" (click)="closeBulkPanel()">
+            {{ t('Cancel', 'إلغاء') }}
+          </button>
+          <button
+            type="button"
+            class="btn btn--dark"
+            [disabled]="bulkBusy() || !bulkTagText().trim()"
+            (click)="bulkApplyTags()"
+          >
+            {{ t('Set tags', 'إضافة وسوم') }}
+          </button>
+        </div>
+      </div>
+    }
     <div class="bulk-bar">
       <b>{{ checkedIds().length }} {{ t('selected', 'محدد') }}</b>
       <button
@@ -325,17 +444,6 @@
           <circle cx="9" cy="8" r="3.5" /><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6" /><path d="M17 8h4M19 6v4" />
         </svg>
         {{ t('Assign agent', 'إسناد لمندوب') }}
-      </button>
-      <button
-        type="button"
-        class="bulk-bar__item"
-        [class.on]="bulkPanel() === 'distribute'"
-        (click)="toggleBulkPanel('distribute')"
-      >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 12h9M13 12l-3-3M13 12l-3 3" /><circle cx="18" cy="6" r="2" /><circle cx="18" cy="18" r="2" />
-        </svg>
-        {{ t('Distribute', 'توزيع') }}
       </button>
       <button
         type="button"

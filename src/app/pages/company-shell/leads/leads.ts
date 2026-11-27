@@ -90,16 +90,26 @@ export class Leads {
   selectAllOnPage(checked: boolean) {
     this.checkedIds.set(checked ? this.leads().map((l) => l.id) : []);
   }
-  readonly bulkPanel = signal<'stage' | 'assign' | 'distribute' | 'tags' | 'whatsapp' | null>(
-    null,
-  );
+  readonly bulkPanel = signal<'stage' | 'assign' | 'tags' | 'whatsapp' | null>(null);
   readonly bulkBusy = signal(false);
   readonly bulkNotice = signal('');
   readonly bulkStageValue = signal('');
   readonly bulkAssignOwner = signal('');
-  readonly bulkDistributeIds = signal<string[]>([]);
   readonly bulkTagText = signal('');
   readonly bulkWhatsappMessage = signal('');
+  readonly bulkAssignPickerOpen = signal(false);
+  readonly bulkAssignQuery = signal('');
+  readonly bulkAssignFiltered = computed(() => {
+    const q = this.bulkAssignQuery().trim().toLowerCase();
+    const list = this.owners();
+    return q ? list.filter((o) => o.name.toLowerCase().includes(q)) : list;
+  });
+  readonly bulkAssignOwnerName = computed(
+    () =>
+      this.owners().find((o) => o.id === this.bulkAssignOwner())?.name ??
+      this.t('Pick an agent', 'اختر مندوبًا'),
+  );
+  readonly bulkAssignPickerEl = viewChild<ElementRef<HTMLElement>>('bulkAssignPicker');
   get bulkSelectedLeads() {
     const ids = new Set(this.checkedIds());
     return this.leads().filter((l) => ids.has(l.id));
@@ -107,21 +117,36 @@ export class Leads {
   private bulkItems() {
     return this.bulkSelectedLeads.map((l) => ({ id: l.id, version: l.version }));
   }
-  toggleBulkPanel(panel: 'stage' | 'assign' | 'distribute' | 'tags' | 'whatsapp') {
+  toggleBulkPanel(panel: 'stage' | 'assign' | 'tags' | 'whatsapp') {
     this.bulkPanel.set(this.bulkPanel() === panel ? null : panel);
+    this.bulkAssignPickerOpen.set(false);
   }
   closeBulkPanel() {
     this.bulkPanel.set(null);
+    this.bulkAssignPickerOpen.set(false);
   }
   cancelBulk() {
     this.checkedIds.set([]);
     this.bulkPanel.set(null);
-    this.bulkDistributeIds.set([]);
+    this.bulkAssignPickerOpen.set(false);
   }
-  toggleDistributeAgent(id: string, checked: boolean) {
-    this.bulkDistributeIds.update((ids) =>
-      checked ? [...new Set([...ids, id])] : ids.filter((x) => x !== id),
-    );
+  toggleBulkAssignPicker() {
+    this.bulkAssignPickerOpen.update((v) => !v);
+    if (this.bulkAssignPickerOpen()) this.bulkAssignQuery.set('');
+  }
+  chooseBulkAssignOwner(id: string) {
+    this.bulkAssignOwner.set(id);
+    this.bulkAssignPickerOpen.set(false);
+  }
+  @HostListener('document:click', ['$event'])
+  onDocumentClickForBulkAssignPicker(e: MouseEvent) {
+    if (!this.bulkAssignPickerOpen()) return;
+    const el = this.bulkAssignPickerEl()?.nativeElement;
+    if (el && !el.contains(e.target as Node)) this.bulkAssignPickerOpen.set(false);
+  }
+  @HostListener('document:keydown.escape')
+  onEscapeForBulkAssignPicker() {
+    if (this.bulkAssignPickerOpen()) this.bulkAssignPickerOpen.set(false);
   }
   private async runBulk(path: string, body: Record<string, unknown>, closePanel = true) {
     this.bulkBusy.set(true);
@@ -150,11 +175,6 @@ export class Leads {
     if (!this.bulkAssignOwner()) return;
     await this.runBulk('leads/bulk/assign', { ownerId: this.bulkAssignOwner() });
     this.bulkAssignOwner.set('');
-  }
-  async bulkApplyDistribute() {
-    if (this.bulkDistributeIds().length < 2) return;
-    await this.runBulk('leads/bulk/distribute', { agentIds: this.bulkDistributeIds() });
-    this.bulkDistributeIds.set([]);
   }
   async bulkApplyTags() {
     const tag = this.bulkTagText().trim();

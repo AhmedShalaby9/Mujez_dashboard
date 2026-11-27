@@ -503,6 +503,7 @@
             <th>{{ t('Contact', 'العميل') }}</th>
             <th>{{ t('Wants', 'يبحث عن') }}</th>
             <th>{{ t('Budget', 'الميزانية') }}</th>
+            <th>{{ t('Last comment', 'آخر تعليق') }}</th>
             <th>{{ isBrokerage() ? t('Status', 'الحالة') : t('Stage', 'المرحلة') }}</th>
             <th>{{ t('Source', 'المصدر') }}</th>
             <th>{{ t('Owner', 'المسؤول') }}</th>
@@ -545,6 +546,9 @@
                 </div>
               </td>
               <td class="mono">{{ money(l.budgetMinor) }}</td>
+              <td class="muted comment-cell" [attr.title]="l.lastComment || ''">
+                {{ l.lastComment || '—' }}
+              </td>
               <td>
                 @if (l.archivedAt) {
                   <span class="muted">{{ t('Archived', 'مؤرشف') }}</span>
@@ -797,7 +801,7 @@
         }
         @if (latestNote(); as n) {
           <div class="content-panel content-panel--note">
-            <span class="sect__label">{{ t('LATEST NOTE', 'آخر ملاحظة') }}</span>
+            <span class="sect__label">{{ t('LATEST COMMENT', 'آخر تعليق') }}</span>
             <span>{{ n.text }}</span>
             <span class="sub">{{ n.by || t('System', 'النظام') }} · {{ date(n.at) }}</span>
           </div>

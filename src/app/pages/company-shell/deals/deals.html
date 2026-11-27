@@ -185,11 +185,22 @@
             <button (click)="closeWizard()">✕</button>
           </header>
           <nav class="steps">
-            <span [class.active]="step() === 1">1 {{ t('Client & deal', 'المشتري والصفقة') }}</span
-            ><span [class.active]="step() === 2"
-              >2 {{ t('Unit & details', 'الوحدة والتفاصيل') }}</span
-            ><span [class.active]="step() === 3">3 {{ t('Documents', 'المستندات') }}</span
-            ><span [class.active]="step() === 4">4 {{ t('Review', 'مراجعة') }}</span>
+            @for (s of stepDefs; track s.n) {
+              <button
+                type="button"
+                class="steps__item"
+                [class.steps__item--active]="step() === s.n"
+                [class.steps__item--done]="step() > s.n"
+                [disabled]="step() <= s.n"
+                (click)="goToStep(s.n)"
+              >
+                <span class="steps__dot">{{ step() > s.n ? '✓' : s.n }}</span>
+                <span class="steps__label">{{ t(s.en, s.ar) }}</span>
+              </button>
+              @if (s.n < stepDefs.length) {
+                <span class="steps__line" [class.steps__line--done]="step() > s.n"></span>
+              }
+            }
           </nav>
           <div class="wizard-body">
             @if (step() === 1) {
@@ -208,10 +219,7 @@
                   }}<input
                     [(ngModel)]="form.clientName"
                     [placeholder]="t('Full name as on ID', 'الاسم كما في البطاقة')"
-                  /><button
-                    class="text-button"
-                    (click)="copyLead()"
-                  >
+                  /><button class="text-button" (click)="copyLead()">
                     {{ t('Copy name and phone from lead', 'نسخ الاسم والهاتف من العميل المحتمل') }}
                   </button></label
                 ><label
@@ -226,8 +234,8 @@
                       [ngModelOptions]="{ standalone: true }"
                       (ngModelChange)="form.clientPhone = '+20' + $event"
                       placeholder="xxx xxx xxxx"
-                      maxlength="10"
-                  /></span></label>
+                      maxlength="10" /></span
+                ></label>
               </div>
               <h3>{{ t('The deal', 'الصفقة') }}</h3>
               <div class="choice-row">
@@ -389,8 +397,7 @@
                   >{{ t('Unit number', 'رقم الوحدة')
                   }}<input
                     [(ngModel)]="form.details['unitNumber']"
-                    [placeholder]="t('e.g. B2-304', 'مثال: B2-304')"
-                /></label
+                    [placeholder]="t('e.g. B2-304', 'مثال: B2-304')" /></label
                 ><label
                   >{{ t('Unit type', 'نوع الوحدة')
                   }}<select [(ngModel)]="form.details['unitType']">
@@ -403,8 +410,7 @@
                   >{{ t('Developer salesperson *', 'مندوب المطوّر *')
                   }}<input
                     [(ngModel)]="form.details['developerSalesperson']"
-                    [placeholder]="t('Full name', 'الاسم الكامل')"
-                /></label
+                    [placeholder]="t('Full name', 'الاسم الكامل')" /></label
                 ><label
                   >{{ t('Salesperson mobile *', 'هاتف مندوب المطوّر *') }}
                   <span class="phone20" dir="ltr"
@@ -416,11 +422,21 @@
                       [ngModelOptions]="{ standalone: true }"
                       (ngModelChange)="form.details['developerSalespersonMobile'] = '+20' + $event"
                       placeholder="xxx xxx xxxx"
-                      maxlength="10"
-                  /></span></label>
+                      maxlength="10" /></span
+                ></label>
               </div>
+            }
+            @if (step() === 3) {
               <h3>{{ t('Unit & money', 'الوحدة والبيانات المالية') }}</h3>
               <div class="grid three">
+                <label
+                  >{{ t('Unit total sale price (EGP) *', 'سعر بيع الوحدة الإجمالي (جنيه) *')
+                  }}<input
+                    type="number"
+                    min="0"
+                    [(ngModel)]="unitValueEgp"
+                    [placeholder]="t('e.g. 5000000', 'مثال: 5000000')"
+                /></label>
                 <label
                   >{{ t('Area (m²) *', 'المساحة (م²) *')
                   }}<input
@@ -436,7 +452,8 @@
                     @for (f of options()?.finishingTypes ?? []; track f) {
                       <option [value]="f">{{ f }}</option>
                     }
-                  </select></label>
+                  </select></label
+                >
                 <label
                   >{{ t('Delivery in (years) *', 'التسليم خلال (سنوات) *')
                   }}<input
@@ -503,7 +520,7 @@
                 }
               </div>
             }
-            @if (step() === 3) {
+            @if (step() === 4) {
               <h3>{{ t('Documents', 'المستندات') }}</h3>
               <p class="hint">
                 {{
@@ -536,13 +553,13 @@
                 <div class="file-row">{{ f.fileName }} · {{ f.kind }}</div>
               }
             }
-            @if (step() === 4) {
+            @if (step() === 5) {
               <h3>{{ t('Review deal', 'مراجعة الصفقة') }}</h3>
               <div class="review">
                 <div>
                   <h4>
                     {{ t('Client & deal', 'المشتري والصفقة') }}
-                    <button (click)="step.set(1)">{{ t('Change', 'تعديل') }}</button>
+                    <button (click)="goToStep(1)">{{ t('Change', 'تعديل') }}</button>
                   </h4>
                   <p>{{ form.clientName }} · {{ form.clientPhone }}</p>
                   <p>{{ leadName(form.leadId) }} · {{ agentName(form.agentId) }}</p>
@@ -550,20 +567,29 @@
                 </div>
                 <div>
                   <h4>
-                    {{ t('Unit & details', 'الوحدة والتفاصيل') }}
-                    <button (click)="step.set(2)">{{ t('Change', 'تعديل') }}</button>
+                    {{ t('Project & unit', 'المشروع والوحدة') }}
+                    <button (click)="goToStep(2)">{{ t('Change', 'تعديل') }}</button>
                   </h4>
                   <p>{{ projectName(form.projectId) }} · {{ form.details['unitNumber'] || '—' }}</p>
-                  <p>{{ form.details['reservationPrice'] }} EGP · {{ form.details['area'] }} m²</p>
                   <p>
-                    {{ t('Expected contract', 'التعاقد المتوقع') }}:
+                    {{ form.details['unitType'] || t('No unit type set', 'نوع الوحدة غير محدد') }}
+                  </p>
+                </div>
+                <div>
+                  <h4>
+                    {{ t('Financials & reservation', 'البيانات المالية والحجز') }}
+                    <button (click)="goToStep(3)">{{ t('Change', 'تعديل') }}</button>
+                  </h4>
+                  <p>{{ unitValueEgp || '—' }} EGP · {{ form.details['area'] }} m²</p>
+                  <p>
+                    {{ t('Reservation', 'الحجز') }}: {{ form.details['reservationPrice'] }} EGP ·
                     {{ form.details['expectedContractDate'] }}
                   </p>
                 </div>
                 <div>
                   <h4>
                     {{ t('Documents', 'المستندات') }}
-                    <button (click)="step.set(3)">{{ t('Change', 'تعديل') }}</button>
+                    <button (click)="goToStep(4)">{{ t('Change', 'تعديل') }}</button>
                   </h4>
                   <p>
                     {{ form.documents.length + (selected()?.documents?.length ?? 0) }}
@@ -586,8 +612,8 @@
           <footer>
             <button (click)="step() === 1 ? closeWizard() : back()">
               {{ step() === 1 ? t('Cancel', 'إلغاء') : t('Back', 'رجوع') }}</button
-            ><span>{{ t('Step', 'خطوة') }} {{ step() }} / 4</span>
-            @if (step() < 4) {
+            ><span>{{ t('Step', 'خطوة') }} {{ step() }} / 5</span>
+            @if (step() < 5) {
               <button class="primary" (click)="next()">{{ t('Next', 'التالي') }} →</button>
             } @else {
               <button class="primary" [disabled]="saving()" (click)="save()">
@@ -631,20 +657,19 @@
               </select></label
             ><label
               >{{ t('Code', 'الكود')
-              }}<input [(ngModel)]="inventoryForm.code" [placeholder]="t('e.g. PH-01', 'مثال: PH-01')"
-            /></label
+              }}<input
+                [(ngModel)]="inventoryForm.code"
+                [placeholder]="t('e.g. PH-01', 'مثال: PH-01')" /></label
             ><label
               >{{ t('Name', 'الاسم')
               }}<input
                 [(ngModel)]="inventoryForm.name"
-                [placeholder]="t('e.g. Badya', 'مثال: بادية')"
-            /></label
+                [placeholder]="t('e.g. Badya', 'مثال: بادية')" /></label
             ><label
               >{{ t('Location', 'الموقع')
               }}<input
                 [(ngModel)]="inventoryForm.location"
-                [placeholder]="t('e.g. 6th of October City', 'مثال: مدينة 6 أكتوبر')"
-            /></label
+                [placeholder]="t('e.g. 6th of October City', 'مثال: مدينة 6 أكتوبر')" /></label
             ><label
               >{{ t('Segment', 'الفئة')
               }}<select [(ngModel)]="inventoryForm.segment">

@@ -1,0 +1,42 @@
+:host {
+  display: block;
+}
+.tbl em {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.tbl em.pending {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+.tbl em.approved {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+.commission-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.commission-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 2fr auto;
+  gap: 12px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--line, #deded8);
+  border-radius: 14px;
+}
+.commission-row__remove {
+  height: 38px;
+}
+@media (max-width: 720px) {
+  .commission-row {
+    grid-template-columns: 1fr;
+  }
+}

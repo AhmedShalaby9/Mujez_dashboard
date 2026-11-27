@@ -419,7 +419,12 @@ export class CompanyShell {
           (u.roles ?? [u.role]).some((r) => r === 'team_lead' || r === 'team_leader') &&
           perms.includes('team.self.read')
         );
-      if (item.path === 'deals' || item.path === 'commission-scheme')
+      if (item.path === 'commission-scheme')
+        return (
+          (u?.company?.type ?? u?.workspace?.company?.type) === 'brokerage' &&
+          perms.includes('commissions.read')
+        );
+      if (item.path === 'deals')
         return (u?.company?.type ?? u?.workspace?.company?.type) === 'brokerage';
       if (item.path === 'inventory/developers')
         return (

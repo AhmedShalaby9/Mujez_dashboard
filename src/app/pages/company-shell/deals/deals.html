@@ -431,10 +431,12 @@
                 /></label>
                 <label
                   >{{ t('Finishing *', 'التشطيب *')
-                  }}<input
-                    [(ngModel)]="form.details['finishing']"
-                    [placeholder]="t('e.g. Fully finished', 'مثال: تشطيب كامل')"
-                /></label>
+                  }}<select [(ngModel)]="form.details['finishing']">
+                    <option value="">{{ t('Select finishing', 'اختر التشطيب') }}</option>
+                    @for (f of options()?.finishingTypes ?? []; track f) {
+                      <option [value]="f">{{ f }}</option>
+                    }
+                  </select></label>
                 <label
                   >{{ t('Delivery in (years) *', 'التسليم خلال (سنوات) *')
                   }}<input

@@ -24,22 +24,6 @@
     </div>
   </div>
 
-  <div class="saved-view-tools">
-    <input
-      class="input"
-      [value]="savedName()"
-      (input)="savedName.set($any($event.target).value)"
-      [placeholder]="t('Saved view name', 'اسم طريقة العرض')"
-      [attr.aria-label]="t('Saved view name', 'اسم طريقة العرض')"
-    /><button
-      type="button"
-      class="btn"
-      (click)="saveView()"
-      [disabled]="savedName().trim().length < 2"
-    >
-      {{ t('Save current filters', 'حفظ التصفية الحالية') }}
-    </button>
-  </div>
   @if (error()) {
     <p class="note note--bad" role="alert">
       {{ error() }} · {{ t('Previous data may be stale', 'قد تكون البيانات السابقة قديمة') }}

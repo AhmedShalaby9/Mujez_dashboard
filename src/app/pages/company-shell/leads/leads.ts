@@ -156,27 +156,8 @@ export class Leads {
   readonly duplicates = signal<any[]>([]);
   readonly duplicateId = signal('');
   readonly dupReason = signal('');
-  readonly savedName = signal('');
   readonly budgetMinFilter = signal('');
   readonly budgetMaxFilter = signal('');
-  async saveView() {
-    if (this.savedName().trim().length < 2) return;
-    try {
-      const filters: Record<string, string> = {};
-      if (this.search().trim()) filters['q'] = this.search().trim();
-      if (this.segmentFilter() !== 'all') filters['segment'] = this.segmentFilter();
-      if (this.ownerFilter()) filters['ownerId'] = this.ownerFilter();
-      if (this.stageFilter() !== 'all')
-        filters[this.isBrokerage() ? 'leadStatus' : 'stage'] = this.stageFilter();
-      if (this.budgetMinFilter()) filters['budgetMinMinor'] = this.budgetMinFilter();
-      if (this.budgetMaxFilter()) filters['budgetMaxMinor'] = this.budgetMaxFilter();
-      await this.api.write('saved-views', { name: this.savedName().trim(), filters });
-      this.savedName.set('');
-      this.showToast(this.t('View saved to your account', 'تم حفظ طريقة العرض بحسابك'));
-    } catch (e) {
-      this.error.set((e as Error).message);
-    }
-  }
   readonly segmentFilter = signal<'all' | 'res' | 'com'>('all');
   readonly ownerFilter = signal('');
   readonly callOutcome = signal('');

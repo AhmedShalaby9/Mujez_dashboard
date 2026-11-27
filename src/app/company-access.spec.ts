@@ -98,7 +98,7 @@ describe('Company owner workspace identity', () => {
     f.detectChanges();
     expect(f.nativeElement.textContent).toContain('Actual Company');
     expect(f.nativeElement.textContent).toContain('Actual Owner');
-    expect(f.nativeElement.textContent).toContain('Company Owner');
+    expect(f.nativeElement.textContent).toContain('Admin');
     expect(f.nativeElement.textContent).not.toContain('design previews');
     expect(f.nativeElement.textContent).not.toContain('Horizon Realty');
     expect(f.nativeElement.querySelector('.sidebar__itemCount')).toBeNull();

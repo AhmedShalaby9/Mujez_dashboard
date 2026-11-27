@@ -8,7 +8,7 @@ import { AuthService } from './auth.service';
   template: `<main>
     <section>
       <h1>
-        Activate your {{ team ? 'team' : company ? 'company owner' : 'Mujez administrator' }}
+        Activate your {{ team ? 'team' : company ? 'company admin' : 'Mujez administrator' }}
         account
       </h1>
       <p>

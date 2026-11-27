@@ -305,7 +305,7 @@ const COPY: Record<Lang, Copy> = {
       created: 'Created',
       lastActivity: 'Last activity',
       cycle: 'Billing cycle',
-      owner: 'Account owner',
+      owner: 'Account admin',
     },
     cycleNames: { monthly: 'Monthly', annual: 'Annual', custom: 'Custom term' },
     statusNote: (status, reason) =>
@@ -397,7 +397,7 @@ const COPY: Record<Lang, Copy> = {
       created: 'تاريخ الإنشاء',
       lastActivity: 'آخر نشاط',
       cycle: 'دورة الفوترة',
-      owner: 'مالك الحساب',
+      owner: 'مسؤول الحساب',
     },
     cycleNames: { monthly: 'شهري', annual: 'سنوي', custom: 'مدة مخصصة' },
     statusNote: (status, reason) =>
@@ -575,8 +575,8 @@ export class Companies {
       if (created)
         this.success.set(
           this.lang() === 'ar'
-            ? 'تم إنشاء الشركة وحساب المالك والاشتراك الفعّال بالخطة المختارة. تمت جدولة إرسال بيانات الدخول بالبريد.'
-            : 'Company, owner account and active subscription created on the selected plan. Login details are queued for email delivery.',
+            ? 'تم إنشاء الشركة وحساب المسؤول والاشتراك الفعّال بالخطة المختارة. تمت جدولة إرسال بيانات الدخول بالبريد.'
+            : 'Company, admin account and active subscription created on the selected plan. Login details are queued for email delivery.',
         );
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to save company');

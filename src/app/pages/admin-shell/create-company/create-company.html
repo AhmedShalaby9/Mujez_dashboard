@@ -265,7 +265,7 @@
                     <span class="err">{{ err(1, 'adminEmail') }}</span>
                   } @else {
                     <span class="hint">{{
-                      t('Becomes the company owner login.', 'يصبح بريد دخول مالك الشركة.')
+                      t('Becomes the company admin login.', 'يصبح بريد دخول مسؤول الشركة.')
                     }}</span>
                   }
                 </label>
@@ -319,8 +319,8 @@
                 </svg>
                 <span>{{
                   t(
-                    'The owner account is created on save and a welcome email with a temporary password is queued to the work email.',
-                    'يتم إنشاء حساب المالك عند الحفظ وجدولة بريد ترحيبي بكلمة مرور مؤقتة إلى بريد العمل.'
+                    'The admin account is created on save and a welcome email with a temporary password is queued to the work email.',
+                    'يتم إنشاء حساب المسؤول عند الحفظ وجدولة بريد ترحيبي بكلمة مرور مؤقتة إلى بريد العمل.'
                   )
                 }}</span>
               </div>
@@ -422,7 +422,7 @@
                 ><b>{{ typeName(f().type) }}</b>
               </div>
               <div class="kv">
-                <span>{{ t('Owner email', 'بريد المالك') }}</span
+                <span>{{ t('Admin email', 'بريد المسؤول') }}</span
                 ><b dir="ltr">{{ f().adminEmail }}</b>
               </div>
               <div class="kv">
@@ -446,8 +446,8 @@
               <p class="note">
                 {{
                   t(
-                    'Creates an active subscription starting now, provisions the owner and queues the welcome email. No payment is collected.',
-                    'يبدأ الاشتراك الآن، ويتم إنشاء حساب المالك وجدولة بريد الترحيب. لا يتم تحصيل أي أموال.'
+                    'Creates an active subscription starting now, provisions the admin and queues the welcome email. No payment is collected.',
+                    'يبدأ الاشتراك الآن، ويتم إنشاء حساب المسؤول وجدولة بريد الترحيب. لا يتم تحصيل أي أموال.'
                   )
                 }}
               </p>
@@ -504,8 +504,8 @@
         <b>{{ t('Company created', 'تم إنشاء الشركة') }}</b>
         <span>{{
           t(
-            'The workspace is active and the owner’s welcome email is queued.',
-            'مساحة العمل نشطة وتمت جدولة بريد الترحيب للمالك.'
+            'The workspace is active and the admin welcome email is queued.',
+            'مساحة العمل نشطة وتمت جدولة بريد الترحيب للمسؤول.'
           )
         }}</span>
       </div>
@@ -523,7 +523,7 @@
           ><b class="mono" dir="ltr">{{ done().slug }}</b>
         </div>
         <div class="kv">
-          <span>{{ t('Owner email', 'بريد المالك') }}</span
+          <span>{{ t('Admin email', 'بريد المسؤول') }}</span
           ><b dir="ltr">{{ done().adminEmail }}</b>
         </div>
         <div class="kv">

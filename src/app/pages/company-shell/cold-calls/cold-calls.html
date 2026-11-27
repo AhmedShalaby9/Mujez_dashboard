@@ -68,10 +68,10 @@
   @if (options().canAssign && selected().length) {
     <div class="bulk-actions">
       <b>{{ selected().length }} {{ t('selected', 'محدد') }}</b
-      ><button type="button" class="btn btn--dark" (click)="openAssignment()">
-        {{ t('Assign selected', 'إسناد المحدد') }}</button
       ><button type="button" class="btn" (click)="selected.set([])">
-        {{ t('Clear selection', 'إلغاء التحديد') }}
+        {{ t('Cancel', 'إلغاء') }}</button
+      ><button type="button" class="btn btn--dark" (click)="bulkAssign()">
+        {{ t('Assign', 'إسناد') }}
       </button>
     </div>
   }

@@ -131,6 +131,8 @@ export class ColdCalls {
         : [],
     );
   }
+  /** Placeholder for the bulk "Assign" action; behavior to be defined later. */
+  bulkAssign() {}
   openAssignment(row?: any) {
     if (row) this.selected.set([row.id]);
     this.assignOwner = '';

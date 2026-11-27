@@ -33,7 +33,10 @@ interface Form {
   hrEnabled: boolean;
   financeEnabled: boolean;
   aiEnabled: boolean;
+  maxUsers: number;
 }
+
+const USERS_LIMIT_PRESETS = [10, 20, 30, 40, 50];
 
 const PLAN_KEYS: PlanKey[] = ['starter', 'pro', 'business', 'enterprise'];
 const PLAN_NAMES: Record<PlanKey, [string, string]> = {
@@ -128,7 +131,13 @@ export class CreateCompany {
     hrEnabled: false,
     financeEnabled: false,
     aiEnabled: false,
+    maxUsers: 20,
   });
+  readonly usersLimitPresets = USERS_LIMIT_PRESETS;
+  setMaxUsers(v: string) {
+    const n = Math.round(Number(v));
+    this.set('maxUsers', Number.isFinite(n) && n > 0 ? Math.min(n, 100000) : 1);
+  }
   /** Design-only fields: shown and kept in the form, never sent (see BACKEND_MISSING.md). */
   readonly x = signal({
     country: 'EG',
@@ -425,6 +434,7 @@ export class CreateCompany {
         hrEnabled: p.hrEnabled ?? false,
         financeEnabled: p.financeEnabled ?? false,
         aiEnabled: p.aiEnabled ?? false,
+        maxUsers: p.maxUsers ?? 20,
       }));
       this.x.update((x) => ({
         ...x,
@@ -539,6 +549,7 @@ export class CreateCompany {
       hrEnabled: false,
       financeEnabled: false,
       aiEnabled: false,
+      maxUsers: 20,
     });
   }
 

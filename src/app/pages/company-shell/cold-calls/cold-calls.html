@@ -13,6 +13,14 @@
       </div>
     }
   </div>
+  <p class="muted">
+    {{
+      t(
+        'All callback times use Cairo time. The queue follows the selected owner and visibility scope.',
+        'جميع المواعيد بتوقيت القاهرة. قائمة المتابعة حسب المسؤول ونطاق العرض المحددين.'
+      )
+    }}
+  </p>
   @if (error()) {
     <p class="note note--bad" role="alert">{{ error() }}</p>
   }
@@ -48,14 +56,6 @@
       ><b>{{ summary().upcoming ?? 0 }}</b>
     </button>
   </div>
-  <p class="muted">
-    {{
-      t(
-        'All callback times use Cairo time. The queue follows the selected owner and visibility scope.',
-        'جميع المواعيد بتوقيت القاهرة. قائمة المتابعة حسب المسؤول ونطاق العرض المحددين.'
-      )
-    }}
-  </p>
   @if (options().canAssign && selected().length) {
     <div class="bulk-actions">
       <b>{{ selected().length }} {{ t('selected', 'محدد') }}</b

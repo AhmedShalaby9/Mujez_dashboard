@@ -88,8 +88,16 @@
           [attr.aria-label]="t('Filter by salesperson', 'التصفية حسب السيلز')"
           (click)="togglePersonFilter()"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" />
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" />
           </svg>
           {{ selectedOwnerName() }}
         </button>
@@ -119,7 +127,14 @@
               <button type="button" class="pf-item" (click)="choosePerson('')">
                 <span>{{ t('Any person', 'أي شخص') }}</span>
                 @if (!ownerFilter()) {
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
                     <path d="M5 13l4 4L19 7" />
                   </svg>
                 }
@@ -193,11 +208,30 @@
     >
   </div>
 
+  @if (checkedIds().length) {
+    <div class="bulk-actions">
+      <b>{{ checkedIds().length }} {{ t('selected', 'محدد') }}</b
+      ><button type="button" class="btn" (click)="checkedIds.set([])">
+        {{ t('Cancel', 'إلغاء') }}</button
+      ><button type="button" class="btn btn--dark" (click)="bulkAssign()">
+        {{ t('Assign', 'إسناد') }}
+      </button>
+    </div>
+  }
+
   <section class="card">
     <div class="scroll">
       <table>
         <thead>
           <tr>
+            <th>
+              <input
+                type="checkbox"
+                aria-label="Select page of leads"
+                [checked]="leads().length > 0 && checkedIds().length === leads().length"
+                (change)="selectAllOnPage($any($event.target).checked)"
+              />
+            </th>
             <th>{{ t('Contact', 'العميل') }}</th>
             <th>{{ t('Wants', 'يبحث عن') }}</th>
             <th>{{ t('Budget', 'الميزانية') }}</th>
@@ -211,6 +245,14 @@
         <tbody>
           @for (l of leads(); track l.id) {
             <tr [class.sel]="selected()?.id === l.id" (click)="open(l.id)">
+              <td (click)="$event.stopPropagation()">
+                <input
+                  type="checkbox"
+                  [attr.aria-label]="t('Select ', 'تحديد ') + name(l)"
+                  [checked]="checkedIds().includes(l.id)"
+                  (change)="toggleChecked(l.id, $any($event.target).checked)"
+                />
+              </td>
               <td>
                 <div class="who">
                   <span class="avatar">{{ initials(l) }}</span>
@@ -338,7 +380,9 @@
 
         <div class="sect">
           <div class="sect__row">
-            <span class="sect__label">{{ isBrokerage() ? t('LEAD STATUS', 'حالة العميل') : t('STAGE', 'المرحلة') }}</span>
+            <span class="sect__label">{{
+              isBrokerage() ? t('LEAD STATUS', 'حالة العميل') : t('STAGE', 'المرحلة')
+            }}</span>
           </div>
           <div class="steps">
             @for (s of stages(); track s) {

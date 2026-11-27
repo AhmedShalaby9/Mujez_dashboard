@@ -25,6 +25,7 @@ export interface Deal {
   developer: string;
   projectId: string;
   project: string;
+  unitValueMinor: string;
   details: Record<string, any>;
   version: number;
   createdAt: string;

@@ -430,6 +430,14 @@
               <h3>{{ t('Unit & money', 'الوحدة والبيانات المالية') }}</h3>
               <div class="grid three">
                 <label
+                  >{{ t('Unit total sale price (EGP) *', 'سعر بيع الوحدة الإجمالي (جنيه) *')
+                  }}<input
+                    type="number"
+                    min="0"
+                    [(ngModel)]="unitValueEgp"
+                    [placeholder]="t('e.g. 5000000', 'مثال: 5000000')"
+                /></label>
+                <label
                   >{{ t('Area (m²) *', 'المساحة (م²) *')
                   }}<input
                     type="number"
@@ -572,9 +580,9 @@
                     {{ t('Financials & reservation', 'البيانات المالية والحجز') }}
                     <button (click)="goToStep(3)">{{ t('Change', 'تعديل') }}</button>
                   </h4>
-                  <p>{{ form.details['reservationPrice'] }} EGP · {{ form.details['area'] }} m²</p>
+                  <p>{{ unitValueEgp || '—' }} EGP · {{ form.details['area'] }} m²</p>
                   <p>
-                    {{ t('Expected contract', 'التعاقد المتوقع') }}:
+                    {{ t('Reservation', 'الحجز') }}: {{ form.details['reservationPrice'] }} EGP ·
                     {{ form.details['expectedContractDate'] }}
                   </p>
                 </div>

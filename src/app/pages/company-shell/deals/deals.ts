@@ -29,6 +29,7 @@ const empty = () => ({
   status: 'reservation' as DealStatus,
   developerId: '',
   projectId: '',
+  unitValueMinor: '',
   details: {
     unitNumber: '',
     unitType: '',
@@ -263,6 +264,14 @@ export class Deals {
   phoneLocal(value: string) {
     return String(value ?? '').replace(/^\+20/, '');
   }
+  /** unitValueMinor is EGP minor units (×100); the input shows plain EGP. */
+  get unitValueEgp() {
+    return this.form.unitValueMinor ? String(Number(this.form.unitValueMinor) / 100) : '';
+  }
+  set unitValueEgp(v: string) {
+    const n = Number(v);
+    this.form.unitValueMinor = v && n > 0 ? String(Math.round(n * 100)) : '';
+  }
   agentName(id: string) {
     return this.options()?.agents.find((p) => p.id === id)?.name ?? '—';
   }
@@ -364,6 +373,7 @@ export class Deals {
       status: d.status,
       developerId: d.developerId,
       projectId: d.projectId,
+      unitValueMinor: d.unitValueMinor ?? '',
       details: { ...empty().details, ...d.details },
       documents: [],
     };
@@ -427,6 +437,10 @@ export class Deals {
     }
     if (this.step() === 3) {
       const d = this.form.details;
+      if (!this.form.unitValueMinor) {
+        this.error.set(this.t('Enter the unit total sale price.', 'أدخل سعر بيع الوحدة الإجمالي.'));
+        return;
+      }
       const required = [
         'area',
         'finishing',

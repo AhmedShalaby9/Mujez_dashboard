@@ -204,6 +204,22 @@ export class Leads {
       this.error.set(this.t('Could not copy to clipboard', 'تعذر النسخ إلى الحافظة'));
     }
   }
+  readonly tagAddOpenId = signal<string | null>(null);
+  toggleTagAdd(id: string) {
+    this.tagAddOpenId.update((cur) => (cur === id ? null : id));
+  }
+  closeTagAdd() {
+    this.tagAddOpenId.set(null);
+  }
+  @HostListener('document:click', ['$event'])
+  onDocumentClickForTagAdd(e: MouseEvent) {
+    if (!this.tagAddOpenId()) return;
+    if (!(e.target as HTMLElement).closest?.('.tag-add-pick')) this.closeTagAdd();
+  }
+  @HostListener('document:keydown.escape')
+  onEscapeForTagAdd() {
+    if (this.tagAddOpenId()) this.closeTagAdd();
+  }
   async addTag(l: SalesLead, raw: string) {
     const tag = raw.trim();
     if (!tag || l.tags.some((t) => t.toLowerCase() === tag.toLowerCase())) return;

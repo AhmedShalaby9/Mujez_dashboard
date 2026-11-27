@@ -81,7 +81,7 @@
       />
     </div>
     @if (isBrokerage() && !ownScope()) {
-      <div class="person-filter">
+      <div class="person-filter" #personFilter>
         <button
           type="button"
           class="btn"
@@ -94,7 +94,6 @@
           {{ selectedOwnerName() }}
         </button>
         @if (personOpen()) {
-          <div class="pf-backdrop" (click)="closePersonFilter()"></div>
           <div class="pf-panel">
             <div class="pf-search">
               <svg

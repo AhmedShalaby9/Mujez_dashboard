@@ -2,7 +2,16 @@ import { CompactAmountDirective } from '../../../compact-amount.directive';
 import { LeadUnitRecommendations } from './lead-unit-recommendations';
 import { Router, ActivatedRoute } from '@angular/router';
 import type { CompanyTask } from '../../../tasks-api.service';
-import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  computed,
+  inject,
+  signal,
+  viewChild,
+  DestroyRef,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CompanyUiState } from '../company-ui-state';
 import { AuthService, ApiError, aiModuleEnabled, canCreateLead } from '../../../auth.service';
@@ -98,12 +107,24 @@ export class Leads {
   readonly selectedOwnerName = computed(
     () => this.owners().find((o) => o.id === this.ownerFilter())?.name ?? this.t('Any person', 'أي شخص'),
   );
+  readonly personFilterEl = viewChild<ElementRef<HTMLElement>>('personFilter');
   togglePersonFilter() {
     this.personOpen.update((v) => !v);
     if (this.personOpen()) this.personQuery.set('');
   }
   closePersonFilter() {
     this.personOpen.set(false);
+  }
+  /** No backdrop: that would block scrolling the rest of the page while the panel is open. */
+  @HostListener('document:click', ['$event'])
+  onDocumentClickForPersonFilter(e: MouseEvent) {
+    if (!this.personOpen()) return;
+    const el = this.personFilterEl()?.nativeElement;
+    if (el && !el.contains(e.target as Node)) this.closePersonFilter();
+  }
+  @HostListener('document:keydown.escape')
+  onEscapeForPersonFilter() {
+    if (this.personOpen()) this.closePersonFilter();
   }
   choosePerson(id: string) {
     this.ownerFilter.set(id);

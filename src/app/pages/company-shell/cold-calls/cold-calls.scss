@@ -138,30 +138,30 @@ details {
 .callback-cards button {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   border: 1px solid var(--border-card-alt, #deded8);
   border-radius: 999px;
   background: #fff;
   text-align: start;
-  padding: 8px 14px;
+  padding: 5px 12px;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 .callback-cards span {
   color: var(--ink-muted, #6b6b73);
-  font-size: 13px;
+  font-size: 12.5px;
 }
 .callback-cards b {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 .callback-cards button.active {
-  background: var(--accent, #c8f169);
-  border-color: var(--accent, #c8f169);
+  background: var(--accent-wash, #eef5d6);
+  border-color: var(--accent-wash, #eef5d6);
 }
 .callback-cards button.active span,
 .callback-cards button.active b {
-  color: var(--ink, #111113);
+  color: var(--accent-wash-ink, #3f5a0e);
 }
 .bulk-actions,
 .detail-head {

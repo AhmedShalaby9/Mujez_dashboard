@@ -1,6 +1,11 @@
 :host {
   display: block;
 }
+// The page's flex gap already spaces these out; drop the extra margins so the
+// header area is more compact and the contacts table gets more room.
+.pg > p.muted {
+  margin: 0;
+}
 .import-panel {
   padding: 24px;
   margin: 20px 0;
@@ -42,7 +47,7 @@
   gap: 12px;
   align-items: end;
   flex-wrap: wrap;
-  margin: 24px 0;
+  margin: 0;
 }
 .toolbar .field:first-child {
   flex: 1;
@@ -90,7 +95,7 @@ details {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
-  margin: 24px 0 12px;
+  margin: 0;
 }
 .callback-cards button {
   border: 1px solid var(--line, #deded8);

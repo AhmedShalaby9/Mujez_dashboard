@@ -284,14 +284,14 @@
             </button>
           </div>
         </div>
-        <div class="dialog__main">
+        <div class="dialog__main dialog__main--tall">
           <label class="field"><span>{{ t('Agent', 'المندوب') }}</span></label>
           <div class="search-pick bulk-pick" #bulkAssignPicker>
             <button type="button" class="btn" (click)="toggleBulkAssignPicker()">
               {{ bulkAssignOwnerName() }}
             </button>
             @if (bulkAssignPickerOpen()) {
-              <div class="pf-panel">
+              <div class="pf-panel pf-panel--up">
                 <div class="pf-search">
                   <svg
                     width="14"
@@ -574,15 +574,56 @@
                     </span>
                   }
                   @if (canManage()) {
-                    <input
-                      #tagInput
-                      type="text"
-                      class="tag-add"
-                      maxlength="40"
-                      [placeholder]="t('+ tag', '+ وسم')"
-                      (keydown.enter)="addTag(l, tagInput.value); tagInput.value = ''"
-                      (click)="$event.stopPropagation()"
-                    />
+                    <div class="tag-add-pick">
+                      <button
+                        type="button"
+                        class="tag-add-btn"
+                        (click)="toggleTagAdd(l.id)"
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path
+                            d="M11 3H5a2 2 0 0 0-2 2v6l9.5 9.5a2 2 0 0 0 2.8 0l5.2-5.2a2 2 0 0 0 0-2.8L11 3Z"
+                          /><circle cx="7.5" cy="7.5" r="1.2" />
+                        </svg>
+                        {{ t('Add tag', 'إضافة وسم') }}
+                      </button>
+                      @if (tagAddOpenId() === l.id) {
+                        <div class="tag-add-panel">
+                          <span class="tag-add-panel__label">{{
+                            t('Type a tag and press Enter', 'اكتب وسمًا واضغط Enter')
+                          }}</span>
+                          <div class="tag-add-panel__row">
+                            <input
+                              #rowTagInput
+                              type="text"
+                              maxlength="40"
+                              [placeholder]="t('e.g. #urgent', 'مثال: #عاجل')"
+                              (keydown.enter)="
+                                addTag(l, rowTagInput.value); rowTagInput.value = ''; closeTagAdd()
+                              "
+                            /><button
+                              type="button"
+                              class="tag-add-panel__go"
+                              [attr.aria-label]="t('Add', 'إضافة')"
+                              (click)="
+                                addTag(l, rowTagInput.value); rowTagInput.value = ''; closeTagAdd()
+                              "
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      }
+                    </div>
                   }
                 </div>
               </td>

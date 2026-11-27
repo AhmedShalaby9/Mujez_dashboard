@@ -113,6 +113,9 @@
   justify-content: flex-start;
   text-align: start;
 }
+.dialog__main--tall {
+  min-height: 260px;
+}
 .bulk-whatsapp .field textarea {
   min-width: 320px;
   border: 1px solid var(--line, #deded8);
@@ -154,18 +157,67 @@
   line-height: 1;
   font-size: 13px;
 }
-.tag-add {
-  width: 64px;
+.tag-add-pick {
+  position: relative;
+}
+.tag-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border: 1px dashed var(--line, #deded8);
   border-radius: 999px;
   padding: 2px 8px;
   font-size: 11.5px;
+  color: var(--ink-muted, #6e6e73);
   background: transparent;
+  cursor: pointer;
 }
-.tag-add:focus {
-  width: 110px;
-  outline: none;
+.tag-add-btn:hover {
   border-style: solid;
+  color: var(--ink, #111113);
+}
+.tag-add-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  z-index: 30;
+  width: 220px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-card-alt, #e2e2dc);
+  box-shadow: 0 10px 28px rgba(17, 17, 19, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tag-add-panel__label {
+  font-size: 11.5px;
+  color: var(--ink-muted, #6e6e73);
+}
+.tag-add-panel__row {
+  display: flex;
+  gap: 6px;
+}
+.tag-add-panel__row input {
+  min-height: 32px;
+  border: 1px solid var(--line, #deded8);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12.5px;
+}
+.tag-add-panel__go {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--ink, #111113);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
 }
 .check {
   display: flex;

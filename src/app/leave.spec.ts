@@ -150,7 +150,7 @@ describe('Annual leave workspace', () => {
     const { f, c, request } = await setup('manage', { isHr: true, canFinalize: false });
     await c.switchTab('policy');
     f.detectChanges();
-    expect(f.nativeElement.textContent).toContain('Only the company owner or HR Manager');
+    expect(f.nativeElement.textContent).toContain('Only the company admin or HR Manager');
     await c.savePolicy();
     expect(request.mock.calls.some(([path, b]) => path === '/api/v1/leave/policy' && !!b)).toBe(
       false,

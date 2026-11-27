@@ -575,7 +575,7 @@ export class CompanyShell {
     const ws = u?.workspace;
     const name = ws ? ws.platformUserName : (u?.name ?? '');
     const roleLabels: Record<string, { en: string; ar: string }> = {
-      company_owner: { en: 'Company Owner', ar: 'مالك الشركة' },
+      company_owner: { en: 'Admin', ar: 'المسؤول' },
       team_lead: { en: 'Team Lead', ar: 'قائد الفريق' },
       agent: { en: 'Sales Agent', ar: 'وكيل المبيعات' },
       employee: { en: 'Employee', ar: 'موظف' },

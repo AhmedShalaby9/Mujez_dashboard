@@ -339,6 +339,45 @@
           </select>
         }
       </div>
+      <div class="kv">
+        <span>{{ lang() === 'ar' ? 'الحد الأقصى للمستخدمين' : 'Users limit' }}</span>
+        <b>{{ c.maxUsers }}</b>
+      </div>
+      @if (auth.user()?.permissions?.includes('co.create')) {
+        <div class="field">
+          <span>{{ lang() === 'ar' ? 'تعديل الحد الأقصى للمستخدمين' : 'Edit users limit' }}</span>
+          <div class="segs">
+            @for (n of usersLimitPresets; track n) {
+              <button
+                type="button"
+                class="seg"
+                [class.seg--on]="c.maxUsers === n"
+                (click)="setUsersLimit(c, n)"
+              >
+                {{ n }}
+              </button>
+            }
+          </div>
+          <div class="segs">
+            <input
+              type="number"
+              min="1"
+              max="100000"
+              dir="ltr"
+              class="mono"
+              [placeholder]="lang() === 'ar' ? 'مخصص' : 'Custom'"
+              [value]="usersLimitCustom() ?? ''"
+              (input)="setUsersLimitCustomDraft($any($event.target).value)"
+              (keydown.enter)="usersLimitCustom() && setUsersLimit(c, usersLimitCustom()!)"
+            />
+            @if (usersLimitCustom()) {
+              <button type="button" class="seg" (click)="setUsersLimit(c, usersLimitCustom()!)">
+                {{ lang() === 'ar' ? 'تطبيق' : 'Apply' }}
+              </button>
+            }
+          </div>
+        </div>
+      }
       @if (L().statusNote(c.status, c.statusReason ?? null); as note) {
         <p
           class="note"

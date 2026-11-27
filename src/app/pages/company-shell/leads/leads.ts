@@ -80,13 +80,23 @@ export class Leads {
   readonly loading = signal(false);
   readonly error = signal('');
   readonly saving = signal(false);
+  /** Bulk row checkboxes; distinct from `selected`, which is the open detail drawer. */
+  readonly checkedIds = signal<string[]>([]);
+  toggleChecked(id: string, checked: boolean) {
+    this.checkedIds.update((ids) =>
+      checked ? [...new Set([...ids, id])] : ids.filter((x) => x !== id),
+    );
+  }
+  selectAllOnPage(checked: boolean) {
+    this.checkedIds.set(checked ? this.leads().map((l) => l.id) : []);
+  }
+  /** Placeholder for the bulk "Assign" action; behavior and permissions to be defined later. */
+  bulkAssign() {}
   readonly isBrokerage = computed(() => {
     const user = this.auth.user();
     return (user?.company?.type ?? user?.workspace?.company?.type) === 'brokerage';
   });
-  readonly stages = computed(() =>
-    this.isBrokerage() ? BROKERAGE_LEAD_STATUSES : SALES_STAGES,
-  );
+  readonly stages = computed(() => (this.isBrokerage() ? BROKERAGE_LEAD_STATUSES : SALES_STAGES));
   readonly stageNames = computed(() => STAGE_NAMES[this.lang()]);
   readonly sources = Object.keys(SOURCE_NAMES);
   readonly money = salesMoney;
@@ -105,7 +115,9 @@ export class Leads {
     return q ? list.filter((o) => o.name.toLowerCase().includes(q)) : list;
   });
   readonly selectedOwnerName = computed(
-    () => this.owners().find((o) => o.id === this.ownerFilter())?.name ?? this.t('Any person', 'أي شخص'),
+    () =>
+      this.owners().find((o) => o.id === this.ownerFilter())?.name ??
+      this.t('Any person', 'أي شخص'),
   );
   readonly personFilterEl = viewChild<ElementRef<HTMLElement>>('personFilter');
   togglePersonFilter() {

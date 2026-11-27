@@ -55,9 +55,12 @@ interface Company {
   lastActivity: string;
   lastActiveAt?: string | null;
   subscriptionStatus?: SubStatus | null;
-  seatLimit?: number | null;
+  maxUsers: number;
   successManager?: { id: string; name: string } | null;
 }
+
+/** Preset choices offered when setting a company's users limit; any positive value is accepted. */
+export const USERS_LIMIT_PRESETS = [10, 20, 30, 40, 50];
 
 const CITY_AR: Record<string, string> = {
   Cairo: 'القاهرة',
@@ -991,8 +994,7 @@ export class Companies {
   }
   /** Seat usage bar for the Users column; null when no limit is known. */
   seats(c: Company): { limit: string; w: string; color: string } | null {
-    const u =
-      this.usage()[c.id]?.users ?? (c.subscriptionStatus ? { limit: c.seatLimit ?? null } : null);
+    const u = this.usage()[c.id]?.users ?? { limit: c.maxUsers };
     if (!u) return null;
     if (u.limit === null) return { limit: '∞', w: '12%', color: '#111113' };
     const p = u.limit ? c.users / u.limit : 1;
@@ -1069,6 +1071,23 @@ export class Companies {
     try {
       await this.api.change(c.id, 'success-manager', { version: c.version, managerId: id || null });
       this.viewing.set(await this.api.detail(c.id));
+      await this.reload();
+    } catch (e) {
+      this.error.set((e as Error).message);
+    }
+  }
+  readonly usersLimitPresets = USERS_LIMIT_PRESETS;
+  readonly usersLimitCustom = signal<number | null>(null);
+  setUsersLimitCustomDraft(v: string) {
+    const n = Number(v);
+    this.usersLimitCustom.set(v && Number.isFinite(n) ? n : null);
+  }
+  async setUsersLimit(c: Company, value: number) {
+    if (!Number.isInteger(value) || value < 1 || value > 100000) return;
+    try {
+      await this.api.change(c.id, 'users-limit', { version: c.version, maxUsers: value });
+      this.viewing.set(await this.api.detail(c.id));
+      this.usersLimitCustom.set(null);
       await this.reload();
     } catch (e) {
       this.error.set((e as Error).message);

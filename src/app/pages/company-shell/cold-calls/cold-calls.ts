@@ -131,6 +131,8 @@ export class ColdCalls {
         : [],
     );
   }
+  /** Placeholder for the bulk "Assign" action; behavior to be defined later. */
+  bulkAssign() {}
   openAssignment(row?: any) {
     if (row) this.selected.set([row.id]);
     this.assignOwner = '';
@@ -267,6 +269,11 @@ export class ColdCalls {
   file: File | null = null;
   want = '';
   segment = 'res';
+  readonly importStep = signal<1 | 2 | 3>(1);
+  readonly columns = signal<{ index: number; label: string | null }[]>([]);
+  readonly columnSample = signal<string[][]>([]);
+  nameColumn = '';
+  phoneColumn = '';
   private requestId = '';
   private convertId = '';
   private serial = 0;
@@ -304,33 +311,108 @@ export class ColdCalls {
   }
   async openImport() {
     this.uploading.set(true);
-    this.preview.set(null);
-    this.result.set(null);
-    this.file = null;
-    this.ownerId = '';
+    this.resetImport();
     try {
       await this.loadOptions();
     } catch (e) {
       this.error.set((e as Error).message);
     }
   }
-  fileChanged(event: Event) {
+  private resetImport() {
+    this.importStep.set(1);
+    this.preview.set(null);
+    this.result.set(null);
+    this.columns.set([]);
+    this.columnSample.set([]);
+    this.file = null;
+    this.ownerId = '';
+    this.nameColumn = '';
+    this.phoneColumn = '';
+  }
+  backToFile() {
+    this.resetImport();
+  }
+  backToMapping() {
+    this.importStep.set(2);
+    this.preview.set(null);
+    this.result.set(null);
+  }
+  /** Column index guessed from common header names; the user can always override it. */
+  private guessColumn(hints: string[]) {
+    const hit = this.columns().find((c) => c.label && hints.includes(c.label.trim().toLowerCase()));
+    return hit ? String(hit.index) : '';
+  }
+  columnLabel(col: { index: number; label: string | null }) {
+    return col.label || this.t('Column ', 'العمود ') + col.index;
+  }
+  columnHint(index: number) {
+    const i = this.columns().findIndex((c) => c.index === index);
+    return i >= 0 ? (this.columnSample()[0]?.[i] ?? '') : '';
+  }
+  nameOptions() {
+    return this.columns().filter((c) => String(c.index) !== this.phoneColumn);
+  }
+  phoneOptions() {
+    return this.columns().filter((c) => String(c.index) !== this.nameColumn);
+  }
+  mappingReady() {
+    return !!this.nameColumn && !!this.phoneColumn && this.nameColumn !== this.phoneColumn;
+  }
+  async fileChanged(event: Event) {
     this.file = (event.target as HTMLInputElement).files?.[0] ?? null;
     this.preview.set(null);
     this.result.set(null);
+    this.columns.set([]);
+    this.columnSample.set([]);
+    this.nameColumn = '';
+    this.phoneColumn = '';
     this.requestId = crypto.randomUUID();
+    if (!this.file) return;
+    this.saving.set(true);
+    this.error.set('');
+    try {
+      const b = new FormData();
+      b.append('file', this.file);
+      const r = await this.auth.request('/api/v1/cold-calls/columns', b);
+      this.columns.set(r.columns);
+      this.columnSample.set(r.sample);
+      this.nameColumn = this.guessColumn(['name', 'full name', 'fullname', 'الاسم', 'اسم']);
+      this.phoneColumn = this.guessColumn([
+        'phone',
+        'mobile',
+        'phone number',
+        'mobile number',
+        'الهاتف',
+        'الموبايل',
+        'موبايل',
+        'رقم الهاتف',
+        'رقم الموبايل',
+      ]);
+      this.importStep.set(2);
+    } catch (e) {
+      this.error.set((e as Error).message);
+      this.file = null;
+    } finally {
+      this.saving.set(false);
+    }
+  }
+  confirmMapping() {
+    if (!this.mappingReady()) return;
+    this.importStep.set(3);
   }
   ownerChanged() {
     this.preview.set(null);
     this.requestId = crypto.randomUUID();
   }
   async upload(commit = false) {
-    if (this.saving() || !this.file) return;
+    if (this.saving() || !this.file || !this.mappingReady()) return;
     this.saving.set(true);
     this.error.set('');
     try {
       const b = new FormData();
       b.append('file', this.file);
+      b.append('nameColumn', this.nameColumn);
+      b.append('phoneColumn', this.phoneColumn);
       if (this.ownerId) b.append('ownerId', this.ownerId);
       if (commit) b.append('requestId', (this.requestId ||= crypto.randomUUID()));
       const r = await this.auth.request('/api/v1/cold-calls/' + (commit ? 'import' : 'preview'), b);

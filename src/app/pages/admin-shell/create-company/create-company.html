@@ -123,6 +123,38 @@
                     }
                   </div>
                 </div>
+                <div class="field full">
+                  <span>{{ t('Users limit', 'الحد الأقصى للمستخدمين') }}</span>
+                  <div class="segs">
+                    @for (n of usersLimitPresets; track n) {
+                      <button
+                        type="button"
+                        class="seg"
+                        [class.seg--on]="f().maxUsers === n"
+                        (click)="set('maxUsers', n)"
+                      >
+                        {{ n }}
+                      </button>
+                    }
+                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100000"
+                    dir="ltr"
+                    class="mono"
+                    style="margin-top: 8px; max-width: 160px"
+                    [placeholder]="t('Custom', 'مخصص')"
+                    [value]="f().maxUsers"
+                    (input)="setMaxUsers($any($event.target).value)"
+                  />
+                  <span class="hint">{{
+                    t(
+                      'Maximum active users (seats) allowed for this company.',
+                      'أقصى عدد للمستخدمين النشطين المسموح به لهذه الشركة.'
+                    )
+                  }}</span>
+                </div>
                 <label class="field">
                   <span>{{ t('Country', 'الدولة') }}</span>
                   <select

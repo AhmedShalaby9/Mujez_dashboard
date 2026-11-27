@@ -1,0 +1,172 @@
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <h1>{{ t('Commissions', 'العمولات') }}</h1>
+    </div>
+    @if (canManage()) {
+      <div class="head__actions">
+        <button type="button" class="btn btn--dark" (click)="openDialog()">
+          {{ t('Add commission', 'إضافة عمولة') }}
+        </button>
+      </div>
+    }
+  </div>
+  <p class="muted">
+    {{
+      canManage()
+        ? t(
+            "Pick a contracted deal, pick who worked on it, and enter each person's commission amount by hand.",
+            'اختر صفقة متعاقد عليها، اختر من عمل عليها، وأدخل عمولة كل شخص يدويًا.'
+          )
+        : t(
+            'Your commission entries, as entered by Sales Admin.',
+            'عمولاتك كما أدخلها مسؤول المبيعات.'
+          )
+    }}
+  </p>
+  @if (error()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>{{ t('Deal', 'الصفقة') }}</th>
+          @if (canManage()) {
+            <th>{{ t('Person', 'الشخص') }}</th>
+          }
+          <th>{{ t('Amount', 'المبلغ') }}</th>
+          <th>{{ t('Note', 'ملاحظة') }}</th>
+          <th>{{ t('Date', 'التاريخ') }}</th>
+          <th>{{ t('Finance', 'الفاينانس') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of items(); track r.id) {
+          <tr>
+            <td>{{ r.clientName }}</td>
+            @if (canManage()) {
+              <td>{{ r.userName }}</td>
+            }
+            <td>{{ money(r.amountMinor) }}</td>
+            <td>{{ r.note || '—' }}</td>
+            <td>{{ r.createdAt | date: 'mediumDate' }}</td>
+            <td>
+              <em [class]="r.posted ? 'approved' : 'pending'">{{
+                r.posted ? t('Posted', 'مُرحّلة') : t('Not posted', 'غير مُرحّلة')
+              }}</em>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td [attr.colspan]="canManage() ? 6 : 5">
+              {{
+                loading()
+                  ? t('Loading…', 'جار التحميل…')
+                  : t('No commission entries yet.', 'لا توجد عمولات بعد.')
+              }}
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination">
+    <span>{{ total() }} · {{ t('Page', 'صفحة') }} {{ page() }}</span
+    ><button
+      class="btn"
+      type="button"
+      [disabled]="page() === 1 || loading()"
+      (click)="nextPage(-1)"
+    >
+      {{ t('Previous', 'السابق') }}</button
+    ><button
+      class="btn"
+      type="button"
+      [disabled]="page() * 30 >= total() || loading()"
+      (click)="nextPage(1)"
+    >
+      {{ t('Next', 'التالي') }}
+    </button>
+  </div>
+</div>
+
+@if (dialogOpen()) {
+  <div class="scrim scrim--top" (click)="closeDialog()"></div>
+  <div
+    class="dialog dialog--wide"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="deal-commission-title"
+  >
+    <div class="dialog__head">
+      <span class="dialog__title" id="deal-commission-title">{{
+        t('Add commission', 'إضافة عمولة')
+      }}</span>
+    </div>
+    <form id="commission-form" class="dialog__main" (ngSubmit)="submit()">
+      @if (dialogError()) {
+        <p class="note note--bad" role="alert">{{ dialogError() }}</p>
+      }
+      <div class="grid">
+        <label class="field"
+          ><span>{{ t('Deal', 'الصفقة') }}</span
+          ><select [(ngModel)]="dealId" name="dealId" [ngModelOptions]="{ standalone: true }">
+            <option value="">{{ t('Choose a deal', 'اختر صفقة') }}</option>
+            @for (d of options()?.deals ?? []; track d.id) {
+              <option [value]="d.id">{{ d.clientName }} · {{ money(d.unitValueMinor) }}</option>
+            }
+          </select></label
+        >
+      </div>
+      <h3>{{ t('People & amounts', 'الأشخاص والمبالغ') }}</h3>
+      <div class="commission-rows">
+        @for (row of rows(); track row) {
+          <div class="commission-row">
+            <label class="field"
+              ><span>{{ t('Person', 'الشخص') }}</span
+              ><select [(ngModel)]="row.userId" [ngModelOptions]="{ standalone: true }">
+                <option value="">{{ t('Choose a person', 'اختر الشخص') }}</option>
+                @for (p of options()?.people ?? []; track p.id) {
+                  <option [value]="p.id">{{ p.name }}</option>
+                }
+              </select></label
+            >
+            <label class="field"
+              ><span>{{ t('Amount (EGP)', 'المبلغ (جنيه)') }}</span
+              ><input
+                compactAmount
+                class="mono"
+                [(ngModel)]="row.amount"
+                [ngModelOptions]="{ standalone: true }"
+                placeholder="e.g. 10k"
+            /></label>
+            <label class="field"
+              ><span>{{ t('Note (optional)', 'ملاحظة (اختياري)') }}</span
+              ><input [(ngModel)]="row.note" [ngModelOptions]="{ standalone: true }"
+            /></label>
+            <button
+              type="button"
+              class="btn commission-row__remove"
+              [disabled]="rows().length === 1"
+              (click)="removeRow(row)"
+            >
+              {{ t('Remove', 'إزالة') }}
+            </button>
+          </div>
+        }
+      </div>
+      <button type="button" class="btn" (click)="addRow()">
+        {{ t('+ Add person', '+ إضافة شخص') }}
+      </button>
+    </form>
+    <div class="dialog__foot">
+      <button type="button" class="btn" [disabled]="saving()" (click)="closeDialog()">
+        {{ t('Cancel', 'إلغاء') }}
+      </button>
+      <button class="btn btn--dark" type="submit" form="commission-form" [disabled]="saving()">
+        {{ t('Save', 'حفظ') }}
+      </button>
+    </div>
+  </div>
+}

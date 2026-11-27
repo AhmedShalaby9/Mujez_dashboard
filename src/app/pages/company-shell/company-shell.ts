@@ -69,6 +69,7 @@ const NAV_PERMISSION: Record<string, string> = {
   units: 'units.read',
   reservations: 'reservations.read',
   deals: 'leads.read',
+  'deal-commissions': 'leads.read',
   contracts: 'contracts.read',
   commissions: 'commissions.read',
   documents: 'documents.read',
@@ -116,6 +117,7 @@ const COMPANY_ICONS: Record<string, string> = {
   units: 'M3 10l9-7 9 7M5 9v12h14V9M9 21v-7h6v7',
   reservations: 'M5 3h14v18l-7-4-7 4zM9 8h6M9 12h6',
   deals: 'M3 8l5-4 4 4 4-4 5 4 4-4 5-5-5',
+  'deal-commissions': 'M12 3v18M17 7c-1-2-9-2-9 2s8 2 8 6-8 4-10 1',
   finance: 'M3 5h18v16H3zM7 9h3M7 13h10M7 17h10',
   'finance/settings': 'M3 5h18v16H3zM7 9h3M7 13h10M7 17h10',
   'finance/journals': 'M3 5h18v16H3zM7 9h3M7 13h10M7 17h10',
@@ -184,6 +186,7 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Pipeline', path: 'pipeline' },
   { kind: 'item', label: 'Leads', path: 'leads' },
   { kind: 'item', label: 'Deals', path: 'deals' },
+  { kind: 'item', label: 'Deal commissions', path: 'deal-commissions' },
   { kind: 'item', label: 'Cold calls', path: 'cold-calls' },
   { kind: 'item', label: 'Contacts', path: 'contacts' },
   { kind: 'item', label: 'Calendar', path: 'calendar' },
@@ -245,6 +248,7 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'مراحل الصفقات', path: 'pipeline' },
   { kind: 'item', label: 'العملاء المحتملون', path: 'leads' },
   { kind: 'item', label: 'الصفقات', path: 'deals' },
+  { kind: 'item', label: 'عمولات الصفقات', path: 'deal-commissions' },
   { kind: 'item', label: 'المكالمات الباردة', path: 'cold-calls' },
   { kind: 'item', label: 'جهات الاتصال', path: 'contacts' },
   { kind: 'item', label: 'التقويم', path: 'calendar' },
@@ -424,7 +428,7 @@ export class CompanyShell {
           (u?.company?.type ?? u?.workspace?.company?.type) === 'brokerage' &&
           perms.includes('commissions.read')
         );
-      if (item.path === 'deals')
+      if (item.path === 'deals' || item.path === 'deal-commissions')
         return (u?.company?.type ?? u?.workspace?.company?.type) === 'brokerage';
       if (item.path === 'inventory/developers')
         return (
@@ -477,6 +481,7 @@ export class CompanyShell {
         'inventory/developers': null,
         reservations: ['office/bookings', 'Bookings', 'الحجوزات'],
         deals: null,
+        'deal-commissions': null,
         pipeline: ['office/pipeline', 'Pipeline', 'مراحل العملاء'],
         'cold-calls': null,
         'my-team': ['office/my-team', 'My team', 'فريقي'],

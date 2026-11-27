@@ -508,6 +508,14 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/company-shell/deals/deals').then((m) => m.Deals),
       },
       {
+        path: 'deal-commissions',
+        data: { permission: 'leads.read' },
+        loadComponent: () =>
+          import('./pages/company-shell/deal-commissions/deal-commissions').then(
+            (m) => m.DealCommissions,
+          ),
+      },
+      {
         path: 'commission-scheme',
         data: { permission: 'commissions.read' },
         loadComponent: () =>

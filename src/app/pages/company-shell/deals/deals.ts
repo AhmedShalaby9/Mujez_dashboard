@@ -1,4 +1,12 @@
-import { Component, ElementRef, HostListener, computed, inject, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RUNTIME_CONFIG } from '../../../runtime-config';
 import { FormsModule } from '@angular/forms';
@@ -95,6 +103,13 @@ export class Deals {
   search = '';
   page = signal(1);
   step = signal(0);
+  readonly stepDefs = [
+    { n: 1, en: 'Client & deal', ar: 'المشتري والصفقة' },
+    { n: 2, en: 'Project & unit', ar: 'المشروع والوحدة' },
+    { n: 3, en: 'Financials & reservation', ar: 'البيانات المالية والحجز' },
+    { n: 4, en: 'Documents', ar: 'المستندات' },
+    { n: 5, en: 'Review', ar: 'مراجعة' },
+  ];
   editing = signal<string | null>(null);
   form = empty();
   rejectReason = '';
@@ -128,7 +143,13 @@ export class Deals {
     ['jobTitle', 'Job title', 'الوظيفة', 'e.g. Engineer', 'مثال: مهندس'],
     ['nationality', 'Nationality', 'الجنسية', 'e.g. Egyptian', 'مثال: مصري'],
     ['email', 'Email', 'البريد الإلكتروني', 'name@example.com', 'name@example.com'],
-    ['livingAddress', 'Living address', 'عنوان السكن', 'Street, building, area', 'الشارع، المبنى، المنطقة'],
+    [
+      'livingAddress',
+      'Living address',
+      'عنوان السكن',
+      'Street, building, area',
+      'الشارع، المبنى، المنطقة',
+    ],
     [
       'correspondenceAddress',
       'Correspondence address',
@@ -389,9 +410,24 @@ export class Deals {
     }
     if (this.step() === 2) {
       const d = this.form.details;
+      if (
+        !this.form.developerId ||
+        !this.form.projectId ||
+        !String(d['developerSalesperson'] ?? '').trim() ||
+        !String(d['developerSalespersonMobile'] ?? '').trim()
+      ) {
+        this.error.set(
+          this.t(
+            'Choose a developer and project, then enter the developer salesperson details.',
+            'اختر المطوّر والمشروع، ثم أدخل بيانات مندوب المطوّر.',
+          ),
+        );
+        return;
+      }
+    }
+    if (this.step() === 3) {
+      const d = this.form.details;
       const required = [
-        'developerSalesperson',
-        'developerSalespersonMobile',
         'area',
         'finishing',
         'deliveryYears',
@@ -402,33 +438,38 @@ export class Deals {
         'reservationDate',
       ];
       if (
-        !this.form.developerId ||
-        !this.form.projectId ||
         required.some((k) => !String(d[k] ?? '').trim()) ||
         (this.form.sellingType === 'resale' && !d['sellerOwner']?.trim())
       ) {
         this.error.set(
           this.t(
-            'Complete all required unit and deal fields.',
-            'أكمل بيانات الوحدة والصفقة المطلوبة.',
+            'Complete all required unit financial and reservation fields.',
+            'أكمل بيانات الوحدة المالية وبيانات الحجز المطلوبة.',
           ),
         );
         return;
       }
     }
     if (
-      this.step() === 3 &&
+      this.step() === 4 &&
       this.form.documents.length === 0 &&
       !(this.editing() && this.selected()?.documents?.length)
     ) {
       this.error.set(this.t('Add at least one document.', 'ارفع مستندًا واحدًا على الأقل.'));
       return;
     }
-    this.step.update((x) => Math.min(x + 1, 4));
+    this.step.update((x) => Math.min(x + 1, 5));
   }
   back() {
     this.error.set('');
     this.step.update((x) => Math.max(1, x - 1));
+  }
+  /** The stepper nav only ever jumps backward; each forward step is gated by next()'s validation. */
+  goToStep(n: number) {
+    if (n < this.step()) {
+      this.error.set('');
+      this.step.set(n);
+    }
   }
   async addFiles(event: Event, kind: string) {
     const input = event.target as HTMLInputElement;

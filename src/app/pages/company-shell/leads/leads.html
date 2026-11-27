@@ -963,17 +963,28 @@
       @if (formError()) {
         <p class="note note--bad" role="alert">{{ formError() }}</p>
       }
-      <div class="grid">
+      <div class="grid grid--divided">
         <label class="field"
           ><span>{{ t('Full name', 'الاسم الكامل') }}</span
-          ><input [(ngModel)]="draft.name" name="name" minlength="2" maxlength="160" required
+          ><input
+            [(ngModel)]="draft.name"
+            name="name"
+            minlength="2"
+            maxlength="160"
+            required
+            [placeholder]="t('e.g. Ahmed Mostafa', 'مثال: أحمد مصطفى')"
         /></label>
         <label class="field"
           ><span>{{ t('Arabic name (optional)', 'الاسم بالعربية (اختياري)') }}</span
-          ><input dir="rtl" [(ngModel)]="draft.nameAr" name="nameAr" maxlength="160"
+          ><input
+            dir="rtl"
+            [(ngModel)]="draft.nameAr"
+            name="nameAr"
+            maxlength="160"
+            [placeholder]="t('e.g. أحمد مصطفى', 'مثال: أحمد مصطفى')"
         /></label>
         <label class="field"
-          ><span>{{ t('Email', 'البريد') }}</span
+          ><span>{{ t('Email (optional)', 'البريد (اختياري)') }}</span
           ><input
             class="input"
             name="email"
@@ -981,19 +992,19 @@
             [(ngModel)]="draft.email"
             (ngModelChange)="formChanged()"
             maxlength="254"
+            placeholder="name@example.com"
         /></label>
         <label class="field"
           ><span>{{ t('Phone', 'الهاتف') }}</span
-          ><input
-            dir="ltr"
+          ><app-phone-input
             [(ngModel)]="draft.phone"
             name="phone"
-            placeholder="+20…"
-            maxlength="40"
+            [ariaLabel]="t('Phone', 'الهاتف')"
             required
-        /></label>
+          ></app-phone-input
+        ></label>
         <div class="field">
-          <span>{{ t('Segment', 'الفئة') }}</span>
+          <span>{{ t('Segment (optional)', 'الفئة (اختياري)') }}</span>
           <div class="segs">
             <button
               type="button"
@@ -1011,16 +1022,45 @@
             >
               {{ t('Commercial', 'تجاري') }}
             </button>
+            <button
+              type="button"
+              class="seg"
+              [class.seg--on]="!draft.segment"
+              (click)="draft.segment = ''; formChanged()"
+            >
+              {{ t('Not set', 'غير محدد') }}
+            </button>
           </div>
         </div>
         <label class="field"
-          ><span>{{ t('What they want', 'الطلب') }}</span
-          ><input [(ngModel)]="draft.want" name="want" maxlength="1000"
-        /></label>
+          ><span>{{ t('What they want (optional)', 'الطلب (اختياري)') }}</span
+          ><select [(ngModel)]="draft.want" name="want">
+            <option value="">{{ t('Not set', 'غير محدد') }}</option>
+            @for (w of wantTypes(); track w) {
+              <option [value]="w">{{ w }}</option>
+            }
+          </select></label
+        >
         <label class="field"
           ><span>{{ t('Arabic requirement (optional)', 'الطلب بالعربية (اختياري)') }}</span
-          ><input dir="rtl" [(ngModel)]="draft.wantAr" name="wantAr" maxlength="1000"
+          ><input
+            dir="rtl"
+            [(ngModel)]="draft.wantAr"
+            name="wantAr"
+            maxlength="1000"
+            [placeholder]="t('e.g. شقة قريبة من المترو', 'مثال: شقة قريبة من المترو')"
         /></label>
+        @if (canProjects()) {
+          <label class="field"
+            ><span>{{ t('Project (optional)', 'المشروع (اختياري)') }}</span
+            ><select [(ngModel)]="draft.projectId" name="project">
+              <option value="">{{ t('Not set', 'غير محدد') }}</option>
+              @for (pr of projects(); track pr.id) {
+                <option [value]="pr.id">{{ pr.name[lang()] }}</option>
+              }
+            </select></label
+          >
+        }
         <label class="field"
           ><span>{{ t('Budget (EGP, optional)', 'الميزانية بالجنيه (اختياري)') }}</span
           ><input
@@ -1054,9 +1094,13 @@
             </select></label
           >
           <div class="field">
-            <span>{{ t('Search active campaigns', 'بحث الحملات النشطة') }}</span>
+            <span>{{ t('Search active campaigns (optional)', 'بحث الحملات النشطة (اختياري)') }}</span>
             <div class="grid2">
-              <input [(ngModel)]="campaignQuery" name="campaignSearch" />
+              <input
+                [(ngModel)]="campaignQuery"
+                name="campaignSearch"
+                [placeholder]="t('Search by campaign name…', 'ابحث باسم الحملة…')"
+              />
               <button type="button" class="btn btn--sm" (click)="loadCampaigns(true)">
                 {{ t('Search', 'بحث') }}
               </button>
@@ -1069,7 +1113,7 @@
           </div>
         }
         <label class="field"
-          ><span>{{ t('Owner', 'المسؤول') }}</span
+          ><span>{{ t('Owner (optional)', 'المسؤول (اختياري)') }}</span
           ><select [(ngModel)]="draft.ownerId" name="owner">
             @if (!editing()) {
               <option value="auto">{{ t('Automatic assignment', 'إسناد تلقائي') }}</option>
@@ -1089,7 +1133,20 @@
             name="score"
             min="0"
             max="100"
+            placeholder="e.g. 75"
         /></label>
+        @if (!editing()) {
+          <label class="field field--full"
+            ><span>{{ t('First comment (optional)', 'أول تعليق (اختياري)') }}</span
+            ><textarea
+              [(ngModel)]="draft.firstComment"
+              name="firstComment"
+              rows="2"
+              maxlength="2000"
+              [placeholder]="t('e.g. Walked in asking about 3BR apartments', 'مثال: سأل عن شقق 3 غرف')"
+            ></textarea
+          ></label>
+        }
       </div>
     </form>
     <div class="dialog__foot">

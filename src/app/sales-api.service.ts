@@ -61,6 +61,7 @@ export interface SalesLead {
   brokerageStatus?: BrokerageLeadStatus | null;
   score: number | null;
   tags: string[];
+  lastComment?: string | null;
   version: number;
   archivedAt: string | null;
   createdAt: string;

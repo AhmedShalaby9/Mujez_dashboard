@@ -565,7 +565,7 @@ export class Leads {
       'lead.updated': ['Lead details updated', 'تم تعديل البيانات'],
       'lead.stage_changed': ['Stage changed', 'تم تغيير المرحلة'],
       'lead.status_changed': ['Lead status changed', 'تم تغيير حالة العميل'],
-      'lead.note_added': ['Note', 'ملاحظة'],
+      'lead.note_added': ['Comment', 'تعليق'],
       'lead.archived': ['Lead archived', 'تمت الأرشفة'],
       'lead.restored': ['Lead restored', 'تمت الاستعادة'],
       'lead.related': ['Related lead added', 'تم ربط عميل'],
@@ -837,7 +837,7 @@ export class Leads {
     ['call', 'Call', 'مكالمة'],
     ['whatsapp', 'WhatsApp', 'واتساب'],
     ['meeting', 'Viewing / meeting', 'معاينة / اجتماع'],
-    ['note', 'Note', 'ملاحظة'],
+    ['note', 'Comment', 'تعليق'],
   ];
   async logActivity() {
     const text = this.note().trim();

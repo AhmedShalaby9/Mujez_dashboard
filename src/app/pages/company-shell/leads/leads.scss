@@ -1,3 +1,23 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.pg {
+  flex: 1;
+  min-height: 0;
+}
+.card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.scroll {
+  flex: 1;
+  min-height: 0;
+}
 .bulk-bar {
   position: fixed;
   left: 50%;
@@ -178,7 +198,7 @@
 }
 .tag-add-panel {
   position: absolute;
-  top: calc(100% + 6px);
+  bottom: calc(100% + 6px);
   inset-inline-start: 0;
   z-index: 30;
   width: 220px;
@@ -274,6 +294,12 @@ tr.sel {
   overflow: hidden;
   text-overflow: ellipsis;
   color: #45454a;
+}
+.comment-cell {
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .stage {
   display: inline-flex;

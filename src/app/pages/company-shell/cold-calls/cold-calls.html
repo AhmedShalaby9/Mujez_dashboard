@@ -269,48 +269,168 @@
   }
   @if (uploading()) {
     <section class="card import-panel" aria-labelledby="cold-import-title">
-      <h2 id="cold-import-title">{{ t('Import old contacts', 'استيراد جهات الاتصال القديمة') }}</h2>
-      <p>
-        {{
-          t(
-            'XLSX or UTF-8 CSV. Exactly two columns: name, phone. Maximum 2,000 rows and 5 MB. Use one worksheet; keep phone cells as Text to preserve 0 and +.',
-            'ملف XLSX أو CSV بترميز UTF-8. عمودان فقط: name وphone. الحد الأقصى 2,000 صف و5 MB. استخدم ورقة واحدة ونسّق الهاتف كنص للحفاظ على 0 و+.'
-          )
-        }}
-      </p>
-      <div class="import-fields">
-        <label class="field"
-          ><span>{{ t('File', 'الملف') }}</span
-          ><input
-            type="file"
-            accept=".xlsx,.csv"
-            (change)="fileChanged($event)"
-            [disabled]="saving()"
-        /></label>
+      <div class="import-steps" aria-hidden="true">
+        @for (s of [1, 2, 3]; track s) {
+          <span
+            class="import-steps__dot"
+            [class.on]="importStep() === s"
+            [class.done]="importStep() > s"
+            >{{ s }}</span
+          >
+          @if (s < 3) {
+            <span class="import-steps__line" [class.done]="importStep() > s"></span>
+          }
+        }
+      </div>
+
+      @if (importStep() === 1) {
+        <h2 id="cold-import-title">
+          {{ t('Import old contacts', 'استيراد جهات الاتصال القديمة') }}
+        </h2>
+        <p>
+          {{
+            t(
+              'XLSX or UTF-8 CSV, up to 5 MB and 2,000 rows, one worksheet. Any column layout works — on the next step you choose which column is the name and which is the phone number, and keep phone cells as Text to preserve 0 and +.',
+              'ملف XLSX أو CSV بترميز UTF-8، بحد أقصى 5 ميجابايت و2,000 صف وورقة واحدة. أي ترتيب للأعمدة يعمل — في الخطوة التالية تحدد عمود الاسم وعمود رقم الهاتف، ونسّق خلايا الهاتف كنص للحفاظ على 0 و+.'
+            )
+          }}
+        </p>
+        <div class="import-fields">
+          <label class="field"
+            ><span>{{ t('File', 'الملف') }}</span
+            ><input
+              type="file"
+              accept=".xlsx,.csv"
+              (change)="fileChanged($event)"
+              [disabled]="saving()"
+          /></label>
+        </div>
+        @if (saving()) {
+          <p class="muted">{{ t('Reading your file…', 'جارٍ قراءة الملف…') }}</p>
+        }
+        <div class="actions">
+          <button type="button" class="btn" [disabled]="saving()" (click)="uploading.set(false)">
+            {{ t('Close', 'إغلاق') }}
+          </button>
+        </div>
+      }
+
+      @if (importStep() === 2) {
+        <h2 id="cold-import-title">{{ t('Map your columns', 'تحديد الأعمدة') }}</h2>
+        <p>
+          {{
+            t(
+              'We read ' +
+                columns().length +
+                " columns from your file. Choose which one has the name and which has the phone number — we'll ignore the rest.",
+              'قرأنا ' +
+                columns().length +
+                ' أعمدة من ملفك. حدد العمود الذي يحتوي على الاسم والعمود الذي يحتوي على رقم الهاتف — سيتم تجاهل باقي الأعمدة.'
+            )
+          }}
+        </p>
+        <div class="import-fields">
+          <label class="field"
+            ><span>{{ t('Name column', 'عمود الاسم') }} <em>*</em></span
+            ><select [(ngModel)]="nameColumn">
+              <option value="">{{ t('— Choose a column —', '— اختر عمودًا —') }}</option>
+              @for (col of nameOptions(); track col.index) {
+                <option [value]="col.index">
+                  {{ columnLabel(col) }}
+                  @if (columnHint(col.index)) {
+                    — {{ t('e.g.', 'مثال') }} {{ columnHint(col.index) }}
+                  }
+                </option>
+              }
+            </select></label
+          >
+          <label class="field"
+            ><span>{{ t('Phone number column', 'عمود رقم الهاتف') }} <em>*</em></span
+            ><select [(ngModel)]="phoneColumn">
+              <option value="">{{ t('— Choose a column —', '— اختر عمودًا —') }}</option>
+              @for (col of phoneOptions(); track col.index) {
+                <option [value]="col.index">
+                  {{ columnLabel(col) }}
+                  @if (columnHint(col.index)) {
+                    — {{ t('e.g.', 'مثال') }} {{ columnHint(col.index) }}
+                  }
+                </option>
+              }
+            </select></label
+          >
+        </div>
+        <div class="table-wrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                @for (col of columns(); track col.index) {
+                  <th>{{ columnLabel(col) }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of columnSample(); track $index) {
+                <tr>
+                  @for (cell of row; track $index) {
+                    <td>{{ cell }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
         <label class="field"
           ><span>{{ t('Assign imported contacts to', 'إسناد السجلات المستوردة إلى') }}</span
-          ><select [(ngModel)]="ownerId" (ngModelChange)="ownerChanged()" [disabled]="saving()">
+          ><select [(ngModel)]="ownerId" (ngModelChange)="ownerChanged()">
             <option value="">{{ t('Me', 'أنا') }}</option>
             @for (o of owners(); track o.id) {
               <option [value]="o.id">{{ o.name }}</option>
             }
           </select></label
         >
-      </div>
-      <div class="actions">
-        <button type="button" class="btn" [disabled]="saving()" (click)="uploading.set(false)">
-          {{ t('Close', 'إغلاق') }}</button
-        ><button
-          type="button"
-          class="btn btn--dark"
-          [disabled]="!file || saving()"
-          (click)="upload(false)"
-        >
-          {{
-            saving() ? t('Processing…', 'جار المعالجة…') : t('Preview import', 'معاينة الاستيراد')
-          }}
-        </button>
-      </div>
+        @if (!mappingReady()) {
+          <p class="note note--bad">
+            {{
+              t(
+                'Choose both the name and the phone number columns to continue.',
+                'حدد عمود الاسم وعمود رقم الهاتف للمتابعة.'
+              )
+            }}
+          </p>
+        }
+        <div class="actions">
+          <button type="button" class="btn" (click)="backToFile()">
+            {{ t('Back', 'رجوع') }}</button
+          ><button
+            type="button"
+            class="btn btn--dark"
+            [disabled]="!mappingReady()"
+            (click)="confirmMapping()"
+          >
+            {{ t('Continue', 'متابعة') }}
+          </button>
+        </div>
+      }
+
+      @if (importStep() === 3) {
+        <h2 id="cold-import-title">{{ t('Review and import', 'مراجعة واستيراد') }}</h2>
+        <div class="actions">
+          <button type="button" class="btn" [disabled]="saving()" (click)="backToMapping()">
+            {{ t('Back', 'رجوع') }}</button
+          ><button type="button" class="btn" [disabled]="saving()" (click)="uploading.set(false)">
+            {{ t('Close', 'إغلاق') }}</button
+          ><button
+            type="button"
+            class="btn btn--dark"
+            [disabled]="!file || saving()"
+            (click)="upload(false)"
+          >
+            {{
+              saving() ? t('Processing…', 'جار المعالجة…') : t('Preview import', 'معاينة الاستيراد')
+            }}
+          </button>
+        </div>
+      }
       @if (preview(); as p) {
         <div class="summary">
           <span

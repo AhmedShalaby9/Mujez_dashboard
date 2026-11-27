@@ -9,6 +9,15 @@ import { RUNTIME_CONFIG } from './runtime-config';
 afterEach(() => TestBed.resetTestingModule());
 async function setup(manage = true) {
   const request = vi.fn(async (path: string, body?: any): Promise<any> => {
+    if (path.includes('/columns'))
+      return {
+        columns: [
+          { index: 1, label: 'name' },
+          { index: 2, label: 'phone' },
+        ],
+        sample: [['Old contact', '+12025550199']],
+        totalRows: 1,
+      };
     if (path.includes('/preview'))
       return {
         valid: 1,
@@ -63,9 +72,14 @@ describe('Cold calls', () => {
     const { f, c, request } = await setup();
     expect(f.nativeElement.textContent).toContain('Old contact');
     await c.openImport();
-    c.fileChanged({
+    await c.fileChanged({
       target: { files: [new File(['name,phone\nOld contact,+12025550199'], 'contacts.csv')] },
     } as any);
+    expect(c.importStep()).toBe(2);
+    expect(c.nameColumn).toBe('1');
+    expect(c.phoneColumn).toBe('2');
+    c.confirmMapping();
+    expect(c.importStep()).toBe(3);
     await c.upload();
     expect(c.preview().valid).toBe(1);
     expect(request.mock.calls.some(([p]) => p.endsWith('/import'))).toBe(false);
@@ -74,6 +88,8 @@ describe('Cold calls', () => {
     expect(request.mock.calls.some(([p]) => p === '/api/v1/leads')).toBe(false);
     const form = request.mock.calls.find(([p]) => p.endsWith('/import'))![1] as FormData;
     expect(form.get('requestId')).toBeTruthy();
+    expect(form.get('nameColumn')).toBe('1');
+    expect(form.get('phoneColumn')).toBe('2');
   });
   it('converts only after entering needs and sends a versioned idempotent request', async () => {
     const { c, request } = await setup();

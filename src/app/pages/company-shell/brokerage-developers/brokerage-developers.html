@@ -1,54 +1,146 @@
-<div class="dev-page">
-  <header>
-    <span class="eyebrow">{{ t('COMPANY INVENTORY', 'مخزون الشركة') }}</span>
-    <h1>{{ t('Developers', 'المطوّرون') }}</h1>
-    <p>
-      {{
-        t(
-          'Developers used by your company projects and deals.',
-          'المطوّرون المرتبطون بمشروعات وصفقات شركتك.'
-        )
-      }}
-    </p>
-  </header>
-  @if (!brokerage()) {
-    <section class="card">{{ t('Brokerage only.', 'متاح لشركات الوساطة فقط.') }}</section>
-  } @else {
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <span>{{ items().length }} {{ t('developers', 'مطوّر') }}</span>
+      <h1>{{ t('Developers', 'المطوّرون') }}</h1>
+    </div>
     @if (owner()) {
-      <section class="card add">
-        <label
-          >{{ t('Developer name', 'اسم المطوّر')
-          }}<input [(ngModel)]="name" (keydown.enter)="create()" /></label
-        ><button [disabled]="busy() || !name.trim()" (click)="create()">
-          ＋ {{ t('Add developer', 'إضافة مطوّر') }}
+      <div class="head__actions">
+        <button type="button" class="btn btn--dark" (click)="openAdd()">
+          {{ t('+ Add developer', '+ إضافة مطوّر') }}
         </button>
-      </section>
+      </div>
     }
+  </div>
+  <p class="muted">
+    {{
+      t(
+        'Developers used by your company projects and brokerage deals.',
+        'المطوّرون المرتبطون بمشروعات وصفقات شركتك.'
+      )
+    }}
+  </p>
+
+  @if (!brokerage()) {
+    <section class="card">
+      <p class="muted pad">{{ t('Brokerage only.', 'متاح لشركات الوساطة فقط.') }}</p>
+    </section>
+  } @else {
     @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
+      <p class="note note--bad" role="alert">{{ error() }}</p>
     }
-    <section class="card list">
-      @for (d of items(); track d.id) {
-        <div class="item">
-          @if (editId === d.id) {
-            <input [(ngModel)]="editName" /><button
-              [disabled]="busy() || !editName.trim()"
-              (click)="save(d)"
-            >
-              {{ t('Save', 'حفظ') }}</button
-            ><button (click)="editId = ''">{{ t('Cancel', 'إلغاء') }}</button>
-          } @else {
-            <strong>{{ d.name }}</strong>
-            @if (owner()) {
-              <button (click)="edit(d)">{{ t('Edit', 'تعديل') }}</button
-              ><button [disabled]="busy()" (click)="archive(d)">{{ t('Archive', 'أرشفة') }}</button>
+    <section class="card">
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('Name', 'الاسم') }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of items(); track d.id) {
+              <tr>
+                <td>
+                  @if (editId === d.id) {
+                    <input class="mono" [(ngModel)]="editName" (keydown.enter)="save(d)" />
+                  } @else {
+                    <b>{{ d.name }}</b>
+                  }
+                </td>
+                <td class="end">
+                  @if (editId === d.id) {
+                    <span class="acts">
+                      <button
+                        type="button"
+                        class="btn btn--sm btn--dark"
+                        [disabled]="busy() || !editName.trim()"
+                        (click)="save(d)"
+                      >
+                        {{ t('Save', 'حفظ') }}
+                      </button>
+                      <button type="button" class="btn btn--sm" (click)="editId = ''">
+                        {{ t('Cancel', 'إلغاء') }}
+                      </button>
+                    </span>
+                  } @else if (owner()) {
+                    <span class="acts">
+                      <button type="button" class="btn btn--sm" (click)="edit(d)">
+                        {{ t('Edit', 'تعديل') }}
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn--sm btn--badText"
+                        [disabled]="busy()"
+                        (click)="archive(d)"
+                      >
+                        {{ t('Archive', 'أرشفة') }}
+                      </button>
+                    </span>
+                  }
+                </td>
+              </tr>
             }
+          </tbody>
+        </table>
+      </div>
+      @if (loading() && !items().length) {
+        <p class="muted pad" role="status">{{ t('Loading…', 'جارٍ التحميل…') }}</p>
+      } @else if (!items().length) {
+        <div class="empty">
+          <strong>{{ t('No developers yet', 'لا يوجد مطوّرون بعد') }}</strong>
+          <span>{{
+            t(
+              'Add the developers your projects and deals are linked to.',
+              'أضف المطوّرين المرتبطين بمشروعاتك وصفقاتك.'
+            )
+          }}</span>
+          @if (owner()) {
+            <button type="button" class="btn btn--dark" (click)="openAdd()">
+              {{ t('+ Add developer', '+ إضافة مطوّر') }}
+            </button>
           }
         </div>
-      }
-      @if (!items().length) {
-        <p class="empty">{{ t('No developers yet.', 'لا يوجد مطوّرون بعد.') }}</p>
       }
     </section>
   }
 </div>
+
+@if (addOpen()) {
+  <div class="scrim scrim--top" (click)="!busy() && closeAdd()"></div>
+  <section
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="t('Add developer', 'إضافة مطوّر')"
+  >
+    <form (ngSubmit)="create()">
+      <div class="dialog__head">
+        <span class="dialog__title">{{ t('Add developer', 'إضافة مطوّر') }}</span>
+      </div>
+      <div class="dialog__main">
+        @if (addError()) {
+          <p class="note note--bad" role="alert">{{ addError() }}</p>
+        }
+        <label class="field"
+          ><span>{{ t('Developer name', 'اسم المطوّر') }}</span
+          ><input
+            [ngModel]="addName()"
+            (ngModelChange)="addName.set($event)"
+            name="name"
+            required
+            minlength="2"
+            [disabled]="busy()"
+        /></label>
+      </div>
+      <div class="dialog__foot">
+        <button type="button" class="btn" [disabled]="busy()" (click)="closeAdd()">
+          {{ t('Cancel', 'إلغاء') }}
+        </button>
+        <button type="submit" class="btn btn--dark" [disabled]="busy() || !addName().trim()">
+          {{ busy() ? t('Saving…', 'جارٍ الحفظ…') : t('Add developer', 'إضافة مطوّر') }}
+        </button>
+      </div>
+    </form>
+  </section>
+}

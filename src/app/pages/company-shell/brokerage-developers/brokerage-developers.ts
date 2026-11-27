@@ -7,7 +7,12 @@ import { CompanyUiState } from '../company-ui-state';
   selector: 'app-brokerage-developers',
   imports: [FormsModule],
   templateUrl: './brokerage-developers.html',
-  styleUrls: ['../company-ui.scss', './brokerage-developers.scss'],
+  styleUrls: [
+    '../../admin-shell/admin-ui.scss',
+    '../../admin-shell/admin-table.scss',
+    '../company-ui.scss',
+    './brokerage-developers.scss',
+  ],
 })
 export class BrokerageDevelopers {
   readonly api = inject(BrokerageDealsApi);
@@ -26,9 +31,14 @@ export class BrokerageDevelopers {
       'brokerage',
   );
   readonly items = signal<{ id: string; name: string; version: number }[]>([]);
+  readonly loading = signal(false);
   readonly error = signal('');
   readonly busy = signal(false);
-  name = '';
+
+  readonly addOpen = signal(false);
+  readonly addName = signal('');
+  readonly addError = signal('');
+
   editId = '';
   editName = '';
   constructor() {
@@ -38,22 +48,35 @@ export class BrokerageDevelopers {
     return this.ar() ? ar : en;
   }
   async reload() {
+    this.loading.set(true);
     try {
       this.items.set(await this.api.developers());
       this.error.set('');
     } catch (e) {
       this.error.set((e as Error).message);
+    } finally {
+      this.loading.set(false);
     }
   }
+  openAdd() {
+    this.addName.set('');
+    this.addError.set('');
+    this.addOpen.set(true);
+  }
+  closeAdd() {
+    this.addOpen.set(false);
+  }
   async create() {
-    if (!this.name.trim()) return;
+    const name = this.addName().trim();
+    if (!name || this.busy()) return;
     this.busy.set(true);
+    this.addError.set('');
     try {
-      await this.api.createDeveloper(this.name.trim());
-      this.name = '';
+      await this.api.createDeveloper(name);
+      this.addOpen.set(false);
       await this.reload();
     } catch (e) {
-      this.error.set((e as Error).message);
+      this.addError.set((e as Error).message);
     } finally {
       this.busy.set(false);
     }

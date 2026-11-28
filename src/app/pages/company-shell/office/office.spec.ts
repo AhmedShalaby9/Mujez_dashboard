@@ -268,3 +268,54 @@ it('uses a fixed Egyptian prefix and one owner number with a managed city select
     request.mock.calls.find(([p, b]) => p.endsWith('/properties') && b)?.[1].data,
   ).toMatchObject({ ownerPhones: ['+201001234567'], cityId: 'city' });
 });
+
+it('shows compact filters and saves a clinic installment listing with unit details', async () => {
+  const { c, f, request } = await setup('properties');
+  expect(f.nativeElement.querySelector('.office-filter-dialog')).toBeNull();
+  [...f.nativeElement.querySelectorAll('button')]
+    .find((button: any) => button.textContent.trim() === 'Filters')
+    ?.click();
+  f.detectChanges();
+  await f.whenStable();
+  f.detectChanges();
+  expect(f.nativeElement.querySelector('.office-filter-dialog')).not.toBeNull();
+  c.begin('property');
+  c.form = {
+    ...c.form,
+    title: 'Clinic 12',
+    ownerName: 'Owner',
+    ownerPhone: '1001234567',
+    cityId: 'city',
+    areaName: 'Maadi',
+    address: 'Street 1',
+    type: 'clinic',
+    listingType: 'sale_installments',
+    groupName: 'Group A',
+    buildingNumber: '4',
+    unitNumber: '12',
+    additions: 'Parking',
+    deliveryYear: 2028,
+    area: 80,
+    salePrice: '2m',
+    downPayment: '500k',
+  };
+  f.detectChanges();
+  expect(f.nativeElement.querySelector('input[name="downPayment"]')).not.toBeNull();
+  expect(f.nativeElement.querySelector('input[name="rentPrice"]')).toBeNull();
+  await c.save();
+  expect(
+    request.mock.calls.find(([p, b]) => p.endsWith('/properties') && b)?.[1].data,
+  ).toMatchObject({
+    type: 'clinic',
+    listingType: 'sale_installments',
+    purpose: 'sale',
+    groupName: 'Group A',
+    buildingNumber: '4',
+    unitNumber: '12',
+    additions: 'Parking',
+    deliveryYear: 2028,
+    saleMinor: '200000000',
+    downPaymentMinor: '50000000',
+    rentMinor: null,
+  });
+});

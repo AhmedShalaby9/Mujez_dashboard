@@ -73,78 +73,116 @@
       </p>
     </section>
   } @else {
-    <section class="card office-filter-panel">
-      <form (ngSubmit)="apply()">
-        <div class="office-filters">
-          @for (field of filterFields(); track field.key; let index = $index) {
-            @if (advanced || index < 3 || ['status', 'ownerId', 'sort'].includes(field.key)) {
-              <label class="field"
-                ><span>{{ t(field.en, field.ar) }}</span>
-                @if (field.options) {
-                  <select [name]="'filter-' + field.key" [(ngModel)]="filters[field.key]">
-                    <option value="">{{ t('All', 'الكل') }}</option>
-                    @for (o of field.options; track o[0]) {
-                      <option [value]="o[0]">{{ t(o[1], o[2]) }}</option>
-                    }
-                  </select>
-                } @else if (field.type === 'money') {
-                  <input
-                    [name]="'filter-' + field.key"
-                    [(ngModel)]="filters[field.key]"
-                    compactAmount
-                    placeholder="10k / 2m"
-                  />
-                } @else {
-                  <input
-                    [name]="'filter-' + field.key"
-                    [(ngModel)]="filters[field.key]"
-                    [type]="field.type || 'text'"
-                  />
-                }
-              </label>
-            }
-          }
-        </div>
-        <div class="office-actions">
-          <button class="btn btn--dark" [disabled]="loading()">
-            {{ t('Apply filters', 'تطبيق الفلاتر') }}</button
-          ><button type="button" class="btn" (click)="advanced = !advanced">
-            {{
-              advanced ? t('Fewer filters', 'فلاتر أقل') : t('More filters', 'فلاتر إضافية')
-            }}</button
-          ><button type="button" class="btn" (click)="reset()">
-            {{ t('Clear all', 'مسح الكل') }}</button
-          ><span class="muted">{{ total() }} {{ t('results', 'نتيجة') }}</span>
-        </div>
-      </form>
-      @if (activeFilters().length) {
-        <div class="office-actions filter-chips">
-          @for (f of activeFilters(); track f[0]) {
-            <button type="button" class="pill" (click)="removeFilter(f[0])">
-              {{ filterLabel(f[0]) }}: {{ label('' + f[1]) }} ×
-            </button>
-          }
-        </div>
-      }
-      @if (view === 'clients' || view === 'properties') {
-        <div class="office-saved">
-          <label class="field"
-            ><span>{{ t('Saved filters', 'الفلاتر المحفوظة') }}</span
-            ><select [(ngModel)]="savedId" (ngModelChange)="useSaved()">
-              <option value="">{{ t('Choose saved view', 'اختر فلاتر محفوظة') }}</option>
-              @for (f of savedFilters(); track f.id) {
-                <option [value]="f.id">{{ f.name }}</option>
-              }
-            </select></label
-          ><label class="field"
-            ><span>{{ t('Save current filters as', 'حفظ الفلاتر باسم') }}</span
-            ><input [(ngModel)]="filterName" maxlength="80" /></label
-          ><button class="btn" [disabled]="filterName.trim().length < 2" (click)="saveFilters()">
-            {{ t('Save view', 'حفظ') }}
+    <section class="card office-filter-panel office-filter-bar">
+      <label class="field office-search"
+        ><span>{{ t('Search', 'بحث') }}</span>
+        <input
+          name="office-search"
+          [(ngModel)]="filters['q']"
+          [placeholder]="t('Name, phone, code or address', 'اسم أو هاتف أو كود أو عنوان')"
+          (keydown.enter)="apply()"
+        />
+      </label>
+      <button type="button" class="btn btn--dark" (click)="apply()">
+        {{ t('Search', 'بحث') }}
+      </button>
+      <button type="button" class="btn" (click)="filtersOpen = true">
+        {{ t('Filters', 'الفلاتر') }}
+        @if (activeFilters().length) {
+          ({{ activeFilters().length }})
+        }
+      </button>
+      <span class="muted">{{ total() }} {{ t('results', 'نتيجة') }}</span>
+    </section>
+    @if (filtersOpen) {
+      <div class="scrim" (click)="filtersOpen = false"></div>
+      <section
+        class="dialog dialog--wide office-dialog office-filter-dialog"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="t('Filter records', 'تصفية النتائج')"
+        [attr.dir]="ar() ? 'rtl' : 'ltr'"
+      >
+        <div class="dialog__head">
+          <h2>{{ t('Filters', 'الفلاتر') }}</h2>
+          <button type="button" class="btn" (click)="filtersOpen = false">
+            {{ t('Close', 'إغلاق') }}
           </button>
         </div>
-      }
-    </section>
+        <form (ngSubmit)="apply()">
+          <div class="dialog__main">
+            <div class="office-filters">
+              @for (field of filterFields(); track field.key) {
+                <label class="field"
+                  ><span>{{ t(field.en, field.ar) }}</span>
+                  @if (field.options) {
+                    <select [name]="'filter-' + field.key" [(ngModel)]="filters[field.key]">
+                      <option value="">{{ t('All', 'الكل') }}</option>
+                      @for (o of field.options; track o[0]) {
+                        <option [value]="o[0]">{{ t(o[1], o[2]) }}</option>
+                      }
+                    </select>
+                  } @else if (field.type === 'money') {
+                    <input
+                      [name]="'filter-' + field.key"
+                      [(ngModel)]="filters[field.key]"
+                      compactAmount
+                      placeholder="10k / 2m"
+                    />
+                  } @else {
+                    <input
+                      [name]="'filter-' + field.key"
+                      [(ngModel)]="filters[field.key]"
+                      [type]="field.type || 'text'"
+                    />
+                  }
+                </label>
+              }
+            </div>
+            @if (view === 'clients' || view === 'properties') {
+              <div class="office-saved">
+                <label class="field"
+                  ><span>{{ t('Saved filters', 'الفلاتر المحفوظة') }}</span
+                  ><select name="savedId" [(ngModel)]="savedId" (ngModelChange)="useSaved()">
+                    <option value="">{{ t('Choose saved view', 'اختر فلاتر محفوظة') }}</option>
+                    @for (f of savedFilters(); track f.id) {
+                      <option [value]="f.id">{{ f.name }}</option>
+                    }
+                  </select></label
+                ><label class="field"
+                  ><span>{{ t('Save current filters as', 'حفظ الفلاتر باسم') }}</span
+                  ><input name="filterName" [(ngModel)]="filterName" maxlength="80" /></label
+                ><button
+                  type="button"
+                  class="btn"
+                  [disabled]="filterName.trim().length < 2"
+                  (click)="saveFilters()"
+                >
+                  {{ t('Save view', 'حفظ') }}
+                </button>
+              </div>
+            }
+          </div>
+          <div class="dialog__foot office-actions">
+            <button type="button" class="btn" (click)="reset()">
+              {{ t('Clear all', 'مسح الكل') }}
+            </button>
+            <button class="btn btn--dark" [disabled]="loading()">
+              {{ t('Apply filters', 'تطبيق الفلاتر') }}
+            </button>
+          </div>
+        </form>
+      </section>
+    }
+    @if (activeFilters().length) {
+      <div class="office-actions filter-chips">
+        @for (f of activeFilters(); track f[0]) {
+          <button type="button" class="pill" (click)="removeFilter(f[0])">
+            {{ filterLabel(f[0]) }}: {{ label('' + f[1]) }} ×
+          </button>
+        }
+      </div>
+    }
     @if (loading()) {
       <p class="muted" role="status">{{ t('Loading…', 'جارٍ التحميل…') }}</p>
     }
@@ -170,6 +208,7 @@
               <p class="muted">
                 {{ p.data.areaName }} · {{ p.data.city }} · {{ label(p.data.type) }}
               </p>
+              <p>{{ listingLabel(p.data) }}</p>
               <p>
                 {{ label(p.data.furnishing) }} · {{ p.data.area }} m² · {{ p.data.bedrooms ?? '—' }}
                 {{ t('bedrooms', 'غرف') }}
@@ -378,6 +417,14 @@
         <span class="pill">{{ label(d.status) }}</span>
         <p>{{ d.data.address }} · {{ d.data.areaName }} · {{ d.data.city }}</p>
         <p>{{ label(d.data.type) }} · {{ label(d.data.furnishing) }} · {{ d.data.area }} m²</p>
+        <p>{{ t('Listing type', 'نوع العرض') }}: {{ listingLabel(d.data) }}</p>
+        <p>
+          {{ t('Group / compound', 'المجموعة / الكمبوند') }}: {{ d.data.groupName || '—' }} ·
+          {{ t('Building', 'العمارة') }}: {{ d.data.buildingNumber || '—' }} ·
+          {{ t('Unit', 'الوحدة') }}: {{ d.data.unitNumber || '—' }}
+        </p>
+        <p>{{ t('Delivery year', 'سنة الاستلام') }}: {{ d.data.deliveryYear || '—' }}</p>
+        <p>{{ t('Property additions', 'إضافات العقار') }}: {{ d.data.additions || '—' }}</p>
         <p>
           {{ t('Bedrooms', 'غرف النوم') }}: {{ d.data.bedrooms ?? '—' }} ·
           {{ t('Bathrooms', 'الحمامات') }}: {{ d.data.bathrooms ?? '—' }} ·
@@ -410,6 +457,9 @@
         <p>{{ t('Last confirmation', 'آخر تأكيد') }}: {{ d.data.verifiedOn || '—' }}</p>
         @if (d.data.purpose !== 'rent') {
           <p>{{ t('Sale price', 'سعر البيع') }}: {{ money(d.data.saleMinor) }}</p>
+          @if (d.data.listingType === 'sale_installments') {
+            <p>{{ t('Down payment', 'المقدم') }}: {{ money(d.data.downPaymentMinor) }}</p>
+          }
         }
         @if (d.data.purpose !== 'sale') {
           <p>{{ t('Monthly rent', 'الإيجار الشهري') }}: {{ money(d.data.rentMinor) }}</p>
@@ -612,7 +662,12 @@
                   {{ target().data.areaName }} · {{ target().data.city }} · {{ target().code }}
                 </p>
               </div>
-              <button type="button" class="btn btn--sm" [disabled]="saving()" (click)="changeBookingProperty()">
+              <button
+                type="button"
+                class="btn btn--sm"
+                [disabled]="saving()"
+                (click)="changeBookingProperty()"
+              >
                 {{ t('Change property', 'تغيير العقار') }}
               </button>
             </div>
@@ -625,7 +680,10 @@
                 mode() === 'book'
                   ? bookStep() === 'property'
                     ? t('Search available properties', 'ابحث عن العقارات المتاحة')
-                    : t('Search your clients by name or phone', 'ابحث في عملائك بالاسم أو رقم الهاتف')
+                    : t(
+                        'Search your clients by name or phone',
+                        'ابحث في عملائك بالاسم أو رقم الهاتف'
+                      )
                   : t('Search office properties for a viewing', 'بحث عقارات المكتب للمعاينة')
               }}</span
               ><input
@@ -638,8 +696,7 @@
                       ? t('Type a property name or area', 'اكتب اسم العقار أو المنطقة')
                       : t('Type a client name or phone', 'اكتب اسم العميل أو رقم هاتفه')
                     : t('Search properties', 'ابحث عن العقارات')
-                "
-              /></label
+                " /></label
             ><button
               type="button"
               class="btn"
@@ -693,12 +750,20 @@
               {{
                 mode() === 'book' && bookStep() === 'property'
                   ? t(
-                      'Showing ' + choiceResultCount() + ' of ' + choiceTotal() + ' available properties',
+                      'Showing ' +
+                        choiceResultCount() +
+                        ' of ' +
+                        choiceTotal() +
+                        ' available properties',
                       'عرض ' + choiceResultCount() + ' من ' + choiceTotal() + ' عقار متاح'
                     )
                   : t(
                       'Showing ' + choiceResultCount() + ' of your ' + choiceTotal() + ' clients',
-                      'عرض ' + choiceResultCount() + ' من إجمالي ' + choiceTotal() + ' عميل من عملائك'
+                      'عرض ' +
+                        choiceResultCount() +
+                        ' من إجمالي ' +
+                        choiceTotal() +
+                        ' عميل من عملائك'
                     )
               }}
             </p>
@@ -760,12 +825,14 @@
               )
             }}
             @if (auth.user()?.pool === 'company_admin' && !auth.user()?.workspace) {
-              <a routerLink="/company/office/cities">{{ t('Manage projects', 'إدارة المشاريع') }}</a>
+              <a routerLink="/company/office/cities">{{
+                t('Manage projects', 'إدارة المشاريع')
+              }}</a>
             }
           </p>
         }
         <div class="office-form-grid">
-          @for (field of fields(); track field.key) {
+          @for (field of visibleFields(); track field.key) {
             <label class="field" [class.office-wide]="field.type === 'textarea'"
               ><span
                 >{{ t(field.en, field.ar) }}

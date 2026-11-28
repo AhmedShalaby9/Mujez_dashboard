@@ -121,6 +121,22 @@ export class Office {
         c.nameAr + (c.archived ? ' (محذوفة)' : ''),
       ]);
   }
+  /** Projects offered on a client. The server already limits the list to the
+   * salesperson's own; archived ones stay only while selected. */
+  projectChoices() {
+    const selected: string[] = this.form.projectIds ?? [];
+    return (this.options().cities ?? []).filter((c: any) => !c.archived || selected.includes(c.id));
+  }
+  toggleProject(id: string, checked: boolean) {
+    const rest = (this.form.projectIds ?? []).filter((x: string) => x !== id);
+    this.form.projectIds = checked ? [...rest, id] : rest;
+  }
+  projectNames(needs: any) {
+    const names = (this.options().cities ?? [])
+      .filter((c: any) => needs?.projectIds?.includes(c.id))
+      .map((c: any) => this.t(c.nameEn, c.nameAr));
+    return names.join('، ');
+  }
   ownerPhoneLocal(value: string) {
     return String(value ?? '').replace(/^\+20/, '');
   }
@@ -457,6 +473,7 @@ export class Office {
         status: 'new',
         purpose: 'rent',
         areas: '',
+        projectIds: [],
         type: '',
         furnishing: '',
         saleBudget: '',
@@ -476,11 +493,16 @@ export class Office {
               rentBudget: row.needs.rentBudgetMinor ? majorAmount(row.needs.rentBudgetMinor) : '',
               followUpAt: this.local(row.followUpAt),
               ownerId: row.owner.id,
+              projectIds: [...(row.needs.projectIds ?? [])],
             }
           : {}),
       };
+      const limited = !!this.options().restrictedProjects;
+      // A salesperson with a single project does not need to pick it.
+      if (!row && limited && this.projectChoices().length === 1)
+        this.form.projectIds = [this.projectChoices()[0].id];
       this.fields.set([
-        ...clientFields,
+        ...clientFields.map((f) => (f.key === 'projectIds' ? { ...f, required: limited } : f)),
         ...(this.options().scope !== 'own'
           ? [
               {
@@ -904,6 +926,7 @@ export class Office {
         needs: {
           purpose: f.purpose,
           areas: this.lines(f.areas),
+          projectIds: f.projectIds ?? [],
           type: f.type || '',
           furnishing: f.furnishing || '',
           saleBudgetMinor: this.amount(f.saleBudget),

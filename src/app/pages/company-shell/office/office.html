@@ -283,8 +283,11 @@
                       ><span class="sub mono">{{ r.code }}</span>
                     </td>
                     <td>
-                      {{ label(r.needs.purpose) }} · {{ (r.needs.areas || []).join('، ')
-                      }}<span class="sub">{{
+                      {{ label(r.needs.purpose) }} · {{ (r.needs.areas || []).join('، ') }}
+                      @if (projectNames(r.needs); as names) {
+                        <span class="sub">{{ names }}</span>
+                      }
+                      <span class="sub">{{
                         r.needs.purpose === 'rent'
                           ? money(r.needs.rentBudgetMinor)
                           : money(r.needs.saleBudgetMinor)
@@ -493,6 +496,9 @@
           {{ label(d.needs.purpose) }} · {{ (d.needs.areas || []).join('، ') }} ·
           {{ label(d.needs.type) }} · {{ label(d.needs.furnishing) }}
         </p>
+        @if (projectNames(d.needs); as names) {
+          <p>{{ t('Projects', 'المشاريع') }}: {{ names }}</p>
+        }
         <p>{{ t('Purchase budget', 'ميزانية الشراء') }}: {{ money(d.needs.saleBudgetMinor) }}</p>
         <p>
           {{ t('Monthly rent budget', 'ميزانية الإيجار الشهري') }}:
@@ -833,85 +839,110 @@
         }
         <div class="office-form-grid">
           @for (field of visibleFields(); track field.key) {
-            <label class="field" [class.office-wide]="field.type === 'textarea'"
-              ><span
-                >{{ t(field.en, field.ar) }}
-                @if (field.required) {
-                  *
-                }
-              </span>
-              @if (field.options) {
-                <select
-                  [name]="field.key"
-                  [attr.name]="field.key"
-                  [(ngModel)]="form[field.key]"
-                  [required]="!!field.required"
-                  [disabled]="saving()"
-                >
-                  <option value="">{{ t('Not set', 'غير محدد') }}</option>
-                  @for (o of field.options; track o[0]) {
-                    <option [value]="o[0]">{{ t(o[1], o[2]) }}</option>
+            @if (field.type === 'projects') {
+              <fieldset class="office-wide office-projects" [disabled]="saving()">
+                <legend>
+                  {{ t(field.en, field.ar) }}
+                  @if (field.required) {
+                    *
                   }
-                </select>
-              } @else if (field.type === 'egypt-phone') {
-                <span class="office-phone" dir="ltr"
-                  ><span aria-hidden="true">+20</span
-                  ><input
-                    type="tel"
-                    inputmode="numeric"
-                    autocomplete="tel-national"
-                    name="ownerPhone"
-                    [(ngModel)]="form.ownerPhone"
-                    required
-                    pattern="[1-9][0-9]{8,9}"
-                    minlength="9"
-                    maxlength="10"
-                    [attr.aria-label]="t('Owner phone after +20', 'رقم المالك بعد +20')"
-                    placeholder="1001234567"
+                </legend>
+                @for (c of projectChoices(); track c.id) {
+                  <label
+                    ><input
+                      type="checkbox"
+                      [attr.name]="'project-' + c.id"
+                      [checked]="form.projectIds?.includes(c.id)"
+                      (change)="toggleProject(c.id, $any($event.target).checked)"
+                    />{{ t(c.nameEn, c.nameAr) }}</label
+                  >
+                } @empty {
+                  <span class="muted">{{
+                    t('No projects available.', 'لا توجد مشاريع متاحة.')
+                  }}</span>
+                }
+              </fieldset>
+            } @else {
+              <label class="field" [class.office-wide]="field.type === 'textarea'"
+                ><span
+                  >{{ t(field.en, field.ar) }}
+                  @if (field.required) {
+                    *
+                  }
+                </span>
+                @if (field.options) {
+                  <select
+                    [name]="field.key"
+                    [attr.name]="field.key"
+                    [(ngModel)]="form[field.key]"
+                    [required]="!!field.required"
                     [disabled]="saving()"
-                /></span>
-              } @else if (field.type === 'textarea') {
-                <textarea
-                  [name]="field.key"
-                  [attr.name]="field.key"
-                  [(ngModel)]="form[field.key]"
-                  [required]="!!field.required"
-                  rows="3"
-                  maxlength="4000"
-                  [disabled]="saving()"
-                ></textarea>
-              } @else if (field.type === 'money') {
-                <input
-                  [name]="field.key"
-                  [attr.name]="field.key"
-                  [(ngModel)]="form[field.key]"
-                  compactAmount
-                  [required]="!!field.required"
-                  placeholder="10k / 2m"
-                  [disabled]="saving()"
-                />
-              } @else if (field.type === 'checkbox') {
-                <input
-                  type="checkbox"
-                  [name]="field.key"
-                  [attr.name]="field.key"
-                  [(ngModel)]="form[field.key]"
-                  [disabled]="saving()"
-                />
-              } @else {
-                <input
-                  [name]="field.key"
-                  [attr.name]="field.key"
-                  [(ngModel)]="form[field.key]"
-                  [type]="field.type || 'text'"
-                  [required]="!!field.required"
-                  [min]="field.min ?? null"
-                  [max]="field.max ?? null"
-                  [step]="field.type === 'number' ? 'any' : null"
-                  [disabled]="saving()"
-                />
-              }
-            </label>
+                  >
+                    <option value="">{{ t('Not set', 'غير محدد') }}</option>
+                    @for (o of field.options; track o[0]) {
+                      <option [value]="o[0]">{{ t(o[1], o[2]) }}</option>
+                    }
+                  </select>
+                } @else if (field.type === 'egypt-phone') {
+                  <span class="office-phone" dir="ltr"
+                    ><span aria-hidden="true">+20</span
+                    ><input
+                      type="tel"
+                      inputmode="numeric"
+                      autocomplete="tel-national"
+                      name="ownerPhone"
+                      [(ngModel)]="form.ownerPhone"
+                      required
+                      pattern="[1-9][0-9]{8,9}"
+                      minlength="9"
+                      maxlength="10"
+                      [attr.aria-label]="t('Owner phone after +20', 'رقم المالك بعد +20')"
+                      placeholder="1001234567"
+                      [disabled]="saving()"
+                  /></span>
+                } @else if (field.type === 'textarea') {
+                  <textarea
+                    [name]="field.key"
+                    [attr.name]="field.key"
+                    [(ngModel)]="form[field.key]"
+                    [required]="!!field.required"
+                    rows="3"
+                    maxlength="4000"
+                    [disabled]="saving()"
+                  ></textarea>
+                } @else if (field.type === 'money') {
+                  <input
+                    [name]="field.key"
+                    [attr.name]="field.key"
+                    [(ngModel)]="form[field.key]"
+                    compactAmount
+                    [required]="!!field.required"
+                    placeholder="10k / 2m"
+                    [disabled]="saving()"
+                  />
+                } @else if (field.type === 'checkbox') {
+                  <input
+                    type="checkbox"
+                    [name]="field.key"
+                    [attr.name]="field.key"
+                    [(ngModel)]="form[field.key]"
+                    [disabled]="saving()"
+                  />
+                } @else {
+                  <input
+                    [name]="field.key"
+                    [attr.name]="field.key"
+                    [(ngModel)]="form[field.key]"
+                    [type]="field.type || 'text'"
+                    [required]="!!field.required"
+                    [min]="field.min ?? null"
+                    [max]="field.max ?? null"
+                    [step]="field.type === 'number' ? 'any' : null"
+                    [disabled]="saving()"
+                  />
+                }
+              </label>
+            }
           }
         </div>
       </div>

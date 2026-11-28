@@ -2,7 +2,7 @@ import { compactNumber } from '../../../compact-numbers';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CompanyUiState } from '../company-ui-state';
-import { AuthService, hasHrAccess, hasLeaveSelf } from '../../../auth.service';
+import { AuthService, brokerageCompany, hasHrAccess, hasLeaveSelf } from '../../../auth.service';
 import {
   CompanyInsightsApi,
   type CompanyReport,
@@ -178,10 +178,7 @@ export class Dashboard {
     return EVENT_COLOR[t] ?? '#111113';
   }
   /** Brokerages track leads by handling status, not by sales pipeline stage. */
-  readonly isBrokerage = computed(() => {
-    const user = this.auth.user();
-    return (user?.company?.type ?? user?.workspace?.company?.type) === 'brokerage';
-  });
+  readonly isBrokerage = computed(() => brokerageCompany(this.auth.user()));
   /** Design pipeline card: open stages, value + count, bar sized by sale value. */
   readonly stages = computed(() => {
     const st = this.stageStats();
@@ -256,7 +253,7 @@ export class Dashboard {
         route: '/company/commissions',
         bar: null,
       });
-    if (d.inventory) {
+    if (d.inventory && !this.isBrokerage()) {
       const inv = d.inventory;
       const total = Object.values(inv).reduce((a, n) => a + n, 0);
       out.push({

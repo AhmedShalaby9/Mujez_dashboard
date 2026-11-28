@@ -2,7 +2,7 @@ import { Component, computed, inject, signal, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { CompanyUiState, type Lang } from '../company-ui-state';
-import { AuthService } from '../../../auth.service';
+import { AuthService, brokerageCompany } from '../../../auth.service';
 import {
   InventoryApi,
   type Project,
@@ -113,6 +113,7 @@ export class Projects implements OnDestroy {
     () => this.auth.user()?.permissions.includes('projects.manage') ?? false,
   );
   readonly canUnits = computed(() => this.auth.user()?.permissions.includes('units.read') ?? false);
+  readonly isBrokerage = computed(() => brokerageCompany(this.auth.user()));
   readonly canManageUnits = computed(
     () => this.auth.user()?.permissions.includes('units.manage') ?? false,
   );

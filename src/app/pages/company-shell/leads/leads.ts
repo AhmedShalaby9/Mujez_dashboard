@@ -1,4 +1,5 @@
 import { CompactAmountDirective } from '../../../compact-amount.directive';
+import { PhoneInput } from '../../../phone-input';
 import { LeadUnitRecommendations } from './lead-unit-recommendations';
 import { Router, ActivatedRoute } from '@angular/router';
 import type { CompanyTask } from '../../../tasks-api.service';
@@ -28,9 +29,10 @@ import {
   type SalesActivity,
   type SalesStage,
 } from '../../../sales-api.service';
+import { InventoryApi } from '../../../inventory-api.service';
 @Component({
   selector: 'app-leads',
-  imports: [CompactAmountDirective, FormsModule, LeadUnitRecommendations],
+  imports: [CompactAmountDirective, PhoneInput, FormsModule, LeadUnitRecommendations],
   templateUrl: './leads.html',
   styleUrls: [
     '../../admin-shell/admin-ui.scss',
@@ -44,6 +46,7 @@ export class Leads {
   readonly aiModuleEnabled = aiModuleEnabled;
   readonly auth = inject(AuthService);
   readonly api = inject(SalesApi);
+  private readonly inventory = inject(InventoryApi);
   private readonly destroy = inject(DestroyRef);
   private readonly router = inject(Router, { optional: true });
   private readonly route = inject(ActivatedRoute, { optional: true });
@@ -56,6 +59,11 @@ export class Leads {
   readonly canMarketing = computed(
     () => this.auth.user()?.permissions.includes('marketing.read') ?? false,
   );
+  readonly canProjects = computed(
+    () => this.auth.user()?.permissions.includes('projects.read') ?? false,
+  );
+  readonly projects = signal<Array<{ id: string; name: { en: string; ar: string } }>>([]);
+  readonly wantTypes = signal<string[]>([]);
   readonly campaignOptions = signal<any[]>([]);
   readonly campaignTotal = signal(0);
   campaignPage = 0;
@@ -321,7 +329,7 @@ export class Leads {
     nameAr: '',
     phone: '',
     email: '',
-    segment: 'res',
+    segment: '',
     want: '',
     wantAr: '',
     budget: '',
@@ -329,6 +337,8 @@ export class Leads {
     campaignId: '',
     ownerId: '',
     score: '',
+    projectId: '',
+    firstComment: '',
   };
   private serial = 0;
   private detailSerial = 0;
@@ -376,8 +386,20 @@ export class Leads {
     try {
       const r = await this.api.get('leads/options');
       this.owners.set(r.owners);
+      this.wantTypes.set(r.wantTypes ?? []);
     } catch (e) {
       this.error.set((e as Error).message);
+    }
+    if (this.canProjects()) {
+      try {
+        const r = await this.inventory.get<{ items: Array<{ id: string; name: { en: string; ar: string } }> }>(
+          'projects',
+          { limit: '100', archived: 'active' },
+        );
+        this.projects.set(r.items);
+      } catch {
+        /* Project picker stays empty; not fatal to the lead form. */
+      }
     }
   }
   async reload(page = 1) {
@@ -601,7 +623,7 @@ export class Leads {
           nameAr: l.name.ar,
           phone: l.phone,
           email: l.email ?? '',
-          segment: l.segment,
+          segment: l.segment ?? '',
           want: l.want.en,
           wantAr: l.want.ar,
           budget: majorAmount(l.budgetMinor),
@@ -609,13 +631,15 @@ export class Leads {
           campaignId: l.campaign?.id ?? '',
           ownerId: l.owner?.id ?? '',
           score: l.score === null ? '' : String(l.score),
+          projectId: l.project?.id ?? '',
+          firstComment: '',
         }
       : {
           name: '',
           nameAr: '',
           phone: '',
           email: '',
-          segment: 'res',
+          segment: '',
           want: '',
           wantAr: '',
           budget: '',
@@ -623,6 +647,8 @@ export class Leads {
           campaignId: '',
           ownerId: 'auto',
           score: '',
+          projectId: '',
+          firstComment: '',
         };
     this.formRequest = crypto.randomUUID();
     this.formError.set('');
@@ -647,7 +673,7 @@ export class Leads {
         ...(this.draft.nameAr.trim() ? { nameAr: this.draft.nameAr.trim() } : {}),
         phone: this.draft.phone,
         email: this.draft.email.trim() || null,
-        segment: this.draft.segment,
+        segment: this.draft.segment || null,
         want: this.draft.want.trim(),
         wantAr: this.draft.wantAr.trim() || this.draft.want.trim(),
         budgetMinor: minorAmount(this.draft.budget, true),
@@ -656,6 +682,10 @@ export class Leads {
           ? {}
           : { ownerId: this.draft.ownerId || null }),
         ...(this.canMarketing() ? { campaignId: this.draft.campaignId || null } : {}),
+        ...(this.canProjects() ? { projectId: this.draft.projectId || null } : {}),
+        ...(!current && this.draft.firstComment.trim()
+          ? { firstComment: this.draft.firstComment.trim() }
+          : {}),
         score:
           this.draft.score === '' || this.draft.score === null ? null : Number(this.draft.score),
         ...(current ? { version: current.version } : {}),
@@ -811,7 +841,11 @@ export class Leads {
     return n === null ? '#A1A1A6' : n >= 85 ? '#B4442F' : n >= 75 ? '#B7791F' : '#6E6E73';
   }
   segLabel(l: SalesLead) {
-    return l.segment === 'com' ? this.t('Com', 'تجاري') : this.t('Res', 'سكني');
+    return l.segment === 'com'
+      ? this.t('Com', 'تجاري')
+      : l.segment === 'res'
+        ? this.t('Res', 'سكني')
+        : this.t('Not set', 'غير محدد');
   }
   /** Latest recorded note, from the real activity timeline. */
   readonly latestNote = computed(() => {

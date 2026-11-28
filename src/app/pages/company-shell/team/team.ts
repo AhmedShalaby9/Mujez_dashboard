@@ -2,7 +2,14 @@ import { visibleCompanyRoles } from '../../../company-role-labels';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
-import { AuthService, officeWorkspace } from '../../../auth.service';
+import {
+  AuthService,
+  officeWorkspace,
+  hrModuleEnabled,
+  financeModuleEnabled,
+} from '../../../auth.service';
+import { minorAmount } from '../../../sales-api.service';
+import { CompactAmountDirective } from '../../../compact-amount.directive';
 import { CompanyUiState } from '../company-ui-state';
 import {
   TeamApi,
@@ -18,7 +25,7 @@ import {
 
 @Component({
   selector: 'app-team',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, CompactAmountDirective],
   templateUrl: './team.html',
   styleUrls: [
     '../../admin-shell/admin-ui.scss',
@@ -70,6 +77,30 @@ export class Team {
     head_of_sales: { en: 'Head of Sales', ar: 'رئيس قطاع المبيعات' },
     sales_admin: { en: 'Sales Admin', ar: 'مسؤول إداري للمبيعات' },
   };
+  readonly departmentNames: Record<
+    'marketing' | 'sales' | 'hr' | 'finance',
+    { en: string; ar: string }
+  > = {
+    marketing: { en: 'Marketing', ar: 'التسويق' },
+    sales: { en: 'Sales', ar: 'المبيعات' },
+    hr: { en: 'HR', ar: 'الموارد البشرية' },
+    finance: { en: 'Finance', ar: 'الفاينانس' },
+  };
+  /** Every company at least markets and sells; HR/Finance departments only
+   * make sense once those modules are actually on. */
+  get departmentOptions(): readonly ('marketing' | 'sales' | 'hr' | 'finance')[] {
+    const u = this.auth.user();
+    return [
+      'marketing',
+      'sales',
+      ...(hrModuleEnabled(u) ? (['hr'] as const) : []),
+      ...(financeModuleEnabled(u) ? (['finance'] as const) : []),
+    ];
+  }
+  get canSetSalary() {
+    const u = this.auth.user();
+    return hrModuleEnabled(u) && financeModuleEnabled(u);
+  }
   readonly statusNames: Record<TeamMember['status'], { en: string; ar: string }> = {
     invited: { en: 'Invited', ar: 'تمت الدعوة' },
     active: { en: 'Active', ar: 'نشط' },
@@ -180,6 +211,9 @@ export class Team {
     this.rolesError.set('');
   }
   toggleRole(r: TeamRole, checked: boolean, invite = false) {
+    // Every invited company user is an employee first; that checkbox can't be
+    // unchecked (real estate offices don't use this role at all).
+    if (invite && r === 'employee' && !this.office) return;
     const target = invite ? this.inviteRoles : this.selectedRoles;
     target.set(checked ? [...new Set([...target(), r])] : target().filter((x) => x !== r));
   }
@@ -328,6 +362,8 @@ export class Team {
   readonly inviteName = signal('');
   readonly inviteEmail = signal('');
   readonly inviteRoles = signal<TeamRole[]>(['agent']);
+  readonly inviteDepartment = signal<'marketing' | 'sales' | 'hr' | 'finance' | ''>('');
+  readonly inviteSalary = signal('');
   readonly inviteError = signal('');
   readonly inviting = signal(false);
   readonly inviteLink = signal('');
@@ -355,7 +391,10 @@ export class Team {
     this.inviteOpen.set(true);
     this.inviteName.set('');
     this.inviteEmail.set('');
-    this.inviteRoles.set([this.isBrokerage ? 'property_advisor' : 'agent']);
+    const primary = this.isBrokerage ? 'property_advisor' : 'agent';
+    this.inviteRoles.set(this.office ? [primary] : [primary, 'employee']);
+    this.inviteDepartment.set('');
+    this.inviteSalary.set('');
     this.inviteError.set('');
     this.inviteLink.set('');
     this.createdMember.set(null);
@@ -370,10 +409,21 @@ export class Team {
     this.inviting.set(true);
     this.inviteError.set('');
     try {
+      const salary = this.inviteSalary().trim();
+      let salaryMinor: string | undefined;
+      if (this.canSetSalary && salary) {
+        try {
+          salaryMinor = minorAmount(salary) ?? undefined;
+        } catch {
+          throw new Error(this.t('Enter a valid salary amount.', 'أدخل راتبًا صحيحًا.'));
+        }
+      }
       const r = await this.api.invite({
         name: this.inviteName().trim(),
         email: this.inviteEmail().trim(),
         roles: this.inviteRoles(),
+        department: this.inviteDepartment() || undefined,
+        salaryMinor,
       });
       this.inviteLink.set(location.origin + '/activate/team#token=' + r.token);
       await this.reload();

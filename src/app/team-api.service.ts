@@ -223,7 +223,14 @@ export class TeamApi {
       version,
     });
   }
-  invite(body: { name: string; email: string; role?: TeamRole; roles?: TeamRole[] }) {
+  invite(body: {
+    name: string;
+    email: string;
+    role?: TeamRole;
+    roles?: TeamRole[];
+    department?: 'marketing' | 'sales' | 'hr' | 'finance';
+    salaryMinor?: string;
+  }) {
     return this.auth.request('/api/v1/team/invite', body) as Promise<{
       status: string;
       accountId: string;

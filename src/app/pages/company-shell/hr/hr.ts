@@ -283,6 +283,34 @@ export class Hr {
       this.saving.set(false);
     }
   }
+  readonly exporting = signal(false);
+  /** All employees with positions and salaries, as Excel or CSV. */
+  async exportEmployees(format: 'xlsx' | 'csv') {
+    if (this.exporting()) return;
+    this.exporting.set(true);
+    this.error.set('');
+    try {
+      const r = await fetch(
+        this.config.apiUrl +
+          '/api/v1/hr/employees/export?format=' +
+          format +
+          '&lang=' +
+          (this.ar() ? 'ar' : 'en'),
+        { credentials: 'include' },
+      );
+      if (!r.ok) throw new Error(this.t('Export failed', 'تعذر التصدير'));
+      const url = URL.createObjectURL(await r.blob());
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'employees.' + format;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      this.error.set((e as Error).message);
+    } finally {
+      this.exporting.set(false);
+    }
+  }
   async download(row: any) {
     this.error.set('');
     try {

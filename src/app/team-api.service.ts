@@ -17,6 +17,13 @@ export const BROKERAGE_LADDER_ROLES = [
 export const BROKERAGE_SALES_ROLES = [...BROKERAGE_LADDER_ROLES, 'sales_admin'] as const;
 /** Any role that can be a "my team" member/lead, across both company types. */
 export const TEAM_MEMBER_ROLES = [...OFFICE_SALES_ROLES, ...BROKERAGE_LADDER_ROLES] as const;
+/** Only the company admin may grant or remove these; mirrors the backend. */
+export const ADMIN_ONLY_ROLES: readonly string[] = [
+  'finance_manager',
+  'accountant',
+  'hr_manager',
+  'sales_admin',
+];
 export const TEAM_ROLES = [
   ...OFFICE_SALES_ROLES,
   ...BROKERAGE_SALES_ROLES,

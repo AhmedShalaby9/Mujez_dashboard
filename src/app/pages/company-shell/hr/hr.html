@@ -6,8 +6,22 @@
     </div>
     <div class="head__actions">
       <button class="btn" [disabled]="loading()" (click)="reload()">
-        {{ t('Refresh', 'تحديث') }}</button
-      ><button class="btn btn--dark" (click)="show()">
+        {{ t('Refresh', 'تحديث') }}
+      </button>
+      @if (view === 'employees') {
+        <button
+          type="button"
+          class="btn"
+          [disabled]="exporting()"
+          (click)="exportEmployees('xlsx')"
+        >
+          {{ t('Export Excel', 'تصدير Excel') }}
+        </button>
+        <button type="button" class="btn" [disabled]="exporting()" (click)="exportEmployees('csv')">
+          {{ t('Export CSV', 'تصدير CSV') }}
+        </button>
+      }
+      <button class="btn btn--dark" (click)="show()">
         {{
           view === 'documents'
             ? t('+ Upload document', '+ رفع مستند')

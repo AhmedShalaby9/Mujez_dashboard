@@ -138,6 +138,8 @@ const COMPANY_ICONS: Record<string, string> = {
   'audit-log': 'M5 3h10l4 4v14H5zM9 12h6M9 16h6M9 8h3',
   'office/cities': 'M3 21h18M5 21V5h6v16M11 9h8v12',
   team: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 0 0 0-6M22 21a6 6 0 0 0-4-5.6',
+  'hr/team':
+    'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 0 0 0-6M22 21a6 6 0 0 0-4-5.6',
 };
 interface NavHead {
   kind: 'head';
@@ -149,9 +151,6 @@ interface NavItem {
   label: string;
   path: string;
   count?: string;
-  /** For the 'team' entry, which duplicates into both the Administration and
-   * HR sections: which one shows, based on whether HR is enabled for the company. */
-  only?: 'hr' | 'no-hr';
 }
 
 type NavEntry = NavHead | NavItem;
@@ -238,12 +237,12 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Leave management', path: 'hr/leave' },
   { kind: 'item', label: 'Employees', path: 'hr/employees' },
   { kind: 'item', label: 'Departments', path: 'hr/departments' },
-  { kind: 'item', label: 'Team', path: 'team', only: 'hr' },
+  { kind: 'item', label: 'Team', path: 'hr/team' },
   { kind: 'item', label: 'Employee documents', path: 'hr/documents' },
   { kind: 'head', label: 'Administration' },
   { kind: 'item', label: 'Lead Routing', path: 'lead-routing' },
   { kind: 'item', label: 'Audit Log', path: 'audit-log' },
-  { kind: 'item', label: 'Team', path: 'team', only: 'no-hr' },
+  { kind: 'item', label: 'Team', path: 'team' },
   { kind: 'item', label: 'Commission Scheme', path: 'commission-scheme' },
 ];
 
@@ -301,12 +300,12 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'إدارة الإجازات', path: 'hr/leave' },
   { kind: 'item', label: 'الموظفون', path: 'hr/employees' },
   { kind: 'item', label: 'الأقسام', path: 'hr/departments' },
-  { kind: 'item', label: 'الفريق', path: 'team', only: 'hr' },
+  { kind: 'item', label: 'الفريق', path: 'hr/team' },
   { kind: 'item', label: 'مستندات الموظفين', path: 'hr/documents' },
   { kind: 'head', label: 'الإدارة' },
   { kind: 'item', label: 'توزيع العملاء', path: 'lead-routing' },
   { kind: 'item', label: 'سجل التدقيق', path: 'audit-log' },
-  { kind: 'item', label: 'الفريق', path: 'team', only: 'no-hr' },
+  { kind: 'item', label: 'الفريق', path: 'team' },
   { kind: 'item', label: 'مخطط العمولة', path: 'commission-scheme' },
 ];
 
@@ -423,11 +422,10 @@ export class CompanyShell {
     const kept: NavEntry[] = [];
     const canSee = (item: NavItem) => {
       const u = this.auth.user();
+      // With HR on, the team lives at hr/team. Read-only platform workspaces have
+      // no HR access, so they keep the Administration entry.
       if (item.path === 'team')
-        return (
-          (item.only === 'hr' ? hrModuleEnabled(u) : !hrModuleEnabled(u)) &&
-          perms.includes('team.read')
-        );
+        return (!hrModuleEnabled(u) || !!u?.workspace) && perms.includes('team.read');
       if (item.path === 'office/my-team')
         return (
           u?.pool === 'company_user' &&

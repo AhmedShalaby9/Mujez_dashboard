@@ -99,6 +99,12 @@ export function hasHrAccess(u: User | null | undefined) {
     (u.roles ?? [u.role]).some((r) => r === 'hr_manager' || r === 'hr_officer')
   );
 }
+/** With the HR module on, employees and teams are managed in the HR section. */
+export const hrTeamRedirect: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return hasHrAccess(auth.user()) ? router.createUrlTree(['/company/hr/team']) : true;
+};
 export function aiModuleEnabled(u: User | null | undefined) {
   return !!u && u.company?.aiEnabled !== false;
 }

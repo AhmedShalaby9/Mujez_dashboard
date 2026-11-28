@@ -13,6 +13,7 @@ import {
   commonFilters,
   purposes,
   propertyTypes,
+  listingTypes,
   furnishing,
   clientStatuses,
   propertyStatuses,
@@ -71,7 +72,7 @@ export class Office {
   filters: Record<string, any> = {};
   filterName = '';
   savedId = '';
-  advanced = false;
+  filtersOpen = false;
   lookup = '';
   matchPurpose = 'rent';
   private requestId = '';
@@ -85,6 +86,32 @@ export class Office {
   readonly clientStatuses = clientStatuses;
   readonly propertyStatuses = propertyStatuses;
   readonly dealStatuses = dealStatuses;
+  readonly listingTypes = listingTypes;
+  visibleFields() {
+    if (this.mode() !== 'property') return this.fields();
+    const type = this.form.listingType;
+    return this.fields().filter((field) => {
+      if (field.key === 'salePrice') return type?.startsWith('sale_') || type === 'both';
+      if (field.key === 'downPayment') return type === 'sale_installments';
+      if (['rentPrice', 'deposit', 'minLeaseMonths'].includes(field.key))
+        return type === 'rent' || type === 'rent_furnished' || type === 'both';
+      if (field.key === 'furnishing') return type !== 'rent_furnished';
+      return true;
+    });
+  }
+  listingLabel(data: any) {
+    const type =
+      data.listingType ||
+      (data.purpose === 'sale'
+        ? 'sale_cash'
+        : data.purpose === 'rent'
+          ? data.furnishing === 'furnished'
+            ? 'rent_furnished'
+            : 'rent'
+          : 'both');
+    const item = listingTypes.find((x) => x[0] === type);
+    return item ? this.t(item[1], item[2]) : this.label(type);
+  }
   cityOptions(includeArchived = false): [string, string, string][] {
     return (this.options().cities ?? [])
       .filter((c: any) => includeArchived || !c.archived || c.id === this.form.cityId)
@@ -238,6 +265,7 @@ export class Office {
     }
   }
   apply() {
+    this.filtersOpen = false;
     this.page.set(1);
     void this.load();
   }
@@ -315,11 +343,14 @@ export class Office {
       ];
     if (this.view === 'properties')
       return [
-        ...commonFilters,
+        ...commonFilters.filter((f) => f.key !== 'purpose'),
+        { key: 'listingType', en: 'Listing type', ar: 'نوع العرض', options: listingTypes },
         ...extra,
         { key: 'createdBy', en: 'Added by', ar: 'أضيف بواسطة', options: staff },
         { key: 'city', en: 'Project', ar: 'مشروع', options: this.cityOptions(true) },
         { key: 'finish', en: 'Finishing', ar: 'التشطيب' },
+        { key: 'groupName', en: 'Group / compound', ar: 'المجموعة / الكمبوند' },
+        { key: 'deliveryYear', en: 'Delivery year', ar: 'سنة الاستلام', type: 'number' },
         { key: 'minFloor', en: 'Minimum floor', ar: 'أقل دور', type: 'number' },
         { key: 'maxFloor', en: 'Maximum floor', ar: 'أعلى دور', type: 'number' },
         { key: 'verifiedBefore', en: 'Last confirmed before', ar: 'آخر تأكيد قبل', type: 'date' },
@@ -470,15 +501,22 @@ export class Office {
         cityId: '',
         areaName: '',
         address: '',
+        groupName: '',
+        buildingNumber: '',
+        unitNumber: '',
         type: 'apartment',
         purpose: 'rent',
+        listingType: 'rent',
         furnishing: 'unfurnished',
         bedrooms: null,
         bathrooms: null,
         area: null,
         floor: null,
         finish: '',
+        additions: '',
+        deliveryYear: null,
         salePrice: '',
+        downPayment: '',
         rentPrice: '',
         deposit: '',
         minLeaseMonths: 1,
@@ -500,7 +538,17 @@ export class Office {
                 '',
               photos: (row.data.photos ?? []).join('\n'),
               salePrice: row.data.saleMinor ? majorAmount(row.data.saleMinor) : '',
+              downPayment: row.data.downPaymentMinor ? majorAmount(row.data.downPaymentMinor) : '',
               rentPrice: row.data.rentMinor ? majorAmount(row.data.rentMinor) : '',
+              listingType:
+                row.data.listingType ??
+                (row.data.purpose === 'both'
+                  ? 'both'
+                  : row.data.purpose === 'sale'
+                    ? 'sale_cash'
+                    : row.data.furnishing === 'furnished'
+                      ? 'rent_furnished'
+                      : 'rent'),
               deposit: row.data.depositMinor ? majorAmount(row.data.depositMinor) : '',
               responsibleId: row.responsible.id,
               status: row.status,
@@ -509,7 +557,21 @@ export class Office {
       };
       this.fields.set([
         ...propertyFields.map((f) =>
-          f.key === 'cityId' ? { ...f, options: this.cityOptions() } : f,
+          f.key === 'cityId'
+            ? { ...f, options: this.cityOptions() }
+            : f.key === 'listingType' && row?.data.purpose === 'both'
+              ? {
+                  ...f,
+                  options: [
+                    ...listingTypes,
+                    ['both', 'Sale and rent (existing)', 'بيع وإيجار (عرض حالي)'] as [
+                      string,
+                      string,
+                      string,
+                    ],
+                  ],
+                }
+              : f,
         ),
         ...(row && ['available', 'withdrawn'].includes(row.status)
           ? [
@@ -586,8 +648,7 @@ export class Office {
           ar: 'الغرض',
           options: purposes.filter(
             (p) =>
-              p[0] !== 'both' &&
-              (!row || row.data.purpose === 'both' || p[0] === row.data.purpose),
+              p[0] !== 'both' && (!row || row.data.purpose === 'both' || p[0] === row.data.purpose),
           ),
         },
         { key: 'notes', en: 'Agreement notes', ar: 'ملاحظات الاتفاق', type: 'textarea' },
@@ -778,8 +839,7 @@ export class Office {
         ar: 'الغرض',
         options: purposes.filter(
           (p) =>
-            p[0] !== 'both' &&
-            (property.data.purpose === 'both' || p[0] === property.data.purpose),
+            p[0] !== 'both' && (property.data.purpose === 'both' || p[0] === property.data.purpose),
         ),
       },
       { key: 'notes', en: 'Agreement notes', ar: 'ملاحظات الاتفاق', type: 'textarea' },
@@ -864,13 +924,24 @@ export class Office {
         'cityId',
         'areaName',
         'address',
+        'groupName',
+        'buildingNumber',
+        'unitNumber',
         'type',
-        'purpose',
         'furnishing',
         'finish',
         'description',
+        'additions',
       ])
         d[key] = f[key] ?? '';
+      if (f.listingType !== 'both') d.listingType = f.listingType;
+      d.purpose =
+        f.listingType === 'both'
+          ? 'both'
+          : String(f.listingType).startsWith('sale_')
+            ? 'sale'
+            : 'rent';
+      if (f.listingType === 'rent_furnished') d.furnishing = 'furnished';
       for (const key of ['bedrooms', 'bathrooms', 'area', 'floor'])
         d[key] = f[key] === '' || f[key] == null ? null : Number(f[key]);
       Object.assign(d, {
@@ -879,10 +950,13 @@ export class Office {
           .split('\n')
           .map((x) => x.trim())
           .filter(Boolean),
-        saleMinor: this.amount(f.salePrice),
-        rentMinor: this.amount(f.rentPrice),
-        depositMinor: this.amount(f.deposit),
-        minLeaseMonths: Number(f.minLeaseMonths),
+        saleMinor: d.purpose !== 'rent' ? this.amount(f.salePrice) : null,
+        downPaymentMinor: f.listingType === 'sale_installments' ? this.amount(f.downPayment) : null,
+        rentMinor: d.purpose !== 'sale' ? this.amount(f.rentPrice) : null,
+        depositMinor: d.purpose !== 'sale' ? this.amount(f.deposit) : null,
+        minLeaseMonths: d.purpose !== 'sale' ? Number(f.minLeaseMonths) : 1,
+        deliveryYear:
+          f.deliveryYear === '' || f.deliveryYear == null ? null : Number(f.deliveryYear),
         availableOn: f.availableOn || null,
         verifiedOn: f.verifiedOn || null,
         negotiable: !!f.negotiable,

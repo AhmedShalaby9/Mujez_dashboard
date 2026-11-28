@@ -107,11 +107,20 @@
           @if (stages() || d.keyDates !== null) {
             <section class="card content-panel content-panel--wide">
               <div class="c-head">
-                <h2>{{ text('Pipeline', 'خط الصفقات') }}</h2>
+                <h2>
+                  {{
+                    isBrokerage()
+                      ? text('Lead statuses', 'حالات العملاء')
+                      : text('Pipeline', 'خط الصفقات')
+                  }}
+                </h2>
                 @if (stages(); as s) {
-                  <span class="mono muted small"
-                    >{{ api.money(s.total) }} · {{ s.count }} {{ text('open', 'مفتوحة') }}</span
-                  >
+                  <span class="mono muted small">
+                    @if (!isBrokerage()) {
+                      {{ api.money(s.total) }} ·
+                    }
+                    {{ s.count }} {{ text('open', 'مفتوحة') }}
+                  </span>
                 }
                 <a class="c-link" routerLink="/company/pipeline">{{
                   text('Open board', 'فتح اللوحة')
@@ -131,17 +140,27 @@
                           ><span class="dot" [style.background]="r.color"></span
                           >{{ stageName(r.key) }}</span
                         >
-                        <span class="stage__val mono">{{ api.money(r.value) }}</span>
-                        <span class="sub">{{ r.count }} {{ text('deals', 'صفقات') }}</span>
+                        @if (isBrokerage()) {
+                          <span class="stage__val mono">{{ r.count }}</span>
+                          <span class="sub">{{ text('leads', 'عملاء') }}</span>
+                        } @else {
+                          <span class="stage__val mono">{{ api.money(r.value) }}</span>
+                          <span class="sub">{{ r.count }} {{ text('deals', 'صفقات') }}</span>
+                        }
                       </a>
                     }
                   </div>
                   @if (segment() !== 'all') {
                     <span class="sub">{{
-                      text(
-                        'Pipeline stages include all segments.',
-                        'مراحل الصفقات تشمل كل القطاعات.'
-                      )
+                      isBrokerage()
+                        ? text(
+                            'Lead statuses include all segments.',
+                            'حالات العملاء تشمل كل القطاعات.'
+                          )
+                        : text(
+                            'Pipeline stages include all segments.',
+                            'مراحل الصفقات تشمل كل القطاعات.'
+                          )
                     }}</span>
                   }
                 </div>

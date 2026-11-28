@@ -148,6 +148,9 @@ interface NavItem {
   label: string;
   path: string;
   count?: string;
+  /** For the 'team' entry, which duplicates into both the Administration and
+   * HR sections: which one shows, based on whether HR is enabled for the company. */
+  only?: 'hr' | 'no-hr';
 }
 
 type NavEntry = NavHead | NavItem;
@@ -234,11 +237,12 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Leave management', path: 'hr/leave' },
   { kind: 'item', label: 'Employees', path: 'hr/employees' },
   { kind: 'item', label: 'Departments', path: 'hr/departments' },
+  { kind: 'item', label: 'Team', path: 'team', only: 'hr' },
   { kind: 'item', label: 'Employee documents', path: 'hr/documents' },
   { kind: 'head', label: 'Administration' },
   { kind: 'item', label: 'Lead Routing', path: 'lead-routing' },
   { kind: 'item', label: 'Audit Log', path: 'audit-log' },
-  { kind: 'item', label: 'Team', path: 'team' },
+  { kind: 'item', label: 'Team', path: 'team', only: 'no-hr' },
   { kind: 'item', label: 'Commission Scheme', path: 'commission-scheme' },
 ];
 
@@ -296,11 +300,12 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'إدارة الإجازات', path: 'hr/leave' },
   { kind: 'item', label: 'الموظفون', path: 'hr/employees' },
   { kind: 'item', label: 'الأقسام', path: 'hr/departments' },
+  { kind: 'item', label: 'الفريق', path: 'team', only: 'hr' },
   { kind: 'item', label: 'مستندات الموظفين', path: 'hr/documents' },
   { kind: 'head', label: 'الإدارة' },
   { kind: 'item', label: 'توزيع العملاء', path: 'lead-routing' },
   { kind: 'item', label: 'سجل التدقيق', path: 'audit-log' },
-  { kind: 'item', label: 'الفريق', path: 'team' },
+  { kind: 'item', label: 'الفريق', path: 'team', only: 'no-hr' },
   { kind: 'item', label: 'مخطط العمولة', path: 'commission-scheme' },
 ];
 
@@ -417,6 +422,11 @@ export class CompanyShell {
     const kept: NavEntry[] = [];
     const canSee = (item: NavItem) => {
       const u = this.auth.user();
+      if (item.path === 'team')
+        return (
+          (item.only === 'hr' ? hrModuleEnabled(u) : !hrModuleEnabled(u)) &&
+          perms.includes('team.read')
+        );
       if (item.path === 'office/my-team')
         return (
           u?.pool === 'company_user' &&

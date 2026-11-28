@@ -362,7 +362,8 @@
               <label class="role-option"
                 ><input
                   type="checkbox"
-                  [checked]="inviteRoles().includes(r)"
+                  [checked]="r === 'employee' || inviteRoles().includes(r)"
+                  [disabled]="inviting() || r === 'employee'"
                   (change)="toggleRole(r, $any($event.target).checked, true)"
                 />{{ roleNames[r][lang()] }}</label
               >
@@ -377,6 +378,34 @@
                 )
               }}
             </p>
+            <label class="field">
+              <span>{{ t('Department', 'القسم') }}</span>
+              <select
+                [ngModel]="inviteDepartment()"
+                (ngModelChange)="inviteDepartment.set($event)"
+                name="department"
+              >
+                <option value="">{{ t('No department', 'بدون قسم') }}</option>
+                @for (d of departmentOptions; track d) {
+                  <option [value]="d">{{ departmentNames[d][lang()] }}</option>
+                }
+              </select>
+            </label>
+            @if (canSetSalary) {
+              <label class="field">
+                <span>{{
+                  t('Starting salary (EGP, optional)', 'الراتب الابتدائي (جنيه، اختياري)')
+                }}</span>
+                <input
+                  compactAmount
+                  class="mono"
+                  [ngModel]="inviteSalary()"
+                  (ngModelChange)="inviteSalary.set($event)"
+                  name="salary"
+                  [placeholder]="t('e.g. 10k', 'مثال: 10k')"
+                />
+              </label>
+            }
           }
         </div>
         <div class="dialog__foot">
@@ -599,11 +628,9 @@
             }}</label
           >
           <label class="role-option"
-            ><input
-              type="checkbox"
-              [(ngModel)]="perm.deleteProperties"
-              name="deleteProperties"
-            />{{ t('Delete properties', 'حذف العقارات') }}</label
+            ><input type="checkbox" [(ngModel)]="perm.deleteProperties" name="deleteProperties" />{{
+              t('Delete properties', 'حذف العقارات')
+            }}</label
           >
         </fieldset>
         <fieldset class="role-options" [disabled]="permSaving()">

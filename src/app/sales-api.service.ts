@@ -35,6 +35,43 @@ export const BROKERAGE_LEAD_STATUSES = [
   'meeting_done',
 ] as const;
 export type BrokerageLeadStatus = (typeof BROKERAGE_LEAD_STATUSES)[number];
+/** Dot/bar color for every pipeline stage and brokerage lead status. */
+export const STAGE_COLORS: Record<string, string> = {
+  new: '#C4C4BE',
+  attempting: '#E0A24B',
+  contacted: '#4FB0C6',
+  qualified: '#5B78E5',
+  nurturing: '#9B7BD4',
+  unresponsive: '#9A9A94',
+  viewing: '#D99A28',
+  offer: '#8BB33A',
+  contract: '#111113',
+  won: '#2FA35F',
+  lost: '#E2553B',
+  unqualified: '#B8564A',
+  new_lead: '#C4C4BE',
+  call_back: '#E0A24B',
+  hot_case: '#E2553B',
+  low_budget: '#9A9A94',
+  no_answer: '#4FB0C6',
+  non_potential: '#9A9A94',
+  potential: '#5B78E5',
+  resale: '#9B7BD4',
+  wrong_number: '#B8564A',
+  switched_off: '#4FB0C6',
+  whatsapp: '#2FA35F',
+  closed_deal: '#2FA35F',
+  closed_outside: '#8A8A90',
+  eoi: '#8BB33A',
+  meeting_scheduled: '#D99A28',
+  meeting_done: '#2FA35F',
+};
+/** Brokerage statuses that take a lead out of the open list. */
+export const CLOSED_BROKERAGE_STATUSES: readonly string[] = [
+  'closed_deal',
+  'closed_outside',
+  'non_potential',
+];
 /** Stages that take a lead out of the active pipeline. */
 export const CLOSED_STAGES: readonly SalesStage[] = ['won', 'lost', 'unqualified'];
 export const isClosedStage = (s: string) => (CLOSED_STAGES as readonly string[]).includes(s);

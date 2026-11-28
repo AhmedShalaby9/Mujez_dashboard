@@ -11,9 +11,13 @@ import {
 import {
   SalesApi,
   SALES_STAGES,
+  BROKERAGE_LEAD_STATUSES,
+  CLOSED_BROKERAGE_STATUSES,
+  STAGE_COLORS,
   STAGE_NAMES,
   isClosedStage,
   type SalesStage,
+  type BrokerageLeadStatus,
 } from '../../../sales-api.service';
 import type { CalendarEvent } from '../../../calendar-api.service';
 type Segment = 'all' | 'res' | 'com';
@@ -26,20 +30,9 @@ const ALERTS: Record<string, [string, string]> = {
   'routing-worker': ['Routing worker needs attention', 'عامل التوزيع يحتاج مراجعة'],
 };
 const OPEN_STAGES: SalesStage[] = SALES_STAGES.filter((s) => !isClosedStage(s));
-const STAGE_COLOR: Record<string, string> = {
-  new: '#C4C4BE',
-  attempting: '#E0A24B',
-  contacted: '#4FB0C6',
-  qualified: '#5B78E5',
-  nurturing: '#9B7BD4',
-  unresponsive: '#9A9A94',
-  viewing: '#D99A28',
-  offer: '#8BB33A',
-  contract: '#111113',
-  won: '#2FA35F',
-  lost: '#E2553B',
-  unqualified: '#B8564A',
-};
+const OPEN_BROKERAGE_STATUSES: BrokerageLeadStatus[] = BROKERAGE_LEAD_STATUSES.filter(
+  (s) => !CLOSED_BROKERAGE_STATUSES.includes(s),
+);
 const EVENT_COLOR: Record<string, string> = {
   viewing: '#D99A28',
   call: '#5B78E5',
@@ -79,7 +72,7 @@ export class Dashboard {
   readonly data = signal<Overview | null>(null);
   /** Per-stage counts / sale value from GET /pipeline (all segments). */
   readonly stageStats = signal<Array<{
-    stage: SalesStage;
+    stage: SalesStage | BrokerageLeadStatus;
     count: number;
     saleMinor: string;
   }> | null>(null);
@@ -184,15 +177,21 @@ export class Dashboard {
   eventColor(t: string) {
     return EVENT_COLOR[t] ?? '#111113';
   }
+  /** Brokerages track leads by handling status, not by sales pipeline stage. */
+  readonly isBrokerage = computed(() => {
+    const user = this.auth.user();
+    return (user?.company?.type ?? user?.workspace?.company?.type) === 'brokerage';
+  });
   /** Design pipeline card: open stages, value + count, bar sized by sale value. */
   readonly stages = computed(() => {
     const st = this.stageStats();
     if (!st) return null;
-    const rows = OPEN_STAGES.map((s) => {
+    const brokerage = this.isBrokerage();
+    const rows = (brokerage ? OPEN_BROKERAGE_STATUSES : OPEN_STAGES).map((s) => {
       const r = st.find((x) => x.stage === s);
-      return { key: s, count: r?.count ?? 0, value: r?.saleMinor ?? '0', color: STAGE_COLOR[s] };
+      return { key: s, count: r?.count ?? 0, value: r?.saleMinor ?? '0', color: STAGE_COLORS[s] };
     });
-    const total = rows.reduce((a, r) => a + BigInt(r.value), 0n);
+    const total = brokerage ? 0n : rows.reduce((a, r) => a + BigInt(r.value), 0n);
     const totalCount = rows.reduce((a, r) => a + r.count, 0);
     return {
       total: total.toString(),

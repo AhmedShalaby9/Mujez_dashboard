@@ -7,6 +7,8 @@ import {
   SalesApi,
   SALES_STAGES,
   BROKERAGE_LEAD_STATUSES,
+  STAGE_COLORS,
+  CLOSED_BROKERAGE_STATUSES,
   isClosedStage,
   STAGE_NAMES,
   salesMoney,
@@ -65,7 +67,7 @@ export class Pipeline {
   }
   isClosed(status: string) {
     return this.isBrokerage()
-      ? ['closed_deal', 'closed_outside', 'non_potential'].includes(status)
+      ? CLOSED_BROKERAGE_STATUSES.includes(status)
       : isClosedStage(status);
   }
   readonly columns = computed(() =>
@@ -131,26 +133,7 @@ export class Pipeline {
       if (serial === this.serial) this.loading.set(false);
     }
   }
-  readonly stageColor: Record<string, string> = {
-    new: '#C4C4BE',
-    attempting: '#E0A24B',
-    contacted: '#4FB0C6',
-    qualified: '#5B78E5',
-    nurturing: '#9B7BD4',
-    unresponsive: '#9A9A94',
-    viewing: '#D99A28',
-    offer: '#8BB33A',
-    contract: '#111113',
-    won: '#2FA35F',
-    lost: '#E2553B',
-    unqualified: '#B8564A',
-    new_lead: '#C4C4BE', call_back: '#E0A24B', hot_case: '#E2553B',
-    low_budget: '#9A9A94', no_answer: '#4FB0C6', non_potential: '#9A9A94',
-    potential: '#5B78E5', resale: '#9B7BD4', wrong_number: '#B8564A',
-    switched_off: '#4FB0C6', whatsapp: '#2FA35F', closed_deal: '#2FA35F',
-    closed_outside: '#8A8A90', eoi: '#8BB33A',
-    meeting_scheduled: '#D99A28', meeting_done: '#2FA35F',
-  };
+  readonly stageColor = STAGE_COLORS;
   readonly toast = signal('');
   private say(msg: string) {
     this.toast.set(msg);

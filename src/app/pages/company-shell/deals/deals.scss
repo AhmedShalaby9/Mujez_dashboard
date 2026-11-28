@@ -210,7 +210,8 @@ button {
   font-size: 12px;
 }
 .row em,
-.badges em {
+.badges em,
+.commission-status em {
   font-style: normal;
   font-size: 12px;
   padding: 4px 9px;
@@ -224,13 +225,15 @@ button {
 }
 .row em.reservation,
 .row em.pending,
-.badges em.pending {
+.badges em.pending,
+.commission-status em.pending {
   background: var(--warning-bg);
   color: var(--warning-text);
 }
 .row em.contracted,
 .row em.approved,
-.badges em.approved {
+.badges em.approved,
+.commission-status em.approved {
   background: var(--success-bg);
   color: var(--success-text);
 }
@@ -350,6 +353,17 @@ button {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+.commission-status {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+  a {
+    font-size: 12.5px;
+    color: var(--ink, #111113);
+    text-decoration: underline;
+  }
 }
 .wizard-overlay {
   justify-content: center;

@@ -8,6 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { RUNTIME_CONFIG } from '../../../runtime-config';
 import { FormsModule } from '@angular/forms';
 import { AuthService, officeWorkspace, type User } from '../../../auth.service';
@@ -17,6 +18,7 @@ import {
   type DealOptions,
   type DealStatus,
 } from '../../../brokerage-deals-api.service';
+import { DealCommissionsApi, type CommissionEntry } from '../../../deal-commissions-api.service';
 import { CompanyUiState } from '../company-ui-state';
 
 type Upload = { kind: string; fileName: string; mimeType: string; data: string };
@@ -60,13 +62,15 @@ const empty = () => ({
 });
 @Component({
   selector: 'app-brokerage-deals',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, RouterLink],
   templateUrl: './deals.html',
   styleUrls: ['../company-ui.scss', './deals.scss'],
 })
 export class Deals {
   readonly config = inject(RUNTIME_CONFIG);
   readonly api = inject(BrokerageDealsApi);
+  readonly commissionsApi = inject(DealCommissionsApi);
+  readonly dealCommissions = signal<CommissionEntry[]>([]);
   readonly auth = inject(AuthService);
   readonly ui = inject(CompanyUiState);
   readonly ar = computed(() => this.ui.lang() === 'ar');
@@ -350,11 +354,17 @@ export class Deals {
     this.error.set('');
   }
   async open(id: string) {
+    this.dealCommissions.set([]);
     try {
       this.selected.set(await this.api.detail(id));
       this.error.set('');
     } catch (e) {
       this.error.set(this.message(e));
+    }
+    try {
+      this.dealCommissions.set((await this.commissionsApi.list({ dealId: id })).items);
+    } catch {
+      /* commission status is a nice-to-have on this panel; the deal itself already loaded */
     }
   }
   editDeal() {

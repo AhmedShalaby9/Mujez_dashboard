@@ -72,6 +72,7 @@ export const clientFields: OfficeField[] = [
   { key: 'source', en: 'Source', ar: 'المصدر', required: true },
   { key: 'status', en: 'Stage', ar: 'المرحلة', options: clientStatuses },
   { key: 'purpose', en: 'Looking to', ar: 'الغرض', options: purposes, required: true },
+  { key: 'projectIds', en: 'Projects', ar: 'المشاريع', type: 'projects' },
   {
     key: 'areas',
     en: 'Preferred areas (one per line)',

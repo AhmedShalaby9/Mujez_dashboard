@@ -3,6 +3,7 @@ import {
   companyGuard,
   passwordChangeGuard,
   brokerageReservationsRedirect,
+  hrTeamRedirect,
   brokerageUnitsRedirect,
   brokerageCompany,
   AuthService,
@@ -378,6 +379,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/company-shell/leave/leave').then((m) => m.Leave),
       },
       {
+        path: 'hr/team',
+        data: { hrAccess: true },
+        loadComponent: () => import('./pages/company-shell/team/team').then((m) => m.Team),
+      },
+      {
         path: 'hr/employees',
         data: { hrAccess: true, hrView: 'employees' },
         loadComponent: () => import('./pages/company-shell/hr/hr').then((m) => m.Hr),
@@ -588,6 +594,7 @@ export const routes: Routes = [
       },
       {
         path: 'team',
+        canActivate: [hrTeamRedirect],
         data: { permission: 'team.read' },
         loadComponent: () => import('./pages/company-shell/team/team').then((m) => m.Team),
       },

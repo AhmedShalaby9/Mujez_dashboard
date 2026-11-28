@@ -113,7 +113,7 @@
                       <span class="role-badge">{{ roleNames[r][lang()] }}</span>
                     }
                   </span>
-                  @if (canAssignRoles()) {
+                  @if (canEditRoles(m)) {
                     <button
                       type="button"
                       class="btn btn--sm"
@@ -123,7 +123,7 @@
                     >
                       {{ t('Edit roles', 'تعديل الأدوار') }}
                     </button>
-                    @if (office) {
+                    @if (office && isAdmin()) {
                       <button
                         type="button"
                         class="btn btn--sm"
@@ -155,7 +155,7 @@
                 </td>
                 <td class="soft">{{ m.createdAt | date: 'MMM d, y' }}</td>
                 <td class="end">
-                  @if (canManage()) {
+                  @if (canManageAccount(m)) {
                     <span class="acts">
                       @if (m.status === 'invited') {
                         <button
@@ -310,7 +310,7 @@
         </div>
       </div>
       <div class="dialog__foot">
-        @if (office && createdMember()) {
+        @if (office && isAdmin() && createdMember()) {
           <button type="button" class="btn" (click)="setPermissionsForCreated()">
             {{ t('Set permissions', 'تحديد الصلاحيات') }}
           </button>
@@ -363,7 +363,7 @@
                 ><input
                   type="checkbox"
                   [checked]="r === 'employee' || inviteRoles().includes(r)"
-                  [disabled]="inviting() || r === 'employee'"
+                  [disabled]="inviting() || r === 'employee' || roleLocked(r)"
                   (change)="toggleRole(r, $any($event.target).checked, true)"
                 />{{ roleNames[r][lang()] }}</label
               >
@@ -540,6 +540,16 @@
         @if (rolesError()) {
           <p class="note note--bad" role="alert">{{ rolesError() }}</p>
         }
+        @if (isHr()) {
+          <p class="muted">
+            {{
+              t(
+                'Finance Manager, Accountant, HR Manager and Sales Admin are assigned by the company admin.',
+                'أدوار المدير المالي والمحاسب ومدير الموارد البشرية ومسؤول المبيعات يحددها مسؤول الشركة.'
+              )
+            }}
+          </p>
+        }
         <fieldset class="role-options" [disabled]="!!busy()">
           <legend>{{ t('Assigned roles', 'الأدوار المسندة') }}</legend>
           @for (r of roles; track r) {
@@ -547,6 +557,7 @@
               ><input
                 type="checkbox"
                 [checked]="selectedRoles().includes(r)"
+                [disabled]="roleLocked(r)"
                 (change)="toggleRole(r, $any($event.target).checked)"
               />{{ roleNames[r][lang()] }}</label
             >

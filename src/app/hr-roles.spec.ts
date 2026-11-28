@@ -79,7 +79,7 @@ describe('HR-role navigation and boundaries', () => {
     auth.user.set(user('payroll_officer', ['payroll_officer'], []));
     expect(auth.homePath()).toBe('/company/dashboard');
   });
-  it('shows HR pages to HR staff without sales, finance or role management links', async () => {
+  it('shows HR pages, including the team, to HR staff without sales or finance links', async () => {
     const current = signal<any>(user('hr_officer'));
     TestBed.configureTestingModule({
       providers: [
@@ -109,6 +109,7 @@ describe('HR-role navigation and boundaries', () => {
       '/company/hr/work-schedules',
       '/company/hr/employees',
       '/company/hr/departments',
+      '/company/hr/team',
       '/company/hr/documents',
     ]);
     expect(f.componentInstance.me.role).toBe('HR Officer');

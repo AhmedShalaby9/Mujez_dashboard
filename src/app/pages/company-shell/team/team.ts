@@ -7,6 +7,7 @@ import {
   officeWorkspace,
   hrModuleEnabled,
   financeModuleEnabled,
+  hasHrAccess,
 } from '../../../auth.service';
 import { minorAmount } from '../../../sales-api.service';
 import { CompactAmountDirective } from '../../../compact-amount.directive';
@@ -16,6 +17,7 @@ import {
   TEAM_ROLES,
   OFFICE_SALES_ROLES,
   TEAM_MEMBER_ROLES,
+  ADMIN_ONLY_ROLES,
   type TeamMember,
   type TeamRole,
   type SalesTeam,
@@ -99,7 +101,7 @@ export class Team {
   }
   get canSetSalary() {
     const u = this.auth.user();
-    return hrModuleEnabled(u) && financeModuleEnabled(u);
+    return !this.isHr() && hrModuleEnabled(u) && financeModuleEnabled(u);
   }
   readonly statusNames: Record<TeamMember['status'], { en: string; ar: string }> = {
     invited: { en: 'Invited', ar: 'تمت الدعوة' },
@@ -108,18 +110,41 @@ export class Team {
   };
 
   private readonly auth = inject(AuthService);
+  /** HR staff manage the team when the HR module is on, within limits. */
+  readonly isHr = computed(() => {
+    const u = this.auth.user();
+    return u?.pool === 'company_user' && hasHrAccess(u);
+  });
   readonly canManage = computed(
     () =>
-      (this.auth.user()?.permissions ?? []).includes('team.manage') &&
-      this.auth.user()?.workspace?.mode !== 'read',
+      this.isHr() ||
+      ((this.auth.user()?.permissions ?? []).includes('team.manage') &&
+        this.auth.user()?.workspace?.mode !== 'read'),
   );
-  readonly canAssignRoles = computed(
+  readonly isAdmin = computed(
     () =>
       this.canManage() &&
       this.auth.user()?.pool === 'company_admin' &&
       this.auth.user()?.role === 'company_owner' &&
       !this.auth.user()?.workspace,
   );
+  readonly canAssignRoles = computed(() => this.isAdmin() || this.isHr());
+  roleLocked(r: TeamRole) {
+    return this.isHr() && ADMIN_ONLY_ROLES.includes(r);
+  }
+  /** HR cannot change their own account. */
+  canEditRoles(m: TeamMember) {
+    return this.canAssignRoles() && !(this.isHr() && m.userId === this.auth.user()?.id);
+  }
+  /** HR cannot suspend or re-invite themselves or an admin-only role holder. */
+  canManageAccount(m: TeamMember) {
+    if (!this.canManage()) return false;
+    if (!this.isHr()) return true;
+    return (
+      m.userId !== this.auth.user()?.id &&
+      !(m.roles ?? [m.role]).some((r) => ADMIN_ONLY_ROLES.includes(r))
+    );
+  }
   readonly tab = signal<'members' | 'teams'>('members');
   readonly groups = signal<SalesTeam[]>([]);
   readonly editing = signal<SalesTeam | null>(null);
@@ -268,7 +293,7 @@ export class Team {
     }
   }
   async editPermissions(m: TeamMember) {
-    if (!this.office || !this.canAssignRoles()) return;
+    if (!this.office || !this.isAdmin()) return;
     this.permMember.set(m);
     this.permError.set('');
     this.permOpen.set(true);

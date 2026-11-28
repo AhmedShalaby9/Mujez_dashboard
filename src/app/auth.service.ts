@@ -55,6 +55,12 @@ export const brokerageReservationsRedirect: CanActivateFn = () => {
   const router = inject(Router);
   return brokerageCompany(auth.user()) ? router.createUrlTree(['/company/deals']) : true;
 };
+/** Brokerages browse the shared catalog; they have no company-owned unit stock page. */
+export const brokerageUnitsRedirect: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return brokerageCompany(auth.user()) ? router.createUrlTree(['/company/catalog/units']) : true;
+};
 export function hrModuleEnabled(u: User | null | undefined) {
   return !!u && u.company?.hrEnabled !== false;
 }

@@ -178,11 +178,15 @@
           ><b>{{ owner(c) }}</b>
           @if (c.unitId) {
             <span>{{ L().thUnit }}</span
-            ><b
-              ><a [routerLink]="['/company/units']" [queryParams]="{ unitId: c.unitId }">{{
-                c.unit
-              }}</a></b
-            >
+            ><b>
+              @if (isBrokerage()) {
+                {{ c.unit }}
+              } @else {
+                <a [routerLink]="['/company/units']" [queryParams]="{ unitId: c.unitId }">{{
+                  c.unit
+                }}</a>
+              }
+            </b>
           }
           @if (c.sharedReference) {
             <span>{{ t('Shared ref.', 'مرجع المشاركة') }}</span

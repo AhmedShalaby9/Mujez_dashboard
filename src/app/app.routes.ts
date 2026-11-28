@@ -4,8 +4,11 @@ import {
   passwordChangeGuard,
   brokerageReservationsRedirect,
   brokerageUnitsRedirect,
+  brokerageCompany,
+  AuthService,
 } from './auth.service';
 import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
 
 export const routes: Routes = [
   {
@@ -529,7 +532,11 @@ export const routes: Routes = [
         path: 'contracts',
         data: { permission: 'contracts.read' },
         loadComponent: () =>
-          import('./pages/company-shell/contracts/contracts').then((m) => m.Contracts),
+          brokerageCompany(inject(AuthService).user())
+            ? import('./pages/company-shell/brokerage-contracts/brokerage-contracts').then(
+                (m) => m.BrokerageContracts,
+              )
+            : import('./pages/company-shell/contracts/contracts').then((m) => m.Contracts),
       },
       {
         path: 'commissions',

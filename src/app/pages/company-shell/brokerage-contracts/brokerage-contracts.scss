@@ -1,0 +1,41 @@
+:host {
+  display: block;
+}
+.bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+.bar__actions {
+  display: flex;
+  gap: 8px;
+}
+.doc {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-card, #e2e2dc);
+  border-radius: var(--r-control, 9px);
+  background: var(--surface, #fff);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.doc__name {
+  overflow-wrap: anywhere;
+}
+.state {
+  display: block;
+  width: fit-content;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--warning-bg, #fcf2de);
+  color: var(--warning-text, #83570c);
+  font-size: 12px;
+  font-style: normal;
+}

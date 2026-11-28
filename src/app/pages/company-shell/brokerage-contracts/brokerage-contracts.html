@@ -1,0 +1,202 @@
+<div class="pg">
+  <div class="head">
+    <div class="head__text">
+      <span>{{ total() }} {{ t('contracts', 'عقد') }}</span>
+      <h1>{{ t('Contracts', 'العقود') }}</h1>
+    </div>
+  </div>
+  <p class="muted">
+    {{
+      t(
+        'Deals appear here once approved as contracted, with every document uploaded to the deal.',
+        'تظهر الصفقات هنا بعد اعتمادها كمتعاقد عليها، مع كل المستندات المرفوعة على الصفقة.'
+      )
+    }}
+  </p>
+
+  <form class="bar" (ngSubmit)="apply()">
+    <label class="field"
+      ><span>{{ t('Deal', 'الصفقة') }}</span
+      ><input
+        type="search"
+        name="search"
+        maxlength="100"
+        [(ngModel)]="filters.search"
+        [placeholder]="t('Client, phone, lead or project', 'العميل أو الهاتف أو المشروع')"
+    /></label>
+    @if (!ownScope()) {
+      <label class="field"
+        ><span>{{ t('Agent', 'المندوب') }}</span
+        ><select name="agentId" [(ngModel)]="filters.agentId" (change)="apply()">
+          <option value="">{{ t('All agents', 'كل المندوبين') }}</option>
+          @for (a of agents(); track a.id) {
+            <option [value]="a.id">{{ a.name }}</option>
+          }
+        </select></label
+      >
+    }
+    <label class="field"
+      ><span>{{ t('Find a lead', 'ابحث عن عميل محتمل') }}</span
+      ><input
+        type="search"
+        name="leadSearch"
+        maxlength="100"
+        [(ngModel)]="leadSearch"
+        (ngModelChange)="searchLeads()"
+        [placeholder]="t('Name or phone', 'الاسم أو الهاتف')"
+    /></label>
+    <label class="field"
+      ><span>{{ t('Lead', 'العميل المحتمل') }}</span
+      ><select name="leadId" [(ngModel)]="filters.leadId" (change)="apply()">
+        <option value="">{{ t('All leads', 'كل العملاء') }}</option>
+        @for (l of leads(); track l.id) {
+          <option [value]="l.id">{{ l.name }} · {{ l.phone }}</option>
+        }
+      </select></label
+    >
+    <label class="field"
+      ><span>{{ t('Contract date from', 'تاريخ العقد من') }}</span
+      ><input type="date" name="from" [(ngModel)]="filters.from" (change)="apply()"
+    /></label>
+    <label class="field"
+      ><span>{{ t('Contract date to', 'تاريخ العقد إلى') }}</span
+      ><input type="date" name="to" [(ngModel)]="filters.to" (change)="apply()"
+    /></label>
+    <div class="bar__actions">
+      <button type="submit" class="btn btn--dark">{{ t('Search', 'بحث') }}</button>
+      <button type="button" class="btn" (click)="clear()">{{ t('Clear', 'مسح') }}</button>
+    </div>
+  </form>
+
+  @if (error() && !selected()) {
+    <p class="note note--bad" role="alert">{{ error() }}</p>
+  }
+
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>{{ t('Client', 'العميل') }}</th>
+          <th>{{ t('Project', 'المشروع') }}</th>
+          <th>{{ t('Lead', 'العميل المحتمل') }}</th>
+          <th>{{ t('Agent', 'المندوب') }}</th>
+          <th>{{ t('Unit value', 'قيمة الوحدة') }}</th>
+          <th>{{ t('Contract date', 'تاريخ العقد') }}</th>
+          <th>{{ t('Modified at', 'آخر تعديل') }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of rows(); track r.id) {
+          <tr>
+            <td>
+              {{ r.clientName }}
+              @if (state(r); as note) {
+                <em class="state">{{ note }}</em>
+              }
+            </td>
+            <td>{{ r.project }} · {{ r.developer }}</td>
+            <td>{{ r.lead }}</td>
+            <td>{{ r.agent }}</td>
+            <td>{{ money(r.unitValueMinor) }}</td>
+            <td>{{ date(r.contractedAt) }}</td>
+            <td>{{ date(r.contractModifiedAt, true) }}</td>
+            <td>
+              <button type="button" class="btn" (click)="open(r.id)">
+                {{ t('View', 'عرض') }}
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="8">
+              {{
+                loading()
+                  ? t('Loading…', 'جار التحميل…')
+                  : t('No contracts match.', 'لا توجد عقود مطابقة.')
+              }}
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination">
+    <span>{{ total() }} · {{ t('Page', 'صفحة') }} {{ page() }}</span>
+    <button type="button" class="btn" [disabled]="page() === 1 || loading()" (click)="paginate(-1)">
+      {{ t('Previous', 'السابق') }}
+    </button>
+    <button
+      type="button"
+      class="btn"
+      [disabled]="page() * 30 >= total() || loading()"
+      (click)="paginate(1)"
+    >
+      {{ t('Next', 'التالي') }}
+    </button>
+  </div>
+</div>
+
+@if (selected(); as c) {
+  <div class="scrim" (click)="close()"></div>
+  <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="contract-title">
+    <div class="drawer__head">
+      <div class="drawer__title">
+        <span class="drawer__name" id="contract-title">{{ c.clientName }}</span>
+        <span class="muted">{{ c.project }} · {{ c.developer }}</span>
+      </div>
+      <button type="button" class="x" (click)="close()" [attr.aria-label]="t('Close', 'إغلاق')">
+        ×
+      </button>
+    </div>
+    <div class="drawer__body">
+      @if (error()) {
+        <p class="note note--bad" role="alert">{{ error() }}</p>
+      }
+      @if (state(c); as note) {
+        <p class="note">{{ note }}</p>
+      }
+      <div class="sect">
+        <div class="kv">
+          <span>{{ t('Lead', 'العميل المحتمل') }}</span
+          ><b>{{ c.lead }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ t('Buyer phone', 'هاتف المشتري') }}</span
+          ><b dir="ltr">{{ c.clientPhone }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ t('Agent', 'المندوب') }}</span
+          ><b>{{ c.agent }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ t('Unit number', 'رقم الوحدة') }}</span
+          ><b>{{ c.details['unitNumber'] || '—' }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ t('Unit value', 'قيمة الوحدة') }}</span
+          ><b>{{ money(c.unitValueMinor) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ t('Contract date', 'تاريخ العقد') }}</span
+          ><b>{{ date(c.contractedAt) }}</b>
+        </div>
+        <div class="kv">
+          <span>{{ t('Modified at', 'آخر تعديل') }}</span
+          ><b>{{ date(c.contractModifiedAt, true) }}</b>
+        </div>
+      </div>
+      <div class="sect">
+        <span class="sect__label">{{ t('DOCUMENTS', 'المستندات') }}</span>
+        @for (doc of c.documents ?? []; track doc.id) {
+          <button type="button" class="doc" (click)="download(c.id, doc)">
+            <span class="doc__name">{{ doc.fileName }}</span>
+            <span class="muted">{{ kind(doc.kind) }} · {{ date(doc.createdAt) }}</span>
+          </button>
+        } @empty {
+          <p class="muted">{{ t('No documents.', 'لا توجد مستندات.') }}</p>
+        }
+      </div>
+    </div>
+  </aside>
+}

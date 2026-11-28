@@ -28,6 +28,10 @@ export interface Deal {
   unitValueMinor: string;
   details: Record<string, any>;
   version: number;
+  approvedAt: string | null;
+  /** First approval as a contract; never changes afterwards. */
+  contractedAt: string | null;
+  contractModifiedAt: string | null;
   createdAt: string;
   updatedAt: string;
   documents?: DealDocument[];

@@ -3,7 +3,7 @@ import { Component, computed, inject, signal, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CompanyUiState, type Lang } from '../company-ui-state';
-import { AuthService } from '../../../auth.service';
+import { AuthService, brokerageCompany } from '../../../auth.service';
 import {
   CompanyFinanceApi,
   type CompanyContract,
@@ -124,6 +124,7 @@ const COPY: Record<Lang, Copy> = {
 export class Contracts implements OnDestroy {
   readonly ui = inject(CompanyUiState);
   readonly auth = inject(AuthService);
+  readonly isBrokerage = computed(() => brokerageCompany(this.auth.user()));
   readonly api = inject(CompanyFinanceApi);
   readonly route = inject(ActivatedRoute);
   readonly lang = computed<Lang>(() => this.ui.lang());

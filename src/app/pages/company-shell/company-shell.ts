@@ -4,6 +4,7 @@ import {
   aiModuleEnabled,
   financeModuleEnabled,
   hasAccountingAccess,
+  brokerageCompany,
   hasAccountingSelf,
   hasPayrollAccess,
 } from '../../auth.service';
@@ -446,6 +447,7 @@ export class CompanyShell {
           (u?.company?.type ?? u?.workspace?.company?.type) !== 'brokerage' &&
           perms.includes('commissions.read')
         );
+      if (item.path === 'units' && brokerageCompany(u)) return false;
       if (item.path === 'inventory/developers')
         return (
           (u?.company?.type ?? u?.workspace?.company?.type) === 'brokerage' &&

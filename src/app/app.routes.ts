@@ -3,6 +3,7 @@ import {
   companyGuard,
   passwordChangeGuard,
   brokerageReservationsRedirect,
+  brokerageUnitsRedirect,
 } from './auth.service';
 import { Routes } from '@angular/router';
 
@@ -492,6 +493,7 @@ export const routes: Routes = [
       },
       {
         path: 'units',
+        canActivate: [brokerageUnitsRedirect],
         data: { permission: 'units.read' },
         loadComponent: () => import('./pages/company-shell/units/units').then((m) => m.Units),
       },

@@ -408,7 +408,7 @@
             }
           </section>
 
-          @if (d.inventory; as inventory) {
+          @if (isBrokerage() ? null : d.inventory; as inventory) {
             <section class="card content-panel">
               <div class="c-head">
                 <h2>{{ text('Inventory', 'المخزون') }}</h2>

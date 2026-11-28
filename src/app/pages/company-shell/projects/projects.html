@@ -376,12 +376,14 @@
                       >{{ t('Hold for client', 'تعليق لعميل') }}</a
                     >
                   }
-                  <a
-                    class="btn btn--sm"
-                    [routerLink]="['/company/units']"
-                    [queryParams]="{ unitId: u.id }"
-                    >{{ t('View unit', 'عرض الوحدة') }}</a
-                  >
+                  @if (!isBrokerage()) {
+                    <a
+                      class="btn btn--sm"
+                      [routerLink]="['/company/units']"
+                      [queryParams]="{ unitId: u.id }"
+                      >{{ t('View unit', 'عرض الوحدة') }}</a
+                    >
+                  }
                   @if (canManageUnits() && !p.archivedAt) {
                     <button type="button" class="btn btn--sm" (click)="edit('unit', u)">
                       {{ t('Edit', 'تعديل') }}

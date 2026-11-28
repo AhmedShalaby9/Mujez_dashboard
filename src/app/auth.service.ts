@@ -47,12 +47,19 @@ export interface User {
 export function officeWorkspace(u: User | null | undefined) {
   return (u?.company?.type ?? u?.workspace?.company?.type) === 'real_estate_office';
 }
+export function brokerageCompany(u: User | null | undefined) {
+  return (u?.company?.type ?? u?.workspace?.company?.type) === 'brokerage';
+}
 export const brokerageReservationsRedirect: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  return (auth.user()?.company?.type ?? auth.user()?.workspace?.company?.type) === 'brokerage'
-    ? router.createUrlTree(['/company/deals'])
-    : true;
+  return brokerageCompany(auth.user()) ? router.createUrlTree(['/company/deals']) : true;
+};
+/** Brokerages browse the shared catalog; they have no company-owned unit stock page. */
+export const brokerageUnitsRedirect: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return brokerageCompany(auth.user()) ? router.createUrlTree(['/company/catalog/units']) : true;
 };
 export function hrModuleEnabled(u: User | null | undefined) {
   return !!u && u.company?.hrEnabled !== false;

@@ -129,6 +129,34 @@
               <span>{{ selected()!.rejectionReason }}</span>
             }
           </div>
+          <div class="commission-status">
+            @if (options()?.canApprove) {
+              <em [class]="dealCommissions().length ? 'approved' : 'pending'">
+                {{
+                  dealCommissions().length
+                    ? t('Commissions added', 'تمت إضافة العمولات')
+                    : t('No commissions added yet', 'لم تُضف عمولات بعد')
+                }}
+              </em>
+              <a
+                routerLink="/company/deal-commissions"
+                [queryParams]="{ dealId: selected()!.id, new: '1' }"
+              >
+                {{ t('Add commission →', 'إضافة عمولة ←') }}
+              </a>
+            } @else {
+              <em [class]="dealCommissions().length ? 'approved' : 'pending'">
+                {{
+                  dealCommissions().length
+                    ? t('Your commission was added', 'عمولتك أُضيفت')
+                    : t(
+                        'Your commission was not added yet by Sales Admin',
+                        'عمولتك لم تُضف بعد من مسؤول المبيعات'
+                      )
+                }}
+              </em>
+            }
+          </div>
           @if (error()) {
             <p class="error" role="alert">{{ error() }}</p>
           }

@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CompactAmountDirective } from '../../../compact-amount.directive';
 import { CompanyUiState } from '../company-ui-state';
@@ -27,6 +28,7 @@ const emptyRow = (): EntryRow => ({ userId: '', amount: '', note: '' });
 export class DealCommissions {
   readonly ui = inject(CompanyUiState);
   private readonly api = inject(DealCommissionsApi);
+  private readonly route = inject(ActivatedRoute);
   readonly lang = this.ui.lang;
   readonly ar = computed(() => this.lang() === 'ar');
   t(en: string, ar: string) {
@@ -50,6 +52,9 @@ export class DealCommissions {
 
   constructor() {
     void this.load();
+    const dealId = this.route.snapshot.queryParamMap.get('dealId');
+    if (dealId && this.route.snapshot.queryParamMap.get('new') === '1')
+      void this.openDialog(dealId);
   }
 
   async load() {
@@ -71,9 +76,9 @@ export class DealCommissions {
     void this.load();
   }
 
-  async openDialog() {
+  async openDialog(presetDealId?: string) {
     this.dialogError.set('');
-    this.dealId.set('');
+    this.dealId.set(presetDealId ?? '');
     this.rows.set([emptyRow()]);
     this.dialogOpen.set(true);
     try {

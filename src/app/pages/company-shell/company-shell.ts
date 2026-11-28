@@ -189,7 +189,7 @@ const EN_NAV: NavEntry[] = [
   { kind: 'item', label: 'Pipeline', path: 'pipeline' },
   { kind: 'item', label: 'Leads', path: 'leads' },
   { kind: 'item', label: 'Deals', path: 'deals' },
-  { kind: 'item', label: 'Deal commissions', path: 'deal-commissions' },
+  { kind: 'item', label: 'Commissions', path: 'deal-commissions' },
   { kind: 'item', label: 'Cold calls', path: 'cold-calls' },
   { kind: 'item', label: 'Contacts', path: 'contacts' },
   { kind: 'item', label: 'Calendar', path: 'calendar' },
@@ -252,7 +252,7 @@ const AR_NAV: NavEntry[] = [
   { kind: 'item', label: 'مراحل الصفقات', path: 'pipeline' },
   { kind: 'item', label: 'العملاء المحتملون', path: 'leads' },
   { kind: 'item', label: 'الصفقات', path: 'deals' },
-  { kind: 'item', label: 'عمولات الصفقات', path: 'deal-commissions' },
+  { kind: 'item', label: 'العمولات', path: 'deal-commissions' },
   { kind: 'item', label: 'المكالمات الباردة', path: 'cold-calls' },
   { kind: 'item', label: 'جهات الاتصال', path: 'contacts' },
   { kind: 'item', label: 'التقويم', path: 'calendar' },
@@ -433,13 +433,19 @@ export class CompanyShell {
           (u.roles ?? [u.role]).some((r) => r === 'team_lead' || r === 'team_leader') &&
           perms.includes('team.self.read')
         );
-      if (item.path === 'commission-scheme')
-        return (
-          (u?.company?.type ?? u?.workspace?.company?.type) === 'brokerage' &&
-          perms.includes('commissions.read')
-        );
+      // Retired: the scheme-driven auto-calculation this configured was
+      // scrapped in favor of manual Sales Admin entries (Deal commissions).
+      if (item.path === 'commission-scheme') return false;
       if (item.path === 'deals' || item.path === 'deal-commissions')
         return (u?.company?.type ?? u?.workspace?.company?.type) === 'brokerage';
+      // Brokerage companies use Deal commissions instead of the
+      // contract-based Commissions page (which needs tenant.contracts, a
+      // system brokerage deals don't use).
+      if (item.path === 'commissions')
+        return (
+          (u?.company?.type ?? u?.workspace?.company?.type) !== 'brokerage' &&
+          perms.includes('commissions.read')
+        );
       if (item.path === 'inventory/developers')
         return (
           (u?.company?.type ?? u?.workspace?.company?.type) === 'brokerage' &&
